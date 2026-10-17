@@ -43,7 +43,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   )
   const signOut = useCallback(async () => {
     await SecureStore.deleteItemAsync(KEY)
-    clearWidget()
+    await clearWidget()
     setToken(null)
   }, [])
 

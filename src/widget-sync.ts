@@ -68,7 +68,8 @@ export async function syncWidget(client: BffClient, loaded?: { book: AgentBook; 
   }
 }
 
-/** Signed out, the widget shows no figures. */
-export function clearWidget() {
+/** Signed out, the widget shows no figures, and the next account starts with no pins and a new link token. */
+export async function clearWidget() {
   pushWidget({ signedIn: false, safeToSpend: '', pending: 0, agents: [], palette: palettes })
+  await Promise.all([SecureStore.deleteItemAsync(PINS), SecureStore.deleteItemAsync(TOKEN)])
 }
