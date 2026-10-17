@@ -2,6 +2,9 @@ import { fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-li
 
 // B40.11 DONE: signs in against a mocked BFF, shows Home with the pending approval first, and pauses an agent.
 
+// The first render loads the whole router and the widget modules, which takes CI's runner past jest's default 5 s.
+jest.setTimeout(30_000)
+
 const mockStore = new Map<string, string>()
 jest.mock('expo-secure-store', () => ({
   getItemAsync: async (k: string) => mockStore.get(k) ?? null,
