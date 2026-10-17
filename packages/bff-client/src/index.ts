@@ -1,5 +1,5 @@
-// @talyvor/bff-client — the phone app's reads and writes through the BFF's /api/agents routes, the same routes the
-// web's agentBankApi.ts calls. Every amount is an integer count of µLXC, never a float.
+// @talyvor/bff-client — the phone app's reads and writes through the BFF's /api/agents and /api/money routes, the same
+// routes the web's agentBankApi.ts calls. Every amount is an integer: µLXC, or a currency's minor units; never a float.
 //
 // The BFF answers a refusal with {"error": "<Lens's sentence>"}; BffError carries that sentence, because it is the
 // answer to "why not?" and the screen shows it.
@@ -81,6 +81,44 @@ export interface Statement {
   lines: StatementLine[] | null
 }
 
+/** Lens economy.CurrencyAccount: the company's or an agent's account in one currency, in minor units. */
+export interface CurrencyAccount {
+  id: string
+  /** "" for the company's own */
+  agent_id?: string
+  currency: string
+  purpose: 'company' | 'agent'
+  status: string
+  name: string
+  balance_minor: number
+}
+
+/** Lens economy.OutsidePayee (B30.16): a saved payee outside Talyvor. */
+export interface OutsidePayee {
+  id: string
+  name: string
+  country: string
+  /** a close or no match cannot be paid until the owner confirms it with a passkey */
+  needs_confirmation: boolean
+  /** set while screening holds the payee for an operator */
+  screening?: string
+  created_at: string
+}
+
+/** Lens economy.OutsidePayment (B30.17): money sent to a saved payee. */
+export interface OutsidePayment {
+  id: string
+  payee_id: string
+  payee_name: string
+  amount_minor: number
+  currency: string
+  reference: string
+  /** pending | sent | completed | failed | returned */
+  status: string
+  detail?: string
+  created_at: string
+}
+
 /** What the BFF answers a phone's sign-in: a session token for the Authorization header. */
 export interface MobileSession {
   token: string
@@ -135,6 +173,13 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     /** Every agent wallet's statement for [from, to), YYYY-MM-DD at midnight UTC. */
     statement: (from: string, to: string) =>
       call<Statement>('GET', `/api/agents/statement?${new URLSearchParams({ from, to, format: 'json' })}`),
+    moneyAccounts: () => call<{ accounts: CurrencyAccount[] | null }>('GET', '/api/money/accounts'),
+    payees: () => call<{ payees: OutsidePayee[] | null }>('GET', '/api/money/payees'),
+    /** The payments out, newest first. */
+    payments: () => call<{ payments: OutsidePayment[] | null }>('GET', '/api/money/payments'),
+    /** Pays a saved payee from one account; `idempotency_key` makes a retry pay once. */
+    pay: (body: { account_id: string; payee_id: string; amount_minor: number; currency: string; reference: string; idempotency_key: string }) =>
+      call<OutsidePayment>('POST', '/api/money/payments', body),
   }
 }
 
@@ -151,6 +196,21 @@ export function parseLXC(text: string): number | null {
   if (!m) return null
   const micros = Number(m[1]) * 1_000_000 + Number((m[2] ?? '').padEnd(6, '0'))
   return micros > 0 && Number.isSafeInteger(micros) ? micros : null
+}
+
+/** 1250, GBP → `12.50 GBP`. */
+export function formatMinor(minor: number, currency: string): string {
+  const sign = minor < 0 ? '-' : ''
+  const m = Math.abs(minor)
+  return `${sign}${Math.floor(m / 100)}.${String(m % 100).padStart(2, '0')} ${currency}`
+}
+
+/** `12.5` → 1250 minor units; null for anything that is not a positive amount with at most 2 decimals. */
+export function parseMinor(text: string): number | null {
+  const m = /^(\d+)(?:\.(\d{1,2}))?$/.exec(text.trim())
+  if (!m) return null
+  const minor = Number(m[1]) * 100 + Number((m[2] ?? '').padEnd(2, '0'))
+  return minor > 0 && Number.isSafeInteger(minor) ? minor : null
 }
 
 /** What the owner can still spend: the workspace's balance less every approval still waiting. */
