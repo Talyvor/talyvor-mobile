@@ -29,6 +29,7 @@
       "expo-web-browser",
       "expo-font",
       "expo-image",
+      "./plugins/with-android-widget-links",
       [
         "expo-splash-screen",
         {
@@ -40,6 +41,7 @@
       [
         "expo-widgets",
         {
+          "enableAndroid": true,
           "widgets": [
             {
               "name": "TalyvorAgents",
@@ -52,6 +54,9 @@
                   "systemLarge"
                 ],
                 "initialLayout": "./src/widgets/agents-widget.tsx"
+              },
+              "android": {
+                "initialLayout": "./src/widgets/agents-widget-android.tsx"
               }
             }
           ]
