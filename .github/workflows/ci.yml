@@ -37,3 +37,9 @@ jobs:
       - run: npm ci
       - run: npx expo prebuild --platform ${{ matrix.platform }} --no-install
       - run: npx expo export --platform ${{ matrix.platform }}
+      # The Android widget's provider is Kotlin written by plugins/with-android-widget-links.js; only a compile proves it.
+      - if: matrix.platform == 'android'
+        working-directory: android
+        env:
+          JAVA_HOME: ${{ env.JAVA_HOME_17_X64 }}
+        run: ./gradlew :app:compileDebugKotlin --no-daemon

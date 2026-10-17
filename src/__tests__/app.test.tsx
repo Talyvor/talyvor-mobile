@@ -1,4 +1,10 @@
 import { fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library'
+import * as compose from '@expo/ui/jetpack-compose'
+import * as modifiers from '@expo/ui/jetpack-compose/modifiers'
+import { isValidElement, type ReactNode } from 'react'
+import { Fragment, jsx, jsxs } from 'react/jsx-runtime'
+
+import { AgentsWidgetAndroid } from '../widgets/agents-widget-android'
 
 // B40.11 DONE: signs in against a mocked BFF, shows Home with the pending approval first, and pauses an agent.
 
@@ -87,6 +93,12 @@ test('signs in, shows the pending approval first on Home, and pauses an agent', 
 
 const lastSnapshot = () => mockSnapshots[mockSnapshots.length - 1]
 
+// The 'widget' directive compiles a layout to its source; Android's widget runtime evaluates it with these as globals.
+const layoutScope = { ...compose, ...modifiers, _jsx: jsx, _jsxs: jsxs, _Fragment: Fragment }
+const androidLayout = new Function(...Object.keys(layoutScope), `return (${AgentsWidgetAndroid})`)(
+  ...Object.values(layoutScope),
+) as typeof AgentsWidgetAndroid
+
 describe('B41.35 home-screen widget', () => {
   beforeEach(() => {
     mockStore.clear()
@@ -108,6 +120,37 @@ describe('B41.35 home-screen widget', () => {
       JSON.stringify({ reason: 'Paused from the home-screen widget' }),
     )
     expect(lastSnapshot().agents.find((a) => a.id === 'ag_1')?.paused).toBe(true)
+  })
+
+  test("on Android, the widget's Pause opens the same token-checked link and the widget then reads Paused", async () => {
+    const calls = mockBff()
+    await renderRouter('./src/app', { initialUrl: '/' })
+    await waitFor(() => expect(lastSnapshot()?.agents.find((a) => a.id === 'ag_1')?.paused).toBe(false))
+    // The Android layout drawn from what the app pushed: each Button's target is what a tap sends the widget's provider.
+    const draw = () => {
+      const buttons: { label: string; target: string }[] = []
+      const texts: string[] = []
+      const walk = (n: ReactNode): void => {
+        if (Array.isArray(n)) return n.forEach(walk)
+        if (typeof n === 'string') return void texts.push(n)
+        if (!isValidElement<{ children?: ReactNode; target?: string }>(n)) return
+        const before = texts.length
+        walk(n.props.children)
+        if (n.props.target) buttons.push({ label: texts.slice(before).join(''), target: n.props.target })
+      }
+      walk(androidLayout(lastSnapshot() as never, { colorScheme: 'dark', configuration: undefined }))
+      return { buttons, texts }
+    }
+    const pause = draw().buttons.find((b) => b.label === 'Pause')!
+    expect(pause.target).toBe(lastSnapshot().agents.find((a) => a.id === 'ag_1')!.pauseUrl)
+
+    // TalyvorAgentsProvider opens a talyvor:// target as a link into the app.
+    await renderRouter('./src/app', { initialUrl: pause.target.replace('talyvor://', '/') })
+    expect(await screen.findByText('Resume')).toBeTruthy()
+    expect(calls.filter((c) => c.method === 'POST' && c.path === '/api/agents/ag_1/pause')).toHaveLength(1)
+    const after = draw()
+    expect(after.texts).toContain('Paused')
+    expect(after.buttons.find((b) => b.label === 'Resume')?.target).toBe('talyvor://agents/ag_1')
   })
 
   test('a pause link that did not come from the widget changes nothing', async () => {
