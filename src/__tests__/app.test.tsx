@@ -2,6 +2,9 @@ import { fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-li
 
 // B40.11 DONE: signs in against a mocked BFF, shows Home with the pending approval first, and pauses an agent.
 
+// The first render loads the whole router and the widget modules, which takes CI's runner past jest's default 5 s.
+jest.setTimeout(30_000)
+
 const mockStore = new Map<string, string>()
 jest.mock('expo-secure-store', () => ({
   getItemAsync: async (k: string) => mockStore.get(k) ?? null,
@@ -15,11 +18,15 @@ jest.mock('expo-auth-session', () => ({
   useAuthRequest: () => [{ codeVerifier: 'verifier' }, null, async () => ({ type: 'success', params: { code: 'code-1' } })],
   exchangeCodeAsync: async () => ({ idToken: 'id-token-1' }),
 }))
+let mockUuid = 0
+jest.mock('expo-crypto', () => ({ randomUUID: () => `uuid-${++mockUuid}` }))
+const mockSnapshots: { signedIn: boolean; agents: { id: string; paused: boolean; pauseUrl: string }[] }[] = []
+jest.mock('expo-widgets', () => ({ createWidget: () => ({ updateSnapshot: (p: never) => mockSnapshots.push(p) }) }))
 jest.mock('../config', () => ({ config: { bffUrl: 'https://bff.test', oidcIssuer: 'https://idp', oidcClientId: 'mobile' } }))
 
 /** The BFF as the app sees it: one workspace, two agents, one approval waiting. */
 function mockBff() {
-  const calls: { method: string; path: string; auth: string | undefined; body?: string }[] = []
+  const calls: { method: string; path: string; auth: string | undefined; body?: string; key?: string }[] = []
   let pausedAt: string | undefined
   const agents = () => [
     { id: 'ag_1', name: 'Researcher', balance_ulxc: 12_500_000, spent_ulxc: 0, created_at: '2026-10-01T00:00:00Z', paused_at: pausedAt },
@@ -32,6 +39,7 @@ function mockBff() {
       approvals: [{ id: 'apr_1', agent_id: 'ag_2', amount_ulxc: 2_000_000, model: '', payee: { kind: 'listing', id: 'l_1', name: 'GPU hour' }, status: 'pending', created_at: '2026-10-17T08:00:00Z' }],
     }),
     'GET /api/agents/ag_1/rules': () => ({ max_per_request_ulxc: 1_000_000, daily_limit_ulxc: 0, monthly_limit_ulxc: 0, approval_above_ulxc: 500_000, allowed_models: null, allowed_providers: null, active_from: '', active_until: '', timezone: 'UTC' }),
+    'POST /api/agents/ag_1/fund': () => ({ balance_ulxc: 15_000_000 }),
     'POST /api/agents/ag_1/pause': () => {
       pausedAt = '2026-10-17T09:00:00Z'
       return agents()[0]
@@ -40,8 +48,9 @@ function mockBff() {
   globalThis.fetch = jest.fn(async (url: string, init: RequestInit = {}) => {
     const path = url.replace('https://bff.test', '')
     const method = init.method ?? 'GET'
-    const auth = (init.headers as Record<string, string>).Authorization
-    calls.push({ method, path, auth, body: init.body as string | undefined })
+    const headers = init.headers as Record<string, string>
+    const auth = headers.Authorization
+    calls.push({ method, path, auth, body: init.body as string | undefined, key: headers['Idempotency-Key'] })
     const route = routes[`${method} ${path}`]
     const signedIn = path.startsWith('/auth/') || auth === 'Bearer session-1'
     return new Response(JSON.stringify(route && signedIn ? route() : { error: 'no' }), { status: route ? (signedIn ? 200 : 401) : 404 })
@@ -74,4 +83,52 @@ test('signs in, shows the pending approval first on Home, and pauses an agent', 
   expect(calls.find((c) => c.method === 'POST' && c.path === '/api/agents/ag_1/pause')?.body).toBe(
     JSON.stringify({ reason: 'Paused from the phone app' }),
   )
+})
+
+const lastSnapshot = () => mockSnapshots[mockSnapshots.length - 1]
+
+describe('B41.35 home-screen widget', () => {
+  beforeEach(() => {
+    mockStore.clear()
+    mockStore.set('talyvor.session', JSON.stringify({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }))
+    mockSnapshots.length = 0
+  })
+
+  test("tapping Pause on an agent's widget pauses it in Lens and the widget then reads paused", async () => {
+    const calls = mockBff()
+    await renderRouter('./src/app', { initialUrl: '/' })
+    await waitFor(() => expect(lastSnapshot()?.agents.find((a) => a.id === 'ag_1')?.paused).toBe(false))
+    const pauseUrl = lastSnapshot().agents.find((a) => a.id === 'ag_1')!.pauseUrl
+    expect(pauseUrl).toMatch(/^talyvor:\/\/widget\?do=pause&agent=ag_1&t=uuid-\d+$/)
+
+    // What iOS opens when the widget's Pause is tapped.
+    await renderRouter('./src/app', { initialUrl: pauseUrl.replace('talyvor://', '/') })
+    expect(await screen.findByText('Resume')).toBeTruthy()
+    expect(calls.find((c) => c.method === 'POST' && c.path === '/api/agents/ag_1/pause')?.body).toBe(
+      JSON.stringify({ reason: 'Paused from the home-screen widget' }),
+    )
+    expect(lastSnapshot().agents.find((a) => a.id === 'ag_1')?.paused).toBe(true)
+  })
+
+  test('a pause link that did not come from the widget changes nothing', async () => {
+    const calls = mockBff()
+    await renderRouter('./src/app', { initialUrl: '/widget?do=pause&agent=ag_1&t=forged' })
+    expect(await screen.findByText('This link did not come from your Talyvor widget, so nothing changed.')).toBeTruthy()
+    expect(calls.some((c) => c.path.endsWith('/pause'))).toBe(false)
+  })
+
+  test('pinning puts only that agent on the widget, and Fund sends whole µLXC with an idempotency key', async () => {
+    const calls = mockBff()
+    await renderRouter('./src/app', { initialUrl: '/agents/ag_1' })
+    await fireEvent.press(await screen.findByText('Pin to widget'))
+    await waitFor(() => expect(lastSnapshot()?.agents.map((a) => a.id)).toEqual(['ag_1']))
+
+    await fireEvent.changeText(screen.getByLabelText('Amount in LXC'), '2.5')
+    await fireEvent.press(screen.getByRole('button', { name: 'Fund' }))
+    await waitFor(() => expect(calls.some((c) => c.path === '/api/agents/ag_1/fund')).toBe(true))
+    const fund = calls.find((c) => c.path === '/api/agents/ag_1/fund')!
+    expect(fund.body).toBe(JSON.stringify({ amount_ulxc: 2_500_000 }))
+    expect(fund.key).toMatch(/^uuid-\d+$/)
+  })
+
 })

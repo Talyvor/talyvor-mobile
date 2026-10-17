@@ -36,6 +36,26 @@
           "image": "./assets/images/talyvor-mark-flat-dark.png",
           "imageWidth": 96
         }
+      ],
+      [
+        "expo-widgets",
+        {
+          "widgets": [
+            {
+              "name": "TalyvorAgents",
+              "displayName": "Agents",
+              "description": "Safe to spend, what is waiting for you, and your pinned agents with Pause and Fund.",
+              "ios": {
+                "supportedFamilies": [
+                  "systemSmall",
+                  "systemMedium",
+                  "systemLarge"
+                ],
+                "initialLayout": "./src/widgets/agents-widget.tsx"
+              }
+            }
+          ]
+        }
       ]
     ],
     "experiments": {
