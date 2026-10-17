@@ -1,0 +1,45 @@
+{
+  "expo": {
+    "name": "Talyvor",
+    "slug": "talyvor",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/app-icon-1024.png",
+    "scheme": "talyvor",
+    "userInterfaceStyle": "automatic",
+    "backgroundColor": "#060A12",
+    "ios": {
+      "bundleIdentifier": "com.talyvor.app",
+      "supportsTablet": false
+    },
+    "android": {
+      "package": "com.talyvor.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#060A12",
+        "foregroundImage": "./assets/images/icon-maskable-512.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/images/favicon-32.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-web-browser",
+      "expo-font",
+      "expo-image",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#060A12",
+          "image": "./assets/images/talyvor-mark-flat-dark.png",
+          "imageWidth": 96
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
