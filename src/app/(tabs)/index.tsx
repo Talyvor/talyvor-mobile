@@ -1,12 +1,13 @@
 import { formatULXC, safeToSpend } from '@talyvor/bff-client'
 import { Link } from 'expo-router'
-import { useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
 import { Pressable, View } from 'react-native'
 
 import { ApprovalCard } from '@/components/approval-card'
 import { Body, Card, Eyebrow, Figure, Headline, LoadState, Screen, useLoad } from '@/components/ui'
 import { useSession } from '@/session'
 import { useTheme } from '@/theme'
+import { syncWidget } from '@/widget-sync'
 
 /** Home: what waits for you first, then what you can safely spend, then each agent. */
 export default function Home() {
@@ -17,6 +18,9 @@ export default function Home() {
     return { book, approvals: approvals.approvals ?? [] }
   }, [client])
   const { data, error, loading, reload } = useLoad(load)
+  useEffect(() => {
+    if (data) void syncWidget(client, data)
+  }, [client, data])
   const agents = (data?.book.agents ?? []).filter((a) => !a.archived_at)
   const pending = (data?.approvals ?? []).filter((a) => a.status === 'pending')
   const nameOf = (id: string) => agents.find((a) => a.id === id)?.name ?? id

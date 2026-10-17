@@ -34,6 +34,7 @@ const light: typeof dark = {
   critical: '#BF3B2E',
 }
 export type Palette = typeof dark
+export const palettes = { dark, light }
 
 export const fonts = {
   ui: 'SpaceGrotesk_400Regular',

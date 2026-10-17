@@ -100,8 +100,8 @@ export class BffError extends Error {
 const e = encodeURIComponent
 
 export function createBffClient(baseUrl: string, token: () => string | null, fetchImpl: typeof fetch = fetch) {
-  async function call<T>(method: string, path: string, body?: object): Promise<T> {
-    const headers: Record<string, string> = { Accept: 'application/json' }
+  async function call<T>(method: string, path: string, body?: object, extra: Record<string, string> = {}): Promise<T> {
+    const headers: Record<string, string> = { Accept: 'application/json', ...extra }
     const t = token()
     if (t) headers.Authorization = `Bearer ${t}`
     if (body) headers['Content-Type'] = 'application/json'
@@ -129,6 +129,9 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     rules: (id: string) => call<AgentRules>('GET', `/api/agents/${e(id)}/rules`),
     pause: (id: string, reason: string) => call<Agent>('POST', `/api/agents/${e(id)}/pause`, { reason }),
     resume: (id: string) => call<Agent>('POST', `/api/agents/${e(id)}/resume`),
+    /** Moves µLXC from the workspace's unallocated balance to the agent; `key` makes a retry move it once. */
+    fund: (id: string, amount_ulxc: number, key: string) =>
+      call<{ balance_ulxc: number }>('POST', `/api/agents/${e(id)}/fund`, { amount_ulxc }, { 'Idempotency-Key': key }),
     /** Every agent wallet's statement for [from, to), YYYY-MM-DD at midnight UTC. */
     statement: (from: string, to: string) =>
       call<Statement>('GET', `/api/agents/statement?${new URLSearchParams({ from, to, format: 'json' })}`),
@@ -140,6 +143,14 @@ export type BffClient = ReturnType<typeof createBffClient>
 /** 12,500,000 µLXC → `12.5 LXC`: every µLXC shown, no trailing zeros. */
 export function formatULXC(micros: number): string {
   return `${(micros / 1_000_000).toLocaleString('en-US', { maximumFractionDigits: 6 })} LXC`
+}
+
+/** `2.5` → 2,500,000 µLXC, in whole numbers only; null for anything that is not a positive amount with at most 6 decimals. */
+export function parseLXC(text: string): number | null {
+  const m = /^(\d+)(?:\.(\d{1,6}))?$/.exec(text.trim())
+  if (!m) return null
+  const micros = Number(m[1]) * 1_000_000 + Number((m[2] ?? '').padEnd(6, '0'))
+  return micros > 0 && Number.isSafeInteger(micros) ? micros : null
 }
 
 /** What the owner can still spend: the workspace's balance less every approval still waiting. */

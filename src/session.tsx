@@ -3,6 +3,7 @@ import * as SecureStore from 'expo-secure-store'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 
 import { config } from './config'
+import { clearWidget } from './widget-sync'
 
 const KEY = 'talyvor.session'
 
@@ -42,6 +43,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   )
   const signOut = useCallback(async () => {
     await SecureStore.deleteItemAsync(KEY)
+    clearWidget()
     setToken(null)
   }, [])
 
