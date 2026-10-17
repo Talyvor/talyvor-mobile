@@ -49,7 +49,7 @@ export const AgentsWidgetAndroid = (p: AgentsWidgetProps, env: WidgetEnvironment
         tap(p.pending ? `${p.pending} waiting` : 'Nothing waiting', 'talyvor://approvals'),
       )}
       {p.agents.length === 0 ? <Text {...body(c.inkMuted)}>No agents yet.</Text> : null}
-      {p.agents.slice(0, 4).map((a) => (
+      {p.agents.slice(0, 4 - Math.min(p.payees.length, 2)).map((a) => (
         <Column key={a.id} modifiers={[fillMaxWidth()]}>
           <Spacer modifiers={[height(8)]} />
           {ends(
@@ -65,6 +65,18 @@ export const AgentsWidgetAndroid = (p: AgentsWidgetProps, env: WidgetEnvironment
               <Spacer modifiers={[width(6)]} />
               {tap('Fund', a.openUrl)}
             </Row>,
+          )}
+        </Column>
+      ))}
+      {p.payees.slice(0, 2).map((y) => (
+        <Column key={y.id} modifiers={[fillMaxWidth()]}>
+          <Spacer modifiers={[height(8)]} />
+          {ends(
+            <Column>
+              <Text {...body(c.ink)} maxLines={1}>{y.name}</Text>
+              <Text {...text(11, c.inkMuted)}>{y.last}</Text>
+            </Column>,
+            tap('Pay', y.openUrl),
           )}
         </Column>
       ))}

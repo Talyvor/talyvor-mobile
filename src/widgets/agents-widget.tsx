@@ -11,6 +11,8 @@ export interface AgentsWidgetProps {
   pending: number
   /** pinned agents first; `pauseUrl` pauses it through the app, `openUrl` opens its screen (resume, fund) */
   agents: { id: string; name: string; balance: string; paused: boolean; pauseUrl: string; openUrl: string }[]
+  /** pinned payees; `openUrl` opens the payment screen for it, and nothing is paid from the widget */
+  payees: { id: string; name: string; last: string; openUrl: string }[]
   palette: { dark: Palette; light: Palette }
 }
 
@@ -45,7 +47,9 @@ const AgentsWidget = (p: AgentsWidgetProps, env: WidgetEnvironment) => {
     )
   }
 
-  const rows = p.agents.slice(0, env.widgetFamily === 'systemLarge' ? 5 : 2)
+  const large = env.widgetFamily === 'systemLarge'
+  const payees = p.payees.slice(0, large ? 2 : 1)
+  const rows = p.agents.slice(0, (large ? 5 : 2) - payees.length)
   return (
     <VStack alignment="leading" spacing={8} modifiers={[containerBackground(c.canvas, 'widget')]}>
       <HStack>
@@ -73,6 +77,18 @@ const AgentsWidget = (p: AgentsWidgetProps, env: WidgetEnvironment) => {
           </Link>
           <Link destination={a.openUrl}>
             <Text modifiers={action}>Fund</Text>
+          </Link>
+        </HStack>
+      ))}
+      {payees.map((y) => (
+        <HStack key={y.id} spacing={10}>
+          <VStack alignment="leading" spacing={0}>
+            <Text modifiers={body(c.ink)}>{y.name}</Text>
+            <Text modifiers={[font({ size: 11, design: 'monospaced' }), foregroundStyle(c.inkMuted)]}>{y.last}</Text>
+          </VStack>
+          <Spacer />
+          <Link destination={y.openUrl}>
+            <Text modifiers={action}>Pay</Text>
           </Link>
         </HStack>
       ))}
