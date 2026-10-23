@@ -119,6 +119,24 @@ export interface OutsidePayment {
   created_at: string
 }
 
+/** Lens economy.DeviceKey (B40.4): a phone's approval key. */
+export interface DeviceKey {
+  id: string
+  platform: string
+  name: string
+  person: string
+  created_at: string
+  last_used_at?: string
+  revoked_at?: string
+}
+
+/** A device key's signature, where Lens takes an approval's or a mandate's assertion (B40.4). */
+export interface DeviceAssertion {
+  device_id: string
+  challenge: string
+  signature: string
+}
+
 /** What the BFF answers a phone's sign-in: a session token for the Authorization header. */
 export interface MobileSession {
   token: string
@@ -180,6 +198,11 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     /** Pays a saved payee from one account; `idempotency_key` makes a retry pay once. */
     pay: (body: { account_id: string; payee_id: string; amount_minor: number; currency: string; reference: string; idempotency_key: string }) =>
       call<OutsidePayment>('POST', '/api/money/payments', body),
+    /** The single-use challenge a new device key signs and binds its attestation to. */
+    deviceChallenge: () => call<{ challenge: string }>('POST', '/api/money/devices/challenge'),
+    /** Keeps this phone's key as the person's; every byte string is base64url. */
+    registerDevice: (body: { platform: string; name: string; public_key: string; challenge: string; signature: string; attestation: string }) =>
+      call<DeviceKey>('POST', '/api/money/devices', body),
   }
 }
 

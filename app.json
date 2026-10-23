@@ -10,7 +10,10 @@
     "backgroundColor": "#060A12",
     "ios": {
       "bundleIdentifier": "com.talyvor.app",
-      "supportsTablet": false
+      "supportsTablet": false,
+      "entitlements": {
+        "com.apple.developer.devicecheck.appattest-environment": "production"
+      }
     },
     "android": {
       "package": "com.talyvor.app",
@@ -25,7 +28,12 @@
     },
     "plugins": [
       "expo-router",
-      "expo-secure-store",
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": "Talyvor uses Face ID so that only you can approve what your agents ask for."
+        }
+      ],
       "expo-web-browser",
       "expo-font",
       "expo-image",
