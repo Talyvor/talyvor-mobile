@@ -6,6 +6,9 @@ approve, what is safe to spend, each agent's balance and rules, pause an agent, 
 - `src/app/` — the screens (Expo Router): `sign-in`, `(tabs)/index` (Home), `(tabs)/approvals`, `(tabs)/statement`,
   `agents/[id]`.
 - `packages/bff-client/` — `@talyvor/bff-client`, the typed client for the BFF's `/api/agents` routes.
+- `modules/talyvor-keys/` — TalyvorKeys, the approval key: P-256 in the Secure Enclave (iPhone) or StrongBox/TEE
+  (Android) that signs only after Face ID or a fingerprint. Approvals → This phone → Turn on registers it with Lens;
+  signing out deletes it. Simulators have no Secure Enclave, so the tests mock the key store and the biometric check.
 
 ## Run it
 

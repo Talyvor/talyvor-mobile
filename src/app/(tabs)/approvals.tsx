@@ -3,6 +3,7 @@ import { useCallback } from 'react'
 import { View } from 'react-native'
 
 import { ApprovalCard } from '@/components/approval-card'
+import { PhoneKeyCard } from '@/components/phone-key-card'
 import { Body, Card, Eyebrow, Figure, Headline, LoadState, Screen, useLoad } from '@/components/ui'
 import { useSession } from '@/session'
 
@@ -41,6 +42,7 @@ export default function Approvals() {
           </Body>
         </Card>
       ))}
+      <PhoneKeyCard />
     </Screen>
   )
 }
