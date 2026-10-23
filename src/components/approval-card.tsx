@@ -1,7 +1,8 @@
-import { formatULXC, refusalText, type AgentApproval } from '@talyvor/bff-client'
+import { BffError, formatULXC, refusalText, type AgentApproval } from '@talyvor/bff-client'
 import { useState } from 'react'
 import { View } from 'react-native'
 
+import { signWithThisPhone, thisPhoneDevice } from '../keys'
 import { useSession } from '../session'
 import { useTheme } from '../theme'
 import { Body, Button, Card, Figure } from './ui'
@@ -18,10 +19,14 @@ export function ApprovalCard({ approval, agentName, onDecided }: { approval: Age
     setBusy(true)
     setRefusal('')
     try {
-      await client[decision](approval.id)
+      // With this phone's key on, Lens takes the decision only signed: Face ID or a fingerprint, over this approval's challenge.
+      const assertion = (await thisPhoneDevice())
+        ? await signWithThisPhone((await client.approvalChallenge(approval.id)).challenge, `${decision === 'approve' ? 'Approve' : 'Deny'} ${formatULXC(approval.amount_ulxc)} for ${agentName}`)
+        : undefined
+      await client[decision](approval.id, assertion)
       onDecided()
     } catch (err) {
-      setRefusal(refusalText(err))
+      setRefusal(err instanceof BffError ? refusalText(err) : `Nothing changed: ${(err as Error).message}`)
     } finally {
       setBusy(false)
     }

@@ -68,6 +68,12 @@ export async function signWithThisPhone(challenge: string, reason: string): Prom
   return { device_id, challenge, signature: await TalyvorKeys.sign(ALIAS, deviceMessage(challenge), reason) }
 }
 
+/** This phone's signature over a payment request's approval statement: Lens's challenge is its SHA-256, so the key signs
+ * exactly the statement the screen checked, whatever challenge came with it. */
+export async function signStatement(statement: string, reason: string): Promise<DeviceAssertion> {
+  return signWithThisPhone(toBase64url(await sha256(utf8(statement))), reason)
+}
+
 /** On sign-out: the key is deleted from the phone's hardware, so nothing on this phone can sign again. */
 export async function forgetThisPhone(): Promise<void> {
   await SecureStore.deleteItemAsync(DEVICE)

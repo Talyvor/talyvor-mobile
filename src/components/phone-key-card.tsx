@@ -2,6 +2,7 @@ import { BffError, refusalText } from '@talyvor/bff-client'
 import { useEffect, useState } from 'react'
 
 import { biometricName, keysAvailable, thisPhoneDevice, turnOnPhoneApprovals } from '../keys'
+import { registerPush } from '../push'
 import { useSession } from '../session'
 import { useTheme } from '../theme'
 import { Body, Button, Card, Eyebrow } from './ui'
@@ -21,6 +22,7 @@ export function PhoneKeyCard() {
     setRefusal('')
     try {
       setDevice((await turnOnPhoneApprovals(client)).id)
+      registerPush(client).catch((err) => console.warn('push: not registered', err))
     } catch (err) {
       setRefusal(err instanceof BffError ? refusalText(err) : `Not turned on: ${(err as Error).message}`)
     } finally {
