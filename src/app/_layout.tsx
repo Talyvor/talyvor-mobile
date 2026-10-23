@@ -4,12 +4,14 @@ import { useFonts } from 'expo-font'
 import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 
+import { usePushApprovals } from '@/push'
 import { SessionProvider, useSession } from '@/session'
 import { fonts, useTheme } from '@/theme'
 
 function Navigator() {
-  const { ready, signedIn } = useSession()
+  const { ready, signedIn, client } = useSession()
   const { c, dark } = useTheme()
+  usePushApprovals(client, ready && signedIn)
   if (!ready) return null
   return (
     <>
@@ -26,6 +28,8 @@ function Navigator() {
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="agents/[id]" options={{ headerShown: true, title: 'Agent' }} />
           <Stack.Screen name="payees/[id]" options={{ headerShown: true, title: 'Pay' }} />
+          <Stack.Screen name="approve/[id]" options={{ headerShown: true, title: 'Approve' }} />
+          <Stack.Screen name="approvals/[id]" options={{ headerShown: true, title: 'Approval' }} />
           <Stack.Screen name="widget" />
         </Stack.Protected>
         <Stack.Protected guard={!signedIn}>

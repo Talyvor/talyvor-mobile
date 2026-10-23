@@ -34,6 +34,7 @@
           "faceIDPermission": "Talyvor uses Face ID so that only you can approve what your agents ask for."
         }
       ],
+      "expo-notifications",
       "expo-web-browser",
       "expo-font",
       "expo-image",

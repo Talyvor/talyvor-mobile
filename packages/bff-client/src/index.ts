@@ -137,6 +137,42 @@ export interface DeviceAssertion {
   signature: string
 }
 
+/** Lens economy.PaymentRequest (B40.3): payments prepared for the owner, each with its decision and the rule that made it. */
+export interface PaymentRequest {
+  id: string
+  /** pending_approval | auto | blocked | approved | cancelled */
+  status: string
+  summary: string
+  client: string
+  agent_id?: string
+  totals: Record<string, number>
+  items: PaymentRequestItem[]
+  created_at: string
+}
+
+export interface PaymentRequestItem {
+  position: number
+  payee_id: string
+  payee_name: string
+  listing_id?: string
+  currency: string
+  amount_minor: number
+  reference: string
+  /** auto | needs_approval | blocked */
+  decision: string
+  reason: string
+  rule?: string
+  pay_status?: string
+}
+
+/** Lens economy.ApprovalStatement (B40.5): exactly what the approval signs. */
+export interface ApprovalStatement {
+  request_id: string
+  items: { position: number; payee_id: string; currency: string; amount_minor: number; reference: string }[] | null
+  totals: Record<string, number>
+  expires_at: string
+}
+
 /** What the BFF answers a phone's sign-in: a session token for the Authorization header. */
 export interface MobileSession {
   token: string
@@ -179,9 +215,13 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     signIn: (idToken: string) => call<MobileSession>('POST', '/auth/mobile/session', { id_token: idToken }),
     book: () => call<AgentBook>('GET', '/api/agents'),
     approvals: () => call<{ approvals: AgentApproval[] | null }>('GET', '/api/agents/approvals'),
-    // Sent without a passkey assertion: Lens says whether this workspace may decide without one.
-    approve: (id: string) => call<AgentApproval>('POST', `/api/agents/approvals/${e(id)}/approve`),
-    deny: (id: string) => call<AgentApproval>('POST', `/api/agents/approvals/${e(id)}/deny`),
+    /** The challenge approving or denying one approval is signed over. */
+    approvalChallenge: (id: string) => call<{ challenge: string }>('POST', `/api/agents/approvals/${e(id)}/challenge`),
+    // Without an assertion Lens says whether this workspace may decide without one.
+    approve: (id: string, assertion?: DeviceAssertion) =>
+      call<AgentApproval>('POST', `/api/agents/approvals/${e(id)}/approve`, assertion ? { assertion } : undefined),
+    deny: (id: string, assertion?: DeviceAssertion) =>
+      call<AgentApproval>('POST', `/api/agents/approvals/${e(id)}/deny`, assertion ? { assertion } : undefined),
     rules: (id: string) => call<AgentRules>('GET', `/api/agents/${e(id)}/rules`),
     pause: (id: string, reason: string) => call<Agent>('POST', `/api/agents/${e(id)}/pause`, { reason }),
     resume: (id: string) => call<Agent>('POST', `/api/agents/${e(id)}/resume`),
@@ -203,6 +243,15 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     /** Keeps this phone's key as the person's; every byte string is base64url. */
     registerDevice: (body: { platform: string; name: string; public_key: string; challenge: string; signature: string; attestation: string }) =>
       call<DeviceKey>('POST', '/api/money/devices', body),
+    /** The APNs or FCM token Lens pushes this device's approvals to (B40.15). */
+    setPushToken: (deviceId: string, push_token: string) => call<DeviceKey>('POST', `/api/money/devices/${e(deviceId)}/push-token`, { push_token }),
+    paymentRequest: (id: string) => call<PaymentRequest>('GET', `/api/money/payment-requests/${e(id)}`),
+    /** The statement approving exactly these items, which the approval signs. */
+    requestApproval: (id: string, positions: number[]) =>
+      call<{ statement: string; challenge: string }>('POST', `/api/money/payment-requests/${e(id)}/approval`, { positions }),
+    /** Keeps the signed approval; Lens then pays each approved item once. */
+    approveRequest: (id: string, statement: string, assertion: DeviceAssertion) =>
+      call<PaymentRequest>('POST', `/api/money/payment-requests/${e(id)}/approve`, { statement, assertion }),
   }
 }
 
