@@ -277,6 +277,8 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
       const res = await send('POST', '/api/chat/voice/speech', JSON.stringify({ input }), { 'Content-Type': 'application/json' })
       return { audio: await res.arrayBuffer(), type: res.headers.get('Content-Type') ?? '' }
     },
+    /** The requests waiting for the person's approval: the bills an assistant, Chat or an agent prepared for them. */
+    pendingPaymentRequests: () => call<{ requests: PaymentRequest[] | null }>('GET', '/api/money/payment-requests?status=pending_approval'),
     paymentRequest: (id: string) => call<PaymentRequest>('GET', `/api/money/payment-requests/${e(id)}`),
     /** The statement approving exactly these items, which the approval signs. */
     requestApproval: (id: string, positions: number[]) =>
