@@ -9,7 +9,8 @@ import { useSession } from '@/session'
 import { fonts, useTheme } from '@/theme'
 
 // B40.17 — where "What's due in Talyvor" and "Pay my bills in Talyvor" land: the payments prepared for the person's
-// approval. Nothing is paid here; "Pay my bills" with one request waiting goes straight to its approval card.
+// approval. Nothing is paid here; "Pay my bills" goes straight to the approval card of the oldest request waiting, and
+// each decided card offers the next.
 
 const payWord = (n: number) => (n === 1 ? '1 payment' : `${n} payments`)
 
@@ -22,7 +23,8 @@ export default function Bills() {
   const unlisted = error instanceof BffError && (error.status === 404 || error.status === 405)
 
   useEffect(() => {
-    if (pay === '1' && data?.length === 1) router.replace({ pathname: '/approve/[id]', params: { id: data[0].id } })
+    // Lens lists newest first, so the oldest bill is the last.
+    if (pay === '1' && data?.length) router.replace({ pathname: '/approve/[id]', params: { id: data[data.length - 1].id, pay: '1' } })
   }, [pay, data])
 
   return (
