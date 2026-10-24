@@ -27,7 +27,7 @@ jest.mock('expo-auth-session', () => ({
 let mockUuid = 0
 jest.mock('expo-crypto', () => ({ randomUUID: () => `uuid-${++mockUuid}` }))
 const mockSnapshots: { signedIn: boolean; agents: { id: string; paused: boolean; pauseUrl: string }[]; payees: { id: string; name: string; last: string; openUrl: string }[] }[] = []
-jest.mock('expo-widgets', () => ({ createWidget: () => ({ updateSnapshot: (p: never) => mockSnapshots.push(p) }) }))
+jest.mock('expo-widgets', () => ({ ...jest.requireActual('../../__mocks__/expo-widgets'), createWidget: () => ({ updateSnapshot: (p: never) => mockSnapshots.push(p) }) }))
 jest.mock('../config', () => ({ config: { bffUrl: 'https://bff.test', oidcIssuer: 'https://idp', oidcClientId: 'mobile' } }))
 
 /** The BFF as the app sees it: one workspace, two agents, one approval waiting. */

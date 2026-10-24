@@ -6,6 +6,7 @@ import { Alert } from 'react-native'
 
 import { approveBatch, batchOf } from './approve-batch'
 import { biometricName, thisPhoneDevice } from './keys'
+import { syncLiveActivities } from './live-activity'
 
 // B40.14 — Lens (B40.15) pushes every held payment and every request prepared for approval to the APNs or FCM token of
 // each phone whose approval key is on, with the payee and the amount; tapping one opens its approval card. The data is
@@ -54,6 +55,7 @@ export function usePushApprovals(client: BffClient, signedIn: boolean) {
     if (response.actionIdentifier === APPROVE_ACTION && data?.type === 'payment_request' && href && batch) {
       approved.current = response
       approveBatch(client, String(data.request_id), batch)
+        .then(() => syncLiveActivities(client))
         .catch((err: Error) => Alert.alert('Nothing was approved', err instanceof BffError ? refusalText(err) : err.message))
         .finally(() => router.push(href))
     } else if (href && (response.actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER || response.actionIdentifier === APPROVE_ACTION)) router.push(href)

@@ -17,7 +17,6 @@ jest.mock('expo-secure-store', () => ({
   deleteItemAsync: async (k: string) => void mockStore.delete(k),
 }))
 jest.mock('expo-font', () => ({ ...jest.requireActual('expo-font'), useFonts: () => [true, null] }))
-jest.mock('expo-widgets', () => ({ createWidget: () => ({ updateSnapshot: () => undefined }) }))
 jest.mock('expo-crypto', () => ({
   CryptoDigestAlgorithm: { SHA256: 'SHA-256' },
   digest: async (_: string, b: Uint8Array) => Uint8Array.from(jest.requireActual('node:crypto').createHash('sha256').update(b).digest()).buffer,

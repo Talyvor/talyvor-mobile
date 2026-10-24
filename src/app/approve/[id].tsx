@@ -6,6 +6,7 @@ import { Pressable, Text, View } from 'react-native'
 import { Body, Button, Card, Eyebrow, Figure, Headline, LoadState, Screen, useLoad } from '@/components/ui'
 import { approveBatch, payWord, totalsOf } from '@/approve-batch'
 import { biometricName } from '@/keys'
+import { syncLiveActivities } from '@/live-activity'
 import { useSession } from '@/session'
 import { fonts, useTheme } from '@/theme'
 
@@ -58,6 +59,7 @@ export default function ApproveScreen() {
     setRefusal('')
     try {
       setDone(await approveBatch(client, r!.id, ticked))
+      void syncLiveActivities(client)
     } catch (err) {
       setRefusal(err instanceof BffError ? refusalText(err) : `Nothing was approved: ${(err as Error).message}`)
     } finally {
