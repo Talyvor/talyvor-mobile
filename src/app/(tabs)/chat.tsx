@@ -1,11 +1,11 @@
-import { BffError, formatMinor, refusalText, type OutsidePayee, type PaymentRequest } from '@talyvor/bff-client'
+import { BffError, formatMinor, formatULXC, refusalText, type OutsidePayee, type PaymentRequest } from '@talyvor/bff-client'
 import { RecordingPresets, requestRecordingPermissionsAsync, setAudioModeAsync, useAudioRecorder } from 'expo-audio'
 import * as Crypto from 'expo-crypto'
 import { router } from 'expo-router'
 import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import { AppState, Pressable, Switch, Text, TextInput, View } from 'react-native'
 
-import { bareAmount, currencyOf, parsePay, payeesCalled, PAUSE_ALL, RESUME_ALL, type Amount, type PayAsk } from '@/chat-commands'
+import { bareAmount, currencyOf, parsePay, payeesCalled, PAUSE_ALL, RESUME_ALL, spendOf, WHATS_DUE, type Amount, type PayAsk } from '@/chat-commands'
 import { Body, Button, Card, Eyebrow, Headline, Screen } from '@/components/ui'
 import { biometricName } from '@/keys'
 import { useSession } from '@/session'
@@ -14,7 +14,8 @@ import { AI_NOTICE, heyTalyAvailable, listenForHeyTaly, notToldYet, sayAloud } f
 
 // B40.16 — Chat on the phone: typed, held-to-talk, or after "Hey Taly" while the app is open. "Pause all agents" asks
 // first; "pay the ACME invoice" is prepared with Lens, read back, and paid only once the person approves it with Face ID
-// on the approval card. Anything else is asked of the model, as on the web.
+// on the approval card. "What's due this week?" and "what did Research spend?" are read from Lens (B41.38). Anything else
+// is asked of the model, as on the web.
 
 type Confirm = 'pause-all' | 'resume-all'
 
@@ -27,6 +28,8 @@ interface Turn {
   confirm?: Confirm
   /** a prepared payment request, opened on its approval card */
   approve?: string
+  /** a screen the answer came from */
+  open?: { label: string; go: () => void }
   settled?: boolean
 }
 
@@ -50,6 +53,17 @@ function readBack(r: PaymentRequest): string {
   return it.decision === 'blocked'
     ? `The payment of ${what} can’t be made: ${it.reason}.`
     : `I’ve prepared a payment of ${what}. Nothing is paid until you approve it with ${biometricName}.`
+}
+
+const payWord = (n: number) => (n === 1 ? '1 payment' : `${n} payments`)
+
+/** The payments waiting for approval, said as one sentence. */
+function dueText(requests: PaymentRequest[]): string {
+  const items = requests.flatMap((r) => r.items)
+  if (items.length === 0) return 'Nothing is waiting for your approval.'
+  const each = items.map((it) => `${formatMinor(it.amount_minor, it.currency)} to ${it.payee_name}`)
+  const list = each.length === 1 ? each[0] : `${each.slice(0, -1).join(', ')} and ${each[each.length - 1]}`
+  return `${payWord(items.length)} ${items.length === 1 ? 'is' : 'are'} waiting for your approval: ${list}. Nothing is paid until you approve it with ${biometricName}.`
 }
 
 const why = (err: unknown) => (err instanceof BffError && err.status < 500 ? refusalText(err) : 'No answer just now. You can try again.')
@@ -97,6 +111,21 @@ export default function ChatScreen() {
       if (waiting && much) return await prepare(waiting, much, voiced)
       if (PAUSE_ALL.test(text)) return reply({ text: CONFIRM['pause-all'].said, voiced, confirm: 'pause-all' })
       if (RESUME_ALL.test(text)) return reply({ text: CONFIRM['resume-all'].said, voiced, confirm: 'resume-all' })
+      if (WHATS_DUE.test(text)) {
+        const due = ((await client.pendingPaymentRequests()).requests ?? []).filter((r) => r.status === 'pending_approval')
+        return reply({ text: dueText(due), voiced, open: due.length > 0 ? { label: 'See what is due', go: () => router.push('/bills') } : undefined })
+      }
+      const spender = spendOf(text)
+      const agent = spender ? payeesCalled((await client.book()).agents ?? [], spender) : []
+      if (agent.length === 1) {
+        const a = agent[0]
+        return reply({
+          text: `${a.name} has spent ${formatULXC(a.spent_ulxc)} so far, and holds ${formatULXC(a.balance_ulxc)}.${a.paused_at ? ' It is paused.' : ''}`,
+          voiced,
+          open: { label: `Open ${a.name}`, go: () => router.push({ pathname: '/agents/[id]', params: { id: a.id } }) },
+        })
+      }
+      if (agent.length > 1) return reply({ text: `More than one agent is called “${spender}”: ${agent.map((x) => x.name).join(', ')}. Say the full name.`, voiced })
       const ask = parsePay(text)
       if (ask) {
         const matches = payeesCalled((await client.payees()).payees ?? [], ask.payee)
@@ -208,7 +237,7 @@ export default function ChatScreen() {
     <Screen>
       <Eyebrow>Chat</Eyebrow>
       <Headline>Ask Talyvor</Headline>
-      <Body muted>Ask anything, or say “pause all agents” or “pay the ACME invoice”. Nothing is paid until you approve it with {biometricName}.</Body>
+      <Body muted>Ask anything, or say “what’s due this week?”, “what did Research spend?”, “pause all agents” or “pay the ACME invoice”. Nothing is paid until you approve it with {biometricName}.</Body>
       {heyTalyAvailable() ? (
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <Body style={{ flex: 1 }}>Listen for “Hey Taly” while the app is open</Body>
@@ -225,6 +254,7 @@ export default function ChatScreen() {
             <Card>
               <Body>{t.text}</Body>
               {t.confirm && !t.settled ? <Button primary label={CONFIRM[t.confirm].yes} onPress={() => void decide(t)} /> : null}
+              {t.open ? <Button label={t.open.label} onPress={t.open.go} /> : null}
               {t.approve ? (
                 <Button primary label={`Review and approve with ${biometricName}`} onPress={() => router.push({ pathname: '/approve/[id]', params: { id: t.approve! } })} />
               ) : null}

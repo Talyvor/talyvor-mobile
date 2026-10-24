@@ -106,8 +106,12 @@ function mockLens(heard: string) {
         return json(request())
       case 'GET /api/money/payment-requests/preq_9':
         return json(request())
-      case 'GET /api/agents':
-        return json({ workspace_balance_ulxc: 0, allocated_ulxc: 0, unallocated_ulxc: 0, spent_ulxc: 0, agents: [] })
+      case 'GET /api/agents': {
+        const research = { id: 'ag_research', name: 'Research', balance_ulxc: 4_000_000, spent_ulxc: 1_230_000, created_at: '2026-10-01T00:00:00Z' }
+        return json({ workspace_balance_ulxc: 5_230_000, allocated_ulxc: 5_230_000, unallocated_ulxc: 0, spent_ulxc: 1_230_000, agents: [research] })
+      }
+      case 'GET /api/money/payment-requests?status=pending_approval':
+        return json({ requests: [request()] })
       case 'GET /api/money/payments':
         return json({ payments: [] })
       case 'POST /api/money/payment-requests/preq_9/approval': {
@@ -196,4 +200,27 @@ test('a typed question is asked of the model on "auto" and the answer is shown, 
   expect(await screen.findByText('Your agents spent 12 LXC this week.')).toBeTruthy()
   expect(lens.asked).toEqual([{ model: 'auto', stream: true, messages: [{ role: 'user', content: 'What did my agents spend this week?' }] }])
   expect(lens.spoken).toEqual([])
+})
+
+test('B41.38: "what’s due this week?" said aloud reads back the payments waiting, and "what did Research spend?" reads its wallet', async () => {
+  mockStore.set('talyvor.chat.voice-notice', 'told')
+  const lens = mockLens('What’s due this week?')
+  const app = await renderRouter('./src/app', { initialUrl: '/chat' })
+
+  const mic = await screen.findByLabelText('Hold to talk')
+  await fireEvent(mic, 'pressIn')
+  await waitFor(() => expect(mockMic.recording).toBe(true))
+  await fireEvent(mic, 'pressOut')
+  const due = '1 payment is waiting for your approval: 120.00 GBP to ACME Ltd. Nothing is paid until you approve it with Face ID.'
+  expect(await screen.findByText(due)).toBeTruthy()
+  await waitFor(() => expect(lens.spoken).toEqual([due]))
+  expect(screen.getByText('See what is due')).toBeTruthy()
+
+  await fireEvent.changeText(screen.getByLabelText('Message'), 'What did Research spend?')
+  await fireEvent.press(screen.getByText('Send'))
+  expect(await screen.findByText('Research has spent 1.23 LXC so far, and holds 4 LXC.')).toBeTruthy()
+  expect(lens.asked).toEqual([]) // answered from the wallet, not the model
+  expect(lens.prepared).toEqual([])
+  await fireEvent.press(screen.getByText('Open Research'))
+  await waitFor(() => expect(app.getPathname()).toBe('/agents/ag_research'))
 })
