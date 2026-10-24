@@ -39,6 +39,7 @@
       "expo-font",
       "expo-image",
       "./plugins/with-android-widget-links",
+      "./plugins/with-app-shortcuts",
       [
         "expo-splash-screen",
         {

@@ -1,0 +1,7 @@
+[
+  { "id": "whats_due", "intent": "WhatsDueIntent", "title": "What's due", "phrase": "What's due in", "url": "talyvor://bills", "symbol": "calendar" },
+  { "id": "pay_bills", "intent": "PayBillsIntent", "title": "Pay my bills", "phrase": "Pay my bills in", "url": "talyvor://bills?pay=1", "symbol": "checkmark.seal", "unlock": true },
+  { "id": "pause_agents", "intent": "PauseAgentsIntent", "title": "Pause my agents", "phrase": "Pause my agents in", "url": "talyvor://pause-all", "symbol": "pause.circle" },
+  { "id": "approve", "intent": "ApproveIntent", "title": "Approve", "phrase": "Approve in", "url": "talyvor://approvals", "symbol": "hand.thumbsup" },
+  { "id": "agent_spend", "intent": "AgentSpendIntent", "title": "What my agents spent", "phrase": "What did my agents spend in", "url": "talyvor://statement", "symbol": "list.bullet.rectangle" }
+]
