@@ -100,6 +100,9 @@ export interface OutsidePayee {
   country: string
   /** a close or no match cannot be paid until the owner confirms it with a passkey */
   needs_confirmation: boolean
+  /** read only for the payee's own currency; never shown or read aloud */
+  iban?: string
+  routing_number?: string
   /** set while screening holds the payee for an operator */
   screening?: string
   created_at: string
@@ -192,12 +195,10 @@ export class BffError extends Error {
 const e = encodeURIComponent
 
 export function createBffClient(baseUrl: string, token: () => string | null, fetchImpl: typeof fetch = fetch) {
-  async function call<T>(method: string, path: string, body?: object, extra: Record<string, string> = {}): Promise<T> {
-    const headers: Record<string, string> = { Accept: 'application/json', ...extra }
+  async function send(method: string, path: string, body: string | FormData | undefined, headers: Record<string, string>): Promise<Response> {
     const t = token()
     if (t) headers.Authorization = `Bearer ${t}`
-    if (body) headers['Content-Type'] = 'application/json'
-    const res = await fetchImpl(baseUrl + path, { method, headers, body: body ? JSON.stringify(body) : undefined })
+    const res = await fetchImpl(baseUrl + path, { method, headers, body })
     if (!res.ok) {
       let sentence = ''
       try {
@@ -207,7 +208,13 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
       }
       throw new BffError(res.status, path, sentence)
     }
-    return (await res.json()) as T
+    return res
+  }
+
+  async function call<T>(method: string, path: string, body?: object, extra: Record<string, string> = {}): Promise<T> {
+    const headers: Record<string, string> = { Accept: 'application/json', ...extra }
+    if (body) headers['Content-Type'] = 'application/json'
+    return (await (await send(method, path, body ? JSON.stringify(body) : undefined, headers)).json()) as T
   }
 
   return {
@@ -222,6 +229,9 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
       call<AgentApproval>('POST', `/api/agents/approvals/${e(id)}/approve`, assertion ? { assertion } : undefined),
     deny: (id: string, assertion?: DeviceAssertion) =>
       call<AgentApproval>('POST', `/api/agents/approvals/${e(id)}/deny`, assertion ? { assertion } : undefined),
+    /** Every agent's next request or payment is refused until resume-all; each agent's own pause stays as it was. */
+    pauseAll: (reason: string) => call<{ all_paused: boolean }>('POST', '/api/agents/pause-all', { reason }),
+    resumeAll: () => call<{ all_paused: boolean }>('POST', '/api/agents/resume-all'),
     rules: (id: string) => call<AgentRules>('GET', `/api/agents/${e(id)}/rules`),
     pause: (id: string, reason: string) => call<Agent>('POST', `/api/agents/${e(id)}/pause`, { reason }),
     resume: (id: string) => call<Agent>('POST', `/api/agents/${e(id)}/resume`),
@@ -245,6 +255,28 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
       call<DeviceKey>('POST', '/api/money/devices', body),
     /** The APNs or FCM token Lens pushes this device's approvals to (B40.15). */
     setPushToken: (deviceId: string, push_token: string) => call<DeviceKey>('POST', `/api/money/devices/${e(deviceId)}/push-token`, { push_token }),
+    /** Payments Chat prepared for the person to approve: Lens judges each and moves no money, and one said aloud always
+     * waits for approval (B40.3, B40.12). */
+    preparePayment: (voice: boolean, items: { payee_id: string; currency: string; amount_minor: number; reference: string }[], key: string) =>
+      call<PaymentRequest>('POST', '/api/money/payment-requests', { voice, items }, { 'Idempotency-Key': key }),
+    /** One Chat answer, on model "auto": Lens picks the cheapest model that answers well, and bills it like the web's Chat. */
+    ask: async (messages: { role: 'user' | 'assistant'; content: string }[]) =>
+      answerOf(
+        await (
+          await send('POST', '/api/ai/stream/openai/v1/chat/completions', JSON.stringify({ model: 'auto', stream: true, messages }), {
+            Accept: 'text/event-stream',
+            'Content-Type': 'application/json',
+          })
+        ).text(),
+      ),
+    /** The recording, as text, by Lens's transcription (B40.10); `form` holds it as "file". */
+    transcribe: async (form: FormData) =>
+      (((await (await send('POST', '/api/chat/voice/transcriptions', form, { Accept: 'application/json' })).json()) as { text?: string }).text ?? '').trim(),
+    /** The words, spoken by Lens's speech: the audio and its type. */
+    speech: async (input: string) => {
+      const res = await send('POST', '/api/chat/voice/speech', JSON.stringify({ input }), { 'Content-Type': 'application/json' })
+      return { audio: await res.arrayBuffer(), type: res.headers.get('Content-Type') ?? '' }
+    },
     paymentRequest: (id: string) => call<PaymentRequest>('GET', `/api/money/payment-requests/${e(id)}`),
     /** The statement approving exactly these items, which the approval signs. */
     requestApproval: (id: string, positions: number[]) =>
@@ -256,6 +288,19 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
 }
 
 export type BffClient = ReturnType<typeof createBffClient>
+
+/** The answer in an OpenAI-shaped event stream, read whole; an error event is the refusal. */
+export function answerOf(events: string): string {
+  let text = ''
+  for (const line of events.split('\n')) {
+    const data = line.startsWith('data:') ? line.slice(5).trim() : ''
+    if (data === '' || data === '[DONE]') continue
+    const frame = JSON.parse(data) as { choices?: { delta?: { content?: string } }[]; error?: { message?: string } | string }
+    if (frame.error) throw new BffError(400, '/api/ai/stream', typeof frame.error === 'string' ? frame.error : (frame.error.message ?? ''))
+    text += frame.choices?.[0]?.delta?.content ?? ''
+  }
+  return text.trim()
+}
 
 /** 12,500,000 µLXC → `12.5 LXC`: every µLXC shown, no trailing zeros. */
 export function formatULXC(micros: number): string {

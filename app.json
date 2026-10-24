@@ -70,7 +70,14 @@
             }
           ]
         }
-      ]
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Talyvor listens only while you hold the microphone, or after you say “Hey Taly” with the app open."
+        }
+      ],
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true

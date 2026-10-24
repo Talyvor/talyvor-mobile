@@ -16,6 +16,7 @@ export default function TabsLayout() {
         tabBarLabelPosition: 'beside-icon',
       }}>
       <Tabs.Screen name="index" options={{ title: 'Home' }} />
+      <Tabs.Screen name="chat" options={{ title: 'Chat' }} />
       <Tabs.Screen name="approvals" options={{ title: 'Approvals' }} />
       <Tabs.Screen name="statement" options={{ title: 'Statement' }} />
       <Tabs.Screen name="pay" options={{ title: 'Pay' }} />
