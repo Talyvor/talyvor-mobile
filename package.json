@@ -53,5 +53,8 @@
     "jest": "^30.5.2",
     "jest-expo": "^58.0.11",
     "typescript": "^6.0.3"
+  },
+  "overrides": {
+    "zod": "^4.6.6"
   }
 }
