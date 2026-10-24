@@ -1,10 +1,11 @@
-import { BffError, formatMinor, refusalText, type ApprovalStatement, type PaymentRequest, type PaymentRequestItem } from '@talyvor/bff-client'
+import { BffError, formatMinor, refusalText, type PaymentRequest } from '@talyvor/bff-client'
 import { useLocalSearchParams } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
 
 import { Body, Button, Card, Eyebrow, Figure, Headline, LoadState, Screen, useLoad } from '@/components/ui'
-import { biometricName, signStatement } from '@/keys'
+import { approveBatch, payWord, totalsOf } from '@/approve-batch'
+import { biometricName } from '@/keys'
 import { useSession } from '@/session'
 import { fonts, useTheme } from '@/theme'
 
@@ -22,22 +23,6 @@ const DECIDED: Record<string, string> = {
 /** Who prepared it, in words: Lens names the client "chat", "voice", "mcp:<client id>" or "key:<key id>" (B40.3). */
 const askedBy = (client: string) =>
   client.startsWith('mcp:') ? 'an assistant you connected' : client.startsWith('key:') ? 'an agent' : client === 'chat' ? 'Chat' : client === 'voice' ? 'a voice request' : client
-
-/** Totals by currency, as one line. */
-const totalsOf = (items: PaymentRequestItem[]) =>
-  Object.entries(items.reduce<Record<string, number>>((t, it) => ({ ...t, [it.currency]: (t[it.currency] ?? 0) + it.amount_minor }), {}))
-    .map(([cur, minor]) => formatMinor(minor, cur))
-    .join(' + ')
-
-/** The statement Lens wrote is what the key signs: refuse to sign one that is not exactly the ticked payments. */
-function sameAsShown(statement: string, shown: PaymentRequestItem[]): boolean {
-  const s = JSON.parse(statement) as ApprovalStatement
-  const key = (x: { position: number; payee_id: string; currency: string; amount_minor: number; reference: string }) =>
-    [x.position, x.payee_id, x.currency, x.amount_minor, x.reference].join('\u0000')
-  const want = shown.map(key).sort()
-  const got = (s.items ?? []).map(key).sort()
-  return want.length === got.length && want.every((k, i) => k === got[i])
-}
 
 export default function ApproveScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
@@ -67,19 +52,12 @@ export default function ApproveScreen() {
   const toggle = (p: number) => setUnticked((s) => (s.has(p) ? new Set([...s].filter((x) => x !== p)) : new Set(s).add(p)))
   const agent = r?.agent_id ? (data?.agents.find((a) => a.id === r.agent_id)?.name ?? r.agent_id) : ''
   const paidBefore = new Set((data?.payments ?? []).filter((p) => p.status === 'completed').map((p) => p.payee_id))
-  const payWord = (n: number) => (n === 1 ? '1 payment' : `${n} payments`)
 
   const approve = async () => {
     setBusy(true)
     setRefusal('')
     try {
-      const prepared = await client.requestApproval(r!.id, ticked.map((it) => it.position))
-      if (!sameAsShown(prepared.statement, ticked)) {
-        setRefusal('What you were asked to sign is not what is shown here, so nothing was signed. Pull down to reload.')
-        return
-      }
-      const assertion = await signStatement(prepared.statement, `Approve ${payWord(ticked.length)}, ${totalsOf(ticked)}`)
-      setDone(await client.approveRequest(r!.id, prepared.statement, assertion))
+      setDone(await approveBatch(client, r!.id, ticked))
     } catch (err) {
       setRefusal(err instanceof BffError ? refusalText(err) : `Nothing was approved: ${(err as Error).message}`)
     } finally {

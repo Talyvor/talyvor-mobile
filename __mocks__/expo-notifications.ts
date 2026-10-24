@@ -5,3 +5,4 @@ export const setNotificationHandler = () => undefined
 export const requestPermissionsAsync = async () => ({ granted: false })
 export const getDevicePushTokenAsync = async () => ({ type: 'ios', data: '' })
 export const useLastNotificationResponse = () => null
+export const setNotificationCategoryAsync = async () => null
