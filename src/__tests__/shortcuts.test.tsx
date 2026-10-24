@@ -1,4 +1,4 @@
-import { renderRouter, screen, waitFor } from 'expo-router/testing-library'
+import { fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library'
 
 import shortcuts from '../../plugins/shortcuts.json'
 
@@ -18,8 +18,8 @@ jest.mock('../config', () => ({ config: { bffUrl: 'https://bff.test', oidcIssuer
 
 const { swiftSource, shortcutsXml } = jest.requireActual('../../plugins/with-app-shortcuts.js')
 
-/** The BFF with one request of two bills waiting for approval; any other call answers 404. */
-function mockBff() {
+/** The BFF with one request of two bills waiting for approval, plus any newer ones given; any other call answers 404. */
+function mockBff(newer: Record<string, unknown>[] = []) {
   const calls: string[] = []
   const request = {
     id: 'preq_1',
@@ -34,8 +34,9 @@ function mockBff() {
     created_at: '2026-10-24T08:00:00Z',
   }
   const routes: Record<string, unknown> = {
-    'GET /api/money/payment-requests?status=pending_approval': { requests: [request] },
+    'GET /api/money/payment-requests?status=pending_approval': { requests: [...newer, request] },
     'GET /api/money/payment-requests/preq_1': request,
+    ...Object.fromEntries(newer.map((r) => [`GET /api/money/payment-requests/${r.id}`, r])),
     'GET /api/agents': { workspace_balance_ulxc: 0, allocated_ulxc: 0, unallocated_ulxc: 0, spent_ulxc: 0, agents: [] },
   }
   globalThis.fetch = jest.fn(async (url: string, init: RequestInit = {}) => {
@@ -84,5 +85,20 @@ test('"Pay my bills" lands on the approval card of the bills due and pays nothin
   expect(screen.getByText(/^2 of 2 payments to approve, total/)).toBeTruthy()
   expect(screen.getByText('Approve 2 payments with Face ID')).toBeTruthy()
   await waitFor(() => expect(calls).toContain('GET /api/money/payment-requests/preq_1'))
+  expect(calls.filter((c) => c.startsWith('POST'))).toEqual([])
+})
+
+test('with several requests waiting, "Pay my bills" opens the oldest card, and a decided card opens the next', async () => {
+  const rent = { id: 'preq_2', status: 'pending_approval', summary: 'Office rent', client: 'chat', totals: { GBP: 90000 }, created_at: '2026-10-24T09:00:00Z',
+    items: [{ position: 1, payee_id: 'py_3', payee_name: 'Landlord', currency: 'GBP', amount_minor: 90000, reference: 'Nov', decision: 'needs_approval', reason: 'a new payee' }] }
+  // preq_0 was approved a moment ago and Lens has not dropped it from the list yet: it is not offered again.
+  const calls = mockBff([rent, { ...rent, id: 'preq_0', status: 'approved', summary: 'Paid already' }])
+  await renderRouter('./src/app', { initialUrl: '/bills?pay=1' })
+  expect(await screen.findByText('Bills due Friday')).toBeTruthy()
+  expect(screen.queryByText('Next bill due')).toBeNull()
+
+  await renderRouter('./src/app', { initialUrl: '/approve/preq_0?pay=1' })
+  fireEvent.press(await screen.findByText('Next bill due'))
+  expect(await screen.findByText('Bills due Friday')).toBeTruthy()
   expect(calls.filter((c) => c.startsWith('POST'))).toEqual([])
 })

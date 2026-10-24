@@ -1,5 +1,5 @@
 import { BffError, formatMinor, refusalText, type PaymentRequest } from '@talyvor/bff-client'
-import { useLocalSearchParams } from 'expo-router'
+import { router, useLocalSearchParams } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
 
@@ -26,7 +26,7 @@ const askedBy = (client: string) =>
   client.startsWith('mcp:') ? 'an assistant you connected' : client.startsWith('key:') ? 'an agent' : client === 'chat' ? 'Chat' : client === 'voice' ? 'a voice request' : client
 
 export default function ApproveScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>()
+  const { id, pay } = useLocalSearchParams<{ id: string; pay?: string }>()
   const { client } = useSession()
   const { c } = useTheme()
   const load = useCallback(async () => {
@@ -141,6 +141,9 @@ export default function ApproveScreen() {
           {refusal ? <Body style={{ color: c.critical }}>{refusal}</Body> : null}
           {pending ? (
             <Button primary label={busy ? 'Approving…' : `Approve ${payWord(ticked.length)} with ${biometricName}`} disabled={busy || !ticked.length} onPress={() => void approve()} />
+          ) : pay === '1' ? (
+            // "Pay my bills" (B40.17) walks the bills due one card at a time; each still needs its own approval.
+            <Button label="Next bill due" onPress={() => router.replace({ pathname: '/bills', params: { pay: '1' } })} />
           ) : null}
         </Card>
       ) : null}
