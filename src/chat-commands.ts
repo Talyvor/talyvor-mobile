@@ -64,12 +64,25 @@ export function parsePay(text: string): PayAsk | null {
 
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '')
 
-/** The saved payees a spoken name means: exactly that name, else the names it starts (“ACME” is “ACME Ltd”). */
-export function payeesCalled(payees: OutsidePayee[], said: string): OutsidePayee[] {
+/** The saved payees (or agents) a spoken name means: exactly that name, else the names it starts (“ACME” is “ACME Ltd”). */
+export function payeesCalled<T extends { name: string }>(payees: T[], said: string): T[] {
   const n = norm(said)
   if (n === '') return []
   const exact = payees.filter((p) => norm(p.name) === n)
   return exact.length > 0 ? exact : payees.filter((p) => norm(p.name).startsWith(n))
+}
+
+// B41.38 — "What's due this week?" lists the payments waiting for the person's approval, as the "What's due" shortcut
+// does (B40.17); "What did Research spend?" reads that agent's wallet. Both only read.
+export const WHATS_DUE = /^\s*(?:what[’']?s|what\s+is|what\s+are|what\s+bills\s+are)\s+(?:due|waiting|my\s+bills)(?:\s+(?:this|next)\s+week|\s+today|\s+for\s+me)?\s*[?.!]?\s*$/i
+
+const SPENT = /^\s*(?:what|how\s+much)\s+(?:did|has)\s+(.+?)\s+(?:spend|spent)(?:\s+so\s+far|\s+in\s+all)?\s*[?.!]?\s*$/i
+
+/** The agent a spend question names ("what did Research spend?"); a question about a period is for the model, because an
+ *  agent's wallet holds only what it has spent in all. */
+export function spendOf(text: string): string | null {
+  const name = SPENT.exec(text)?.[1].replace(/^(?:the\s+|my\s+)/i, '').replace(/\s+agent$/i, '')
+  return name ? name : null
 }
 
 /** A payee's own currency: a US routing number pays dollars, an IBAN outside the UK euros, anything else pounds. */
