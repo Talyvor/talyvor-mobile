@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 
 import { config } from './config'
 import { forgetThisPhone } from './keys'
+import { endLiveActivities } from './live-activity'
 import { clearWidget } from './widget-sync'
 
 const KEY = 'talyvor.session'
@@ -45,6 +46,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => {
     await SecureStore.deleteItemAsync(KEY)
     await clearWidget()
+    await endLiveActivities()
     await forgetThisPhone()
     setToken(null)
   }, [])
