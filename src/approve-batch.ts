@@ -6,7 +6,7 @@ import { signStatement } from './keys'
 // button (B41.34): Lens writes the statement for exactly the items shown, the screen checks it, and Face ID or a
 // fingerprint unlocks the device key that signs its SHA-256.
 
-export type BatchItem = NonNullable<ApprovalStatement['items']>[number]
+export type BatchItem = NonNullable<ApprovalStatement['items']>[number] & { payee_name?: string }
 
 /** Totals by currency, as one line. */
 export const totalsOf = (items: Pick<BatchItem, 'currency' | 'amount_minor'>[]) =>
@@ -28,7 +28,9 @@ function sameAsShown(statement: string, shown: BatchItem[]): boolean {
 export async function approveBatch(client: BffClient, requestId: string, shown: BatchItem[]): Promise<PaymentRequest> {
   const prepared = await client.requestApproval(requestId, shown.map((it) => it.position))
   if (!sameAsShown(prepared.statement, shown)) throw new Error('what you were asked to sign is not what was shown, so nothing was signed')
-  const assertion = await signStatement(prepared.statement, `Approve ${payWord(shown.length)}, ${totalsOf(shown)}`)
+  // The biometric prompt names every payment it signs: a notification shows a summary, the prompt shows the batch.
+  const each = shown.map((it) => `${it.payee_name || it.payee_id} ${formatMinor(it.amount_minor, it.currency)}`).join(', ')
+  const assertion = await signStatement(prepared.statement, `Approve ${payWord(shown.length)}, ${totalsOf(shown)}: ${each}`)
   return client.approveRequest(requestId, prepared.statement, assertion)
 }
 

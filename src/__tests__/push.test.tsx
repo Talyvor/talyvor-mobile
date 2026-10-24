@@ -35,11 +35,12 @@ jest.mock('expo-notifications', () => ({
 }))
 let mockTapResponse: unknown
 
-/** This phone's approval key, on (B40.13): it signs only when the biometric check passes. */
+/** This phone's approval key, on (B40.13): it signs only when the biometric check passes, whose prompt says `reason`. */
+const mockReasons: string[] = []
 const mockKey = generateKeyPairSync('ec', { namedCurve: 'P-256' })
 jest.mock('../../modules/talyvor-keys', () => ({
   isAvailable: () => true,
-  sign: async (_: string, message: string) => jest.requireActual('node:crypto').sign('sha256', Buffer.from(message), { key: mockKey.privateKey, dsaEncoding: 'der' }).toString('base64url'),
+  sign: async (_: string, message: string, reason: string) => mockReasons.push(reason) && jest.requireActual('node:crypto').sign('sha256', Buffer.from(message), { key: mockKey.privateKey, dsaEncoding: 'der' }).toString('base64url'),
   deleteKey: async () => undefined,
 }))
 
@@ -148,8 +149,8 @@ test('talyvor://approve/<id> opens the same card', async () => {
 // B41.34 DONE: a batch approved from the notification with Face ID is decided in Lens with the device key's signature
 // over the batch hash.
 const shownItems = [
-  { position: 1, payee_id: 'py_1', currency: 'GBP', amount_minor: 2500, reference: 'Oct' },
-  { position: 2, payee_id: 'py_2', currency: 'GBP', amount_minor: 900, reference: 'Run 4' },
+  { position: 1, payee_id: 'py_1', payee_name: 'Acme Hosting', currency: 'GBP', amount_minor: 2500, reference: 'Oct' },
+  { position: 2, payee_id: 'py_2', payee_name: 'Bolt Couriers', currency: 'GBP', amount_minor: 900, reference: 'Run 4' },
 ]
 
 test("Approve with Face ID on a request's notification signs the hash of exactly the items it names, and Lens approves them", async () => {
@@ -159,7 +160,8 @@ test("Approve with Face ID on a request's notification signs the hash of exactly
 
   expect(await screen.findByText('Approved. Each payment you approved is paid once.')).toBeTruthy()
   // mockLens approves only a device-key signature over the statement's SHA-256, the batch hash.
-  expect(JSON.parse(lens.approvedStatement).items).toEqual(shownItems)
+  expect(JSON.parse(lens.approvedStatement).items).toEqual(shownItems.map(({ payee_name: _, ...it }) => it))
+  expect(mockReasons.at(-1)).toBe('Approve 2 payments, 34.00 GBP: Acme Hosting 25.00 GBP, Bolt Couriers 9.00 GBP')
   expect(mockCategories.payment_request).toEqual([expect.objectContaining({ identifier: 'approve', buttonTitle: 'Approve with Face ID' })])
 })
 
