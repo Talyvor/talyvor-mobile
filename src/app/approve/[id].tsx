@@ -79,9 +79,6 @@ export default function ApproveScreen() {
       {notFound ? <Body muted>There is no request at this address. It may belong to another workspace.</Body> : <LoadState loading={loading && !data} error={error} />}
       {r ? (
         <Card>
-          {/* Lens pays approved requests with test money (economy/payment_approvals.go, FundingTest).
-              shortcut: always shown, drop it once Lens pays approved requests with live money. */}
-          <Text style={{ fontFamily: fonts.uiMedium, fontSize: 12, letterSpacing: 1.2, textTransform: 'uppercase', color: c.caution }}>Preview — test money only</Text>
           <Body muted>
             From {agent ? `${agent}’s account` : 'the company’s account'} · asked by {askedBy(r.client)} · {new Date(r.created_at).toLocaleString()}
           </Body>

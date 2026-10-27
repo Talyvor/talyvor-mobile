@@ -72,7 +72,6 @@ export default function PayeeScreen() {
         <>
           <Eyebrow>Pay</Eyebrow>
           <Headline>{payee.name}</Headline>
-          <Body style={{ color: c.caution }}>Preview — test money only</Body>
           <Body muted>Last payment: {lastPaid(data.payments, payee.id)}</Body>
           {payee.needs_confirmation ? <Body style={{ color: c.caution }}>Confirm this payee with your passkey in Talyvor on the web before the first payment.</Body> : null}
           {payee.screening ? <Body style={{ color: c.caution }}>This payee is being checked, so it cannot be paid yet.</Body> : null}

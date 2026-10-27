@@ -4,13 +4,11 @@ import { Pressable, View } from 'react-native'
 
 import { Body, Card, Eyebrow, Headline, LoadState, Screen, useLoad } from '@/components/ui'
 import { useSession } from '@/session'
-import { useTheme } from '@/theme'
 import { lastPaid } from '@/widget-sync'
 
 /** Your saved payees, each with its last payment; a tap opens its payment screen. */
 export default function PayScreen() {
   const { client } = useSession()
-  const { c } = useTheme()
   const load = useCallback(async () => {
     const [payees, payments] = await Promise.all([client.payees(), client.payments()])
     return { payees: payees.payees ?? [], payments: payments.payments ?? [] }
@@ -21,7 +19,6 @@ export default function PayScreen() {
     <Screen onRefresh={reload} refreshing={loading && !!data}>
       <Eyebrow>Pay</Eyebrow>
       <Headline>Saved payees</Headline>
-      <Body style={{ color: c.caution }}>Preview — test money only</Body>
       <LoadState loading={loading && !data} error={error} />
       {data && data.payees.length === 0 ? <Body muted>No saved payees yet. Add one in Talyvor on the web.</Body> : null}
       {(data?.payees ?? []).map((p) => (

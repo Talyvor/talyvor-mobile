@@ -117,7 +117,7 @@ test('a request notification opens its approval card; approving the ticked payme
   await renderRouter('./src/app', { initialUrl: '/approvals' })
 
   expect(await screen.findByText('Pay October suppliers')).toBeTruthy()
-  expect(screen.getByText('Preview — test money only')).toBeTruthy()
+  expect(screen.queryByText(/test money|preview/i)).toBeNull()
   expect(screen.getByText('New payee · Verified')).toBeTruthy()
   expect(lens.pushTokens).toEqual({ dev_1: 'a1b2c3d4' })
 

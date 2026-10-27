@@ -15,8 +15,6 @@ export interface ApprovalActivityProps {
   detail: string
   /** what a tap does, e.g. `Tap to approve with Face ID` */
   hint: string
-  /** "Preview — test money only" while the money it moves is test money */
-  preview: boolean
   palette: { dark: Palette; light: Palette }
 }
 
@@ -33,7 +31,6 @@ const ApprovalActivity = (p: ApprovalActivityProps, env: LiveActivityEnvironment
     <VStack alignment="leading" spacing={2}>
       <Text modifiers={body(c.inkMuted)}>{p.detail}</Text>
       {p.state === 'waiting' ? <Text modifiers={body(c.accent)}>{p.hint}</Text> : null}
-      {p.preview ? <Text modifiers={eyebrow(c.caution)}>Preview — test money only</Text> : null}
     </VStack>
   )
 

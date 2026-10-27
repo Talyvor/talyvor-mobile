@@ -42,8 +42,6 @@ export function heldPayments(requests: PaymentRequest[], approvals: AgentApprova
             title: asked.length === 1 ? asked[0].payee_name : r.summary || payWord(asked.length),
             amount: totalsOf(asked),
             detail: r.agent_id ? `From ${nameOf(r.agent_id)}’s account` : 'From the company’s account',
-            // Lens pays approved requests with test money (see app/approve/[id].tsx).
-            preview: true,
           },
         }
       }),
@@ -52,7 +50,7 @@ export function heldPayments(requests: PaymentRequest[], approvals: AgentApprova
       .map((a) => ({
         key: `ap:${a.id}`,
         url: `talyvor://approvals/${encodeURIComponent(a.id)}`,
-        props: { ...base, title: a.payee ? a.payee.name || a.payee.id : `Ask ${a.model}`, amount: formatULXC(a.amount_ulxc), detail: `${nameOf(a.agent_id)} asks`, preview: false },
+        props: { ...base, title: a.payee ? a.payee.name || a.payee.id : `Ask ${a.model}`, amount: formatULXC(a.amount_ulxc), detail: `${nameOf(a.agent_id)} asks` },
       })),
   ]
 }

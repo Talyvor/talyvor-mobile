@@ -192,7 +192,7 @@ describe('B41.35 home-screen widget', () => {
     // The widget's tap opens the payment screen for that payee and pays nothing.
     await renderRouter('./src/app', { initialUrl: pay.target.replace('talyvor://', '/') })
     expect(await screen.findByText('Acme Hosting')).toBeTruthy()
-    expect(screen.getByText('Preview — test money only')).toBeTruthy()
+    expect(screen.queryByText(/test money|preview/i)).toBeNull()
     expect(calls.some((c) => c.method === 'POST' && c.path === '/api/money/payments')).toBe(false)
 
     await fireEvent.changeText(screen.getByLabelText('Amount in GBP'), '12.5')
