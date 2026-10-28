@@ -2,7 +2,7 @@ import { BffError, formatULXC, refusalText, type AgentApproval } from '@talyvor/
 import { useState } from 'react'
 import { View } from 'react-native'
 
-import { signWithThisPhone, thisPhoneDevice } from '../keys'
+import { biometricName, signWithThisPhone, thisPhoneDevice } from '../keys'
 import { syncLiveActivities } from '../live-activity'
 import { useSession } from '../session'
 import { useTheme } from '../theme'
@@ -21,7 +21,10 @@ export function ApprovalCard({ approval, agentName, onDecided }: { approval: Age
     setRefusal('')
     try {
       // With this phone's key on, Lens takes the decision only signed: Face ID or a fingerprint, over this approval's challenge.
-      const assertion = (await thisPhoneDevice())
+      // Approving moves money, so on a phone it is never made unsigned (B50.10); denying moves none and may be.
+      const device = await thisPhoneDevice()
+      if (decision === 'approve' && !device) throw new Error(`turn on approving with ${biometricName} on this phone first.`)
+      const assertion = device
         ? await signWithThisPhone((await client.approvalChallenge(approval.id)).challenge, `${decision === 'approve' ? 'Approve' : 'Deny'} ${formatULXC(approval.amount_ulxc)} for ${agentName}`)
         : undefined
       await client[decision](approval.id, assertion)
