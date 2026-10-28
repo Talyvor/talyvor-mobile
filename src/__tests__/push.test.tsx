@@ -139,6 +139,22 @@ test('a held-payment notification opens its card, and Approve signs its challeng
   expect(lens.approvalApproved).toBe(true)
 })
 
+// B50.10: a money approval on the phone is made only through the biometric step; without this phone's key, Approve asks
+// for it to be turned on and sends nothing.
+test('without this phone\'s key, Approve on a held payment sends nothing and asks for the key first', async () => {
+  const lens = mockLens()
+  mockStore.delete('talyvor.device-key')
+  tap({ type: 'agent_approval', approval_id: 'apr_1', workspace_id: 'ws_1', agent_id: 'ag_1' })
+  await renderRouter('./src/app', { initialUrl: '/approvals' })
+
+  expect(await screen.findByText('Buyer is waiting for you')).toBeTruthy()
+  await fireEvent.press(screen.getAllByText('Approve').at(-1)!)
+  expect(await screen.findByText('Nothing changed: turn on approving with Face ID on this phone first.')).toBeTruthy()
+  const sent = (globalThis.fetch as jest.Mock).mock.calls.map(([url, init]) => `${init?.method ?? 'GET'} ${url}`)
+  expect(sent.filter((r: string) => /\/approvals\/apr_1\/(approve|challenge)/.test(r))).toEqual([])
+  expect(lens.approvalApproved).toBeFalsy()
+})
+
 test('talyvor://approve/<id> opens the same card', async () => {
   mockLens()
   await renderRouter('./src/app', { initialUrl: '/approve/preq_1' })
