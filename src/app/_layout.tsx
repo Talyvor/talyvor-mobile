@@ -4,6 +4,7 @@ import { useFonts } from 'expo-font'
 import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 
+import { useHideFromAppSwitcher } from '@/app-switcher'
 import { useLiveActivities } from '@/live-activity'
 import { usePushApprovals } from '@/push'
 import { SessionProvider, useSession } from '@/session'
@@ -14,6 +15,7 @@ function Navigator() {
   const { c, dark } = useTheme()
   usePushApprovals(client, ready && signedIn)
   useLiveActivities(client, ready && signedIn)
+  useHideFromAppSwitcher(ready && signedIn)
   if (!ready) return null
   return (
     <>
