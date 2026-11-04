@@ -177,6 +177,94 @@ export interface ApprovalStatement {
 }
 
 /** What the BFF answers a phone's sign-in: a session token for the Authorization header. */
+/** Lens economy.SpendPayment (B53.3): one payment and the category it reads in. */
+export interface SpendPayment {
+  entry_id: string
+  kind: string
+  merchant: string
+  /** "": the owner's own wallet */
+  agent_id?: string
+  amount_minor: number
+  currency: string
+  category: string
+  created_at: string
+}
+
+/** Lens economy.Spending: the payments in [from, to), newest first, and each wallet's totals per currency. */
+export interface Spending {
+  from: string
+  to: string
+  payments: SpendPayment[] | null
+  totals: { agent_id?: string; currency: string; total_minor: number; by_category: Record<string, number> | null }[] | null
+}
+
+/** Lens economy.SpendBudget (B53.4): a weekly or monthly budget and how far this period has gone. */
+export interface SpendBudget {
+  id: string
+  /** "": the owner's own wallet; "all": every wallet together; else an agent's */
+  agent_id: string
+  /** "": all spending */
+  category: string
+  period: 'week' | 'month'
+  amount_minor: number
+  currency: string
+  spent_minor: number
+  /** below zero once it is over */
+  left_minor: number
+  percent: number
+}
+
+/** Lens economy.SpendSubscription: a payment that recurs, to one merchant for one amount. */
+export interface SpendSubscription {
+  agent_id?: string
+  merchant: string
+  category: string
+  amount_minor: number
+  currency: string
+  interval: 'weekly' | 'monthly'
+  next_at: string
+  yearly_minor: number
+}
+
+/** Lens economy.SpendFinding (B53.5): one payment a rule found unusual. */
+export interface SpendFinding {
+  rule: string
+  entry_id?: string
+  agent_id?: string
+  merchant?: string
+  category?: string
+  amount_minor?: number
+  currency?: string
+  at: string
+}
+
+/** Lens economy.CoachLine (B53.6): one sentence and the fact it words. */
+export interface CoachLine {
+  fact: { kind: string; merchant?: string; category?: string }
+  sentence: string
+  help?: { name: string; url: string; for: string }[]
+}
+
+/** Lens economy.SpendNoticeSettings (B53.7). */
+export interface NoticeSettings {
+  timezone: string
+  quiet_from: string
+  quiet_until: string
+  off: string[] | null
+}
+
+/** Lens economy.SpendNotice (B53.7): a payment's and an unusual payment's `data` name its `entry_id`. */
+export interface SpendNotice {
+  id: string
+  kind: string
+  title: string
+  body: string
+  data?: { entry_id?: string; agent_id?: string; rule?: string } | null
+  status: 'waiting' | 'sent' | 'dropped'
+  held?: string
+  created_at: string
+}
+
 export interface MobileSession {
   token: string
   expires_at: string
@@ -286,6 +374,16 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     /** Keeps the signed approval; Lens then pays each approved item once. */
     approveRequest: (id: string, statement: string, assertion: DeviceAssertion) =>
       call<PaymentRequest>('POST', `/api/money/payment-requests/${e(id)}/approve`, { statement, assertion }),
+    // B53.9 — the web's Spending screen's reads (B53.8), every number from Lens.
+    /** The payments in [from, to), RFC 3339, with each wallet's totals by category. */
+    spending: (from: string, to: string) => call<Spending>('GET', `/api/money/spending?${new URLSearchParams({ from, to })}`),
+    unusual: (from: string, to: string) =>
+      call<{ findings: SpendFinding[] | null }>('GET', `/api/money/spending/unusual?${new URLSearchParams({ from, to })}`),
+    budgets: () => call<{ budgets: SpendBudget[] | null }>('GET', '/api/money/budgets'),
+    subscriptions: () => call<{ subscriptions: SpendSubscription[] | null }>('GET', '/api/money/spending/subscriptions'),
+    coach: () => call<{ lines: CoachLine[] | null }>('GET', '/api/money/coach'),
+    notices: () => call<{ settings: NoticeSettings; notices: SpendNotice[] | null }>('GET', '/api/money/notices'),
+    setNoticeSettings: (s: NoticeSettings) => call<NoticeSettings>('PUT', '/api/money/notices/settings', s),
   }
 }
 

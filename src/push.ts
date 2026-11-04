@@ -23,6 +23,13 @@ export function approvalHref(data: Record<string, unknown> | undefined): Href | 
   return null
 }
 
+/** B53.9 — a spending notice (Lens B53.7) opens the payment it is about; its push names only the notice. */
+export function spendHref(data: Record<string, unknown> | undefined): Href | null {
+  if (data?.type !== 'spend_notice') return null
+  if ((data.kind === 'payment' || data.kind === 'unusual') && typeof data.notice_id === 'string') return { pathname: '/notices/[id]', params: { id: data.notice_id } }
+  return '/spending'
+}
+
 // B41.34 — a request's notification carries an Approve button, on the lock screen too. It opens the app, where Face ID
 // or a fingerprint unlocks the device key that signs the batch hash: the SHA-256 of Lens's statement for exactly the
 // items the notification names (its data's `items`). One that names none opens the card instead.
@@ -51,6 +58,7 @@ export function usePushApprovals(client: BffClient, signedIn: boolean) {
     if (!signedIn || !response || approved.current === response) return
     const data = response.notification.request.content.data
     const href = approvalHref(data)
+    const spend = spendHref(data)
     const batch = batchOf(data?.items)
     if (response.actionIdentifier === APPROVE_ACTION && data?.type === 'payment_request' && href && batch) {
       approved.current = response
@@ -58,6 +66,9 @@ export function usePushApprovals(client: BffClient, signedIn: boolean) {
         .then(() => syncLiveActivities(client))
         .catch((err: Error) => Alert.alert('Nothing was approved', err instanceof BffError ? refusalText(err) : err.message))
         .finally(() => router.push(href))
+    } else if (spend && response.actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER) {
+      approved.current = response
+      router.push(spend)
     } else if (href && (response.actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER || response.actionIdentifier === APPROVE_ACTION)) router.push(href)
   }, [client, response, signedIn])
 }
