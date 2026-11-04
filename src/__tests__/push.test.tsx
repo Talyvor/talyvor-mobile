@@ -180,6 +180,20 @@ test("Approve with Face ID on a request's notification signs the hash of exactly
   expect(mockCategories.payment_request).toEqual([expect.objectContaining({ identifier: 'approve', buttonTitle: 'Approve with Face ID' })])
 })
 
+test('on an iPhone, where the data Lens sends is the top of the APNs payload, Approve with Face ID still approves exactly those items', async () => {
+  const lens = mockLens()
+  // Lens's APNs payload (nativepush.APNs.Send): aps with the category, then each data key beside it. expo-notifications
+  // leaves content.data empty for it, since the payload has no `body` key.
+  const payload = { aps: { alert: { title: 'Approval needed', body: 'Pay Acme Hosting, Bolt Couriers · £34.00' }, sound: 'default', category: 'payment_request' },
+    type: 'payment_request', request_id: 'preq_1', workspace_id: 'ws_1', url: 'talyvor://approve/preq_1', items: JSON.stringify(shownItems) }
+  mockTap.data = {}
+  mockTapResponse = { actionIdentifier: 'approve', notification: { request: { content: { data: {}, categoryIdentifier: 'payment_request' }, trigger: { type: 'push', payload } } } }
+  await renderRouter('./src/app', { initialUrl: '/approvals' })
+
+  expect(await screen.findByText('Approved. Each payment you approved is paid once.')).toBeTruthy()
+  expect(JSON.parse(lens.approvedStatement).items).toEqual(shownItems.map(({ payee_name: _, ...it }) => it))
+})
+
 test('a notification whose items are not what Lens would have signed approves nothing', async () => {
   const lens = mockLens()
   const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined)

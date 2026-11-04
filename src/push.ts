@@ -35,6 +35,14 @@ export function spendHref(data: Record<string, unknown> | undefined): Href | nul
 // items the notification names (its data's `items`). One that names none opens the card instead.
 export const APPROVE_ACTION = 'approve'
 
+/** A notification's data. On iOS expo-notifications reads a remote push's data only from a `body` key, and Lens's APNs
+ * push puts its data at the top of the payload, so there it is the trigger's raw payload. */
+export function pushData(request: Notifications.NotificationRequest): Record<string, unknown> | undefined {
+  const { data } = request.content
+  if (data && Object.keys(data).length > 0) return data
+  return request.trigger && 'payload' in request.trigger ? (request.trigger.payload ?? undefined) : undefined
+}
+
 /** Gives Lens this phone's push token, once its approval key is on and the person allows notifications. */
 export async function registerPush(client: BffClient): Promise<void> {
   const device = await thisPhoneDevice()
@@ -56,7 +64,7 @@ export function usePushApprovals(client: BffClient, signedIn: boolean) {
   const approved = useRef<unknown>(null)
   useEffect(() => {
     if (!signedIn || !response || approved.current === response) return
-    const data = response.notification.request.content.data
+    const data = pushData(response.notification.request)
     const href = approvalHref(data)
     const spend = spendHref(data)
     const batch = batchOf(data?.items)
