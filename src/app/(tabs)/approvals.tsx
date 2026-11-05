@@ -7,7 +7,7 @@ import { PhoneKeyCard } from '@/components/phone-key-card'
 import { Body, Card, Eyebrow, Figure, Headline, LoadState, Screen, useLoad } from '@/components/ui'
 import { useSession } from '@/session'
 
-const DECIDED = { approved: 'Approved', denied: 'Denied', used: 'Approved and spent' } as const
+const DECIDED: Record<string, string> = { approved: 'Approved', denied: 'Denied', used: 'Approved and spent', expired: 'Expired' }
 
 /** Every approval: those waiting first, then what was decided. */
 export default function Approvals() {
@@ -38,7 +38,7 @@ export default function Approvals() {
             <Figure>{formatULXC(a.amount_ulxc)}</Figure>
           </View>
           <Body muted>
-            {DECIDED[a.status as keyof typeof DECIDED]} · {new Date(a.created_at).toLocaleDateString()}
+            {DECIDED[a.status] ?? 'Closed'} · {new Date(a.decided_at ?? a.created_at).toLocaleDateString()}
           </Body>
         </Card>
       ))}

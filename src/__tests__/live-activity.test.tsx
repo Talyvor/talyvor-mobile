@@ -59,3 +59,35 @@ test('a held payment stays on the lock screen until it is approved or declined',
   expect(mockActivities.map((a) => a.ended?.props?.state)).toEqual(['approved', 'declined'])
   expect(mockActivities).toHaveLength(2)
 })
+
+test('B55.8: an approval or request nobody answered in time ends Expired, and a cancelled request ends Declined', async () => {
+  mockActivities.length = 0
+  mockStore.clear()
+  const lens = { requests: ['pending_approval', 'pending_approval'], approval: 'pending' }
+  const request = (id: string, status: string) => ({
+    id,
+    status,
+    summary: '',
+    totals: { GBP: 2500 },
+    created_at: '2026-10-24T08:00:00Z',
+    items: [{ position: 1, payee_id: 'py_1', payee_name: 'Acme Hosting', currency: 'GBP', amount_minor: 2500, reference: 'Oct', decision: 'needs_approval' }],
+  })
+  const ids = ['preq_1', 'preq_2']
+  const client = {
+    pendingPaymentRequests: async () => ({ requests: ids.map((id, i) => request(id, lens.requests[i])).filter((r) => r.status === 'pending_approval') }),
+    paymentRequest: async (id: string) => request(id, lens.requests[ids.indexOf(id)]),
+    approvals: async () => ({ approvals: [{ id: 'apr_1', agent_id: 'ag_1', amount_ulxc: 2_000_000, model: 'gpt', status: lens.approval, created_at: '2026-10-24T08:00:00Z' }] }),
+    book: async () => ({ agents: [{ id: 'ag_1', name: 'Research' }] }),
+  } as unknown as BffClient
+
+  await syncLiveActivities(client)
+  expect(mockActivities).toHaveLength(3)
+  lens.requests = ['expired', 'cancelled']
+  lens.approval = 'expired'
+  await syncLiveActivities(client)
+  expect(mockActivities.map((a) => [a.url, a.ended?.props?.state])).toEqual([
+    ['talyvor://approve/preq_1', 'expired'],
+    ['talyvor://approve/preq_2', 'declined'],
+    ['talyvor://approvals/apr_1', 'expired'],
+  ])
+})

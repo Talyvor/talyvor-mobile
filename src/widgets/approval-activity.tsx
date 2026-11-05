@@ -6,8 +6,8 @@ import type { Palette } from '../theme'
 
 /** One held payment on the lock screen and in the Dynamic Island, formatted by the app: the widget runtime cannot format. */
 export interface ApprovalActivityProps {
-  /** waiting until it is decided; the activity ends showing approved or declined */
-  state: 'waiting' | 'approved' | 'declined'
+  /** waiting until it is decided; the activity ends showing approved, declined or expired */
+  state: 'waiting' | 'approved' | 'declined' | 'expired'
   /** the payee, or what the request is for */
   title: string
   amount: string
@@ -23,7 +23,7 @@ const ApprovalActivity = (p: ApprovalActivityProps, env: LiveActivityEnvironment
   'widget'
   const c = env.colorScheme === 'light' ? p.palette.light : p.palette.dark
   const tone = p.state === 'waiting' ? c.caution : p.state === 'approved' ? c.positive : c.inkMuted
-  const word = p.state === 'waiting' ? 'Waiting for you' : p.state === 'approved' ? 'Approved' : 'Declined'
+  const word = { waiting: 'Waiting for you', approved: 'Approved', declined: 'Declined', expired: 'Expired' }[p.state]
   const eyebrow = (color: string) => [font({ size: 11, weight: 'medium' }), kerning(1.6), textCase('uppercase'), foregroundStyle(color)]
   const figure = (size: number) => [font({ size, weight: 'medium', design: 'monospaced' }), monospacedDigit(), minimumScaleFactor(0.6), foregroundStyle(c.ink)]
   const body = (color: string) => [font({ size: 13 }), foregroundStyle(color)]

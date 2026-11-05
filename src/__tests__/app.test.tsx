@@ -31,7 +31,7 @@ jest.mock('expo-widgets', () => ({ ...jest.requireActual('../../__mocks__/expo-w
 jest.mock('../config', () => ({ config: { bffUrl: 'https://bff.test', oidcIssuer: 'https://idp', oidcClientId: 'mobile' } }))
 
 /** The BFF as the app sees it: one workspace, two agents, one approval waiting. */
-function mockBff() {
+function mockBff(approvals: unknown[] = [{ id: 'apr_1', agent_id: 'ag_2', amount_ulxc: 2_000_000, model: '', payee: { kind: 'listing', id: 'l_1', name: 'GPU hour' }, status: 'pending', created_at: '2026-10-17T08:00:00Z' }]) {
   const calls: { method: string; path: string; auth: string | undefined; body?: string; key?: string }[] = []
   let pausedAt: string | undefined
   const agents = () => [
@@ -41,9 +41,7 @@ function mockBff() {
   const routes: Partial<Record<string, () => unknown>> = {
     'POST /auth/mobile/session': () => ({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }),
     'GET /api/agents': () => ({ workspace_balance_ulxc: 20_000_000, allocated_ulxc: 15_500_000, unallocated_ulxc: 4_500_000, spent_ulxc: 0, agents: agents() }),
-    'GET /api/agents/approvals': () => ({
-      approvals: [{ id: 'apr_1', agent_id: 'ag_2', amount_ulxc: 2_000_000, model: '', payee: { kind: 'listing', id: 'l_1', name: 'GPU hour' }, status: 'pending', created_at: '2026-10-17T08:00:00Z' }],
-    }),
+    'GET /api/agents/approvals': () => ({ approvals }),
     'GET /api/agents/ag_1/rules': () => ({ max_per_request_ulxc: 1_000_000, daily_limit_ulxc: 0, monthly_limit_ulxc: 0, approval_above_ulxc: 500_000, allowed_models: null, allowed_providers: null, active_from: '', active_until: '', timezone: 'UTC' }),
     'POST /api/agents/ag_1/fund': () => ({ balance_ulxc: 15_000_000 }),
     'GET /api/money/payees': () => ({ payees: [{ id: 'py_1', name: 'Acme Hosting', country: 'GB', needs_confirmation: false, created_at: '2026-10-01T00:00:00Z' }] }),
@@ -120,6 +118,33 @@ const draw = () => {
   walk(androidLayout(lastSnapshot() as never, { colorScheme: 'dark', configuration: undefined }))
   return { buttons, texts }
 }
+
+describe('B55.8 expired approvals', () => {
+  beforeEach(() => {
+    mockStore.clear()
+    mockStore.set('talyvor.session', JSON.stringify({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }))
+  })
+  const day = (at: string) => new Date(at).toLocaleDateString()
+
+  test('an expired approval reads Expired in the list and on its screen, and decided rows are dated when decided', async () => {
+    mockBff([
+      { id: 'apr_2', agent_id: 'ag_2', amount_ulxc: 2_000_000, model: '', status: 'expired', created_at: '2026-10-10T08:00:00Z' },
+      { id: 'apr_3', agent_id: 'ag_2', amount_ulxc: 1_000_000, model: '', status: 'expired', created_at: '2026-10-11T08:00:00Z', decided_at: '2026-10-11T09:00:00Z' },
+      { id: 'apr_4', agent_id: 'ag_1', amount_ulxc: 1_000_000, model: '', status: 'used', created_at: '2026-10-12T08:00:00Z', decided_at: '2026-10-14T08:00:00Z' },
+    ])
+    await renderRouter('./src/app', { initialUrl: '/approvals' })
+    expect(await screen.findByText(`Expired · ${day('2026-10-10T08:00:00Z')}`)).toBeTruthy()
+    expect(screen.getByText(`Approved and spent · ${day('2026-10-14T08:00:00Z')}`)).toBeTruthy()
+
+    await renderRouter('./src/app', { initialUrl: '/approvals/apr_2' })
+    expect(await screen.findByText('Expired: nobody answered within 24 hours. Nothing is waiting for you here.')).toBeTruthy()
+    expect(screen.getByText('Buyer’s request')).toBeTruthy()
+    expect(screen.queryByText('Buyer is waiting for you')).toBeNull()
+
+    await renderRouter('./src/app', { initialUrl: '/approvals/apr_3' })
+    expect(await screen.findByText('Expired: approved, but not used within 24 hours. Nothing is waiting for you here.')).toBeTruthy()
+  })
+})
 
 describe('B41.35 home-screen widget', () => {
   beforeEach(() => {
