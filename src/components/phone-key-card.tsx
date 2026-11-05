@@ -36,7 +36,7 @@ export function PhoneKeyCard() {
       <Card>
         <Body>Approve with {biometricName}</Body>
         {device ? (
-          <Body muted>On. This phone signs your approvals with a key that never leaves its secure chip and works only with {biometricName}. Signing out deletes it.</Body>
+          <Body muted>On. This phone signs your approvals with a key that never leaves its secure chip and works only with {biometricName}.</Body>
         ) : keysAvailable() ? (
           <>
             <Body muted>This phone makes a key in its secure chip that only {biometricName} can use, and signs your approvals with it.</Body>

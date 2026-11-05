@@ -74,7 +74,16 @@ export async function signStatement(statement: string, reason: string): Promise<
   return signWithThisPhone(toBase64url(await sha256(utf8(statement))), reason)
 }
 
-/** On sign-out: the key is deleted from the phone's hardware, so nothing on this phone can sign again. */
+/** At sign-in: the stored key stays only while this workspace's Lens lists it unrevoked; otherwise it is deleted, so
+ * Turn on shows. A failed check keeps it, since a key deleted by mistake may be the only one that can approve. */
+export async function checkThisPhone(client: BffClient): Promise<void> {
+  const id = await thisPhoneDevice()
+  if (!id) return
+  const { devices } = await client.devices()
+  if (!(devices ?? []).some((d) => d.id === id && !d.revoked_at)) await forgetThisPhone()
+}
+
+/** Deletes the key from the phone's hardware, so nothing on this phone can sign again. */
 export async function forgetThisPhone(): Promise<void> {
   await SecureStore.deleteItemAsync(DEVICE)
   await TalyvorKeys?.deleteKey(ALIAS)

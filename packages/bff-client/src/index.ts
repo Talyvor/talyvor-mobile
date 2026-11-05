@@ -339,6 +339,7 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     pay: (body: { account_id: string; payee_id: string; amount_minor: number; currency: string; reference: string; idempotency_key: string }) =>
       call<OutsidePayment>('POST', '/api/money/payments', body),
     /** The single-use challenge a new device key signs and binds its attestation to. */
+    devices: () => call<{ devices: DeviceKey[] | null }>('GET', '/api/money/devices'),
     deviceChallenge: () => call<{ challenge: string }>('POST', '/api/money/devices/challenge'),
     /** Keeps this phone's key as the person's; every byte string is base64url. */
     registerDevice: (body: { platform: string; name: string; public_key: string; challenge: string; signature: string; attestation: string }) =>

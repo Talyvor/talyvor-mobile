@@ -17,6 +17,12 @@ jest.mock('expo-secure-store', () => ({
   deleteItemAsync: async (k: string) => void mockStore.delete(k),
 }))
 jest.mock('expo-font', () => ({ ...jest.requireActual('expo-font'), useFonts: () => [true, null] }))
+jest.mock('expo-auth-session', () => ({
+  makeRedirectUri: () => 'talyvor://auth',
+  useAutoDiscovery: () => ({ authorizationEndpoint: 'https://idp/auth', tokenEndpoint: 'https://idp/token' }),
+  useAuthRequest: () => [{ codeVerifier: 'verifier' }, null, async () => ({ type: 'success', params: { code: 'code-1' } })],
+  exchangeCodeAsync: async () => ({ idToken: 'id-token-1' }),
+}))
 jest.mock('expo-crypto', () => ({
   CryptoDigestAlgorithm: { SHA256: 'SHA-256' },
   digest: async (_: string, b: Uint8Array) => Uint8Array.from(jest.requireActual('node:crypto').createHash('sha256').update(b).digest()).buffer,
@@ -111,13 +117,53 @@ test('when the biometric check fails, nothing is signed and nothing is registere
   await expect(signWithThisPhone('ch_approval_1', 'Approve')).rejects.toMatchObject({ code: 'ERR_BIOMETRIC' })
 })
 
-test('signing out deletes the key from the phone', async () => {
+/** The BFF after this phone's session has ended: every call is a 401 until the person signs in again, and Lens then
+ * lists this workspace's keys as `devices`. */
+function mockExpiredSession(devices: { id: string; revoked_at?: string }[]) {
+  let token = ''
+  globalThis.fetch = jest.fn(async (url: string, init: RequestInit = {}) => {
+    const route = `${init.method ?? 'GET'} ${url.replace('https://bff.test', '')}`
+    const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status })
+    if (route === 'POST /auth/mobile/session') return json({ token: (token = 'session-2'), expires_at: '2099-01-01T00:00:00Z' })
+    if ((init.headers as Record<string, string>).Authorization !== `Bearer ${token}` || !token) return json({}, 401)
+    if (route === 'GET /api/money/devices') return json({ devices: devices.map((d) => ({ platform: 'ios', name: 'iPhone', person: 'owner@acme.test', created_at: '2026-10-23T16:00:00Z', ...d })) })
+    if (route === 'GET /api/agents') return json({ workspace_balance_ulxc: 0, allocated_ulxc: 0, unallocated_ulxc: 0, spent_ulxc: 0, agents: [] })
+    if (route === 'GET /api/agents/approvals') return json({ approvals: [] })
+    return json({ error: 'no' }, 404)
+  }) as unknown as typeof fetch
+}
+
+const holdKey = () => {
   mockStore.set('talyvor.device-key', 'dev_1')
-  mockPhone.keys.set('approval', generateKeyPairSync('ec', { namedCurve: 'P-256' }).privateKey)
-  // The BFF no longer knows the session: the app signs out.
-  globalThis.fetch = jest.fn(async () => new Response('{}', { status: 401 })) as unknown as typeof fetch
+  const { privateKey, publicKey } = generateKeyPairSync('ec', { namedCurve: 'P-256' })
+  mockPhone.keys.set('approval', privateKey)
+  return publicKey
+}
+
+test('a 401 signs out but keeps the key, and after signing in again with the key listed an approval signs with it', async () => {
+  const publicKey = holdKey()
+  mockExpiredSession([{ id: 'dev_1' }])
   await renderRouter('./src/app', { initialUrl: '/approvals' })
+  await fireEvent.press(await screen.findByText('Sign in'))
+  await waitFor(() => expect(mockStore.get('talyvor.session')).toContain('session-2'))
+  expect(mockPhone.keys.has('approval')).toBe(true)
+  expect(mockStore.get('talyvor.device-key')).toBe('dev_1')
+
+  const a = await signWithThisPhone('ch_approval_1', 'Approve')
+  expect(a.device_id).toBe('dev_1')
+  expect(verify('sha256', message('ch_approval_1'), { key: publicKey, dsaEncoding: 'der' }, Buffer.from(a.signature, 'base64url'))).toBe(true)
+})
+
+test.each([
+  ['revoked', [{ id: 'dev_1', revoked_at: '2026-11-01T00:00:00Z' }]],
+  ['missing', [{ id: 'dev_2' }]],
+])('after signing in with the key %s in Lens, the phone deletes it and Turn on shows', async (_, devices) => {
+  holdKey()
+  mockExpiredSession(devices)
+  await renderRouter('./src/app', { initialUrl: '/approvals' })
+  await fireEvent.press(await screen.findByText('Sign in'))
   await waitFor(() => expect(mockPhone.keys.size).toBe(0))
-  expect(mockStore.has('talyvor.session')).toBe(false)
-  await expect(signWithThisPhone('ch_approval_1', 'Approve')).rejects.toThrow('is not on for this phone')
+  expect(mockStore.has('talyvor.device-key')).toBe(false)
+  await fireEvent.press(await screen.findByText('Approvals'))
+  expect(await screen.findByText('Turn on')).toBeTruthy()
 })
