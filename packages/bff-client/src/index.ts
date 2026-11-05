@@ -55,8 +55,10 @@ export interface AgentApproval {
   reason?: string
   payee?: { kind: string; id: string; name: string }
   memo?: string
-  status: 'pending' | 'approved' | 'denied' | 'used'
+  status: 'pending' | 'approved' | 'denied' | 'used' | 'expired'
   created_at: string
+  /** when it was approved or denied; on an expired one, set only if it was approved and then not used */
+  decided_at?: string
 }
 
 /** Lens economy.StatementLine. */

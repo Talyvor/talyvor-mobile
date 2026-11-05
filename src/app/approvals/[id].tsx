@@ -1,3 +1,4 @@
+import type { AgentApproval } from '@talyvor/bff-client'
 import { useLocalSearchParams } from 'expo-router'
 import { useCallback } from 'react'
 
@@ -5,7 +6,13 @@ import { ApprovalCard } from '@/components/approval-card'
 import { Body, Eyebrow, Headline, LoadState, Screen, useLoad } from '@/components/ui'
 import { useSession } from '@/session'
 
-const DECIDED = { approved: 'Approved', denied: 'Denied', used: 'Approved and spent' } as const
+const DECIDED: Record<string, string> = { approved: 'Approved', denied: 'Denied', used: 'Approved and spent' }
+
+/** How a decided approval ended, in a sentence. */
+function ended(a: AgentApproval) {
+  if (a.status === 'expired') return a.decided_at ? 'Expired: approved, but not used within 24 hours' : 'Expired: nobody answered within 24 hours'
+  return DECIDED[a.status] ?? 'Closed'
+}
 
 /** One agent's held payment or request, where its notification lands: approve or deny it here. */
 export default function ApprovalScreen() {
@@ -23,11 +30,11 @@ export default function ApprovalScreen() {
   return (
     <Screen onRefresh={reload} refreshing={loading && !!data}>
       <Eyebrow>Approval</Eyebrow>
-      <Headline>{a ? `${agentName} is waiting for you` : 'Approval'}</Headline>
+      <Headline>{!a ? 'Approval' : a.status === 'pending' ? `${agentName} is waiting for you` : `${agentName}’s request`}</Headline>
       <LoadState loading={loading && !data} error={error} />
       {data && !a ? <Body muted>There is no approval at this address. It may belong to another workspace.</Body> : null}
       {a?.status === 'pending' ? <ApprovalCard approval={a} agentName={agentName} onDecided={reload} /> : null}
-      {a && a.status !== 'pending' ? <Body muted>{DECIDED[a.status]}. Nothing is waiting for you here.</Body> : null}
+      {a && a.status !== 'pending' ? <Body muted>{ended(a)}. Nothing is waiting for you here.</Body> : null}
     </Screen>
   )
 }

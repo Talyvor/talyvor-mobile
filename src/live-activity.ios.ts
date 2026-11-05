@@ -56,10 +56,11 @@ export function heldPayments(requests: PaymentRequest[], approvals: AgentApprova
 }
 
 /** How a held payment that is no longer waiting was decided, or null when that cannot be read now. */
-async function outcome(client: BffClient, key: string, approvals: AgentApproval[]): Promise<'approved' | 'declined' | null> {
+async function outcome(client: BffClient, key: string, approvals: AgentApproval[]): Promise<'approved' | 'declined' | 'expired' | null> {
   const [kind, id] = [key.slice(0, 3), key.slice(3)]
   const status = kind === 'ap:' ? approvals.find((a) => a.id === id)?.status : (await client.paymentRequest(id).catch(() => null))?.status
   if (!status) return null
+  if (status === 'expired') return 'expired'
   return ['approved', 'used', 'auto'].includes(status) ? 'approved' : 'declined'
 }
 
