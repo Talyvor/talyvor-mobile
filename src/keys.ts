@@ -1,4 +1,4 @@
-import type { BffClient, DeviceAssertion, DeviceKey } from '@talyvor/bff-client'
+import { BffError, refusalText, type BffClient, type DeviceAssertion, type DeviceKey } from '@talyvor/bff-client'
 import * as Crypto from 'expo-crypto'
 import * as SecureStore from 'expo-secure-store'
 import { Platform } from 'react-native'
@@ -72,6 +72,20 @@ export async function signWithThisPhone(challenge: string, reason: string): Prom
  * exactly the statement the screen checked, whatever challenge came with it. */
 export async function signStatement(statement: string, reason: string): Promise<DeviceAssertion> {
   return signWithThisPhone(toBase64url(await sha256(utf8(statement))), reason)
+}
+
+/** B55.5 — resumes one agent, or every agent when `id` is null, signed with this phone's key when it is on: Lens refuses
+ * an unsigned resume once the workspace has any passkey or phone key. A cancelled check sends nothing. Answers null once
+ * resumed, or why nothing changed; `onWeb` when Lens wanted a signature this phone could not give. */
+export async function resumeWithThisPhone(client: BffClient, id: string | null, reason: string, onWeb: string): Promise<string | null> {
+  const device = await thisPhoneDevice()
+  try {
+    const assertion = device ? await signWithThisPhone((await (id ? client.resumeChallenge(id) : client.resumeAllChallenge())).challenge, reason) : undefined
+    await (id ? client.resume(id, assertion) : client.resumeAll(assertion))
+    return null
+  } catch (err) {
+    return !device && err instanceof BffError && err.status === 403 ? onWeb : refusalText(err)
+  }
 }
 
 /** On sign-out: the key is deleted from the phone's hardware, so nothing on this phone can sign again. */
