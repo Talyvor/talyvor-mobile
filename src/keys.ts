@@ -10,6 +10,7 @@ import TalyvorKeys from '../modules/talyvor-keys'
 
 const ALIAS = 'approval'
 const DEVICE = 'talyvor.device-key'
+const DEVICE_WORKSPACE = 'talyvor.device-workspace'
 
 export const biometricName = Platform.OS === 'ios' ? 'Face ID' : 'your fingerprint'
 
@@ -40,6 +41,7 @@ export const thisPhoneDevice = () => SecureStore.getItemAsync(DEVICE)
 /** Makes this phone's key, has the person confirm with their biometric, and registers it with Lens. */
 export async function turnOnPhoneApprovals(client: BffClient): Promise<DeviceKey> {
   if (!TalyvorKeys) throw new Error('This phone cannot hold an approval key.')
+  const { workspace_id } = await client.me()
   const { challenge } = await client.deviceChallenge()
   const message = utf8(deviceMessage(challenge))
   // Android writes its attestation's challenge when it makes the key, before there is a public key to bind.
@@ -54,6 +56,7 @@ export async function turnOnPhoneApprovals(client: BffClient): Promise<DeviceKey
     const name = Platform.OS === 'ios' ? 'iPhone' : 'Android phone'
     const device = await client.registerDevice({ platform: Platform.OS, name, public_key: publicKey, challenge, signature, attestation })
     await SecureStore.setItemAsync(DEVICE, device.id)
+    await SecureStore.setItemAsync(DEVICE_WORKSPACE, workspace_id)
     return device
   } catch (err) {
     await TalyvorKeys.deleteKey(ALIAS)
@@ -74,17 +77,23 @@ export async function signStatement(statement: string, reason: string): Promise<
   return signWithThisPhone(toBase64url(await sha256(utf8(statement))), reason)
 }
 
-/** At sign-in: the stored key stays only while this workspace's Lens lists it unrevoked; otherwise it is deleted, so
- * Turn on shows. A failed check keeps it, since a key deleted by mistake may be the only one that can approve. */
-export async function checkThisPhone(client: BffClient): Promise<void> {
+/** At sign-in: the key goes only when the workspace it was made in lists it revoked, or no longer lists it, so Turn on
+ * shows. Another workspace's key stays, since it may be the only one that workspace can approve with; so does a failed
+ * check. */
+export async function recheckPhoneKey(client: BffClient): Promise<void> {
   const id = await thisPhoneDevice()
   if (!id) return
-  const { devices } = await client.devices()
-  if (!(devices ?? []).some((d) => d.id === id && !d.revoked_at)) await forgetThisPhone()
+  const [{ workspace_id }, { devices }, owner] = await Promise.all([client.me(), client.devices(), SecureStore.getItemAsync(DEVICE_WORKSPACE)])
+  if (owner && owner !== workspace_id) return
+  const listed = (devices ?? []).find((d) => d.id === id)
+  if (listed && !listed.revoked_at) return SecureStore.setItemAsync(DEVICE_WORKSPACE, workspace_id)
+  // shortcut: a key turned on before its workspace was stored, and not in this list, stays; it may be another workspace's.
+  if (owner || listed) await forgetThisPhone()
 }
 
 /** Deletes the key from the phone's hardware, so nothing on this phone can sign again. */
 export async function forgetThisPhone(): Promise<void> {
   await SecureStore.deleteItemAsync(DEVICE)
+  await SecureStore.deleteItemAsync(DEVICE_WORKSPACE)
   await TalyvorKeys?.deleteKey(ALIAS)
 }
