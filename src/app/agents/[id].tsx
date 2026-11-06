@@ -43,7 +43,8 @@ export default function AgentScreen() {
       setBusy(false)
     }
   }
-  const toggle = () => (agent!.paused_at ? setAsking(true) : act(() => client.pause(agent!.id, 'Paused from the phone app')))
+  const toggle = () =>
+    !agent!.paused_at ? act(() => client.pause(agent!.id, 'Paused from the phone app')) : data!.signs ? setAsking(true) : void resume()
   const resume = async () => {
     setAsking(false)
     setBusy(true)
@@ -92,7 +93,7 @@ export default function AgentScreen() {
               <Body>{`Resume ${agent.name}?`}</Body>
               <Body muted>Its requests and payments are served again, within its rules.</Body>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 4 }}>
-                <Button primary label={data.signs ? `Resume with ${biometricName}` : 'Yes, resume'} onPress={() => void resume()} />
+                <Button primary label={`Resume with ${biometricName}`} onPress={() => void resume()} />
                 <Button label="Not now" onPress={() => setAsking(false)} />
               </View>
             </Card>

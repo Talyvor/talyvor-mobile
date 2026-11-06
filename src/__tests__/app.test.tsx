@@ -44,7 +44,7 @@ jest.mock('../../modules/talyvor-keys', () => ({
 
 /** The BFF as the app sees it: one workspace, two agents, one approval waiting. The workspace has a key, so Lens refuses
  * an unsigned resume. */
-function mockBff(start: { paused?: boolean; allPaused?: boolean; approvals?: unknown[] } = {}) {
+function mockBff(start: { paused?: boolean; allPaused?: boolean; approvals?: unknown[]; refuseSigned?: boolean } = {}) {
   const calls: { method: string; path: string; auth: string | undefined; body?: string; key?: string }[] = []
   let pausedAt = start.paused ? '2026-10-17T09:00:00Z' : undefined
   const agents = () => [
@@ -79,6 +79,7 @@ function mockBff(start: { paused?: boolean; allPaused?: boolean; approvals?: unk
     'POST /api/agents/ag_1/resume-challenge': () => ({ challenge: 'ch_resume_1' }),
     'POST /api/agents/ag_1/resume': (body) => {
       if (!body) return new Response(JSON.stringify({ error: "economy: this workspace approves with a passkey — sign this approval's challenge" }), { status: 403 })
+      if (start.refuseSigned) return new Response(JSON.stringify({ error: 'economy: device key revoked' }), { status: 403 })
       pausedAt = undefined
       return agents()[0]
     },
@@ -303,12 +304,23 @@ describe('B55.5 Resume signed with Face ID', () => {
     expect(resumes(calls).map((c) => c.path)).toEqual(['/api/agents/ag_1/resume-challenge'])
   })
 
+  test("a signed resume Lens refuses shows words, never Lens's own sentence", async () => {
+    mockStore.set('talyvor.device-key', 'dev_1')
+    mockBff({ paused: true, refuseSigned: true })
+    await renderRouter('./src/app', { initialUrl: '/agents/ag_1' })
+
+    await fireEvent.press(await screen.findByText('Resume'))
+    await fireEvent.press(screen.getByText('Resume with Face ID'))
+    expect(await screen.findByText('Nothing changed. You can try again.')).toBeTruthy()
+    expect(screen.queryByText('Device key revoked.')).toBeNull()
+  })
+
   test("with the phone's key off, a resume Lens refuses unsigned says where to do it", async () => {
     const calls = mockBff({ paused: true })
     await renderRouter('./src/app', { initialUrl: '/agents/ag_1' })
 
     await fireEvent.press(await screen.findByText('Resume'))
-    await fireEvent.press(screen.getByText('Yes, resume'))
+    expect(screen.queryByText('Resume Researcher?')).toBeNull()
 
     expect(await screen.findByText('Resume Researcher on the web with your passkey, or turn on Approve with Face ID on this phone.')).toBeTruthy()
     expect(resumes(calls).map((c) => [c.path, c.body])).toEqual([['/api/agents/ag_1/resume', undefined]])

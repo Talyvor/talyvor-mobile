@@ -1,4 +1,4 @@
-import { BffError, refusalText, type BffClient, type DeviceAssertion, type DeviceKey } from '@talyvor/bff-client'
+import { BffError, type BffClient, type DeviceAssertion, type DeviceKey } from '@talyvor/bff-client'
 import * as Crypto from 'expo-crypto'
 import * as SecureStore from 'expo-secure-store'
 import { Platform } from 'react-native'
@@ -76,7 +76,8 @@ export async function signStatement(statement: string, reason: string): Promise<
 
 /** B55.5 — resumes one agent, or every agent when `id` is null, signed with this phone's key when it is on: Lens refuses
  * an unsigned resume once the workspace has any passkey or phone key. A cancelled check sends nothing. Answers null once
- * resumed, or why nothing changed; `onWeb` when Lens wanted a signature this phone could not give. */
+ * resumed, or why nothing changed; `onWeb` when Lens wanted a signature this phone could not give. Lens's own sentence is
+ * never shown. */
 export async function resumeWithThisPhone(client: BffClient, id: string | null, reason: string, onWeb: string): Promise<string | null> {
   const device = await thisPhoneDevice()
   try {
@@ -84,7 +85,8 @@ export async function resumeWithThisPhone(client: BffClient, id: string | null, 
     await (id ? client.resume(id, assertion) : client.resumeAll(assertion))
     return null
   } catch (err) {
-    return !device && err instanceof BffError && err.status === 403 ? onWeb : refusalText(err)
+    if (!device && err instanceof BffError && err.status === 403) return onWeb
+    return err instanceof BffError && err.status === 401 ? 'Nothing changed — sign in again.' : 'Nothing changed. You can try again.'
   }
 }
 
