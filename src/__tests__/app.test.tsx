@@ -66,7 +66,12 @@ function mockBff(start: { paused?: boolean; allPaused?: boolean; approvals?: unk
     }),
     'GET /api/agents/ag_1/rules': () => ({ max_per_request_ulxc: 1_000_000, daily_limit_ulxc: 0, monthly_limit_ulxc: 0, approval_above_ulxc: 500_000, allowed_models: null, allowed_providers: null, active_from: '', active_until: '', timezone: 'UTC' }),
     'POST /api/agents/ag_1/fund': () => ({ balance_ulxc: 15_000_000 }),
-    'GET /api/money/payees': () => ({ payees: [{ id: 'py_1', name: 'Acme Hosting', country: 'GB', needs_confirmation: false, created_at: '2026-10-01T00:00:00Z' }] }),
+    'GET /api/money/payees': () => ({
+      payees: [
+        { id: 'py_1', name: 'Acme Hosting', country: 'GB', needs_confirmation: false, created_at: '2026-10-01T00:00:00Z' },
+        { id: 'py_2', name: 'Kite Accounting', country: 'GB', needs_confirmation: false, created_at: '2026-10-02T00:00:00Z' },
+      ],
+    }),
     'GET /api/money/payments': () => ({
       payments: [{ id: 'pm_1', payee_id: 'py_1', payee_name: 'Acme Hosting', amount_minor: 2500, currency: 'GBP', reference: 'Sept', status: 'completed', created_at: '2026-10-03T10:00:00Z' }],
     }),
@@ -181,6 +186,7 @@ describe('B41.35 home-screen widget', () => {
   beforeEach(() => {
     mockStore.clear()
     mockStore.set('talyvor.session', JSON.stringify({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }))
+    mockStore.set('talyvor.device-key', 'dk_1')
     mockSnapshots.length = 0
   })
 
@@ -254,7 +260,8 @@ describe('B41.35 home-screen widget', () => {
     await fireEvent.changeText(screen.getByLabelText('Amount in GBP'), '12.5')
     await fireEvent.changeText(screen.getByLabelText('Reference'), 'October')
     await fireEvent.press(screen.getByRole('button', { name: 'Pay' }))
-    expect(await screen.findByText('12.50 GBP to Acme Hosting: pending.')).toBeTruthy()
+    await fireEvent.press(await screen.findByRole('button', { name: 'Pay with Face ID' }))
+    expect(await screen.findByText('12.50 GBP to Acme Hosting is on its way.')).toBeTruthy()
     const sent = calls.filter((c) => c.method === 'POST' && c.path === '/api/money/payments')
     expect(sent).toHaveLength(1)
     expect(JSON.parse(sent[0].body!)).toEqual({ account_id: 'acc_gbp', payee_id: 'py_1', amount_minor: 1250, currency: 'GBP', reference: 'October', idempotency_key: expect.stringMatching(/^uuid-\d+$/) })
@@ -334,5 +341,102 @@ describe('B55.5 Resume signed with Face ID', () => {
     await fireEvent.press(await screen.findByText('Resume'))
     await fireEvent.press(screen.getByText('Resume with Face ID'))
     expect(await screen.findByText('Researcher runs when you start every agent again. Until then it stays paused with every agent.')).toBeTruthy()
+  })
+})
+
+describe('B55.25 a payment from the phone confirms with Face ID', () => {
+  beforeEach(() => {
+    mockStore.clear()
+    mockStore.set('talyvor.session', JSON.stringify({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }))
+    mockStore.set('talyvor.device-key', 'dk_1')
+    mockPhone.face = true
+    mockPhone.reasons = []
+  })
+  const posted = (calls: ReturnType<typeof mockBff>) => calls.filter((c) => c.method === 'POST' && c.path === '/api/money/payments')
+
+  async function typePayment(payee: string) {
+    await renderRouter('./src/app', { initialUrl: `/payees/${payee}` })
+    await fireEvent.changeText(await screen.findByLabelText('Amount in GBP'), '12.5')
+    await fireEvent.changeText(screen.getByLabelText('Reference'), 'October')
+    await fireEvent.press(screen.getByRole('button', { name: 'Pay' }))
+  }
+
+  test('Pay sends nothing; a cancelled check sends nothing; a passing check posts once with its idempotency key', async () => {
+    const calls = mockBff()
+    await typePayment('py_1')
+    expect(await screen.findByText('Pay Acme Hosting 12.50 GBP?')).toBeTruthy()
+    expect(screen.getAllByText('The company · GBP')).toHaveLength(2) // the From button and the confirm step
+    expect(screen.getByText('October')).toBeTruthy()
+    expect(posted(calls)).toHaveLength(0)
+
+    mockPhone.face = false
+    await fireEvent.press(screen.getByRole('button', { name: 'Pay with Face ID' }))
+    expect(await screen.findByText('Nothing was paid.')).toBeTruthy()
+    expect(mockPhone.reasons).toEqual(['Pay Acme Hosting 12.50 GBP'])
+    expect(posted(calls)).toHaveLength(0)
+
+    mockPhone.face = true
+    await fireEvent.press(screen.getByRole('button', { name: 'Pay with Face ID' }))
+    expect(await screen.findByText('12.50 GBP to Acme Hosting is on its way.')).toBeTruthy()
+    expect(posted(calls)).toHaveLength(1)
+    expect(JSON.parse(posted(calls)[0].body!).idempotency_key).toMatch(/^uuid-\d+$/)
+  })
+
+  test('Cancel closes the confirm step and sends nothing', async () => {
+    const calls = mockBff()
+    await typePayment('py_1')
+    await fireEvent.press(await screen.findByRole('button', { name: 'Cancel' }))
+    await waitFor(() => expect(screen.queryByText('Pay Acme Hosting 12.50 GBP?')).toBeNull())
+    expect(mockPhone.reasons).toEqual([])
+    expect(posted(calls)).toHaveLength(0)
+  })
+
+  test('without this phone’s key nothing is checked or sent', async () => {
+    const calls = mockBff()
+    mockStore.delete('talyvor.device-key')
+    await typePayment('py_1')
+    await fireEvent.press(await screen.findByRole('button', { name: 'Pay with Face ID' }))
+    expect(await screen.findByText('Turn on Approve with Face ID on this phone first: Talyvor asks for Face ID before each payment from this phone.')).toBeTruthy()
+    expect(mockPhone.reasons).toEqual([])
+    expect(posted(calls)).toHaveLength(0)
+  })
+
+  test('a first payment needs both answers, and a Yes also the box', async () => {
+    const calls = mockBff()
+    await typePayment('py_2')
+    expect(await screen.findByText('Pay Kite Accounting 12.50 GBP?')).toBeTruthy()
+    const payWithFace = (disabled: boolean) => screen.getByRole('button', { name: 'Pay with Face ID', disabled })
+    expect(payWithFace(true)).toBeTruthy()
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Were you told to pay urgently? No' }))
+    expect(payWithFace(true)).toBeTruthy()
+    await fireEvent.press(screen.getByRole('button', { name: 'Did the bank details arrive by email or chat? Yes' }))
+    expect(await screen.findByText(/^Stop and check\. This could be a scam\./)).toBeTruthy()
+    expect(screen.getByText(/call Kite Accounting on a number you already have/)).toBeTruthy()
+    expect(payWithFace(true)).toBeTruthy()
+
+    await fireEvent.press(screen.getByRole('checkbox', { name: 'I have checked the details with Kite Accounting directly and still want to pay.' }))
+    await fireEvent.press(payWithFace(false))
+    await waitFor(() => expect(posted(calls)).toHaveLength(1))
+    expect(JSON.parse(posted(calls)[0].body!).payee_id).toBe('py_2')
+  })
+
+  test('the result says Paid when Lens completes it, and not paid with its detail when it fails', async () => {
+    mockBff()
+    const pay = (status: string, detail?: string) =>
+      (globalThis.fetch = ((f) => async (url: string, init: RequestInit = {}) =>
+        init.method === 'POST' && url.endsWith('/api/money/payments')
+          ? new Response(JSON.stringify({ id: 'pm_3', payee_id: 'py_1', payee_name: 'Acme Hosting', amount_minor: 1250, currency: 'GBP', reference: 'October', status, detail, created_at: '2026-10-17T10:00:00Z' }))
+          : f(url, init))(globalThis.fetch) as typeof fetch)
+    pay('completed')
+    await typePayment('py_1')
+    await fireEvent.press(await screen.findByRole('button', { name: 'Pay with Face ID' }))
+    expect(await screen.findByText('Paid Acme Hosting 12.50 GBP.')).toBeTruthy()
+
+    mockBff()
+    pay('failed', 'the payee’s bank refused it')
+    await typePayment('py_1')
+    await fireEvent.press(await screen.findByRole('button', { name: 'Pay with Face ID' }))
+    expect(await screen.findByText('12.50 GBP to Acme Hosting was not paid: the payee’s bank refused it.')).toBeTruthy()
   })
 })

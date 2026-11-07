@@ -90,6 +90,14 @@ export async function resumeWithThisPhone(client: BffClient, id: string | null, 
   }
 }
 
+/** B55.25 — the biometric check before a payment from this phone: the key signs a local message that never leaves the
+ * phone, so Lens is unchanged. false when approving on this phone is off; a failed or cancelled check rejects. */
+export async function checkThisPhone(reason: string): Promise<boolean> {
+  if (!TalyvorKeys || !(await thisPhoneDevice())) return false
+  await TalyvorKeys.sign(ALIAS, 'talyvor-pay-check-v1', reason)
+  return true
+}
+
 /** On sign-out: the key is deleted from the phone's hardware, so nothing on this phone can sign again. */
 export async function forgetThisPhone(): Promise<void> {
   await SecureStore.deleteItemAsync(DEVICE)
