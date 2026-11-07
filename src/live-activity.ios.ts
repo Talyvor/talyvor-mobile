@@ -1,4 +1,4 @@
-import { formatULXC, type AgentApproval, type AgentBook, type BffClient, type PaymentRequest } from '@talyvor/bff-client'
+import { formatLXC, type AgentApproval, type AgentBook, type BffClient, type PaymentRequest } from '@talyvor/bff-client'
 import * as Notifications from 'expo-notifications'
 import * as SecureStore from 'expo-secure-store'
 import { useEffect } from 'react'
@@ -26,7 +26,7 @@ export interface Held {
 }
 
 /** What is waiting for the owner, as the activities show it. */
-export function heldPayments(requests: PaymentRequest[], approvals: AgentApproval[], book: AgentBook): Held[] {
+export function heldPayments(requests: PaymentRequest[], approvals: AgentApproval[], book: AgentBook, peg: number | null = null): Held[] {
   const nameOf = (id: string) => book.agents?.find((a) => a.id === id)?.name ?? id
   const base = { state: 'waiting' as const, hint: `Tap to approve with ${biometricName}`, palette: palettes }
   return [
@@ -50,7 +50,7 @@ export function heldPayments(requests: PaymentRequest[], approvals: AgentApprova
       .map((a) => ({
         key: `ap:${a.id}`,
         url: `talyvor://approvals/${encodeURIComponent(a.id)}`,
-        props: { ...base, title: a.payee ? a.payee.name || a.payee.id : `Ask ${a.model}`, amount: formatULXC(a.amount_ulxc), detail: `${nameOf(a.agent_id)} asks` },
+        props: { ...base, title: a.payee ? a.payee.name || a.payee.id : `Ask ${a.model}`, amount: formatLXC(a.amount_ulxc, peg), detail: `${nameOf(a.agent_id)} asks` },
       })),
   ]
 }
@@ -73,7 +73,7 @@ async function sync(client: BffClient) {
   const live = new Map(ApprovalActivity.getInstances().map((a) => [a.getId(), a]))
   const shown = JSON.parse((await SecureStore.getItemAsync(SHOWN)) ?? '{}') as Shown
   const next: Shown = {}
-  for (const h of heldPayments(requests, approvals, book)) {
+  for (const h of heldPayments(requests, approvals, book, await client.peg())) {
     // One the person swiped away stays away.
     if (shown[h.key]) next[h.key] = shown[h.key]
     else {

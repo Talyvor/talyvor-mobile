@@ -1,4 +1,4 @@
-import { formatULXC } from '@talyvor/bff-client'
+import { formatLXC } from '@talyvor/bff-client'
 import { useCallback } from 'react'
 import { View } from 'react-native'
 
@@ -13,7 +13,7 @@ const DECIDED: Record<string, string> = { approved: 'Approved', denied: 'Denied'
 
 /** Every approval: payments prepared for you and agents' requests waiting first, then what was decided. */
 export default function Approvals() {
-  const { client } = useSession()
+  const { client, peg } = useSession()
   const load = useCallback(async () => {
     const [book, approvals, prepared] = await Promise.all([client.book(), client.approvals(), pendingPrepared(client)])
     return { agents: book.agents ?? [], approvals: approvals.approvals ?? [], prepared }
@@ -40,7 +40,7 @@ export default function Approvals() {
         <Card key={a.id}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12 }}>
             <Body style={{ flex: 1 }}>{nameOf(a.agent_id)}</Body>
-            <Figure>{formatULXC(a.amount_ulxc)}</Figure>
+            <Figure>{formatLXC(a.amount_ulxc, peg)}</Figure>
           </View>
           <Body muted>
             {DECIDED[a.status] ?? 'Closed'} · {new Date(a.decided_at ?? a.created_at).toLocaleDateString()}

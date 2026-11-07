@@ -1,4 +1,4 @@
-import { formatULXC } from '@talyvor/bff-client'
+import { formatLXC } from '@talyvor/bff-client'
 import { useCallback } from 'react'
 import { View } from 'react-native'
 
@@ -11,7 +11,7 @@ const day = (d: Date) => d.toISOString().slice(0, 10)
 
 /** This month's statement across every agent wallet, newest line first. */
 export default function StatementScreen() {
-  const { client } = useSession()
+  const { client, peg } = useSession()
   const { c } = useTheme()
   const load = useCallback(async () => {
     const now = new Date()
@@ -33,7 +33,7 @@ export default function StatementScreen() {
       {(data?.statement.accounts ?? []).map((a) => (
         <View key={a.account} style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
           <Body>{accountName(a.account)}</Body>
-          <Figure>{formatULXC(a.closing_ulxc)}</Figure>
+          <Figure>{formatLXC(a.closing_ulxc, peg)}</Figure>
         </View>
       ))}
       {data && lines.length === 0 ? <Body muted>No money moved this month.</Body> : null}
@@ -44,7 +44,7 @@ export default function StatementScreen() {
             <Body style={{ flex: 1 }}>{l.label || l.memo || `${l.kind} · ${l.counterparty}`}</Body>
             <Figure tone={l.amount_ulxc < 0 ? c.ink : c.positive}>
               {l.amount_ulxc > 0 ? '+' : ''}
-              {formatULXC(l.amount_ulxc)}
+              {formatLXC(l.amount_ulxc, peg)}
             </Figure>
           </View>
           <Body muted>

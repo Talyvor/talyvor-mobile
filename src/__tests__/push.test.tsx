@@ -125,7 +125,7 @@ test('a request notification opens its approval card; approving the ticked payme
   expect(lens.pushTokens).toEqual({ dev_1: 'a1b2c3d4' })
 
   // Untick Bolt Couriers: the key signs a statement naming Acme Hosting alone.
-  await fireEvent.press(screen.getByLabelText('Approve 9.00 GBP to Bolt Couriers'))
+  await fireEvent.press(screen.getByLabelText('Approve £9.00 to Bolt Couriers'))
   await fireEvent.press(await screen.findByText('Approve 1 payment with Face ID'))
   expect(await screen.findByText('Approved. Each payment you approved is paid once.')).toBeTruthy()
   expect(JSON.parse(lens.approvedStatement).items.map((it: { position: number }) => it.position)).toEqual([1])
@@ -179,7 +179,7 @@ test("Approve with Face ID on a request's notification signs the hash of exactly
   expect(await screen.findByText('Approved. Each payment you approved is paid once.')).toBeTruthy()
   // mockLens approves only a device-key signature over the statement's SHA-256, the batch hash.
   expect(JSON.parse(lens.approvedStatement).items).toEqual(shownItems.map(({ payee_name: _, ...it }) => it))
-  expect(mockReasons.at(-1)).toBe('Approve 2 payments, 34.00 GBP: Acme Hosting 25.00 GBP, Bolt Couriers 9.00 GBP')
+  expect(mockReasons.at(-1)).toBe('Approve 2 payments, £34.00: Acme Hosting £25.00, Bolt Couriers £9.00')
   expect(mockCategories.payment_request).toEqual([expect.objectContaining({ identifier: 'approve', buttonTitle: 'Approve with Face ID' })])
 })
 

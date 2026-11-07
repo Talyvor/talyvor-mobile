@@ -193,7 +193,7 @@ test('a payment said while holding the microphone is prepared, read back, and wa
   await waitFor(() => expect(mockMic.recording).toBe(true))
   await fireEvent(mic, 'pressOut')
 
-  const readBack = 'I’ve prepared a payment of 120.00 GBP to ACME Ltd. Nothing is paid until you approve it with Face ID.'
+  const readBack = 'I’ve prepared a payment of £120.00 to ACME Ltd. Nothing is paid until you approve it with Face ID.'
   expect(await screen.findByText(readBack)).toBeTruthy()
   expect(lens.prepared).toEqual([{ voice: true, items: [{ payee_id: 'py_acme', currency: 'GBP', amount_minor: 12000, reference: 'ACME invoice' }] }])
   await waitFor(() => expect(lens.spoken).toEqual([readBack]))
@@ -227,7 +227,7 @@ test('B41.38: "what’s due this week?" said aloud reads back the payments waiti
   await fireEvent(mic, 'pressIn')
   await waitFor(() => expect(mockMic.recording).toBe(true))
   await fireEvent(mic, 'pressOut')
-  const due = '1 payment is waiting for your approval: 120.00 GBP to ACME Ltd. Nothing is paid until you approve it with Face ID.'
+  const due = '1 payment is waiting for your approval: £120.00 to ACME Ltd. Nothing is paid until you approve it with Face ID.'
   expect(await screen.findByText(due)).toBeTruthy()
   await waitFor(() => expect(lens.spoken).toEqual([due]))
   expect(screen.getByText('See what is due')).toBeTruthy()
