@@ -3,7 +3,7 @@ import * as SecureStore from 'expo-secure-store'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 
 import { config } from './config'
-import { forgetThisPhone } from './keys'
+import { recheckPhoneKey } from './keys'
 import { endLiveActivities } from './live-activity'
 import { clearWidget } from './widget-sync'
 
@@ -39,6 +39,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     async (idToken: string) => {
       const s = await client.signIn(idToken)
       await SecureStore.setItemAsync(KEY, JSON.stringify(s))
+      await recheckPhoneKey(createBffClient(config.bffUrl, () => s.token)).catch((err) => console.warn('device: not checked', err))
       setToken(s.token)
     },
     [client],
@@ -47,7 +48,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     await SecureStore.deleteItemAsync(KEY)
     await clearWidget()
     await endLiveActivities()
-    await forgetThisPhone()
     setToken(null)
   }, [])
 
