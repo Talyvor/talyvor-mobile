@@ -68,20 +68,21 @@ jest.mock('expo-file-system', () => ({
 }))
 
 /** Face ID: the key signs only once the person has looked at the phone. */
-const mockFaceId = { asked: 0, pass: () => undefined as void }
+const mockFaceId = { asked: 0, pass: () => undefined as void, cancel: () => undefined as void }
 jest.mock('../../modules/talyvor-keys', () => ({
   isAvailable: () => true,
   sign: () =>
-    new Promise<string>((resolve) => {
+    new Promise<string>((resolve, reject) => {
       mockFaceId.asked++
       mockFaceId.pass = () => resolve('c2lnbmVk')
+      mockFaceId.cancel = () => reject(Object.assign(new Error('Face ID did not confirm, so nothing was signed'), { code: 'ERR_BIOMETRIC' }))
     }),
   deleteKey: async () => undefined,
 }))
 
 /** Lens behind the BFF. `heard` is what transcription answers for the next recording. */
 function mockLens(heard: string) {
-  const lens = { allPaused: false, spoken: [] as string[], prepared: [] as unknown[], approved: false, asked: [] as unknown[], uploads: 0 }
+  const lens = { allPaused: false, resumed: [] as unknown[], spoken: [] as string[], prepared: [] as unknown[], approved: false, asked: [] as unknown[], uploads: 0 }
   const item = { position: 1, payee_id: 'py_acme', payee_name: 'ACME Ltd', currency: 'GBP', amount_minor: 12000, reference: 'ACME invoice', decision: 'needs_approval', reason: 'a payment said aloud' }
   const request = () => ({ id: 'preq_9', status: lens.approved ? 'approved' : 'pending_approval', summary: 'Pay ACME Ltd', client: 'voice', totals: { GBP: 12000 }, items: [item], created_at: '2026-10-24T08:00:00Z' })
   globalThis.fetch = jest.fn(async (url: string, init: RequestInit = {}) => {
@@ -98,6 +99,14 @@ function mockLens(heard: string) {
       case 'POST /api/agents/pause-all':
         lens.allPaused = true
         return json({ all_paused: true })
+      case 'POST /api/agents/resume-all/challenge':
+        lens.resumed.push('challenge')
+        return json({ challenge: 'ch_all' })
+      case 'POST /api/agents/resume-all':
+        lens.resumed.push(body)
+        // The workspace has a key, so Lens refuses an unsigned resume.
+        if (!body?.assertion) return new Response(JSON.stringify({ error: "economy: this workspace approves with a passkey — sign this approval's challenge" }), { status: 403 })
+        return json({ all_paused: false })
       case 'GET /api/money/payees':
         return json({ payees: [{ id: 'py_acme', name: 'ACME Ltd', country: 'GB', needs_confirmation: false, created_at: '2026-10-01T00:00:00Z' }] })
       case 'POST /api/money/payment-requests':
@@ -222,4 +231,44 @@ test('B41.38: "what’s due this week?" said aloud reads back the payments waiti
   expect(lens.prepared).toEqual([])
   await fireEvent.press(screen.getByText('Open Research'))
   await waitFor(() => expect(app.getPathname()).toBe('/agents/ag_research'))
+})
+
+test('B55.5: "start all agents" is signed with Face ID over the resume-all challenge, and nothing is sent before', async () => {
+  const lens = mockLens('')
+  await renderRouter('./src/app', { initialUrl: '/chat' })
+
+  await fireEvent.changeText(await screen.findByLabelText('Message'), 'Start all agents')
+  await fireEvent.press(screen.getByText('Send'))
+  await fireEvent.press(await screen.findByText('Start them with Face ID'))
+  await waitFor(() => expect(mockFaceId.asked).toBe(1))
+  expect(lens.resumed).toEqual(['challenge'])
+  await act(async () => mockFaceId.pass())
+  expect(await screen.findByText('Your agents can work again.')).toBeTruthy()
+  expect(lens.resumed).toEqual(['challenge', { assertion: { device_id: 'dev_1', challenge: 'ch_all', signature: 'c2lnbmVk' } }])
+})
+
+test('B55.5: a cancelled Face ID on "start all agents" sends no resume and says nothing changed', async () => {
+  const lens = mockLens('')
+  await renderRouter('./src/app', { initialUrl: '/chat' })
+
+  await fireEvent.changeText(await screen.findByLabelText('Message'), 'Start all agents')
+  await fireEvent.press(screen.getByText('Send'))
+  await fireEvent.press(await screen.findByText('Start them with Face ID'))
+  await waitFor(() => expect(mockFaceId.asked).toBe(1))
+  await act(async () => mockFaceId.cancel())
+  expect(await screen.findByText('Nothing changed. You can try again.')).toBeTruthy()
+  expect(lens.resumed).toEqual(['challenge'])
+})
+
+test('B55.5: with the phone\'s key off, "start all agents" that Lens refuses unsigned says where to start them', async () => {
+  mockStore.delete('talyvor.device-key')
+  const lens = mockLens('')
+  await renderRouter('./src/app', { initialUrl: '/chat' })
+
+  await fireEvent.changeText(await screen.findByLabelText('Message'), 'Start all agents')
+  await fireEvent.press(screen.getByText('Send'))
+  await fireEvent.press(await screen.findByText('Yes, start all'))
+  expect(await screen.findByText('Start your agents again on the web with your passkey, or turn on Approve with Face ID on this phone.')).toBeTruthy()
+  expect(lens.resumed).toEqual([undefined])
+  expect(mockFaceId.asked).toBe(0)
 })
