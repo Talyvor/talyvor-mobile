@@ -204,3 +204,36 @@ test('a notification whose items are not what Lens would have signed approves no
   await waitFor(() => expect(alert).toHaveBeenCalledWith('Nothing was approved', 'what you were asked to sign is not what was shown, so nothing was signed'))
   expect(lens.approvedStatement).toBe('')
 })
+
+// B55.47 DONE: an agent's approval is approved from its notification with Face ID, as a prepared payment is. Lens's push
+// (B55.12) names the agent, the payee and the amount in µLXC; the phone signs only the approval that matches them.
+const agentPush = { type: 'agent_approval', approval_id: 'apr_1', workspace_id: 'ws_1', agent_id: 'ag_1', agent_name: 'Buyer', payee_name: 'GPU hour', currency: 'LXC', amount_minor: '2000000' }
+
+test("Approve with Face ID on an agent's approval signs exactly that approval's challenge, and Lens approves it", async () => {
+  const lens = mockLens()
+  tap(agentPush, 'approve')
+  await renderRouter('./src/app', { initialUrl: '/approvals' })
+
+  expect(await screen.findByText('Approved. Nothing is waiting for you here.')).toBeTruthy()
+  expect(lens.approvalApproved).toBe(true)
+  expect(mockReasons.at(-1)).toBe('Approve 2 LXC for Buyer')
+  expect(mockCategories.agent_approval).toEqual([expect.objectContaining({ identifier: 'approve', buttonTitle: 'Approve with Face ID' })])
+})
+
+test.each([
+  ['amount', { amount_minor: '200' }],
+  ['payee', { payee_name: 'Someone else' }],
+  ['agent', { agent_id: 'ag_2' }],
+])("an agent's approval whose push names a different %s approves nothing", async (_, changed) => {
+  const lens = mockLens()
+  // The spy outlives a test, so it is cleared: a refusal another test caused must not count here.
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined).mockClear()
+  tap({ ...agentPush, ...changed }, 'approve')
+  await renderRouter('./src/app', { initialUrl: '/approvals' })
+
+  expect(await screen.findByText('Buyer is waiting for you')).toBeTruthy()
+  await waitFor(() => expect(alert).toHaveBeenCalledWith('Nothing was approved', 'what you were asked to sign is not what was shown, so nothing was signed'))
+  const sent = (globalThis.fetch as jest.Mock).mock.calls.map(([url, init]) => `${init?.method ?? 'GET'} ${url}`)
+  expect(sent.filter((r: string) => /\/approvals\/apr_1\/(approve|challenge)/.test(r))).toEqual([])
+  expect(lens.approvalApproved).toBeFalsy()
+})

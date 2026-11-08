@@ -1,11 +1,11 @@
-import { BffError, refusalText, type BffClient } from '@talyvor/bff-client'
+import { BffError, formatULXC, refusalText, type BffClient } from '@talyvor/bff-client'
 import * as Notifications from 'expo-notifications'
 import { router, type Href } from 'expo-router'
 import { useEffect, useRef } from 'react'
 import { Alert } from 'react-native'
 
 import { approveBatch, batchOf } from './approve-batch'
-import { biometricName, thisPhoneDevice } from './keys'
+import { biometricName, signWithThisPhone, thisPhoneDevice } from './keys'
 import { syncLiveActivities } from './live-activity'
 
 // B40.14 — Lens (B40.15) pushes every held payment and every request prepared for approval to the APNs or FCM token of
@@ -43,13 +43,24 @@ export function pushData(request: Notifications.NotificationRequest): Record<str
   return request.trigger && 'payload' in request.trigger ? (request.trigger.payload ?? undefined) : undefined
 }
 
+/** B55.47 — an agent's approval from its notification's Approve button. Lens's challenge binds only the approval's id,
+ * so the key signs only when the approval Lens holds is the one the notification named: its agent, payee and µLXC. */
+export async function approveAgentApproval(client: BffClient, data: Record<string, unknown>): Promise<void> {
+  const a = ((await client.approvals()).approvals ?? []).find((x) => x.id === data.approval_id)
+  const same = a && a.agent_id === data.agent_id && (a.payee?.name ?? '') === String(data.payee_name ?? '') &&
+    data.currency === 'LXC' && String(a.amount_ulxc) === String(data.amount_minor)
+  if (!a || !same) throw new Error('what you were asked to sign is not what was shown, so nothing was signed')
+  const agentName = String(data.agent_name || a.agent_id)
+  await client.approve(a.id, await signWithThisPhone((await client.approvalChallenge(a.id)).challenge, `Approve ${formatULXC(a.amount_ulxc)} for ${agentName}`))
+}
+
 /** Gives Lens this phone's push token, once its approval key is on and the person allows notifications. */
 export async function registerPush(client: BffClient): Promise<void> {
   const device = await thisPhoneDevice()
   if (!device || !(await Notifications.requestPermissionsAsync()).granted) return
-  await Notifications.setNotificationCategoryAsync('payment_request', [
-    { identifier: APPROVE_ACTION, buttonTitle: `Approve with ${biometricName}`, options: { opensAppToForeground: true } },
-  ])
+  const approve = [{ identifier: APPROVE_ACTION, buttonTitle: `Approve with ${biometricName}`, options: { opensAppToForeground: true } }]
+  await Notifications.setNotificationCategoryAsync('payment_request', approve)
+  await Notifications.setNotificationCategoryAsync('agent_approval', approve)
   const { data } = await Notifications.getDevicePushTokenAsync()
   await client.setPushToken(device, String(data))
 }
@@ -68,9 +79,10 @@ export function usePushApprovals(client: BffClient, signedIn: boolean) {
     const href = approvalHref(data)
     const spend = spendHref(data)
     const batch = batchOf(data?.items)
-    if (response.actionIdentifier === APPROVE_ACTION && data?.type === 'payment_request' && href && batch) {
+    if (response.actionIdentifier === APPROVE_ACTION && data && href && ((data.type === 'payment_request' && batch) || data.type === 'agent_approval')) {
       approved.current = response
-      approveBatch(client, String(data.request_id), batch)
+      const approving = data.type === 'agent_approval' ? approveAgentApproval(client, data) : approveBatch(client, String(data.request_id), batch!)
+      approving
         .then(() => syncLiveActivities(client))
         .catch((err: Error) => Alert.alert('Nothing was approved', err instanceof BffError ? refusalText(err) : err.message))
         .finally(() => router.push(href))
