@@ -48,8 +48,8 @@ export default function SignIn() {
   return (
     <Screen>
       <Image
-        source={dark ? require('../../assets/images/talyvor-logo-dark-notag.png') : require('../../assets/images/talyvor-logo-light-notag.png')}
-        style={{ width: 180, height: 30, marginTop: 40, marginBottom: 40 }}
+        source={dark ? require('../../assets/logo/talyvor-logo-small-on-dark-480.png') : require('../../assets/logo/talyvor-logo-small-on-light-480.png')}
+        style={{ width: 180, height: 57, marginTop: 40, marginBottom: 40 }}
         contentFit="contain"
         accessibilityLabel="Talyvor"
       />

@@ -1,5 +1,5 @@
-import { HStack, Spacer, Text, VStack } from '@expo/ui/swift-ui'
-import { font, foregroundStyle, kerning, minimumScaleFactor, monospacedDigit, padding, textCase } from '@expo/ui/swift-ui/modifiers'
+import { HStack, Image, Spacer, Text, VStack } from '@expo/ui/swift-ui'
+import { accessibilityLabel, font, foregroundStyle, frame, kerning, minimumScaleFactor, monospacedDigit, padding, resizable, textCase } from '@expo/ui/swift-ui/modifiers'
 import { createLiveActivity, type LiveActivityEnvironment } from 'expo-widgets'
 
 import type { Palette } from '../theme'
@@ -27,6 +27,8 @@ const ApprovalActivity = (p: ApprovalActivityProps, env: LiveActivityEnvironment
   const eyebrow = (color: string) => [font({ size: 11, weight: 'medium' }), kerning(1.6), textCase('uppercase'), foregroundStyle(color)]
   const figure = (size: number) => [font({ size, weight: 'medium', design: 'monospaced' }), monospacedDigit(), minimumScaleFactor(0.6), foregroundStyle(c.ink)]
   const body = (color: string) => [font({ size: 13 }), foregroundStyle(color)]
+  // The logo's symbol, bundled into the widget extension by plugins/with-widget-symbol.js.
+  const symbol = env.colorScheme === 'light' ? 'TalyvorSymbolOnLight' : 'TalyvorSymbolOnDark'
   const bottom = (
     <VStack alignment="leading" spacing={2}>
       <Text modifiers={body(c.inkMuted)}>{p.detail}</Text>
@@ -37,7 +39,11 @@ const ApprovalActivity = (p: ApprovalActivityProps, env: LiveActivityEnvironment
   return {
     banner: (
       <VStack alignment="leading" spacing={6} modifiers={[padding({ all: 14 })]}>
-        <Text modifiers={eyebrow(tone)}>{word}</Text>
+        <HStack>
+          <Text modifiers={eyebrow(tone)}>{word}</Text>
+          <Spacer />
+          <Image assetName={symbol} modifiers={[resizable(), frame({ width: 22, height: 16 }), accessibilityLabel('Talyvor')]} />
+        </HStack>
         <HStack spacing={10}>
           <Text modifiers={body(c.ink)}>{p.title}</Text>
           <Spacer />

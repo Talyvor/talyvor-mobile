@@ -4,7 +4,7 @@
     "slug": "talyvor",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/app-icon-1024.png",
+    "icon": "./assets/logo/app-icon-1024.png",
     "scheme": "talyvor",
     "userInterfaceStyle": "automatic",
     "backgroundColor": "#060A12",
@@ -18,13 +18,13 @@
     "android": {
       "package": "com.talyvor.app",
       "adaptiveIcon": {
-        "backgroundColor": "#060A12",
-        "foregroundImage": "./assets/images/icon-maskable-512.png"
+        "foregroundImage": "./assets/logo/android-adaptive-foreground-432.png",
+        "backgroundImage": "./assets/logo/android-adaptive-background-432.png"
       },
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/images/favicon-32.png"
+      "favicon": "./assets/logo/favicon-32.png"
     },
     "plugins": [
       "expo-router",
@@ -42,11 +42,12 @@
       "./plugins/with-app-shortcuts",
       "./plugins/with-tls-only",
       "./plugins/with-gradle-network-retries",
+      "./plugins/with-widget-symbol",
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#060A12",
-          "image": "./assets/images/talyvor-mark-flat-dark.png",
+          "backgroundColor": "#111216",
+          "image": "./assets/logo/talyvor-symbol-on-dark-1024.png",
           "imageWidth": 96
         }
       ],

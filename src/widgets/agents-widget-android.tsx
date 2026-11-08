@@ -1,4 +1,4 @@
-import { Box, Button, Column, Row, Spacer, Text, type ButtonProps } from '@expo/ui/jetpack-compose'
+import { Box, Button, Column, Image, Row, Spacer, Text, type ButtonProps } from '@expo/ui/jetpack-compose'
 import { background, cornerRadius, fillMaxSize, fillMaxWidth, height, paddingAll, width } from '@expo/ui/jetpack-compose/modifiers'
 import { createWidget, type WidgetEnvironment } from 'expo-widgets'
 import type { JSX } from 'react'
@@ -31,7 +31,12 @@ export const AgentsWidgetAndroid = (p: AgentsWidgetProps, env: WidgetEnvironment
   if (!p.signedIn) {
     return (
       <Column modifiers={frame}>
-        <Text {...eyebrow}>TALYVOR</Text>
+        {/* The logo's symbol, a drawable copied in by plugins/with-widget-symbol.js. */}
+        <Image
+          source={{ uri: env.colorScheme === 'light' ? 'talyvor_symbol_on_light' : 'talyvor_symbol_on_dark' }}
+          modifiers={[width(48), height(35)]}
+          contentDescription="Talyvor"
+        />
         <Text {...body(c.ink)}>Sign in to see your agents here.</Text>
         <Spacer modifiers={[height(8)]} />
         {tap('Open Talyvor', 'talyvor://')}
