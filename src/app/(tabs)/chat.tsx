@@ -7,7 +7,7 @@ import { AppState, Pressable, Switch, Text, TextInput, View } from 'react-native
 
 import { bareAmount, currencyOf, parsePay, payeesCalled, PAUSE_ALL, RESUME_ALL, spendOf, WHATS_DUE, type Amount, type PayAsk } from '@/chat-commands'
 import { Body, Button, Card, Eyebrow, Headline, Screen } from '@/components/ui'
-import { biometricName } from '@/keys'
+import { biometricName, resumeWithThisPhone, thisPhoneDevice } from '@/keys'
 import { useSession } from '@/session'
 import { fonts, useTheme } from '@/theme'
 import { AI_NOTICE, heyTalyAvailable, listenForHeyTaly, notToldYet, sayAloud } from '@/voice'
@@ -84,6 +84,8 @@ export default function ChatScreen() {
   const owed = useRef<{ ask: PayAsk; payee: OutsidePayee } | null>(null)
   const starting = useRef<Promise<boolean> | null>(null)
   const noticed = useRef(false)
+  const [signs, setSigns] = useState(false)
+  useEffect(() => void thisPhoneDevice().then((d) => setSigns(!!d)), [])
 
   const add = (t: Omit<Turn, 'id'>) => {
     const turn = { ...t, id: ++seq.current }
@@ -158,7 +160,11 @@ export default function ChatScreen() {
     setTurns((said.current = said.current.map((t) => (t.id === turn.id ? { ...t, settled: true } : t))))
     try {
       if (turn.confirm === 'pause-all') await client.pauseAll('Paused from Chat')
-      else await client.resumeAll()
+      else {
+        const onWeb = `Start your agents again on the web with your passkey, or turn on Approve with ${biometricName} on this phone.`
+        const not = await resumeWithThisPhone(client, null, 'Start every agent', onWeb)
+        if (not) return reply({ text: not, voiced: turn.voiced })
+      }
       reply({ text: CONFIRM[turn.confirm!].done, voiced: turn.voiced })
     } catch (err) {
       reply({ text: refusalText(err), voiced: turn.voiced })
@@ -253,7 +259,9 @@ export default function ChatScreen() {
           ) : (
             <Card>
               <Body>{t.text}</Body>
-              {t.confirm && !t.settled ? <Button primary label={CONFIRM[t.confirm].yes} onPress={() => void decide(t)} /> : null}
+              {t.confirm && !t.settled ? (
+                <Button primary label={t.confirm === 'resume-all' && signs ? `Start them with ${biometricName}` : CONFIRM[t.confirm].yes} onPress={() => void decide(t)} />
+              ) : null}
               {t.open ? <Button label={t.open.label} onPress={t.open.go} /> : null}
               {t.approve ? (
                 <Button primary label={`Review and approve with ${biometricName}`} onPress={() => router.push({ pathname: '/approve/[id]', params: { id: t.approve! } })} />

@@ -4,7 +4,8 @@ import { useLocalSearchParams } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { TextInput, View } from 'react-native'
 
-import { Body, Button, Eyebrow, Figure, Headline, LoadState, Screen, useLoad } from '@/components/ui'
+import { Body, Button, Card, Eyebrow, Figure, Headline, LoadState, Screen, useLoad } from '@/components/ui'
+import { biometricName, resumeWithThisPhone, thisPhoneDevice } from '@/keys'
 import { useSession } from '@/session'
 import { fonts, useTheme } from '@/theme'
 import { pinnedAgents, setPinned, syncWidget } from '@/widget-sync'
@@ -15,12 +16,15 @@ export default function AgentScreen() {
   const { client } = useSession()
   const { c } = useTheme()
   const load = useCallback(async () => {
-    const [book, rules, pins] = await Promise.all([client.book(), client.rules(id), pinnedAgents()])
-    return { agent: (book.agents ?? []).find((a) => a.id === id) ?? null, rules, unallocated: book.unallocated_ulxc, pinned: pins.includes(id) }
+    const [book, rules, pins, device] = await Promise.all([client.book(), client.rules(id), pinnedAgents(), thisPhoneDevice()])
+    const agent = (book.agents ?? []).find((a) => a.id === id) ?? null
+    return { agent, rules, unallocated: book.unallocated_ulxc, pinned: pins.includes(id), allPaused: !!book.all_paused_at, signs: !!device }
   }, [client, id])
   const { data, error, loading, reload } = useLoad(load)
   const [busy, setBusy] = useState(false)
   const [refusal, setRefusal] = useState('')
+  const [asking, setAsking] = useState(false)
+  const [note, setNote] = useState('')
   const [amount, setAmount] = useState('')
   // One key per amount typed, so a retry after a dropped answer funds once.
   const [fundKey, setFundKey] = useState(() => Crypto.randomUUID())
@@ -40,7 +44,23 @@ export default function AgentScreen() {
     }
   }
   const toggle = () =>
-    act(() => (agent!.paused_at ? client.resume(agent!.id) : client.pause(agent!.id, 'Paused from the phone app')))
+    !agent!.paused_at ? act(() => client.pause(agent!.id, 'Paused from the phone app')) : data!.signs ? setAsking(true) : void resume()
+  const resume = async () => {
+    setAsking(false)
+    setBusy(true)
+    setRefusal('')
+    const why = await resumeWithThisPhone(
+      client,
+      agent!.id,
+      `Resume ${agent!.name}`,
+      `Resume ${agent!.name} on the web with your passkey, or turn on Approve with ${biometricName} on this phone.`,
+    )
+    setBusy(false)
+    if (why) return setRefusal(why)
+    if (data!.allPaused) setNote(`${agent!.name} runs when you start every agent again. Until then it stays paused with every agent.`)
+    reload()
+    void syncWidget(client)
+  }
   const micros = parseLXC(amount)
   const fund = () =>
     act(async () => {
@@ -66,8 +86,19 @@ export default function AgentScreen() {
             {agent.paused_at ? `Paused${agent.paused_reason ? `: ${agent.paused_reason}` : ''}. It can spend nothing until you resume it.` : 'Active.'}
           </Body>
           <View style={{ marginTop: 8 }}>
-            <Button primary={!!agent.paused_at} label={agent.paused_at ? 'Resume' : 'Pause'} disabled={busy} onPress={() => void toggle()} />
+            <Button primary={!!agent.paused_at} label={agent.paused_at ? 'Resume' : 'Pause'} disabled={busy || asking} onPress={() => void toggle()} />
           </View>
+          {asking ? (
+            <Card>
+              <Body>{`Resume ${agent.name}?`}</Body>
+              <Body muted>Its requests and payments are served again, within its rules.</Body>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 4 }}>
+                <Button primary label={`Resume with ${biometricName}`} onPress={() => void resume()} />
+                <Button label="Not now" onPress={() => setAsking(false)} />
+              </View>
+            </Card>
+          ) : null}
+          {note ? <Body>{note}</Body> : null}
           {refusal ? <Body style={{ color: c.critical }}>{refusal}</Body> : null}
           <Eyebrow>Fund</Eyebrow>
           <Body muted>Unallocated in your workspace: {formatULXC(data.unallocated)}</Body>

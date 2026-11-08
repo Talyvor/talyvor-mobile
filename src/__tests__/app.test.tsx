@@ -29,30 +29,41 @@ jest.mock('expo-crypto', () => ({ randomUUID: () => `uuid-${++mockUuid}` }))
 const mockSnapshots: { signedIn: boolean; agents: { id: string; paused: boolean; pauseUrl: string }[]; payees: { id: string; name: string; last: string; openUrl: string }[] }[] = []
 jest.mock('expo-widgets', () => ({ ...jest.requireActual('../../__mocks__/expo-widgets'), createWidget: () => ({ updateSnapshot: (p: never) => mockSnapshots.push(p) }) }))
 jest.mock('../config', () => ({ config: { bffUrl: 'https://bff.test', oidcIssuer: 'https://idp', oidcClientId: 'mobile' } }))
-/** This phone's approval key: each sign is one biometric check, which passes while `face` is true. */
+
+/** Face ID: `face` false is the person cancelling the check, so the key signs nothing. */
 const mockPhone = { face: true, reasons: [] as string[] }
 jest.mock('../../modules/talyvor-keys', () => ({
   isAvailable: () => true,
-  sign: async (_: string, __: string, reason: string) => {
+  sign: async (_: string, message: string, reason: string) => {
     mockPhone.reasons.push(reason)
-    if (!mockPhone.face) throw Object.assign(new Error('Face ID did not confirm'), { code: 'ERR_BIOMETRIC' })
-    return 'signature'
+    if (!mockPhone.face) throw Object.assign(new Error('Face ID did not confirm, so nothing was signed'), { code: 'ERR_BIOMETRIC' })
+    return `signed:${message}`
   },
   deleteKey: async () => undefined,
 }))
 
-/** The BFF as the app sees it: one workspace, two agents, one approval waiting. */
-function mockBff(approvals: unknown[] = [{ id: 'apr_1', agent_id: 'ag_2', amount_ulxc: 2_000_000, model: '', payee: { kind: 'listing', id: 'l_1', name: 'GPU hour' }, status: 'pending', created_at: '2026-10-17T08:00:00Z' }]) {
+/** The BFF as the app sees it: one workspace, two agents, one approval waiting. The workspace has a key, so Lens refuses
+ * an unsigned resume. */
+function mockBff(start: { paused?: boolean; allPaused?: boolean; approvals?: unknown[]; refuseSigned?: boolean; sessionEnded?: boolean } = {}) {
   const calls: { method: string; path: string; auth: string | undefined; body?: string; key?: string }[] = []
-  let pausedAt: string | undefined
+  let pausedAt = start.paused ? '2026-10-17T09:00:00Z' : undefined
   const agents = () => [
     { id: 'ag_1', name: 'Researcher', balance_ulxc: 12_500_000, spent_ulxc: 0, created_at: '2026-10-01T00:00:00Z', paused_at: pausedAt },
     { id: 'ag_2', name: 'Buyer', balance_ulxc: 3_000_000, spent_ulxc: 0, created_at: '2026-10-01T00:00:00Z' },
   ]
-  const routes: Partial<Record<string, () => unknown>> = {
+  const routes: Partial<Record<string, (body?: string) => unknown>> = {
     'POST /auth/mobile/session': () => ({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }),
-    'GET /api/agents': () => ({ workspace_balance_ulxc: 20_000_000, allocated_ulxc: 15_500_000, unallocated_ulxc: 4_500_000, spent_ulxc: 0, agents: agents() }),
-    'GET /api/agents/approvals': () => ({ approvals }),
+    'GET /api/agents': () => ({
+      workspace_balance_ulxc: 20_000_000,
+      allocated_ulxc: 15_500_000,
+      unallocated_ulxc: 4_500_000,
+      spent_ulxc: 0,
+      agents: agents(),
+      all_paused_at: start.allPaused ? '2026-10-17T08:30:00Z' : undefined,
+    }),
+    'GET /api/agents/approvals': () => ({
+      approvals: start.approvals ?? [{ id: 'apr_1', agent_id: 'ag_2', amount_ulxc: 2_000_000, model: '', payee: { kind: 'listing', id: 'l_1', name: 'GPU hour' }, status: 'pending', created_at: '2026-10-17T08:00:00Z' }],
+    }),
     'GET /api/agents/ag_1/rules': () => ({ max_per_request_ulxc: 1_000_000, daily_limit_ulxc: 0, monthly_limit_ulxc: 0, approval_above_ulxc: 500_000, allowed_models: null, allowed_providers: null, active_from: '', active_until: '', timezone: 'UTC' }),
     'POST /api/agents/ag_1/fund': () => ({ balance_ulxc: 15_000_000 }),
     'GET /api/money/payees': () => ({
@@ -70,6 +81,14 @@ function mockBff(approvals: unknown[] = [{ id: 'apr_1', agent_id: 'ag_2', amount
       pausedAt = '2026-10-17T09:00:00Z'
       return agents()[0]
     },
+    'POST /api/agents/ag_1/resume-challenge': () => ({ challenge: 'ch_resume_1' }),
+    'POST /api/agents/ag_1/resume': (body) => {
+      if (!body) return new Response(JSON.stringify({ error: "economy: this workspace approves with a passkey — sign this approval's challenge" }), { status: 403 })
+      if (start.refuseSigned) return new Response(JSON.stringify({ error: 'economy: device key revoked' }), { status: 403 })
+      if (start.sessionEnded) return new Response(JSON.stringify({ error: 'unauthorised' }), { status: 401 })
+      pausedAt = undefined
+      return agents()[0]
+    },
   }
   globalThis.fetch = jest.fn(async (url: string, init: RequestInit = {}) => {
     const path = url.replace('https://bff.test', '')
@@ -79,7 +98,9 @@ function mockBff(approvals: unknown[] = [{ id: 'apr_1', agent_id: 'ag_2', amount
     calls.push({ method, path, auth, body: init.body as string | undefined, key: headers['Idempotency-Key'] })
     const route = routes[`${method} ${path}`]
     const signedIn = path.startsWith('/auth/') || auth === 'Bearer session-1'
-    return new Response(JSON.stringify(route && signedIn ? route() : { error: 'no' }), { status: route ? (signedIn ? 200 : 401) : 404 })
+    const answer = route && signedIn ? route(init.body as string | undefined) : { error: 'no' }
+    if (answer instanceof Response) return answer
+    return new Response(JSON.stringify(answer), { status: route ? (signedIn ? 200 : 401) : 404 })
   }) as unknown as typeof fetch
   return calls
 }
@@ -143,11 +164,11 @@ describe('B55.8 expired approvals', () => {
   const day = (at: string) => new Date(at).toLocaleDateString()
 
   test('an expired approval reads Expired in the list and on its screen, and decided rows are dated when decided', async () => {
-    mockBff([
+    mockBff({ approvals: [
       { id: 'apr_2', agent_id: 'ag_2', amount_ulxc: 2_000_000, model: '', status: 'expired', created_at: '2026-10-10T08:00:00Z' },
       { id: 'apr_3', agent_id: 'ag_2', amount_ulxc: 1_000_000, model: '', status: 'expired', created_at: '2026-10-11T08:00:00Z', decided_at: '2026-10-11T09:00:00Z' },
       { id: 'apr_4', agent_id: 'ag_1', amount_ulxc: 1_000_000, model: '', status: 'used', created_at: '2026-10-12T08:00:00Z', decided_at: '2026-10-14T08:00:00Z' },
-    ])
+    ] })
     await renderRouter('./src/app', { initialUrl: '/approvals' })
     expect(await screen.findByText(`Expired · ${day('2026-10-10T08:00:00Z')}`)).toBeTruthy()
     expect(screen.getByText(`Approved and spent · ${day('2026-10-14T08:00:00Z')}`)).toBeTruthy()
@@ -247,6 +268,91 @@ describe('B41.35 home-screen widget', () => {
     expect(JSON.parse(sent[0].body!)).toEqual({ account_id: 'acc_gbp', payee_id: 'py_1', amount_minor: 1250, currency: 'GBP', reference: 'October', idempotency_key: expect.stringMatching(/^uuid-\d+$/) })
   })
 
+})
+
+describe('B55.5 Resume signed with Face ID', () => {
+  beforeEach(() => {
+    mockStore.clear()
+    mockStore.set('talyvor.session', JSON.stringify({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }))
+    mockPhone.face = true
+    mockPhone.reasons = []
+  })
+  const resumes = (calls: ReturnType<typeof mockBff>) => calls.filter((c) => c.method === 'POST' && c.path.startsWith('/api/agents/ag_1/resume'))
+
+  test("with the phone's key on, Resume asks first, then signs the resume challenge and sends the assertion", async () => {
+    mockStore.set('talyvor.device-key', 'dev_1')
+    const calls = mockBff({ paused: true })
+    await renderRouter('./src/app', { initialUrl: '/agents/ag_1' })
+
+    await fireEvent.press(await screen.findByText('Resume'))
+    expect(screen.getByText('Resume Researcher?')).toBeTruthy()
+    expect(screen.getByText('Its requests and payments are served again, within its rules.')).toBeTruthy()
+    expect(resumes(calls)).toEqual([])
+    await fireEvent.press(screen.getByText('Resume with Face ID'))
+
+    expect(await screen.findByText('Active.')).toBeTruthy()
+    expect(resumes(calls).map((c) => c.path)).toEqual(['/api/agents/ag_1/resume-challenge', '/api/agents/ag_1/resume'])
+    expect(JSON.parse(resumes(calls)[1].body!)).toEqual({ assertion: { device_id: 'dev_1', challenge: 'ch_resume_1', signature: 'signed:talyvor-device-v1:ch_resume_1' } })
+    expect(mockPhone.reasons).toEqual(['Resume Researcher'])
+  })
+
+  test('Not now, and a cancelled Face ID, send no resume', async () => {
+    mockStore.set('talyvor.device-key', 'dev_1')
+    mockPhone.face = false
+    const calls = mockBff({ paused: true })
+    await renderRouter('./src/app', { initialUrl: '/agents/ag_1' })
+
+    await fireEvent.press(await screen.findByText('Resume'))
+    await fireEvent.press(screen.getByText('Not now'))
+    expect(screen.queryByText('Resume Researcher?')).toBeNull()
+    await fireEvent.press(screen.getByText('Resume'))
+    await fireEvent.press(screen.getByText('Resume with Face ID'))
+
+    expect(await screen.findByText('Nothing changed. You can try again.')).toBeTruthy()
+    expect(resumes(calls).map((c) => c.path)).toEqual(['/api/agents/ag_1/resume-challenge'])
+  })
+
+  test("a signed resume Lens refuses shows words, never Lens's own sentence", async () => {
+    mockStore.set('talyvor.device-key', 'dev_1')
+    mockBff({ paused: true, refuseSigned: true })
+    await renderRouter('./src/app', { initialUrl: '/agents/ag_1' })
+
+    await fireEvent.press(await screen.findByText('Resume'))
+    await fireEvent.press(screen.getByText('Resume with Face ID'))
+    expect(await screen.findByText('Nothing changed. You can try again.')).toBeTruthy()
+    expect(screen.queryByText('Device key revoked.')).toBeNull()
+  })
+
+  test('a resume after the session ended says to sign in again, then try again', async () => {
+    mockStore.set('talyvor.device-key', 'dev_1')
+    mockBff({ paused: true, sessionEnded: true })
+    await renderRouter('./src/app', { initialUrl: '/agents/ag_1' })
+
+    await fireEvent.press(await screen.findByText('Resume'))
+    await fireEvent.press(screen.getByText('Resume with Face ID'))
+    expect(await screen.findByText('Nothing changed. Sign in again, then try again.')).toBeTruthy()
+  })
+
+  test("with the phone's key off, a resume Lens refuses unsigned says where to do it", async () => {
+    const calls = mockBff({ paused: true })
+    await renderRouter('./src/app', { initialUrl: '/agents/ag_1' })
+
+    await fireEvent.press(await screen.findByText('Resume'))
+    expect(screen.queryByText('Resume Researcher?')).toBeNull()
+
+    expect(await screen.findByText('Resume Researcher on the web with your passkey, or turn on Approve with Face ID on this phone.')).toBeTruthy()
+    expect(resumes(calls).map((c) => [c.path, c.body])).toEqual([['/api/agents/ag_1/resume', undefined]])
+  })
+
+  test('while every agent is paused, resuming one says it waits for every agent to start again', async () => {
+    mockStore.set('talyvor.device-key', 'dev_1')
+    mockBff({ paused: true, allPaused: true })
+    await renderRouter('./src/app', { initialUrl: '/agents/ag_1' })
+
+    await fireEvent.press(await screen.findByText('Resume'))
+    await fireEvent.press(screen.getByText('Resume with Face ID'))
+    expect(await screen.findByText('Researcher runs when you start every agent again. Until then it stays paused with every agent.')).toBeTruthy()
+  })
 })
 
 describe('B55.25 a payment from the phone confirms with Face ID', () => {

@@ -323,10 +323,13 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
       call<AgentApproval>('POST', `/api/agents/approvals/${e(id)}/deny`, assertion ? { assertion } : undefined),
     /** Every agent's next request or payment is refused until resume-all; each agent's own pause stays as it was. */
     pauseAll: (reason: string) => call<{ all_paused: boolean }>('POST', '/api/agents/pause-all', { reason }),
-    resumeAll: () => call<{ all_paused: boolean }>('POST', '/api/agents/resume-all'),
+    /** The challenge resume-all, or resume(id), is signed over once the workspace has a passkey or phone key (B55.5). */
+    resumeAllChallenge: () => call<{ challenge: string }>('POST', '/api/agents/resume-all/challenge'),
+    resumeChallenge: (id: string) => call<{ challenge: string }>('POST', `/api/agents/${e(id)}/resume-challenge`),
+    resumeAll: (assertion?: DeviceAssertion) => call<{ all_paused: boolean }>('POST', '/api/agents/resume-all', assertion ? { assertion } : undefined),
     rules: (id: string) => call<AgentRules>('GET', `/api/agents/${e(id)}/rules`),
     pause: (id: string, reason: string) => call<Agent>('POST', `/api/agents/${e(id)}/pause`, { reason }),
-    resume: (id: string) => call<Agent>('POST', `/api/agents/${e(id)}/resume`),
+    resume: (id: string, assertion?: DeviceAssertion) => call<Agent>('POST', `/api/agents/${e(id)}/resume`, assertion ? { assertion } : undefined),
     /** Moves µLXC from the workspace's unallocated balance to the agent; `key` makes a retry move it once. */
     fund: (id: string, amount_ulxc: number, key: string) =>
       call<{ balance_ulxc: number }>('POST', `/api/agents/${e(id)}/fund`, { amount_ulxc }, { 'Idempotency-Key': key }),
