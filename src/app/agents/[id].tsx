@@ -5,7 +5,7 @@ import { useCallback, useState } from 'react'
 import { TextInput, View } from 'react-native'
 
 import { Body, Button, Card, Eyebrow, Figure, Headline, LoadState, Screen, useLoad } from '@/components/ui'
-import { biometricName, resumeWithThisPhone, thisPhoneDevice } from '@/keys'
+import { biometricName, phoneKey, resumeWithThisPhone } from '@/keys'
 import { useSession } from '@/session'
 import { fonts, useTheme } from '@/theme'
 import { pinnedAgents, setPinned, syncWidget } from '@/widget-sync'
@@ -16,9 +16,9 @@ export default function AgentScreen() {
   const { client } = useSession()
   const { c } = useTheme()
   const load = useCallback(async () => {
-    const [book, rules, pins, device] = await Promise.all([client.book(), client.rules(id), pinnedAgents(), thisPhoneDevice()])
+    const [book, rules, pins, device] = await Promise.all([client.book(), client.rules(id), pinnedAgents(), phoneKey(client)])
     const agent = (book.agents ?? []).find((a) => a.id === id) ?? null
-    return { agent, rules, unallocated: book.unallocated_ulxc, pinned: pins.includes(id), allPaused: !!book.all_paused_at, signs: !!device }
+    return { agent, rules, unallocated: book.unallocated_ulxc, pinned: pins.includes(id), allPaused: !!book.all_paused_at, signs: !!device?.here }
   }, [client, id])
   const { data, error, loading, reload } = useLoad(load)
   const [busy, setBusy] = useState(false)

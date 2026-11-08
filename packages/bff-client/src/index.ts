@@ -312,6 +312,8 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     signIn: (idToken: string) => call<MobileSession>('POST', '/auth/mobile/session', { id_token: idToken }),
     /** Whose workspace this session is in. */
     me: () => call<{ workspace_id: string }>('GET', '/auth/me'),
+    /** The workspace's name; Lens answers its id until it is named. */
+    workspaceName: () => call<{ id: string; name: string }>('GET', '/api/workspace/name'),
     book: () => call<AgentBook>('GET', '/api/agents'),
     approvals: () => call<{ approvals: AgentApproval[] | null }>('GET', '/api/agents/approvals'),
     /** The challenge approving or denying one approval is signed over. */

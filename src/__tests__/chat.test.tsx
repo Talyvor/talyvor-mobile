@@ -90,6 +90,8 @@ function mockLens(heard: string) {
     const body = typeof init.body === 'string' ? JSON.parse(init.body) : init.body
     const json = (b: unknown) => new Response(JSON.stringify(b), { status: 200 })
     switch (route) {
+      case 'GET /auth/me':
+        return json({ workspace_id: 'ws_1' })
       case 'POST /api/chat/voice/transcriptions':
         lens.uploads++
         return json({ text: (body as FormData).get('file') ? heard : '' })
@@ -142,6 +144,7 @@ beforeEach(() => {
   mockStore.clear()
   mockStore.set('talyvor.session', JSON.stringify({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }))
   mockStore.set('talyvor.device-key', 'dev_1')
+  mockStore.set('talyvor.device-workspace', 'ws_1')
   mockMic.played = []
   mockRecorder.uri = null
   mockFaceId.asked = 0

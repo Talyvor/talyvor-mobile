@@ -58,6 +58,8 @@ function mockLens() {
     const body = init.body ? JSON.parse(init.body as string) : {}
     const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status })
     switch (route) {
+      case 'GET /auth/me':
+        return json({ workspace_id: 'ws_1' })
       case 'POST /api/money/devices/dev_1/push-token':
         lens.pushTokens.dev_1 = body.push_token
         return json({ id: 'dev_1', platform: 'ios', name: 'iPhone', person: 'owner@acme.test', created_at: '2026-10-23T16:00:00Z' })
@@ -101,6 +103,7 @@ beforeEach(() => {
   mockStore.clear()
   mockStore.set('talyvor.session', JSON.stringify({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }))
   mockStore.set('talyvor.device-key', 'dev_1')
+  mockStore.set('talyvor.device-workspace', 'ws_1')
   mockTap.data = null
   mockTap.action = 'expo.modules.notifications.actions.DEFAULT'
 })

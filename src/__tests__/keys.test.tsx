@@ -1,5 +1,6 @@
 /// <reference types="node" />
 import { createHash, createPublicKey, generateKeyPairSync, verify, type KeyObject } from 'node:crypto'
+import { createBffClient } from '@talyvor/bff-client'
 import { fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library'
 
 import { signWithThisPhone } from '../keys'
@@ -57,12 +58,13 @@ jest.mock('../../modules/talyvor-keys', () => {
 const message = (challenge: string) => Buffer.from(`talyvor-device-v1:${challenge}`)
 
 /** Lens behind the BFF, checking a registration as devicekey.VerifyRegistration does for its test platform. */
-function mockLens() {
+function mockLens(workspace = 'ws_1', name = workspace, approvals: object[] = []) {
   const registered: { id: string; spki: Buffer }[] = []
   globalThis.fetch = jest.fn(async (url: string, init: RequestInit = {}) => {
     const route = `${init.method ?? 'GET'} ${url.replace('https://bff.test', '')}`
     const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status })
-    if (route === 'GET /auth/me') return json({ workspace_id: 'ws_1' })
+    if (route === 'GET /auth/me') return json({ workspace_id: workspace })
+    if (route === 'GET /api/workspace/name') return json({ id: workspace, name })
     if (route === 'POST /api/money/devices/challenge') return json({ challenge: 'ch_register' })
     if (route === 'POST /api/money/devices') {
       const r = JSON.parse(init.body as string)
@@ -75,7 +77,7 @@ function mockLens() {
       return json({ id: 'dev_1', platform: r.platform, name: r.name, person: 'owner@acme.test', created_at: '2026-10-23T16:00:00Z' }, 201)
     }
     if (route === 'GET /api/agents') return json({ workspace_balance_ulxc: 0, allocated_ulxc: 0, unallocated_ulxc: 0, spent_ulxc: 0, agents: [] })
-    if (route === 'GET /api/agents/approvals') return json({ approvals: [] })
+    if (route === 'GET /api/agents/approvals') return json({ approvals })
     return json({ error: 'no' }, 404)
   }) as unknown as typeof fetch
   return registered
@@ -96,7 +98,7 @@ test('Turn on makes a key, registers it with Lens, and the key then signs an app
   expect(registered.map((d) => d.id)).toEqual(['dev_1'])
   expect(mockStore.get('talyvor.device-workspace')).toBe('ws_1')
 
-  const a = await signWithThisPhone('ch_approval_1', 'Approve 2 LXC to GPU hour')
+  const a = await signWithThisPhone(createBffClient('https://bff.test', () => 'session-1'), 'ch_approval_1', 'Approve 2 LXC to GPU hour')
   expect(a.device_id).toBe('dev_1')
   const key = createPublicKey({ key: registered[0].spki, format: 'der', type: 'spki' })
   expect(verify('sha256', message('ch_approval_1'), { key, dsaEncoding: 'der' }, Buffer.from(a.signature, 'base64url'))).toBe(true)
@@ -115,8 +117,9 @@ test('when the biometric check fails, nothing is signed and nothing is registere
 
   // A registered phone whose owner then fails the check signs nothing either.
   mockStore.set('talyvor.device-key', 'dev_1')
+  mockStore.set('talyvor.device-workspace', 'ws_1')
   mockPhone.keys.set('approval', generateKeyPairSync('ec', { namedCurve: 'P-256' }).privateKey)
-  await expect(signWithThisPhone('ch_approval_1', 'Approve')).rejects.toMatchObject({ code: 'ERR_BIOMETRIC' })
+  await expect(signWithThisPhone(createBffClient('https://bff.test', () => 'session-1'), 'ch_approval_1', 'Approve')).rejects.toMatchObject({ code: 'ERR_BIOMETRIC' })
 })
 
 /** The BFF after this phone's session has ended: every call is a 401 until the person signs in again to `workspace`,
@@ -168,7 +171,7 @@ test('a 401 on Home signs out but keeps the key, and after signing in again with
   await waitFor(() => expect(mockStore.get('talyvor.session')).toContain('session-2'))
   expect(mockPhone.keys.has('approval')).toBe(true)
 
-  const a = await signWithThisPhone('ch_approval_1', 'Approve')
+  const a = await signWithThisPhone(createBffClient('https://bff.test', () => 'session-2'), 'ch_approval_1', 'Approve')
   expect(a.device_id).toBe('dev_1')
   expect(verify('sha256', message('ch_approval_1'), { key: publicKey, dsaEncoding: 'der' }, Buffer.from(a.signature, 'base64url'))).toBe(true)
 })
@@ -198,4 +201,51 @@ test("signing in to another workspace keeps the key the first workspace still ho
   expect(mockPhone.keys.has('approval')).toBe(true)
   expect(mockStore.get('talyvor.device-key')).toBe('dev_1')
   expect(mockStore.get('talyvor.device-workspace')).toBe('ws_a')
+})
+
+// B55.53 — Lens takes a key only from the workspace it was made in, so signed in to another the card says so.
+const waiting = { id: 'ap_1', agent_id: 'ag_1', amount_ulxc: 2_000_000, model: 'gpu-hour', status: 'pending', created_at: '2026-11-08T00:00:00Z' }
+const routes = () => (globalThis.fetch as jest.Mock).mock.calls.map(([url, init]) => `${init?.method ?? 'GET'} ${String(url).replace('https://bff.test', '')}`)
+
+test("signed in to another workspace, the card says the key approves for the first one and approving signs nothing", async () => {
+  holdKey('ws_a')
+  mockStore.set('talyvor.device-workspace-name', 'Acme')
+  mockLens('ws_b', 'Beta', [waiting])
+  await renderRouter('./src/app', { initialUrl: '/approvals' })
+  expect(await screen.findByText('Off for Beta. This phone’s key approves for Acme, and a phone holds one key.')).toBeTruthy()
+  expect(screen.queryByText(/^On\./)).toBeNull()
+  expect(screen.queryByText('Turn on')).toBeNull()
+
+  await fireEvent.press(await screen.findByText('Approve'))
+  expect(await screen.findByText(`Nothing changed: approving with Face ID is off for this workspace.`)).toBeTruthy()
+  expect(routes()).not.toContain('POST /api/agents/approvals/ap_1/challenge')
+  expect(routes()).not.toContain('POST /api/agents/approvals/ap_1/approve')
+  await expect(signWithThisPhone(createBffClient('https://bff.test', () => 'session-1'), 'ch_approval_1', 'Approve')).rejects.toThrow('off for this workspace')
+})
+
+test('signed in to the workspace the key was made in, the card says On', async () => {
+  holdKey('ws_a')
+  mockLens('ws_a', 'Acme')
+  await renderRouter('./src/app', { initialUrl: '/approvals' })
+  expect(await screen.findByText(/^On\. This phone signs your approvals/)).toBeTruthy()
+})
+
+test("Use this phone moves the key only after the confirm, and Keep it leaves the first workspace's key", async () => {
+  holdKey('ws_a')
+  mockStore.set('talyvor.device-workspace-name', 'Acme')
+  const registered = mockLens('ws_b', 'Beta')
+  await renderRouter('./src/app', { initialUrl: '/approvals' })
+  await fireEvent.press(await screen.findByText('Use this phone for Beta'))
+  expect(await screen.findByText('Move this phone’s key to Beta?')).toBeTruthy()
+  expect(screen.getByText('Acme then approves on the web, or on another phone, until you move it back.')).toBeTruthy()
+  await fireEvent.press(screen.getByText('Keep it for Acme'))
+  expect(await screen.findByText('Use this phone for Beta')).toBeTruthy()
+  expect(registered).toEqual([])
+
+  await fireEvent.press(screen.getByText('Use this phone for Beta'))
+  await fireEvent.press(await screen.findByText('Move it'))
+  expect(await screen.findByText(/^On\. This phone signs your approvals/)).toBeTruthy()
+  expect(registered.map((d) => d.id)).toEqual(['dev_1'])
+  expect(mockStore.get('talyvor.device-workspace')).toBe('ws_b')
+  expect(mockStore.get('talyvor.device-workspace-name')).toBe('Beta')
 })

@@ -11,6 +11,7 @@ import TalyvorKeys from '../modules/talyvor-keys'
 const ALIAS = 'approval'
 const DEVICE = 'talyvor.device-key'
 const DEVICE_WORKSPACE = 'talyvor.device-workspace'
+const DEVICE_WORKSPACE_NAME = 'talyvor.device-workspace-name'
 
 export const biometricName = Platform.OS === 'ios' ? 'Face ID' : 'your fingerprint'
 
@@ -38,15 +39,29 @@ export const keysAvailable = () => TalyvorKeys?.isAvailable() ?? false
 /** The Lens id of this phone's registered key, or null when approving on this phone is off. */
 export const thisPhoneDevice = () => SecureStore.getItemAsync(DEVICE)
 
-/** Makes this phone's key, has the person confirm with their biometric, and registers it with Lens. */
+/** The workspace's name, or '' while it has none (Lens names it by its id until then) or it cannot be read: the name only
+ * words the card, so it never stops a key. */
+export const workspaceName = (client: BffClient) => client.workspaceName().then((w) => (w.name === w.id ? '' : w.name), () => '')
+
+/** This phone's key as the signed-in workspace sees it, or null when the phone holds none. Lens takes a key only from the
+ * workspace it was made in, so `here` is false for another's; `owner` names that one, '' when the phone never learnt it. */
+export async function phoneKey(client: BffClient): Promise<{ id: string; here: boolean; owner: string } | null> {
+  const id = await thisPhoneDevice()
+  if (!id) return null
+  const [{ workspace_id }, made, owner] = await Promise.all([client.me(), SecureStore.getItemAsync(DEVICE_WORKSPACE), SecureStore.getItemAsync(DEVICE_WORKSPACE_NAME)])
+  return { id, here: made === workspace_id, owner: owner ?? '' }
+}
+
+/** Makes this phone's key, has the person confirm with their biometric, and registers it with Lens. A key another
+ * workspace holds is replaced: the phone's hardware holds one. */
 export async function turnOnPhoneApprovals(client: BffClient): Promise<DeviceKey> {
   if (!TalyvorKeys) throw new Error('This phone cannot hold an approval key.')
-  const { workspace_id } = await client.me()
+  const [{ workspace_id }, workspace] = await Promise.all([client.me(), workspaceName(client)])
   const { challenge } = await client.deviceChallenge()
   const message = utf8(deviceMessage(challenge))
-  // Android writes its attestation's challenge when it makes the key, before there is a public key to bind.
-  const publicKey = await TalyvorKeys.createKey(ALIAS, toBase64url(await sha256(message)))
   try {
+    // Android writes its attestation's challenge when it makes the key, before there is a public key to bind.
+    const publicKey = await TalyvorKeys.createKey(ALIAS, toBase64url(await sha256(message)))
     const spki = fromBase64url(publicKey)
     const bound = new Uint8Array(message.length + spki.length)
     bound.set(message)
@@ -57,24 +72,28 @@ export async function turnOnPhoneApprovals(client: BffClient): Promise<DeviceKey
     const device = await client.registerDevice({ platform: Platform.OS, name, public_key: publicKey, challenge, signature, attestation })
     await SecureStore.setItemAsync(DEVICE, device.id)
     await SecureStore.setItemAsync(DEVICE_WORKSPACE, workspace_id)
+    await SecureStore.setItemAsync(DEVICE_WORKSPACE_NAME, workspace)
     return device
   } catch (err) {
-    await TalyvorKeys.deleteKey(ALIAS)
+    // Making the key deleted any key before it, so a failed move leaves the phone with none.
+    await forgetThisPhone()
     throw err
   }
 }
 
-/** This phone's signature over a Lens approval or mandate challenge, after the biometric check; `reason` is shown in it. */
-export async function signWithThisPhone(challenge: string, reason: string): Promise<DeviceAssertion> {
-  const device_id = await thisPhoneDevice()
-  if (!TalyvorKeys || !device_id) throw new Error(`Approving with ${biometricName} is not on for this phone.`)
-  return { device_id, challenge, signature: await TalyvorKeys.sign(ALIAS, deviceMessage(challenge), reason) }
+/** This phone's signature over a Lens approval or mandate challenge, after the biometric check; `reason` is shown in it.
+ * Only for the workspace the key was made in, since Lens refuses it for any other. */
+export async function signWithThisPhone(client: BffClient, challenge: string, reason: string): Promise<DeviceAssertion> {
+  const key = await phoneKey(client)
+  if (!TalyvorKeys || !key) throw new Error(`Approving with ${biometricName} is not on for this phone.`)
+  if (!key.here) throw new Error(`approving with ${biometricName} is off for this workspace.`)
+  return { device_id: key.id, challenge, signature: await TalyvorKeys.sign(ALIAS, deviceMessage(challenge), reason) }
 }
 
 /** This phone's signature over a payment request's approval statement: Lens's challenge is its SHA-256, so the key signs
  * exactly the statement the screen checked, whatever challenge came with it. */
-export async function signStatement(statement: string, reason: string): Promise<DeviceAssertion> {
-  return signWithThisPhone(toBase64url(await sha256(utf8(statement))), reason)
+export async function signStatement(client: BffClient, statement: string, reason: string): Promise<DeviceAssertion> {
+  return signWithThisPhone(client, toBase64url(await sha256(utf8(statement))), reason)
 }
 
 /** B55.5 — resumes one agent, or every agent when `id` is null, signed with this phone's key when it is on: Lens refuses
@@ -82,9 +101,9 @@ export async function signStatement(statement: string, reason: string): Promise<
  * resumed, or why nothing changed; `onWeb` when Lens wanted a signature this phone could not give. Lens's own sentence is
  * never shown. */
 export async function resumeWithThisPhone(client: BffClient, id: string | null, reason: string, onWeb: string): Promise<string | null> {
-  const device = await thisPhoneDevice()
+  const device = (await phoneKey(client))?.here
   try {
-    const assertion = device ? await signWithThisPhone((await (id ? client.resumeChallenge(id) : client.resumeAllChallenge())).challenge, reason) : undefined
+    const assertion = device ? await signWithThisPhone(client, (await (id ? client.resumeChallenge(id) : client.resumeAllChallenge())).challenge, reason) : undefined
     await (id ? client.resume(id, assertion) : client.resumeAll(assertion))
     return null
   } catch (err) {
@@ -102,8 +121,12 @@ export async function recheckPhoneKey(client: BffClient): Promise<void> {
   const [{ workspace_id }, { devices }, owner] = await Promise.all([client.me(), client.devices(), SecureStore.getItemAsync(DEVICE_WORKSPACE)])
   if (owner && owner !== workspace_id) return
   const listed = (devices ?? []).find((d) => d.id === id)
-  if (listed && !listed.revoked_at) return SecureStore.setItemAsync(DEVICE_WORKSPACE, workspace_id)
-  // shortcut: a key turned on before its workspace was stored, and not in this list, stays; it may be another workspace's.
+  if (listed && !listed.revoked_at) {
+    await SecureStore.setItemAsync(DEVICE_WORKSPACE, workspace_id)
+    return SecureStore.setItemAsync(DEVICE_WORKSPACE_NAME, await workspaceName(client))
+  }
+  // A key turned on before its workspace was stored, and not in this list, may be another workspace's: it stays, and the
+  // card reads it as another workspace's.
   if (owner || listed) await forgetThisPhone()
 }
 
@@ -119,5 +142,6 @@ export async function checkThisPhone(reason: string): Promise<boolean> {
 export async function forgetThisPhone(): Promise<void> {
   await SecureStore.deleteItemAsync(DEVICE)
   await SecureStore.deleteItemAsync(DEVICE_WORKSPACE)
+  await SecureStore.deleteItemAsync(DEVICE_WORKSPACE_NAME)
   await TalyvorKeys?.deleteKey(ALIAS)
 }
