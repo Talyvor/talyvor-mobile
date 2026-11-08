@@ -1,5 +1,5 @@
-import { HStack, Link, Spacer, Text, VStack } from '@expo/ui/swift-ui'
-import { containerBackground, font, foregroundStyle, kerning, monospacedDigit, textCase, widgetURL } from '@expo/ui/swift-ui/modifiers'
+import { HStack, Image, Link, Spacer, Text, VStack } from '@expo/ui/swift-ui'
+import { accessibilityLabel, containerBackground, font, foregroundStyle, frame, kerning, monospacedDigit, resizable, textCase, widgetURL } from '@expo/ui/swift-ui/modifiers'
 import { createWidget, type WidgetEnvironment } from 'expo-widgets'
 
 import type { Palette } from '../theme'
@@ -29,7 +29,11 @@ const AgentsWidget = (p: AgentsWidgetProps, env: WidgetEnvironment) => {
   if (!p.signedIn) {
     return (
       <VStack alignment="leading" modifiers={[containerBackground(c.canvas, 'widget'), widgetURL('talyvor://')]}>
-        <Text modifiers={eyebrow}>Talyvor</Text>
+        {/* The logo's symbol, bundled into the widget extension by plugins/with-widget-symbol.js. */}
+        <Image
+          assetName={env.colorScheme === 'light' ? 'TalyvorSymbolOnLight' : 'TalyvorSymbolOnDark'}
+          modifiers={[resizable(), frame({ width: 48, height: 35 }), accessibilityLabel('Talyvor')]}
+        />
         <Text modifiers={body(c.ink)}>Sign in to see your agents here.</Text>
       </VStack>
     )
