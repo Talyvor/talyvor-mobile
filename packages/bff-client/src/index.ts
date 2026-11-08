@@ -310,6 +310,8 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
   return {
     /** Trades the identity provider's ID token, got in the system browser with PKCE, for a BFF session. */
     signIn: (idToken: string) => call<MobileSession>('POST', '/auth/mobile/session', { id_token: idToken }),
+    /** Whose workspace this session is in. */
+    me: () => call<{ workspace_id: string }>('GET', '/auth/me'),
     book: () => call<AgentBook>('GET', '/api/agents'),
     approvals: () => call<{ approvals: AgentApproval[] | null }>('GET', '/api/agents/approvals'),
     /** The challenge approving or denying one approval is signed over. */
@@ -341,6 +343,7 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     /** Pays a saved payee from one account; `idempotency_key` makes a retry pay once. */
     pay: (body: { account_id: string; payee_id: string; amount_minor: number; currency: string; reference: string; idempotency_key: string }) =>
       call<OutsidePayment>('POST', '/api/money/payments', body),
+    devices: () => call<{ devices: DeviceKey[] | null }>('GET', '/api/money/devices'),
     /** The single-use challenge a new device key signs and binds its attestation to. */
     deviceChallenge: () => call<{ challenge: string }>('POST', '/api/money/devices/challenge'),
     /** Keeps this phone's key as the person's; every byte string is base64url. */
