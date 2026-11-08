@@ -464,7 +464,7 @@ export function rulesInWords(r: AgentRules): string[] {
 
 /** Why a write did not happen, in Lens's words where it gave some. */
 export function refusalText(err: unknown): string {
-  if (err instanceof BffError && err.status === 401) return 'Nothing changed — sign in again.'
+  if (err instanceof BffError && err.status === 401) return 'Nothing changed. Sign in again.'
   if (err instanceof BffError && err.status < 500 && err.sentence) {
     const s = err.sentence.replace(/^economy: /, '')
     return `${s.charAt(0).toUpperCase()}${s.slice(1)}${s.endsWith('.') ? '' : '.'}`
