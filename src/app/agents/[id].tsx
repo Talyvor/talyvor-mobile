@@ -63,7 +63,7 @@ export default function AgentScreen() {
           <Figure size={32}>{formatULXC(agent.balance_ulxc)}</Figure>
           <Body muted>Spent so far: {formatULXC(agent.spent_ulxc)}</Body>
           <Body style={{ color: agent.paused_at ? c.caution : c.positive }}>
-            {agent.paused_at ? `Paused${agent.paused_reason ? ` — ${agent.paused_reason}` : ''}. It can spend nothing until you resume it.` : 'Active.'}
+            {agent.paused_at ? `Paused${agent.paused_reason ? `: ${agent.paused_reason}` : ''}. It can spend nothing until you resume it.` : 'Active.'}
           </Body>
           <View style={{ marginTop: 8 }}>
             <Button primary={!!agent.paused_at} label={agent.paused_at ? 'Resume' : 'Pause'} disabled={busy} onPress={() => void toggle()} />

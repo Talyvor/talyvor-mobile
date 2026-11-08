@@ -128,7 +128,7 @@ export default function SpendingScreen() {
               {f.line ? <Body muted>{f.line.sentence}</Body> : null}
               {f.line?.help?.map((h) => (
                 <Body key={h.name} muted>
-                  {h.name} ({h.url.replace(/^https:\/\//, '')}) — {h.for}.
+                  {h.name} ({h.url.replace(/^https:\/\//, '')}): {h.for}.
                 </Body>
               ))}
             </Card>
