@@ -1,7 +1,7 @@
 import { BffError, refusalText } from '@talyvor/bff-client'
 import { useEffect, useState } from 'react'
 
-import { biometricName, keysAvailable, phoneKey, turnOnPhoneApprovals, workspaceName } from '../keys'
+import { biometricName, keysAvailable, phoneKey, turnOffPhoneApprovals, turnOffRefusal, turnOnPhoneApprovals, workspaceName } from '../keys'
 import { registerPush } from '../push'
 import { useSession } from '../session'
 import { useTheme } from '../theme'
@@ -10,13 +10,15 @@ import { Body, Button, Card, Eyebrow } from './ui'
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
 /** B40.13: approving on this phone with its hardware key — off, turning on, or on. B55.53: a key made in another
- * workspace is off here, since Lens refuses it, and moving it here strands that workspace, so it asks first. */
+ * workspace is off here, since Lens refuses it, and moving it here strands that workspace, so it asks first. B55.17: Turn
+ * off asks first too, and the key leaves the phone only once Lens has revoked it. */
 export function PhoneKeyCard() {
   const { client } = useSession()
   const { c } = useTheme()
   const [key, setKey] = useState<Awaited<ReturnType<typeof phoneKey>> | undefined>(undefined)
   const [here, setHere] = useState('')
   const [moving, setMoving] = useState(false)
+  const [ending, setEnding] = useState(false)
   const [busy, setBusy] = useState(false)
   const [refusal, setRefusal] = useState('')
   useEffect(() => {
@@ -46,14 +48,45 @@ export function PhoneKeyCard() {
     }
   }
 
+  const turnOff = async () => {
+    setBusy(true)
+    setRefusal('')
+    try {
+      await turnOffPhoneApprovals(client)
+      setKey(null)
+      setEnding(false)
+    } catch (err) {
+      setRefusal(turnOffRefusal(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const failed = refusal ? <Body style={{ color: c.critical }}>{refusal}</Body> : null
   return (
     <>
       <Eyebrow>This phone</Eyebrow>
       <Card>
         <Body>Approve with {biometricName}</Body>
-        {key?.here ? (
-          <Body muted>On. This phone signs your approvals with a key that never leaves its secure chip and works only with {biometricName}.</Body>
+        {key?.here && ending ? (
+          <>
+            <Body>Turn off approving on this phone?</Body>
+            <Body muted>This phone’s key is removed and can no longer approve anything.</Body>
+            {failed}
+            <Button label="Keep it" disabled={busy} onPress={() => setEnding(false)} />
+            <Button primary label="Turn it off" disabled={busy} onPress={() => void turnOff()} />
+          </>
+        ) : key?.here ? (
+          <>
+            <Body muted>On. This phone signs your approvals with a key that never leaves its secure chip and works only with {biometricName}.</Body>
+            <Button
+              label="Turn off"
+              onPress={() => {
+                setRefusal('')
+                setEnding(true)
+              }}
+            />
+          </>
         ) : key && moving ? (
           <>
             <Body>Move this phone’s key to {b}?</Body>
