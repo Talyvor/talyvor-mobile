@@ -12,14 +12,30 @@ import { fonts, useTheme } from '@/theme'
 
 // B40.14 — the approval card of a request prepared for approval (B40.9 on the web), where talyvor://approve/<id> and its
 // push notification land: every item with its payee, amount, reference and the rule that asked; the person unticks what
-// they will not pay and approves the rest with Face ID or a fingerprint over the statement Lens writes for exactly those.
+// they will not pay and approves the rest with Face ID or a fingerprint over the statement Lens writes for exactly those,
+// or declines the whole request (B55.11).
 
 const DECIDED: Record<string, string> = {
   approved: 'Approved. Each payment you approved is paid once.',
   cancelled: 'This request was cancelled. Nothing will be paid.',
-  auto: 'Nothing here needs your approval: each payment is inside a mandate you signed.',
+  auto: 'Nothing here needs your approval: each payment is inside a permission you signed.',
   blocked: 'Nothing here can be paid: every payment was blocked.',
+  expired: 'This request expired: nobody approved it within 24 hours. Nothing waiting was paid.',
 }
+
+/** Where one item stands once paying it was tried, in words: never Lens's own status. */
+const payWords = (it: PaymentRequest['items'][number]) =>
+  ({
+    pending: 'On its way',
+    sent: 'Sent',
+    completed: 'Paid',
+    failed: 'Not paid: it failed',
+    returned: 'Came back',
+    refused: `Not paid: ${it.pay_detail}`,
+    not_approved: 'Not paid: you left it out',
+    not_paid: 'Not paid: a marketplace purchase is not paid from here yet',
+    held: `Held for 24 hours, as ${it.payee_name} is a new payee`,
+  })[it.pay_status ?? ''] ?? 'Not paid yet'
 
 /** Who prepared it, in words: Lens names the client "chat", "voice", "mcp:<client id>" or "key:<key id>" (B40.3). */
 const askedBy = (client: string) =>
@@ -44,6 +60,8 @@ export default function ApproveScreen() {
   const [unticked, setUnticked] = useState<Set<number>>(new Set())
   const [busy, setBusy] = useState(false)
   const [refusal, setRefusal] = useState('')
+  const [declining, setDeclining] = useState(false)
+  const [declined, setDeclined] = useState(false)
 
   const notFound = error instanceof BffError && error.status === 404
   const r = done ?? data?.request
@@ -67,10 +85,26 @@ export default function ApproveScreen() {
     }
   }
 
+  const decline = async () => {
+    setBusy(true)
+    setRefusal('')
+    try {
+      setDone(await client.cancelRequest(r!.id))
+      setDeclined(true)
+      setDeclining(false)
+      void syncLiveActivities(client)
+    } catch (err) {
+      setRefusal(err instanceof BffError ? refusalText(err) : `Nothing was declined: ${(err as Error).message}`)
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
     <Screen
       onRefresh={() => {
         setDone(null)
+        setDeclined(false)
         reload()
       }}
       refreshing={loading && !!data}>
@@ -92,7 +126,9 @@ export default function ApproveScreen() {
               ) : null}
             </Body>
           ) : (
-            <Body style={{ color: r.status === 'approved' ? c.positive : c.ink }}>{DECIDED[r.status] ?? r.status}</Body>
+            <Body style={{ color: r.status === 'approved' ? c.positive : c.ink }}>
+              {declined && r.status === 'cancelled' ? 'Declined. Nothing waiting here will be paid.' : (DECIDED[r.status] ?? 'Nothing waiting here will be paid.')}
+            </Body>
           )}
           {r.items.map((it) => {
             const payee = data?.payees?.find((p) => p.id === it.payee_id)
@@ -124,24 +160,35 @@ export default function ApproveScreen() {
                   {it.reference ? <Body muted>Reference: {it.reference}</Body> : null}
                   <Body muted>
                     {it.decision === 'auto'
-                      ? 'Inside a mandate you signed: paid with this request, no approval needed.'
+                      ? 'Inside a permission you signed: paid without asking you.'
                       : it.decision === 'blocked'
                         ? `Blocked: ${it.reason}.`
                         : `Asks for approval: ${it.reason}.`}
-                    {it.rule ? ` (${it.rule})` : ''}
                   </Body>
-                  {it.pay_status ? <Body>Payment: {it.pay_status}</Body> : null}
+                  {it.pay_status ? <Body>{payWords(it)}</Body> : null}
                 </View>
               </View>
             )
           })}
           {refusal ? <Body style={{ color: c.critical }}>{refusal}</Body> : null}
           {pending ? (
-            <Button primary label={busy ? 'Approving…' : `Approve ${payWord(ticked.length)} with ${biometricName}`} disabled={busy || !ticked.length} onPress={() => void approve()} />
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+              <Button primary label={busy ? 'Approving…' : `Approve ${payWord(ticked.length)} with ${biometricName}`} disabled={busy || declining || !ticked.length} onPress={() => void approve()} />
+              <Button label="Decline" disabled={busy || declining} onPress={() => setDeclining(true)} />
+            </View>
           ) : pay === '1' ? (
             // "Pay my bills" (B40.17) walks the bills due one card at a time; each still needs its own approval.
             <Button label="Next bill due" onPress={() => router.replace({ pathname: '/bills', params: { pay: '1' } })} />
           ) : null}
+        </Card>
+      ) : null}
+      {pending && declining ? (
+        <Card>
+          <Body>Decline these payments? Nothing waiting here is paid.</Body>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 4 }}>
+            <Button primary label="Decline" disabled={busy} onPress={() => void decline()} />
+            <Button label="Keep it" disabled={busy} onPress={() => setDeclining(false)} />
+          </View>
         </Card>
       ) : null}
     </Screen>

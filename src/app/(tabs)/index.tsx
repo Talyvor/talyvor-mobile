@@ -4,6 +4,7 @@ import { useCallback, useEffect } from 'react'
 import { Pressable, View } from 'react-native'
 
 import { ApprovalCard } from '@/components/approval-card'
+import { PreparedPaymentCard, pendingPrepared } from '@/components/prepared-payment-card'
 import { Body, Card, Eyebrow, Figure, Headline, LoadState, Screen, useLoad } from '@/components/ui'
 import { useSession } from '@/session'
 import { useTheme } from '@/theme'
@@ -14,8 +15,8 @@ export default function Home() {
   const { client } = useSession()
   const { c } = useTheme()
   const load = useCallback(async () => {
-    const [book, approvals] = await Promise.all([client.book(), client.approvals()])
-    return { book, approvals: approvals.approvals ?? [] }
+    const [book, approvals, prepared] = await Promise.all([client.book(), client.approvals(), pendingPrepared(client)])
+    return { book, approvals: approvals.approvals ?? [], prepared }
   }, [client])
   const { data, error, loading, reload } = useLoad(load)
   useEffect(() => {
@@ -23,15 +24,19 @@ export default function Home() {
   }, [client, data])
   const agents = (data?.book.agents ?? []).filter((a) => !a.archived_at)
   const pending = (data?.approvals ?? []).filter((a) => a.status === 'pending')
+  const waiting = pending.length + (data?.prepared.length ?? 0)
   const nameOf = (id: string) => agents.find((a) => a.id === id)?.name ?? id
 
   return (
     <Screen onRefresh={reload} refreshing={loading && !!data}>
       <Eyebrow>Home</Eyebrow>
-      <Headline>{pending.length ? `${pending.length} waiting for you` : 'Nothing waiting for you'}</Headline>
+      <Headline>{waiting ? `${waiting} waiting for you` : 'Nothing waiting for you'}</Headline>
       <LoadState loading={loading && !data} error={error} />
       {data ? (
         <>
+          {data.prepared.map((r) => (
+            <PreparedPaymentCard key={r.id} request={r} />
+          ))}
           {pending.map((a) => (
             <ApprovalCard key={a.id} approval={a} agentName={nameOf(a.agent_id)} onDecided={reload} />
           ))}
