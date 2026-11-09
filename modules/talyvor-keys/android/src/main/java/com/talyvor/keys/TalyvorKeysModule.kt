@@ -3,6 +3,7 @@ package com.talyvor.keys
 import android.content.pm.PackageManager
 import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyPermanentlyInvalidatedException
 import android.security.keystore.KeyProperties
 import android.security.keystore.StrongBoxUnavailableException
 import android.util.Base64
@@ -75,7 +76,12 @@ class TalyvorKeysModule : Module() {
     // Signs message's UTF-8 bytes (SHA256withECDSA, DER) after a strong biometric; base64url.
     AsyncFunction("sign") Coroutine { name: String, message: String, reason: String ->
       val key = keyStore().getKey(alias(name), null) as? PrivateKey ?: throw KeyException("this phone has no approval key")
-      val signature = Signature.getInstance("SHA256withECDSA").apply { initSign(key) }
+      // A face or fingerprint enrolled since the key was made invalidates it for good (setInvalidatedByBiometricEnrollment).
+      val signature = try {
+        Signature.getInstance("SHA256withECDSA").apply { initSign(key) }
+      } catch (e: KeyPermanentlyInvalidatedException) {
+        throw KeyException("a new face or fingerprint was enrolled, so this approval key no longer works")
+      }
       val unlocked = withContext(Dispatchers.Main.immediate) { authenticate(signature, reason) }
       base64url(unlocked.run { update(message.toByteArray(Charsets.UTF_8)); sign() })
     }

@@ -1,4 +1,4 @@
-import { BffError, type BffClient, type DeviceAssertion, type DeviceKey } from '@talyvor/bff-client'
+import { BffError, type BffClient, type DeviceAssertion, type DeviceKey, type OutsidePaymentRequest } from '@talyvor/bff-client'
 import * as Crypto from 'expo-crypto'
 import * as SecureStore from 'expo-secure-store'
 import { Platform } from 'react-native'
@@ -130,13 +130,21 @@ export async function recheckPhoneKey(client: BffClient): Promise<void> {
   if (owner || listed) await forgetThisPhone()
 }
 
-/** B55.25 — the biometric check before a payment from this phone: the key signs a local message that never leaves the
- * phone, so Lens is unchanged. false when approving on this phone is off; a failed or cancelled check rejects. */
-export async function checkThisPhone(reason: string): Promise<boolean> {
-  if (!TalyvorKeys || !(await thisPhoneDevice())) return false
-  await TalyvorKeys.sign(ALIAS, 'talyvor-pay-check-v1', reason)
-  return true
+/** B54.36 — a payment from this phone, signed: Lens's challenge names exactly this payment, idempotency key included, and
+ * the key signs it after the biometric check. null when approving on this phone is off for this workspace; a failed or
+ * cancelled check rejects, with ERR_TALYVOR_KEY when the key no longer works (keyGone). */
+export async function signPayment(client: BffClient, payment: OutsidePaymentRequest, reason: string): Promise<DeviceAssertion | null> {
+  const key = await phoneKey(client)
+  if (!TalyvorKeys || !key?.here) return null
+  const { challenge } = await client.paymentChallenge(payment)
+  return { device_id: key.id, challenge, signature: await TalyvorKeys.sign(ALIAS, deviceMessage(challenge), reason) }
 }
+
+/** The key is gone from the phone's hardware, or a new face or fingerprint made it unusable: only Turn on again helps. */
+export const keyGone = (err: unknown) => (err as { code?: string } | null)?.code === 'ERR_TALYVOR_KEY'
+
+/** What the person is told when keyGone: where to turn approving on again. */
+export const keyGoneText = `${Platform.OS === 'ios' ? 'Face ID' : 'Your fingerprint'} changed on this phone, so its key no longer works. Turn approving on again in Approvals, then try again.`
 
 /** Deletes the key from the phone's hardware, so nothing on this phone can sign again. */
 export async function forgetThisPhone(): Promise<void> {

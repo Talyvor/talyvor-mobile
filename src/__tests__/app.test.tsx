@@ -31,11 +31,12 @@ jest.mock('expo-widgets', () => ({ ...jest.requireActual('../../__mocks__/expo-w
 jest.mock('../config', () => ({ config: { bffUrl: 'https://bff.test', oidcIssuer: 'https://idp', oidcClientId: 'mobile' } }))
 
 /** Face ID: `face` false is the person cancelling the check, so the key signs nothing. */
-const mockPhone = { face: true, reasons: [] as string[] }
+const mockPhone = { face: true, reasons: [] as string[], gone: false }
 jest.mock('../../modules/talyvor-keys', () => ({
   isAvailable: () => true,
   sign: async (_: string, message: string, reason: string) => {
     mockPhone.reasons.push(reason)
+    if (mockPhone.gone) throw Object.assign(new Error('this phone has no approval key'), { code: 'ERR_TALYVOR_KEY' })
     if (!mockPhone.face) throw Object.assign(new Error('Face ID did not confirm, so nothing was signed'), { code: 'ERR_BIOMETRIC' })
     return `signed:${message}`
   },
@@ -77,7 +78,12 @@ function mockBff(start: { paused?: boolean; allPaused?: boolean; approvals?: unk
       payments: [{ id: 'pm_1', payee_id: 'py_1', payee_name: 'Acme Hosting', amount_minor: 2500, currency: 'GBP', reference: 'Sept', status: 'completed', created_at: '2026-10-03T10:00:00Z' }],
     }),
     'GET /api/money/accounts': () => ({ accounts: [{ id: 'acc_gbp', currency: 'GBP', purpose: 'company', status: 'open', name: 'The company · GBP', balance_minor: 100_000 }] }),
-    'POST /api/money/payments': () => ({ id: 'pm_2', payee_id: 'py_1', payee_name: 'Acme Hosting', amount_minor: 1250, currency: 'GBP', reference: 'October', status: 'pending', created_at: '2026-10-17T10:00:00Z' }),
+    'POST /api/money/payments/challenge': () => ({ challenge: 'ch_pay_1', allow_credentials: [] }),
+    // The workspace has a key, so Lens pays a person's payment only with a signature over its own challenge (B54.33).
+    'POST /api/money/payments': (body) =>
+      JSON.parse(body!).assertion
+        ? { id: 'pm_2', payee_id: 'py_1', payee_name: 'Acme Hosting', amount_minor: 1250, currency: 'GBP', reference: 'October', status: 'pending', created_at: '2026-10-17T10:00:00Z' }
+        : new Response(JSON.stringify({ error: 'economy: this workspace signs its payments with a passkey or the phone app' }), { status: 403 }),
     'POST /api/agents/ag_1/pause': () => {
       pausedAt = '2026-10-17T09:00:00Z'
       return agents()[0]
@@ -267,7 +273,15 @@ describe('B41.35 home-screen widget', () => {
     expect(await screen.findByText('12.50 GBP to Acme Hosting is on its way.')).toBeTruthy()
     const sent = calls.filter((c) => c.method === 'POST' && c.path === '/api/money/payments')
     expect(sent).toHaveLength(1)
-    expect(JSON.parse(sent[0].body!)).toEqual({ account_id: 'acc_gbp', payee_id: 'py_1', amount_minor: 1250, currency: 'GBP', reference: 'October', idempotency_key: expect.stringMatching(/^uuid-\d+$/) })
+    expect(JSON.parse(sent[0].body!)).toEqual({
+      account_id: 'acc_gbp',
+      payee_id: 'py_1',
+      amount_minor: 1250,
+      currency: 'GBP',
+      reference: 'October',
+      idempotency_key: expect.stringMatching(/^uuid-\d+$/),
+      assertion: { device_id: 'dk_1', challenge: 'ch_pay_1', signature: 'signed:talyvor-device-v1:ch_pay_1' },
+    })
   })
 
 })
@@ -382,8 +396,10 @@ describe('B55.25 a payment from the phone confirms with Face ID', () => {
     mockStore.set('talyvor.device-workspace', 'ws_1')
     mockPhone.face = true
     mockPhone.reasons = []
+    mockPhone.gone = false
   })
   const posted = (calls: ReturnType<typeof mockBff>) => calls.filter((c) => c.method === 'POST' && c.path === '/api/money/payments')
+  const challenged = (calls: ReturnType<typeof mockBff>) => calls.filter((c) => c.method === 'POST' && c.path === '/api/money/payments/challenge')
 
   async function typePayment(payee: string) {
     await renderRouter('./src/app', { initialUrl: `/payees/${payee}` })
@@ -411,6 +427,57 @@ describe('B55.25 a payment from the phone confirms with Face ID', () => {
     expect(await screen.findByText('12.50 GBP to Acme Hosting is on its way.')).toBeTruthy()
     expect(posted(calls)).toHaveLength(1)
     expect(JSON.parse(posted(calls)[0].body!).idempotency_key).toMatch(/^uuid-\d+$/)
+  })
+
+  test('B54.36: the payment carries Face ID’s signature over the challenge Lens gave for that exact payment', async () => {
+    const calls = mockBff()
+    await typePayment('py_1')
+    await fireEvent.press(await screen.findByRole('button', { name: 'Pay with Face ID' }))
+    expect(await screen.findByText('12.50 GBP to Acme Hosting is on its way.')).toBeTruthy()
+    expect(challenged(calls)).toHaveLength(1)
+    const { assertion, ...payment } = JSON.parse(posted(calls)[0].body!)
+    expect(JSON.parse(challenged(calls)[0].body!)).toEqual(payment)
+    expect(payment).toMatchObject({ account_id: 'acc_gbp', payee_id: 'py_1', amount_minor: 1250, currency: 'GBP', reference: 'October' })
+    expect(assertion).toEqual({ device_id: 'dk_1', challenge: 'ch_pay_1', signature: 'signed:talyvor-device-v1:ch_pay_1' })
+  })
+
+  test('B54.36: changing the From account changes the idempotency key; trying again unchanged keeps it', async () => {
+    const calls = mockBff()
+    globalThis.fetch = ((f) => async (url: string, init: RequestInit = {}) =>
+      url.endsWith('/api/money/accounts')
+        ? new Response(JSON.stringify({ accounts: [
+            { id: 'acc_gbp', currency: 'GBP', purpose: 'company', status: 'open', name: 'The company · GBP', balance_minor: 100_000 },
+            { id: 'acc_gbp_2', currency: 'GBP', purpose: 'company', status: 'open', name: 'Payroll · GBP', balance_minor: 50_000 },
+          ] }))
+        : f(url, init))(globalThis.fetch) as typeof fetch
+    await typePayment('py_1')
+    mockPhone.face = false
+    await fireEvent.press(await screen.findByRole('button', { name: 'Pay with Face ID' }))
+    expect(await screen.findByText('Nothing was paid.')).toBeTruthy()
+    await fireEvent.press(screen.getByRole('button', { name: 'Pay with Face ID' }))
+    await waitFor(() => expect(challenged(calls)).toHaveLength(2))
+    const asked = () => challenged(calls).map((c) => JSON.parse(c.body!))
+    expect(asked()[1].idempotency_key).toBe(asked()[0].idempotency_key)
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Cancel' }))
+    await fireEvent.press(await screen.findByRole('button', { name: 'Payroll · GBP' }))
+    await fireEvent.press(screen.getByRole('button', { name: 'Pay' }))
+    await fireEvent.press(await screen.findByRole('button', { name: 'Pay with Face ID' }))
+    await waitFor(() => expect(challenged(calls)).toHaveLength(3))
+    expect(asked()[2].account_id).toBe('acc_gbp_2')
+    expect(asked()[2].idempotency_key).not.toBe(asked()[0].idempotency_key)
+    expect(posted(calls)).toHaveLength(0)
+  })
+
+  test('B54.36: a key a new Face ID made unusable says how to turn approving on again, and sends nothing', async () => {
+    const calls = mockBff()
+    mockPhone.gone = true
+    await typePayment('py_1')
+    await fireEvent.press(await screen.findByRole('button', { name: 'Pay with Face ID' }))
+    expect(await screen.findByText('Face ID changed on this phone, so its key no longer works. Turn approving on again in Approvals, then try again.')).toBeTruthy()
+    expect(posted(calls)).toHaveLength(0)
+    // The phone forgets the dead key, so Approvals offers Turn on again.
+    await waitFor(() => expect(mockStore.has('talyvor.device-key')).toBe(false))
   })
 
   test('Cancel closes the confirm step and sends nothing', async () => {

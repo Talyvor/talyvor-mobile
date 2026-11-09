@@ -1,11 +1,11 @@
-import { formatMinor, parseMinor, refusalText, type OutsidePayment } from '@talyvor/bff-client'
+import { BffError, formatMinor, parseMinor, refusalText, type DeviceAssertion, type OutsidePayment } from '@talyvor/bff-client'
 import * as Crypto from 'expo-crypto'
 import { useLocalSearchParams } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { Modal, Pressable, TextInput, View } from 'react-native'
 
 import { Body, Button, Eyebrow, Figure, Headline, LoadState, Screen, useLoad } from '@/components/ui'
-import { biometricName, checkThisPhone } from '@/keys'
+import { biometricName, forgetThisPhone, keyGone, keyGoneText, signPayment } from '@/keys'
 import { useSession } from '@/session'
 import { fonts, useTheme } from '@/theme'
 import { lastPaid, pinnedPayees, setPayeePinned, syncWidget } from '@/widget-sync'
@@ -55,6 +55,13 @@ export default function PayeeScreen() {
   const payee = data?.payee
   const account = data?.accounts.find((a) => a.id === accountID) ?? data?.accounts[0]
   const minor = parseMinor(amount)
+  // A new key for another payee or account too: Lens signs the key into the payment, so it names one payment exactly.
+  const target = `${id} ${account?.id ?? ''}`
+  const [keyFor, setKeyFor] = useState(target)
+  if (keyFor !== target) {
+    setKeyFor(target)
+    setKey(Crypto.randomUUID())
+  }
   const typed = (set: (v: string) => void) => (v: string) => {
     set(v)
     setKey(Crypto.randomUUID())
@@ -90,12 +97,21 @@ export default function PayeeScreen() {
   const confirm = async () => {
     setRefusal('')
     setBusy(true)
-    const passed = await checkThisPhone(`Pay ${payee!.name} ${shown}`).catch(() => null)
+    const payment = { account_id: account!.id, payee_id: payee!.id, amount_minor: minor!, currency: account!.currency, reference: reference.trim(), idempotency_key: key }
+    let assertion: DeviceAssertion | null
+    try {
+      assertion = await signPayment(client, payment, `Pay ${payee!.name} ${shown}`)
+    } catch (err) {
+      setBusy(false)
+      if (!keyGone(err)) return setRefusal(err instanceof BffError ? refusalText(err) : 'Nothing was paid.')
+      // The dead key goes, so Approvals offers Turn on again.
+      await forgetThisPhone().catch(() => undefined)
+      return setRefusal(keyGoneText)
+    }
     setBusy(false)
-    if (passed === null) return setRefusal('Nothing was paid.')
-    if (!passed) return setRefusal(`Turn on Approve with ${biometricName} on this phone first: Talyvor asks for ${biometricName} before each payment from this phone.`)
+    if (!assertion) return setRefusal(`Turn on Approve with ${biometricName} on this phone first: Talyvor asks for ${biometricName} before each payment from this phone.`)
     await act(async () => {
-      setMade(await client.pay({ account_id: account!.id, payee_id: payee!.id, amount_minor: minor!, currency: account!.currency, reference: reference.trim(), idempotency_key: key }))
+      setMade(await client.pay(payment, assertion))
       close()
       setAmount('')
       setReference('')
