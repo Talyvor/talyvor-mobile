@@ -67,6 +67,8 @@ function mockLens() {
         return json({ workspace_balance_ulxc: 0, allocated_ulxc: 0, unallocated_ulxc: 0, spent_ulxc: 0, agents: [{ id: 'ag_1', name: 'Buyer', balance_ulxc: 0, spent_ulxc: 0, created_at: '2026-10-01T00:00:00Z' }] })
       case 'GET /api/agents/approvals':
         return json({ approvals: [{ id: 'apr_1', agent_id: 'ag_1', amount_ulxc: 2_000_000, model: '', payee: { kind: 'listing', id: 'l_1', name: 'GPU hour' }, status: lens.approvalApproved ? 'approved' : 'pending', created_at: '2026-10-24T08:00:00Z' }] })
+      case 'GET /api/lxc/topup-options':
+        return json({ usd_per_lxc: 0.1, min_usd_cents: 1000 })
       case 'POST /api/agents/approvals/apr_1/challenge':
         return json({ challenge: 'ch_apr_1' })
       case 'POST /api/agents/approvals/apr_1/approve': {
@@ -219,7 +221,7 @@ test("Approve with Face ID on an agent's approval signs exactly that approval's 
 
   expect(await screen.findByText('Approved. Nothing is waiting for you here.')).toBeTruthy()
   expect(lens.approvalApproved).toBe(true)
-  expect(mockReasons.at(-1)).toBe('Approve 2 LXC for Buyer')
+  expect(mockReasons.at(-1)).toBe('Approve $0.20 (2 LXC) for Buyer')
   expect(mockCategories.agent_approval).toEqual([expect.objectContaining({ identifier: 'approve', buttonTitle: 'Approve with Face ID' })])
 })
 
