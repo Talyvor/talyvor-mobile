@@ -45,7 +45,7 @@ jest.mock('../../modules/talyvor-keys', () => ({
 
 /** The BFF as the app sees it: one workspace, two agents, one approval waiting. The workspace has a key, so Lens refuses
  * an unsigned resume. */
-function mockBff(start: { paused?: boolean; allPaused?: boolean; approvals?: unknown[]; refuseSigned?: boolean; sessionEnded?: boolean } = {}) {
+function mockBff(start: { paused?: boolean; allPaused?: boolean; approvals?: unknown[]; requests?: { id: string }[]; refuseSigned?: boolean; sessionEnded?: boolean } = {}) {
   const calls: { method: string; path: string; auth: string | undefined; body?: string; key?: string }[] = []
   let pausedAt = start.paused ? '2026-10-17T09:00:00Z' : undefined
   const agents = () => [
@@ -84,6 +84,9 @@ function mockBff(start: { paused?: boolean; allPaused?: boolean; approvals?: unk
       JSON.parse(body!).assertion
         ? { id: 'pm_2', payee_id: 'py_1', payee_name: 'Acme Hosting', amount_minor: 1250, currency: 'GBP', reference: 'October', status: 'pending', created_at: '2026-10-17T10:00:00Z' }
         : new Response(JSON.stringify({ error: 'economy: this workspace signs its payments with a passkey or the phone app' }), { status: 403 }),
+    'GET /api/money/payment-requests?status=pending_approval': () => ({ requests: start.requests ?? [] }),
+    ...Object.fromEntries((start.requests ?? []).map((r) => [`GET /api/money/payment-requests/${r.id}`, () => r])),
+    ...Object.fromEntries((start.requests ?? []).map((r) => [`POST /api/money/payment-requests/${r.id}/cancel`, () => ({ ...r, status: 'cancelled' })])),
     'POST /api/agents/ag_1/pause': () => {
       pausedAt = '2026-10-17T09:00:00Z'
       return agents()[0]
@@ -536,5 +539,70 @@ describe('B55.25 a payment from the phone confirms with Face ID', () => {
     await typePayment('py_1')
     await fireEvent.press(await screen.findByRole('button', { name: 'Pay with Face ID' }))
     expect(await screen.findByText('12.50 GBP to Acme Hosting was not paid: the payee’s bank refused it.')).toBeTruthy()
+  })
+})
+
+describe('B55.11 prepared payments on Home and Approvals', () => {
+  beforeEach(() => {
+    mockStore.clear()
+    mockStore.set('talyvor.session', JSON.stringify({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }))
+  })
+  const item = (over: object = {}) => ({ position: 1, payee_id: 'py_1', payee_name: 'Acme Hosting', currency: 'GBP', amount_minor: 4200, reference: 'November hosting', decision: 'needs_approval', reason: 'above the approval amount', rule: 'R-APPROVE-1', ...over })
+  const preq = (over: object = {}) => ({ id: 'preq_1', status: 'pending_approval', summary: '', client: 'mcp:claude-desktop', totals: { GBP: 4200 }, items: [item()], created_at: '2026-11-09T08:00:00Z', ...over })
+  const allText = () => screen.getAllByText(/./).map((t) => [t.props.children].flat().join('')).join('\n')
+
+  test('Home and Approvals list a prepared payment above the agents’ requests, and it opens its approval card', async () => {
+    const calls = mockBff({ requests: [preq()] })
+    await renderRouter('./src/app', { initialUrl: '/' })
+    expect(await screen.findByText('Your assistant prepared a payment to Acme Hosting')).toBeTruthy()
+    expect(screen.getByText('2 waiting for you')).toBeTruthy()
+    const texts = screen.getAllByText(/./).map((t) => [t.props.children].flat().join(''))
+    expect(texts.findIndex((t) => t.startsWith('Your assistant prepared'))).toBeLessThan(texts.findIndex((t) => t.startsWith('Buyer wants to pay')))
+    expect(screen.getByText('42.00 GBP')).toBeTruthy()
+
+    await renderRouter('./src/app', { initialUrl: '/approvals' })
+    await fireEvent.press(await screen.findByText('Your assistant prepared a payment to Acme Hosting'))
+    await waitFor(() => expect(calls.some((c) => c.path === '/api/money/payment-requests/preq_1')).toBe(true))
+    expect(await screen.findByRole('button', { name: 'Decline' })).toBeTruthy()
+  })
+
+  test('Decline asks first, Keep it sends nothing, and Decline posts /cancel once and says so', async () => {
+    const calls = mockBff({ requests: [preq()] })
+    const cancels = () => calls.filter((c) => c.method === 'POST' && c.path === '/api/money/payment-requests/preq_1/cancel')
+    await renderRouter('./src/app', { initialUrl: '/approve/preq_1' })
+    await fireEvent.press(await screen.findByRole('button', { name: 'Decline' }))
+    expect(await screen.findByText('Decline these payments? Nothing waiting here is paid.')).toBeTruthy()
+    await fireEvent.press(screen.getByRole('button', { name: 'Keep it' }))
+    expect(screen.queryByText('Decline these payments? Nothing waiting here is paid.')).toBeNull()
+    expect(cancels()).toHaveLength(0)
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Decline' }))
+    const confirm = await screen.findAllByRole('button', { name: 'Decline' })
+    await fireEvent.press(confirm[confirm.length - 1])
+    expect(await screen.findByText('Declined. Nothing waiting here will be paid.')).toBeTruthy()
+    expect(cancels()).toHaveLength(1)
+  })
+
+  test('each item says where it stands in words, with no rule code and no mandate', async () => {
+    mockBff({
+      requests: [
+        preq({
+          status: 'approved',
+          items: [
+            item({ position: 1, payee_id: '', payee_name: '', listing_id: 'l_9', decision: 'needs_approval', pay_status: 'not_paid' }),
+            item({ position: 2, decision: 'auto', rule: 'mandate:mdt_1', pay_status: 'completed' }),
+            item({ position: 3, payee_name: 'Kite Accounting', payee_id: 'py_2', pay_status: 'held' }),
+          ],
+        }),
+      ],
+    })
+    await renderRouter('./src/app', { initialUrl: '/approve/preq_1' })
+    expect(await screen.findByText('Not paid: a marketplace purchase is not paid from here yet')).toBeTruthy()
+    expect(screen.getByText('Paid')).toBeTruthy()
+    expect(screen.getByText('Inside a permission you signed: paid without asking you.')).toBeTruthy()
+    expect(screen.getByText('Held for 24 hours, as Kite Accounting is a new payee')).toBeTruthy()
+    const text = allText()
+    expect(text).not.toMatch(/\(|\)|R-APPROVE|mandate/i)
+    expect(text).not.toContain('not_paid')
   })
 })

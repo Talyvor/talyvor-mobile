@@ -155,7 +155,7 @@ export interface DeviceAssertion {
 /** Lens economy.PaymentRequest (B40.3): payments prepared for the owner, each with its decision and the rule that made it. */
 export interface PaymentRequest {
   id: string
-  /** pending_approval | auto | blocked | approved | cancelled */
+  /** pending_approval | auto | blocked | approved | cancelled | expired */
   status: string
   summary: string
   client: string
@@ -177,7 +177,9 @@ export interface PaymentRequestItem {
   decision: string
   reason: string
   rule?: string
+  /** pending | sent | completed | failed | returned | refused | not_approved | not_paid | held */
   pay_status?: string
+  pay_detail?: string
 }
 
 /** Lens economy.ApprovalStatement (B40.5): exactly what the approval signs. */
@@ -398,6 +400,8 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     /** Keeps the signed approval; Lens then pays each approved item once. */
     approveRequest: (id: string, statement: string, assertion: DeviceAssertion) =>
       call<PaymentRequest>('POST', `/api/money/payment-requests/${e(id)}/approve`, { statement, assertion }),
+    /** Declines the whole request: nothing waiting in it is paid. */
+    cancelRequest: (id: string) => call<PaymentRequest>('POST', `/api/money/payment-requests/${e(id)}/cancel`),
     // B53.9 — the web's Spending screen's reads (B53.8), every number from Lens.
     /** The payments in [from, to), RFC 3339, with each wallet's totals by category. */
     spending: (from: string, to: string) => call<Spending>('GET', `/api/money/spending?${new URLSearchParams({ from, to })}`),
