@@ -1,7 +1,7 @@
 import { BffError, refusalText } from '@talyvor/bff-client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
-import { biometricName, keysAvailable, phoneKey, turnOnPhoneApprovals, workspaceName } from '../keys'
+import { biometricName, keysAvailable, phoneKey, turnOnPhoneApprovals, waitForTheWeb, workspaceName } from '../keys'
 import { registerPush } from '../push'
 import { useSession } from '../session'
 import { useTheme } from '../theme'
@@ -10,7 +10,8 @@ import { Body, Button, Card, Eyebrow } from './ui'
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
 /** B40.13: approving on this phone with its hardware key — off, turning on, or on. B55.53: a key made in another
- * workspace is off here, since Lens refuses it, and moving it here strands that workspace, so it asks first. */
+ * workspace is off here, since Lens refuses it, and moving it here strands that workspace, so it asks first. B55.4: in a
+ * workspace that already has a key, the new one waits, with its code, until the web lets it in. */
 export function PhoneKeyCard() {
   const { client } = useSession()
   const { c } = useTheme()
@@ -19,6 +20,9 @@ export function PhoneKeyCard() {
   const [moving, setMoving] = useState(false)
   const [busy, setBusy] = useState(false)
   const [refusal, setRefusal] = useState('')
+  const [code, setCode] = useState('')
+  const mounted = useRef(true)
+  useEffect(() => () => void (mounted.current = false), [])
   useEffect(() => {
     // Unchecked, the card shows nothing rather than a Turn on that could replace another workspace's key.
     phoneKey(client).then(setKey, () => undefined)
@@ -33,16 +37,27 @@ export function PhoneKeyCard() {
     setBusy(true)
     setRefusal('')
     try {
-      const device = await turnOnPhoneApprovals(client)
+      const made = await turnOnPhoneApprovals(client)
+      if ('enrolment' in made) setCode(made.enrolment.code)
+      const device = 'enrolment' in made ? await waitForTheWeb(client, made.enrolment, () => mounted.current) : made
+      if (!mounted.current) return
+      setCode('')
+      if (!device) {
+        setKey(null)
+        setRefusal('This phone was not added. Nothing changed.')
+        return
+      }
       setKey({ id: device.id, here: true, owner: here })
       setMoving(false)
       registerPush(client).catch((err) => console.warn('push: not registered', err))
     } catch (err) {
+      if (!mounted.current) return
+      setCode('')
       setRefusal(err instanceof BffError ? refusalText(err) : `Not turned on: ${(err as Error).message}`)
       // A failed move has deleted the old key too.
       setKey(await phoneKey(client).catch(() => key))
     } finally {
-      setBusy(false)
+      if (mounted.current) setBusy(false)
     }
   }
 
@@ -52,7 +67,9 @@ export function PhoneKeyCard() {
       <Eyebrow>This phone</Eyebrow>
       <Card>
         <Body>Approve with {biometricName}</Body>
-        {key?.here ? (
+        {code ? (
+          <Body muted>Waiting for the web. In Talyvor on the web, let this phone in from Approvals. The code there should be {code}.</Body>
+        ) : key?.here ? (
           <Body muted>On. This phone signs your approvals with a key that never leaves its secure chip and works only with {biometricName}.</Body>
         ) : key && moving ? (
           <>

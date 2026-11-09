@@ -1,4 +1,4 @@
-import { BffError, type BffClient, type DeviceAssertion, type DeviceKey, type OutsidePaymentRequest } from '@talyvor/bff-client'
+import { BffError, type BffClient, type DeviceAssertion, type DeviceKey, type KeyEnrolment, type OutsidePaymentRequest } from '@talyvor/bff-client'
 import * as Crypto from 'expo-crypto'
 import * as SecureStore from 'expo-secure-store'
 import { Platform } from 'react-native'
@@ -14,6 +14,13 @@ const DEVICE_WORKSPACE = 'talyvor.device-workspace'
 const DEVICE_WORKSPACE_NAME = 'talyvor.device-workspace-name'
 
 export const biometricName = Platform.OS === 'ios' ? 'Face ID' : 'your fingerprint'
+
+/** The name this phone's key is registered with. */
+const phoneName = Platform.OS === 'ios' ? 'iPhone' : 'Android phone'
+
+// B55.4 — a key waiting for the web to let it in is asked about every 3 seconds, for 10 minutes.
+const POLL_MS = 3000
+const WAIT_MS = 10 * 60_000
 
 /** What the key signs for a Lens challenge: Lens's devicekey.Message. */
 export const deviceMessage = (challenge: string) => `talyvor-device-v1:${challenge}`
@@ -53,8 +60,9 @@ export async function phoneKey(client: BffClient): Promise<{ id: string; here: b
 }
 
 /** Makes this phone's key, has the person confirm with their biometric, and registers it with Lens. A key another
- * workspace holds is replaced: the phone's hardware holds one. */
-export async function turnOnPhoneApprovals(client: BffClient): Promise<DeviceKey> {
+ * workspace holds is replaced: the phone's hardware holds one. B55.4: in a workspace that already has a key, Lens keeps it
+ * waiting and answers its enrolment instead; the key stays in the chip for waitForTheWeb. */
+export async function turnOnPhoneApprovals(client: BffClient): Promise<DeviceKey | { enrolment: Pick<KeyEnrolment, 'id' | 'code' | 'expires_at'> }> {
   if (!TalyvorKeys) throw new Error('This phone cannot hold an approval key.')
   const [{ workspace_id }, workspace] = await Promise.all([client.me(), workspaceName(client)])
   const { challenge } = await client.deviceChallenge()
@@ -68,17 +76,52 @@ export async function turnOnPhoneApprovals(client: BffClient): Promise<DeviceKey
     bound.set(spki, message.length)
     const attestation = await TalyvorKeys.attest(ALIAS, toBase64url(await sha256(bound)))
     const signature = await TalyvorKeys.sign(ALIAS, deviceMessage(challenge), `Approve on this phone with ${biometricName}`)
-    const name = Platform.OS === 'ios' ? 'iPhone' : 'Android phone'
-    const device = await client.registerDevice({ platform: Platform.OS, name, public_key: publicKey, challenge, signature, attestation })
-    await SecureStore.setItemAsync(DEVICE, device.id)
-    await SecureStore.setItemAsync(DEVICE_WORKSPACE, workspace_id)
-    await SecureStore.setItemAsync(DEVICE_WORKSPACE_NAME, workspace)
+    const device = await client.registerDevice({ platform: Platform.OS, name: phoneName, public_key: publicKey, challenge, signature, attestation })
+    if ('enrolment' in device) return device
+    await keepThisPhone(device.id, workspace_id, workspace)
     return device
   } catch (err) {
     // Making the key deleted any key before it, so a failed move leaves the phone with none.
     await forgetThisPhone()
     throw err
   }
+}
+
+/** A Lens time in milliseconds: Go writes up to nine digits of a second, more than every phone's Date reads. */
+const at = (t: string) => Date.parse(t.replace(/(\.\d{3})\d+/, '$1'))
+
+async function keepThisPhone(id: string, workspaceId: string, workspace: string): Promise<void> {
+  await SecureStore.setItemAsync(DEVICE, id)
+  await SecureStore.setItemAsync(DEVICE_WORKSPACE, workspaceId)
+  await SecureStore.setItemAsync(DEVICE_WORKSPACE_NAME, workspace)
+}
+
+/** B55.4 — asks Lens about this phone's waiting key every 3 seconds for 10 minutes. Let in, the phone keeps the id Lens
+ * gave the key and answers it; turned away, expired or out of time, the key is deleted from the chip and it answers null.
+ * Once `live` is false it stops and answers null, leaving the key for Turn on to replace. */
+export async function waitForTheWeb(client: BffClient, enrolment: Pick<KeyEnrolment, 'id'>, live: () => boolean = () => true): Promise<DeviceKey | null> {
+  const until = Date.now() + WAIT_MS
+  while (Date.now() < until) {
+    await new Promise((resolve) => setTimeout(resolve, POLL_MS))
+    if (!live()) return null
+    // A read that fails is asked again; one Lens no longer has was never let in.
+    const e = await client.enrolment(enrolment.id).catch((err) => (err instanceof BffError && err.status === 404 ? null : undefined))
+    if (e === undefined || e?.status === 'waiting') continue
+    if (e?.status !== 'approved') break
+    try {
+      // Lens names the key it let in only in the workspace's list: the one this phone's kind made since it began waiting.
+      const [{ workspace_id }, workspace, { devices }] = await Promise.all([client.me(), workspaceName(client), client.devices()])
+      const ours = (devices ?? []).filter((d) => !d.revoked_at && d.platform === Platform.OS && d.name === phoneName && at(d.created_at) >= at(e.created_at))
+      if (ours.length !== 1) throw new Error('the web let a key in, but this phone could not tell it was its own. Turn on again.')
+      await keepThisPhone(ours[0].id, workspace_id, workspace)
+      return ours[0]
+    } catch (err) {
+      await forgetThisPhone()
+      throw err
+    }
+  }
+  await forgetThisPhone()
+  return null
 }
 
 /** This phone's signature over a Lens approval or mandate challenge, after the biometric check; `reason` is shown in it.

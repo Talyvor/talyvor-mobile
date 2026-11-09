@@ -20,6 +20,8 @@ Notifications.setNotificationHandler({
 export function approvalHref(data: Record<string, unknown> | undefined): Href | null {
   if (data?.type === 'payment_request' && typeof data.request_id === 'string') return { pathname: '/approve/[id]', params: { id: data.request_id } }
   if (data?.type === 'agent_approval' && typeof data.approval_id === 'string') return { pathname: '/approvals/[id]', params: { id: data.approval_id } }
+  // B55.4 — a key waiting to join the workspace (Lens B55.1) is let in or turned away from Approvals.
+  if (data?.type === 'key_enrolment') return '/approvals'
   return null
 }
 
