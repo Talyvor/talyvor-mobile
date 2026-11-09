@@ -3,7 +3,8 @@ import { requireOptionalNativeModule } from 'expo'
 /**
  * B40.13 — TalyvorKeys: the approval key, a P-256 key in the Secure Enclave (iPhone) or StrongBox/TEE (Android) that
  * signs only after Face ID or a fingerprint. Every byte string is base64url. A failed or cancelled biometric check
- * rejects with code ERR_BIOMETRIC and signs nothing.
+ * rejects with code ERR_BIOMETRIC and signs nothing; a key the phone no longer holds, or that a new face or fingerprint
+ * made unusable, rejects sign with ERR_TALYVOR_KEY.
  */
 export interface TalyvorKeysNative {
   /** A phone with secure key hardware and a face or fingerprint enrolled. */

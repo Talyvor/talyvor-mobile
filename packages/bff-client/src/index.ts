@@ -135,7 +135,17 @@ export interface DeviceKey {
   revoked_at?: string
 }
 
-/** A device key's signature, where Lens takes an approval's or a mandate's assertion (B40.4). */
+/** A payment to a saved payee, exactly as it is asked a challenge for and then sent. */
+export interface OutsidePaymentRequest {
+  account_id: string
+  payee_id: string
+  amount_minor: number
+  currency: string
+  reference: string
+  idempotency_key: string
+}
+
+/** A device key's signature, where Lens takes an approval's, a mandate's or a payment's assertion (B40.4). */
 export interface DeviceAssertion {
   device_id: string
   challenge: string
@@ -342,9 +352,13 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     payees: () => call<{ payees: OutsidePayee[] | null }>('GET', '/api/money/payees'),
     /** The payments out, newest first. */
     payments: () => call<{ payments: OutsidePayment[] | null }>('GET', '/api/money/payments'),
-    /** Pays a saved payee from one account; `idempotency_key` makes a retry pay once. */
-    pay: (body: { account_id: string; payee_id: string; amount_minor: number; currency: string; reference: string; idempotency_key: string }) =>
-      call<OutsidePayment>('POST', '/api/money/payments', body),
+    /** B54.36 — the challenge a person's payment is signed over, naming exactly this payment (Lens B54.33). */
+    paymentChallenge: (body: OutsidePaymentRequest) =>
+      call<{ challenge: string; allow_credentials: string[] | null }>('POST', '/api/money/payments/challenge', body),
+    /** Pays a saved payee from one account; `idempotency_key` makes a retry pay once. Once the workspace has a key, Lens
+     * pays it only with `assertion`, a signature over paymentChallenge's challenge for this same body. */
+    pay: (body: OutsidePaymentRequest, assertion?: DeviceAssertion) =>
+      call<OutsidePayment>('POST', '/api/money/payments', assertion ? { ...body, assertion } : body),
     devices: () => call<{ devices: DeviceKey[] | null }>('GET', '/api/money/devices'),
     /** The single-use challenge a new device key signs and binds its attestation to. */
     deviceChallenge: () => call<{ challenge: string }>('POST', '/api/money/devices/challenge'),
