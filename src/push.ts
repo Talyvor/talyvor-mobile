@@ -5,7 +5,7 @@ import { useEffect, useRef } from 'react'
 import { Alert } from 'react-native'
 
 import { approveBatch, batchOf } from './approve-batch'
-import { biometricName, signWithThisPhone, thisPhoneDevice } from './keys'
+import { biometricName, phoneKey, signWithThisPhone } from './keys'
 import { syncLiveActivities } from './live-activity'
 
 // B40.14 — Lens (B40.15) pushes every held payment and every request prepared for approval to the APNs or FCM token of
@@ -51,18 +51,19 @@ export async function approveAgentApproval(client: BffClient, data: Record<strin
     data.currency === 'LXC' && String(a.amount_ulxc) === String(data.amount_minor)
   if (!a || !same) throw new Error('what you were asked to sign is not what was shown, so nothing was signed')
   const agentName = String(data.agent_name || a.agent_id)
-  await client.approve(a.id, await signWithThisPhone((await client.approvalChallenge(a.id)).challenge, `Approve ${formatULXC(a.amount_ulxc)} for ${agentName}`))
+  await client.approve(a.id, await signWithThisPhone(client, (await client.approvalChallenge(a.id)).challenge, `Approve ${formatULXC(a.amount_ulxc)} for ${agentName}`))
 }
 
 /** Gives Lens this phone's push token, once its approval key is on and the person allows notifications. */
 export async function registerPush(client: BffClient): Promise<void> {
-  const device = await thisPhoneDevice()
-  if (!device || !(await Notifications.requestPermissionsAsync()).granted) return
+  // Lens takes a push token only for a key this workspace holds.
+  const key = await phoneKey(client)
+  if (!key?.here || !(await Notifications.requestPermissionsAsync()).granted) return
   const approve = [{ identifier: APPROVE_ACTION, buttonTitle: `Approve with ${biometricName}`, options: { opensAppToForeground: true } }]
   await Notifications.setNotificationCategoryAsync('payment_request', approve)
   await Notifications.setNotificationCategoryAsync('agent_approval', approve)
   const { data } = await Notifications.getDevicePushTokenAsync()
-  await client.setPushToken(device, String(data))
+  await client.setPushToken(key.id, String(data))
 }
 
 /** While signed in: keeps the push token current and opens the approval a tapped notification names. */

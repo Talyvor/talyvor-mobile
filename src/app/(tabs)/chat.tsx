@@ -7,7 +7,7 @@ import { AppState, Pressable, Switch, Text, TextInput, View } from 'react-native
 
 import { bareAmount, currencyOf, parsePay, payeesCalled, PAUSE_ALL, RESUME_ALL, spendOf, WHATS_DUE, type Amount, type PayAsk } from '@/chat-commands'
 import { Body, Button, Card, Eyebrow, Headline, Screen } from '@/components/ui'
-import { biometricName, resumeWithThisPhone, thisPhoneDevice } from '@/keys'
+import { biometricName, phoneKey, resumeWithThisPhone } from '@/keys'
 import { useSession } from '@/session'
 import { fonts, useTheme } from '@/theme'
 import { AI_NOTICE, heyTalyAvailable, listenForHeyTaly, notToldYet, sayAloud } from '@/voice'
@@ -85,7 +85,7 @@ export default function ChatScreen() {
   const starting = useRef<Promise<boolean> | null>(null)
   const noticed = useRef(false)
   const [signs, setSigns] = useState(false)
-  useEffect(() => void thisPhoneDevice().then((d) => setSigns(!!d)), [])
+  useEffect(() => void phoneKey(client).then((k) => setSigns(!!k?.here)), [client])
 
   const add = (t: Omit<Turn, 'id'>) => {
     const turn = { ...t, id: ++seq.current }

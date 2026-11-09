@@ -53,6 +53,7 @@ function mockBff(start: { paused?: boolean; allPaused?: boolean; approvals?: unk
   ]
   const routes: Partial<Record<string, (body?: string) => unknown>> = {
     'POST /auth/mobile/session': () => ({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }),
+    'GET /auth/me': () => ({ workspace_id: 'ws_1' }),
     'GET /api/agents': () => ({
       workspace_balance_ulxc: 20_000_000,
       allocated_ulxc: 15_500_000,
@@ -188,6 +189,7 @@ describe('B41.35 home-screen widget', () => {
     mockStore.clear()
     mockStore.set('talyvor.session', JSON.stringify({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }))
     mockStore.set('talyvor.device-key', 'dk_1')
+    mockStore.set('talyvor.device-workspace', 'ws_1')
     mockSnapshots.length = 0
   })
 
@@ -281,6 +283,7 @@ describe('B55.5 Resume signed with Face ID', () => {
 
   test("with the phone's key on, Resume asks first, then signs the resume challenge and sends the assertion", async () => {
     mockStore.set('talyvor.device-key', 'dev_1')
+    mockStore.set('talyvor.device-workspace', 'ws_1')
     const calls = mockBff({ paused: true })
     await renderRouter('./src/app', { initialUrl: '/agents/ag_1' })
 
@@ -298,6 +301,7 @@ describe('B55.5 Resume signed with Face ID', () => {
 
   test('Not now, and a cancelled Face ID, send no resume', async () => {
     mockStore.set('talyvor.device-key', 'dev_1')
+    mockStore.set('talyvor.device-workspace', 'ws_1')
     mockPhone.face = false
     const calls = mockBff({ paused: true })
     await renderRouter('./src/app', { initialUrl: '/agents/ag_1' })
@@ -314,6 +318,7 @@ describe('B55.5 Resume signed with Face ID', () => {
 
   test("a signed resume Lens refuses shows words, never Lens's own sentence", async () => {
     mockStore.set('talyvor.device-key', 'dev_1')
+    mockStore.set('talyvor.device-workspace', 'ws_1')
     mockBff({ paused: true, refuseSigned: true })
     await renderRouter('./src/app', { initialUrl: '/agents/ag_1' })
 
@@ -325,6 +330,7 @@ describe('B55.5 Resume signed with Face ID', () => {
 
   test('a resume after the session ended says to sign in again, then try again', async () => {
     mockStore.set('talyvor.device-key', 'dev_1')
+    mockStore.set('talyvor.device-workspace', 'ws_1')
     mockBff({ paused: true, sessionEnded: true })
     await renderRouter('./src/app', { initialUrl: '/agents/ag_1' })
 
@@ -344,8 +350,21 @@ describe('B55.5 Resume signed with Face ID', () => {
     expect(resumes(calls).map((c) => [c.path, c.body])).toEqual([['/api/agents/ag_1/resume', undefined]])
   })
 
+  test("with the phone's key made in another workspace, a resume is sent unsigned and says where to do it", async () => {
+    mockStore.set('talyvor.device-key', 'dev_1')
+    mockStore.set('talyvor.device-workspace', 'ws_other')
+    const calls = mockBff({ paused: true })
+    await renderRouter('./src/app', { initialUrl: '/agents/ag_1' })
+
+    await fireEvent.press(await screen.findByText('Resume'))
+    expect(await screen.findByText('Resume Researcher on the web with your passkey, or turn on Approve with Face ID on this phone.')).toBeTruthy()
+    expect(resumes(calls).map((c) => [c.path, c.body])).toEqual([['/api/agents/ag_1/resume', undefined]])
+    expect(mockPhone.reasons).toEqual([])
+  })
+
   test('while every agent is paused, resuming one says it waits for every agent to start again', async () => {
     mockStore.set('talyvor.device-key', 'dev_1')
+    mockStore.set('talyvor.device-workspace', 'ws_1')
     mockBff({ paused: true, allPaused: true })
     await renderRouter('./src/app', { initialUrl: '/agents/ag_1' })
 
@@ -360,6 +379,7 @@ describe('B55.25 a payment from the phone confirms with Face ID', () => {
     mockStore.clear()
     mockStore.set('talyvor.session', JSON.stringify({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }))
     mockStore.set('talyvor.device-key', 'dk_1')
+    mockStore.set('talyvor.device-workspace', 'ws_1')
     mockPhone.face = true
     mockPhone.reasons = []
   })
