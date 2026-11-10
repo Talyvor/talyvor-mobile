@@ -1,9 +1,13 @@
+import { labelOf } from '@talyvor/bff-client'
+import { render } from '@testing-library/react-native'
 import { fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library'
 import * as compose from '@expo/ui/jetpack-compose'
 import * as modifiers from '@expo/ui/jetpack-compose/modifiers'
 import { isValidElement, type ReactNode } from 'react'
 import { Fragment, jsx, jsxs } from 'react/jsx-runtime'
 
+import { MoneyLabel } from '../components/money-label'
+import { SessionProvider } from '../session'
 import { AgentsWidgetAndroid } from '../widgets/agents-widget-android'
 
 // B40.11 DONE: signs in against a mocked BFF, shows Home with the pending approval first, and pauses an agent.
@@ -45,7 +49,9 @@ jest.mock('../../modules/talyvor-keys', () => ({
 
 /** The BFF as the app sees it: one workspace, two agents, one approval waiting. The workspace has a key, so Lens refuses
  * an unsigned resume. */
-function mockBff(start: { paused?: boolean; allPaused?: boolean; approvals?: unknown[]; requests?: { id: string }[]; refuseSigned?: boolean; sessionEnded?: boolean } = {}) {
+function mockBff(
+  start: { paused?: boolean; allPaused?: boolean; approvals?: unknown[]; requests?: { id: string }[]; refuseSigned?: boolean; sessionEnded?: boolean; labels?: 'live' | 'sandbox' | 'unread' } = {},
+) {
   const calls: { method: string; path: string; auth: string | undefined; body?: string; key?: string }[] = []
   let pausedAt = start.paused ? '2026-10-17T09:00:00Z' : undefined
   const agents = () => [
@@ -79,6 +85,25 @@ function mockBff(start: { paused?: boolean; allPaused?: boolean; approvals?: unk
     }),
     'GET /api/money/accounts': () => ({ accounts: [{ id: 'acc_gbp', currency: 'GBP', purpose: 'company', status: 'open', name: 'The company · GBP', balance_minor: 100_000 }] }),
     'POST /api/money/payments/challenge': () => ({ challenge: 'ch_pay_1', allow_credentials: [] }),
+    // B56.12: every money capability labelled as Lens answers it for this workspace; "unread" never answers.
+    'GET /api/wallets/capabilities': () =>
+      start.labels === 'unread'
+        ? new Promise<never>(() => undefined)
+        : {
+            capabilities: ['spend_on_talyvor', 'move_between_own_agents', 'buy_marketplace_listings', 'payments_out', 'pay_another_owner'].map((capability) => ({
+              capability,
+              name: capability,
+              class: 'GREEN',
+              real_money: start.labels === 'live',
+              label: start.labels,
+            })),
+          },
+    'GET /api/agents/statement': () => ({
+      from: '2026-11-01',
+      to: '2026-12-01',
+      accounts: [{ account: 'agent:ag_1', opening_ulxc: 0, in_ulxc: 12_500_000, out_ulxc: 0, closing_ulxc: 12_500_000 }],
+      lines: [],
+    }),
     // The workspace has a key, so Lens pays a person's payment only with a signature over its own challenge (B54.33).
     'POST /api/money/payments': (body) =>
       JSON.parse(body!).assertion
@@ -106,10 +131,10 @@ function mockBff(start: { paused?: boolean; allPaused?: boolean; approvals?: unk
     const headers = init.headers as Record<string, string>
     const auth = headers.Authorization
     calls.push({ method, path, auth, body: init.body as string | undefined, key: headers['Idempotency-Key'] })
-    const route = routes[`${method} ${path}`]
+    const route = routes[`${method} ${path}`] ?? routes[`${method} ${path.split('?')[0]}`]
     const signedIn = path.startsWith('/auth/') || auth === 'Bearer session-1'
     const answer = route && signedIn ? route(init.body as string | undefined) : { error: 'no' }
-    if (answer instanceof Response) return answer
+    if (answer instanceof Response || answer instanceof Promise) return answer
     return new Response(JSON.stringify(answer), { status: route ? (signedIn ? 200 : 401) : 404 })
   }) as unknown as typeof fetch
   return calls
@@ -604,5 +629,65 @@ describe('B55.11 prepared payments on Home and Approvals', () => {
     const text = allText()
     expect(text).not.toMatch(/\(|\)|R-APPROVE|mandate/i)
     expect(text).not.toContain('not_paid')
+  })
+})
+
+describe('B56.12 labels on the phone', () => {
+  beforeEach(() => {
+    mockStore.clear()
+    mockStore.set('talyvor.session', JSON.stringify({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }))
+  })
+  const preq = { id: 'preq_1', status: 'pending_approval', summary: '', client: 'mcp:claude-desktop', totals: { GBP: 4200 }, items: [{ position: 1, payee_id: 'py_1', payee_name: 'Acme Hosting', currency: 'GBP', amount_minor: 4200, reference: 'November hosting', decision: 'needs_approval', reason: 'above the approval amount' }], created_at: '2026-11-09T08:00:00Z' }
+
+  // Each money screen, where it lands, the words that say it has loaded, and how many chips it draws: Home's safe-to-spend,
+  // its prepared payment and its approval; Approvals' prepared payment and approval; one on every other screen.
+  const screens: [string, string, string, number][] = [
+    ['Home', '/', 'Safe to spend', 3],
+    ['Approvals', '/approvals', 'Buyer wants to pay GPU hour', 2],
+    ['the approval sheet', '/approve/preq_1', 'Acme Hosting', 1],
+    ["an agent's approval", '/approvals/apr_1', 'Buyer wants to pay GPU hour', 1],
+    ['the statement', '/statement', 'Researcher', 1],
+    ["an agent's money", '/agents/ag_1', 'Spent so far: 0 LXC', 1],
+  ]
+
+  test.each(screens)('%s says Sandbox or Live as Lens answers, and nothing while it has not', async (_, url, loaded, chips) => {
+    for (const state of ['sandbox', 'live'] as const) {
+      const calls = mockBff({ requests: [preq], labels: state })
+      await renderRouter('./src/app', { initialUrl: url })
+      await waitFor(() => expect(screen.getAllByTestId(`money-label-${state}`)).toHaveLength(chips))
+      expect(screen.queryByTestId(`money-label-${state === 'live' ? 'sandbox' : 'live'}`)).toBeNull()
+      expect(screen.getAllByLabelText(state === 'live' ? 'Live. Moves real money.' : 'Sandbox. Works. No real money moves.')).toHaveLength(chips)
+      // One read labels every chip on the screen.
+      expect(calls.filter((c) => c.path === '/api/wallets/capabilities')).toHaveLength(1)
+    }
+    mockBff({ requests: [preq], labels: 'unread' })
+    await renderRouter('./src/app', { initialUrl: url })
+    expect((await screen.findAllByText(loaded)).length).toBeGreaterThan(0)
+    expect(screen.queryByText('Live')).toBeNull()
+    expect(screen.queryByText('Sandbox')).toBeNull()
+  })
+
+  test('a section is Live only when Lens says live for every capability in it, and a capability with no label draws nothing', async () => {
+    expect(labelOf({ spend_on_talyvor: 'live', move_between_own_agents: 'live' }, ['spend_on_talyvor', 'move_between_own_agents'])).toBe('live')
+    expect(labelOf({ spend_on_talyvor: 'live', move_between_own_agents: 'sandbox' }, ['spend_on_talyvor', 'move_between_own_agents'])).toBe('sandbox')
+    expect(labelOf({ spend_on_talyvor: 'live' }, ['spend_on_talyvor', 'move_between_own_agents'])).toBeNull()
+    expect(labelOf({ spend_on_talyvor: 'paused' }, ['spend_on_talyvor'])).toBeNull()
+    expect(labelOf(undefined, ['spend_on_talyvor'])).toBeNull()
+  })
+
+  test("signed out, the label is Lens's public answer from /api/pricing", async () => {
+    mockStore.clear()
+    const paths: string[] = []
+    globalThis.fetch = jest.fn(async (url: string) => {
+      paths.push(url.replace('https://bff.test', ''))
+      return new Response(JSON.stringify({ plans: [], labels: { payments_out: 'sandbox' } }), { status: 200 })
+    }) as unknown as typeof fetch
+    const view = await render(
+      <SessionProvider>
+        <MoneyLabel capability="payments_out" />
+      </SessionProvider>,
+    )
+    expect(await view.findByTestId('money-label-sandbox')).toBeTruthy()
+    expect(paths).toEqual(['/api/pricing'])
   })
 })

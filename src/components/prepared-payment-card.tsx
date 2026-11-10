@@ -2,6 +2,7 @@ import { BffError, formatMinor, type BffClient, type PaymentRequest } from '@tal
 import { Link } from 'expo-router'
 import { Pressable, View } from 'react-native'
 
+import { MoneyLabel, paymentRequestCapabilities } from './money-label'
 import { Body, Card, Figure } from './ui'
 
 // B55.11 — a payment Chat, an assistant or an agent prepared, listed on Home and Approvals above the agents' requests;
@@ -43,6 +44,7 @@ export function PreparedPaymentCard({ request: r }: { request: PaymentRequest })
             </Figure>
           </View>
           <Body muted>{`${reference ? `${reference} · ` : ''}asked ${asked(r.created_at)}`}</Body>
+          <MoneyLabel capability={paymentRequestCapabilities([r])} />
         </Card>
       </Pressable>
     </Link>

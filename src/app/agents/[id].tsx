@@ -4,6 +4,7 @@ import { useLocalSearchParams } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { TextInput, View } from 'react-native'
 
+import { AGENT_CREDIT, MoneyHeader } from '@/components/money-label'
 import { Body, Button, Card, Eyebrow, Figure, Headline, LoadState, Screen, useLoad } from '@/components/ui'
 import { biometricName, phoneKey, resumeWithThisPhone } from '@/keys'
 import { useSession } from '@/session'
@@ -79,7 +80,7 @@ export default function AgentScreen() {
           <Eyebrow>Agent</Eyebrow>
           <Headline>{agent.name}</Headline>
           {agent.description ? <Body muted>{agent.description}</Body> : null}
-          <Eyebrow>Balance</Eyebrow>
+          <MoneyHeader capability={AGENT_CREDIT}>Balance</MoneyHeader>
           <Figure size={32}>{formatULXC(agent.balance_ulxc)}</Figure>
           <Body muted>Spent so far: {formatULXC(agent.spent_ulxc)}</Body>
           <Body style={{ color: agent.paused_at ? c.caution : c.positive }}>

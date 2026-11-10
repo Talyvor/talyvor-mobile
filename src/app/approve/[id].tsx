@@ -3,7 +3,8 @@ import { router, useLocalSearchParams } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
 
-import { Body, Button, Card, Eyebrow, Figure, Headline, LoadState, Screen, useLoad } from '@/components/ui'
+import { MoneyHeader, paymentRequestCapabilities } from '@/components/money-label'
+import { Body, Button, Card, Figure, Headline, LoadState, Screen, useLoad } from '@/components/ui'
 import { approveBatch, payWord, totalsOf } from '@/approve-batch'
 import { biometricName } from '@/keys'
 import { syncLiveActivities } from '@/live-activity'
@@ -108,7 +109,7 @@ export default function ApproveScreen() {
         reload()
       }}
       refreshing={loading && !!data}>
-      <Eyebrow>Approve payments</Eyebrow>
+      <MoneyHeader capability={r ? paymentRequestCapabilities([r]) : []}>Approve payments</MoneyHeader>
       <Headline>{r?.summary || 'Payments waiting for your approval'}</Headline>
       {notFound ? <Body muted>There is no request at this address. It may belong to another workspace.</Body> : <LoadState loading={loading && !data} error={error} />}
       {r ? (

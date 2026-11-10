@@ -6,10 +6,22 @@ import { biometricName, phoneKey, signWithThisPhone } from '../keys'
 import { syncLiveActivities } from '../live-activity'
 import { useSession } from '../session'
 import { useTheme } from '../theme'
+import { MoneyLabel } from './money-label'
 import { Body, Button, Card, Figure } from './ui'
 
-/** One approval waiting for the owner: what, how much, why — and approve or deny. */
-export function ApprovalCard({ approval, agentName, onDecided }: { approval: AgentApproval; agentName: string; onDecided: () => void }) {
+/** One approval waiting for the owner: what, how much, why, Live or Sandbox for the capability it moves money on, and
+ * approve or deny. */
+export function ApprovalCard({
+  approval,
+  agentName,
+  capability,
+  onDecided,
+}: {
+  approval: AgentApproval
+  agentName: string
+  capability: string
+  onDecided: () => void
+}) {
   const { client } = useSession()
   const { c } = useTheme()
   const [busy, setBusy] = useState(false)
@@ -47,6 +59,7 @@ export function ApprovalCard({ approval, agentName, onDecided }: { approval: Age
         </Body>
         <Figure>{formatULXC(approval.amount_ulxc)}</Figure>
       </View>
+      <MoneyLabel capability={capability} />
       {approval.reason ? <Body muted>“{approval.reason}”</Body> : null}
       {approval.memo ? <Body muted>{approval.memo}</Body> : null}
       {refusal ? <Body style={{ color: c.critical }}>{refusal}</Body> : null}
