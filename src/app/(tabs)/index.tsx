@@ -4,6 +4,7 @@ import { useCallback, useEffect } from 'react'
 import { Pressable, View } from 'react-native'
 
 import { ApprovalCard } from '@/components/approval-card'
+import { AGENT_CREDIT, MoneyHeader, approvalCapability } from '@/components/money-label'
 import { PreparedPaymentCard, pendingPrepared } from '@/components/prepared-payment-card'
 import { Body, Card, Eyebrow, Figure, Headline, LoadState, Screen, useLoad } from '@/components/ui'
 import { useSession } from '@/session'
@@ -38,10 +39,10 @@ export default function Home() {
             <PreparedPaymentCard key={r.id} request={r} />
           ))}
           {pending.map((a) => (
-            <ApprovalCard key={a.id} approval={a} agentName={nameOf(a.agent_id)} onDecided={reload} />
+            <ApprovalCard key={a.id} approval={a} agentName={nameOf(a.agent_id)} capability={approvalCapability(a, data.book.agents ?? [])} onDecided={reload} />
           ))}
 
-          <Eyebrow>Safe to spend</Eyebrow>
+          <MoneyHeader capability={AGENT_CREDIT}>Safe to spend</MoneyHeader>
           <Figure size={32}>{formatULXC(safeToSpend(data.book, data.approvals))}</Figure>
           <Body muted>Your workspace balance, less what is waiting for your approval.</Body>
 

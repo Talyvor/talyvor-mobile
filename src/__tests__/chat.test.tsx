@@ -80,8 +80,9 @@ jest.mock('../../modules/talyvor-keys', () => ({
   deleteKey: async () => undefined,
 }))
 
-/** Lens behind the BFF. `heard` is what transcription answers for the next recording. */
-function mockLens(heard: string) {
+/** Lens behind the BFF. `heard` is what transcription answers for the next recording; `labels` is what Lens says each
+ * money capability is for the workspace (B56.12), and "unread" never answers. */
+function mockLens(heard: string, labels?: 'live' | 'sandbox' | 'unread') {
   const lens = { allPaused: false, resumed: [] as unknown[], spoken: [] as string[], prepared: [] as unknown[], approved: false, asked: [] as unknown[], uploads: 0 }
   const item = { position: 1, payee_id: 'py_acme', payee_name: 'ACME Ltd', currency: 'GBP', amount_minor: 12000, reference: 'ACME invoice', decision: 'needs_approval', reason: 'a payment said aloud' }
   const request = () => ({ id: 'preq_9', status: lens.approved ? 'approved' : 'pending_approval', summary: 'Pay ACME Ltd', client: 'voice', totals: { GBP: 12000 }, items: [item], created_at: '2026-10-24T08:00:00Z' })
@@ -124,6 +125,10 @@ function mockLens(heard: string) {
         return json({ requests: [request()] })
       case 'GET /api/money/payments':
         return json({ payments: [] })
+      case 'GET /api/wallets/capabilities':
+        if (!labels) break
+        if (labels === 'unread') return new Promise<never>(() => undefined)
+        return json({ capabilities: [{ capability: 'payments_out', name: 'Payments out', class: 'RED', real_money: labels === 'live', label: labels }] })
       case 'POST /api/money/payment-requests/preq_9/approval': {
         const statement = JSON.stringify({ request_id: 'preq_9', items: [{ position: 1, payee_id: 'py_acme', currency: 'GBP', amount_minor: 12000, reference: 'ACME invoice' }], expires_at: '2099-01-01T00:00:00Z' })
         return json({ statement, challenge: 'ch' })
@@ -274,4 +279,18 @@ test('B55.5: with the phone\'s key off, "start all agents" that Lens refuses uns
   expect(await screen.findByText('Start your agents again on the web with your passkey, or turn on Approve with Face ID on this phone.')).toBeTruthy()
   expect(lens.resumed).toEqual([undefined])
   expect(mockFaceId.asked).toBe(0)
+})
+
+test.each(['sandbox', 'live', 'unread'] as const)('B56.12: Chat’s card of the payments due says %s as Lens answers, and nothing while unread', async (labels) => {
+  mockLens('', labels)
+  await renderRouter('./src/app', { initialUrl: '/chat' })
+  await fireEvent.changeText(await screen.findByLabelText('Message'), 'What’s due this week?')
+  await fireEvent.press(screen.getByText('Send'))
+  expect(await screen.findByText('See what is due')).toBeTruthy()
+  if (labels === 'unread') {
+    expect(screen.queryByText('Sandbox')).toBeNull()
+    expect(screen.queryByText('Live')).toBeNull()
+  } else {
+    expect(await screen.findByTestId(`money-label-${labels}`)).toBeTruthy()
+  }
 })
