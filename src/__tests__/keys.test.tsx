@@ -249,3 +249,58 @@ test("Use this phone moves the key only after the confirm, and Keep it leaves th
   expect(mockStore.get('talyvor.device-workspace')).toBe('ws_b')
   expect(mockStore.get('talyvor.device-workspace-name')).toBe('Beta')
 })
+
+// B55.17 — Turn off revokes the phone's key in Lens first, and deletes it from the phone only once Lens has.
+/** mockLens for ws_1, whose revoke answers `status` with `error`; each revoke is kept with whether the phone still held
+ * its key when Lens was asked. */
+function mockRevoke(status: number, error = '') {
+  mockLens('ws_1', 'Acme')
+  const lens = globalThis.fetch
+  const revokes: { id: string; held: boolean }[] = []
+  globalThis.fetch = jest.fn(async (url: string, init: RequestInit = {}) => {
+    const id = /\/api\/money\/devices\/([^/]+)\/revoke$/.exec(url)?.[1]
+    if (init.method !== 'POST' || !id) return lens(url, init)
+    revokes.push({ id, held: mockPhone.keys.has('approval') })
+    const body = status === 200 ? { id, platform: 'ios', name: 'iPhone', person: 'owner@acme.test', created_at: '2026-10-23T16:00:00Z', revoked_at: '2026-11-10T00:00:00Z' } : { error }
+    return new Response(JSON.stringify(body), { status })
+  }) as unknown as typeof fetch
+  return revokes
+}
+
+test('Turn off asks first; Turn it off revokes the key in Lens, then deletes it from the phone, and Turn on shows', async () => {
+  holdKey('ws_1')
+  const revokes = mockRevoke(200)
+  await renderRouter('./src/app', { initialUrl: '/approvals' })
+  await fireEvent.press(await screen.findByText('Turn off'))
+  expect(await screen.findByText('Turn off approving on this phone?')).toBeTruthy()
+  expect(screen.getByText('This phone’s key is removed and can no longer approve anything.')).toBeTruthy()
+  await fireEvent.press(screen.getByText('Keep it'))
+  expect(await screen.findByText(/^On\. This phone signs your approvals/)).toBeTruthy()
+  expect(revokes).toEqual([])
+
+  await fireEvent.press(screen.getByText('Turn off'))
+  await fireEvent.press(await screen.findByText('Turn it off'))
+  expect(await screen.findByText('Turn on')).toBeTruthy()
+  // Lens was asked while the phone still held the key; only then did the key leave the chip and the store.
+  expect(revokes).toEqual([{ id: 'dev_1', held: true }])
+  expect(mockPhone.keys.size).toBe(0)
+  expect(mockStore.has('talyvor.device-key')).toBe(false)
+  expect(mockStore.has('talyvor.device-workspace')).toBe(false)
+})
+
+test.each([
+  ['the last key', 409, 'This is your last key. With none, nobody could approve, so add another first.', 'This phone’s key is your last key. With none, nobody could approve, so add a passkey on the web first.'],
+  ["an agent account's owner", 409, "This key owns an agent's account, so it stays. Without it, nobody could sign for that account.", "This key owns an agent's account, so it stays. Without it, nobody could sign for that account."],
+  ['a failure', 500, 'pq: connection refused', 'Nothing changed. You can try again.'],
+])('when Lens refuses to revoke %s, the phone keeps its key and says why', async (_, status, error, words) => {
+  holdKey('ws_1')
+  const revokes = mockRevoke(status, error)
+  await renderRouter('./src/app', { initialUrl: '/approvals' })
+  await fireEvent.press(await screen.findByText('Turn off'))
+  await fireEvent.press(await screen.findByText('Turn it off'))
+  expect(await screen.findByText(words)).toBeTruthy()
+  expect(revokes).toEqual([{ id: 'dev_1', held: true }])
+  expect(mockPhone.keys.has('approval')).toBe(true)
+  expect(mockStore.get('talyvor.device-key')).toBe('dev_1')
+  expect(mockStore.get('talyvor.device-workspace')).toBe('ws_1')
+})

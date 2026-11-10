@@ -377,6 +377,9 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     /** Keeps this phone's key as the person's; every byte string is base64url. */
     registerDevice: (body: { platform: string; name: string; public_key: string; challenge: string; signature: string; attestation: string }) =>
       call<DeviceKey>('POST', '/api/money/devices', body),
+    /** Revokes one device key: Lens refuses its signatures from then on, and never revokes the workspace's last key or
+     * one that owns an agent's account (409, B55.15). */
+    revokeDevice: (id: string) => call<DeviceKey>('POST', `/api/money/devices/${e(id)}/revoke`),
     /** The APNs or FCM token Lens pushes this device's approvals to (B40.15). */
     setPushToken: (deviceId: string, push_token: string) => call<DeviceKey>('POST', `/api/money/devices/${e(deviceId)}/push-token`, { push_token }),
     /** Payments Chat prepared for the person to approve: Lens judges each and moves no money, and one said aloud always
