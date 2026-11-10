@@ -494,7 +494,7 @@ describe('B55.25 a payment from the phone confirms with Face ID', () => {
     const calls = mockBff()
     await typePayment('py_1')
     await fireEvent.press(await screen.findByRole('button', { name: 'Pay with Face ID' }))
-    expect(await screen.findByText('12.50 GBP to Acme Hosting is on its way.')).toBeTruthy()
+    expect(await screen.findByText('£12.50 to Acme Hosting is on its way.')).toBeTruthy()
     expect(challenged(calls)).toHaveLength(1)
     const { assertion, ...payment } = JSON.parse(posted(calls)[0].body!)
     expect(JSON.parse(challenged(calls)[0].body!)).toEqual(payment)
@@ -616,7 +616,7 @@ describe('B55.11 prepared payments on Home and Approvals', () => {
     expect(screen.getByText('2 waiting for you')).toBeTruthy()
     const texts = screen.getAllByText(/./).map((t) => [t.props.children].flat().join(''))
     expect(texts.findIndex((t) => t.startsWith('Your assistant prepared'))).toBeLessThan(texts.findIndex((t) => t.startsWith('Buyer wants to pay')))
-    expect(screen.getByText('42.00 GBP')).toBeTruthy()
+    expect(screen.getByText('£42.00')).toBeTruthy()
 
     await renderRouter('./src/app', { initialUrl: '/approvals' })
     await fireEvent.press(await screen.findByText('Your assistant prepared a payment to Acme Hosting'))
