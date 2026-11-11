@@ -1,5 +1,6 @@
 import { exchangeCodeAsync, makeRedirectUri, useAuthRequest, useAutoDiscovery } from 'expo-auth-session'
 import { Image } from 'expo-image'
+import { router } from 'expo-router'
 import * as WebBrowser from 'expo-web-browser'
 import { useState } from 'react'
 import { View } from 'react-native'
@@ -59,6 +60,8 @@ export default function SignIn() {
       <View style={{ marginTop: 24 }}>
         <Button primary label={busy ? 'Signing in…' : 'Sign in'} disabled={busy || !request || !config.oidcClientId} onPress={() => void start()} />
       </View>
+      {/* B59.9 — a new person opens an account here, with the web's link words. */}
+      <Button variant="secondary" label="Create a workspace" disabled={busy} onPress={() => router.push('/sign-up')} />
       {!config.oidcClientId ? <Body muted>Sign-in is not set up in this build yet.</Body> : null}
       {failure ? <Body style={{ color: c.critical }}>{failure}</Body> : null}
     </Screen>
