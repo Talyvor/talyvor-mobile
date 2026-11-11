@@ -199,6 +199,19 @@ export async function signPayment(client: BffClient, payment: OutsidePaymentRequ
   return { device_id: key.id, challenge, signature: await TalyvorKeys.sign(ALIAS, deviceMessage(challenge), reason) }
 }
 
+/** B59.34 — Face ID or a fingerprint before the phone shows a card's details. The approval key signs a fresh message that
+ * never leaves the phone, under a prefix Lens never takes (deviceMessage's is talyvor-device-v1), so the signature can
+ * approve nothing. 'off' when the phone holds no key, 'gone' when keyGone, 'cancelled' when the check failed. */
+export async function checkItsYou(reason: string): Promise<'ok' | 'off' | 'gone' | 'cancelled'> {
+  if (!TalyvorKeys || !(await thisPhoneDevice())) return 'off'
+  try {
+    await TalyvorKeys.sign(ALIAS, `talyvor-phone-check-v1:${Crypto.randomUUID()}`, reason)
+    return 'ok'
+  } catch (err) {
+    return keyGone(err) ? 'gone' : 'cancelled'
+  }
+}
+
 /** The key is gone from the phone's hardware, or a new face or fingerprint made it unusable: only Turn on again helps. */
 export const keyGone = (err: unknown) => (err as { code?: string } | null)?.code === 'ERR_TALYVOR_KEY'
 

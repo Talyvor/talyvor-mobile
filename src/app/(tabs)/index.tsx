@@ -72,7 +72,14 @@ export default function Home() {
           {/* B57.126: each agent's card, its helper with its own name and job line, opening the agent. */}
           {agents.length ? (
             <>
-              <Eyebrow>Cards</Eyebrow>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Eyebrow>Cards</Eyebrow>
+                <Link href="/cards" asChild>
+                  <Pressable accessibilityRole="link" accessibilityLabel="See all cards" style={{ minHeight: 48, justifyContent: 'center' }}>
+                    <Body style={{ color: c.tangerineInk }}>See all</Body>
+                  </Pressable>
+                </Link>
+              </View>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -18 }} contentContainerStyle={{ gap: 12, paddingHorizontal: 18, paddingBottom: 18 }}>
                 {agents.map((a) => (
                   <Link key={a.id} href={{ pathname: '/agents/[id]', params: { id: a.id } }} asChild>

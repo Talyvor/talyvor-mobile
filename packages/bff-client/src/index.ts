@@ -49,6 +49,35 @@ export interface AgentRules {
   timezone: string
 }
 
+/** Lens economy.AgentCard (B19.12): an agent's virtual card. The number stays with the issuer. */
+export interface AgentCard {
+  id: string
+  agent_id: string
+  last4: string
+  exp_month: number
+  exp_year: number
+  /** lower-case ISO code */
+  currency: string
+  livemode: boolean
+  created_at: string
+  /** B28.360 — Lens declines every purchase on a frozen card until it is unfrozen */
+  frozen?: boolean
+  frozen_at?: string
+}
+
+/** Lens economy.CardAuthorizationRecord: one purchase on the card, approved or declined by the agent's rules. */
+export interface CardAuthorization {
+  id: string
+  approved: boolean
+  /** Lens's sentence: why it was declined, or what approved it */
+  reason: string
+  /** in the card's currency, minor units */
+  amount_minor: number
+  currency: string
+  merchant_name: string
+  created_at: string
+}
+
 /** Lens economy.AgentApproval. `model` is empty for a payment. */
 export interface AgentApproval {
   id: string
@@ -404,6 +433,17 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     resumeChallenge: (id: string) => call<{ challenge: string }>('POST', `/api/agents/${e(id)}/resume-challenge`),
     resumeAll: (assertion?: DeviceAssertion) => call<{ all_paused: boolean }>('POST', '/api/agents/resume-all', assertion ? { assertion } : undefined),
     rules: (id: string) => call<AgentRules>('GET', `/api/agents/${e(id)}/rules`),
+    /** B59.34 — the agent's card and every purchase on it; null when it has none (Lens answers 404). */
+    card: async (id: string) => {
+      try {
+        return await call<{ card: AgentCard; authorizations: CardAuthorization[] | null }>('GET', `/api/agents/${e(id)}/card`)
+      } catch (err) {
+        if (err instanceof BffError && err.status === 404) return null
+        throw err
+      }
+    },
+    freezeCard: (id: string) => call<AgentCard>('POST', `/api/agents/${e(id)}/card/freeze`),
+    unfreezeCard: (id: string) => call<AgentCard>('POST', `/api/agents/${e(id)}/card/unfreeze`),
     pause: (id: string, reason: string) => call<Agent>('POST', `/api/agents/${e(id)}/pause`, { reason }),
     resume: (id: string, assertion?: DeviceAssertion) => call<Agent>('POST', `/api/agents/${e(id)}/resume`, assertion ? { assertion } : undefined),
     /** Moves µLXC from the workspace's unallocated balance to the agent; `key` makes a retry move it once. */
