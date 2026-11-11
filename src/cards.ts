@@ -1,3 +1,4 @@
+import type { WorkspaceAccount } from '@talyvor/bff-client'
 import type { ImageSourcePropType } from 'react-native'
 
 // B57.121 — the approved Talyvor card faces (Nick, 10 Nov 2026): 15 artworks with no text, and what the Card component
@@ -48,3 +49,24 @@ export const CARDS: CardFace[] = [
   face({ id: 'agent-nova', family: 'agent', helper: 'Nova', colour: { name: 'sky', hex: '#39C2FF' }, art: require('../assets/cards/agent-nova.jpg'), ...onLight }),
   face({ id: 'agent-ollie', family: 'agent', helper: 'Ollie', colour: { name: 'rose', hex: '#FF5C8A' }, art: require('../assets/cards/agent-ollie.jpg'), ...onLight }),
 ]
+
+// B57.128 — the owner's or company's own card shows its account's default tier: Daily for a personal account, Team for a
+// business one, and Stablecoin Daily for a stablecoin-only account of either type. Only the picture follows it; no plan,
+// price, limit or fee reads it. The web's display tier is not readable from the phone yet, so the default is shown.
+export function ownerFace(account: Pick<WorkspaceAccount, 'account_type' | 'money_kind'>): OwnerCard {
+  const id = account.money_kind === 'stablecoin' ? 'stable' : account.account_type === 'business' ? 'team' : 'daily'
+  return CARDS.find((c) => c.id === id) as OwnerCard
+}
+
+/** The owner card's one line under the holder, in layout/Card.dc.html's words. */
+export const OWNER_SUB: Record<string, string> = {
+  daily: 'Your everyday account',
+  premium: 'Fiat, stablecoins or both',
+  platinum: 'Fiat, stablecoins or both',
+  team: 'For your team and its agents',
+  business: 'For every team and agent',
+  enterprise: 'Your contract, your limits',
+  stable: 'Spends from your own wallet',
+  'stable-premium': 'Spends from your own wallet',
+  'stable-platinum': 'Spends from your own wallet',
+}
