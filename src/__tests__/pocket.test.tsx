@@ -6,6 +6,7 @@ import { useColorScheme, View } from 'react-native'
 import { Face, faceOf } from '../components/face'
 import { Icon, iconNames } from '../components/icon'
 import { Money, moneyParts } from '../components/money'
+import { AccountChoice, BottomSheet, ConfirmPayment } from '../components/pay-sheet'
 import { Bar, Button, Card, Chip, Field, Row, Sheet, Toggle } from '../components/ui'
 import { pressEverything } from '../testing/press-everything'
 import { agentColours, fonts, palettes, useTheme } from '../theme'
@@ -161,5 +162,48 @@ describe('the components', () => {
     await render(<Button label="Approve" variant="primary" onPress={() => undefined} />)
     const style = Object.assign({}, ...[screen.getByRole('button').props.style].flat(Infinity).filter(Boolean))
     expect(style).toMatchObject({ height: 52, alignSelf: 'stretch', backgroundColor: palettes.light.primary })
+  })
+})
+
+describe('B57.72 the pay sheets', () => {
+  function Confirm({ said, first, hasKey }: { said: (what: string) => void; first: boolean; hasKey: boolean }) {
+    return (
+      <BottomSheet visible onClose={() => said('close')}>
+        <ConfirmPayment
+          payee="Kite Accounting"
+          from="Company · USD"
+          amount="$450.00"
+          reference="November bookkeeping"
+          first={first}
+          hasKey={hasKey}
+          busy={false}
+          refusal=""
+          onPay={() => said('pay')}
+          onCancel={() => said('cancel')}
+          onApprovals={() => said('approvals')}
+        />
+      </BottomSheet>
+    )
+  }
+
+  it.each([
+    ['a first payment with Face ID on this phone', true, true, 6],
+    ['a later payment with Face ID on this phone', false, true, 3],
+    ['a phone without its key', false, false, 3],
+  ])('%s: every control does something, and a disabled one says why', async (_, first, hasKey, pressed) => {
+    const report = await pressEverything((said) => <Confirm said={said} first={first} hasKey={hasKey} />)
+    expect(report.dead).toEqual([])
+    expect(report.pressed).toBe(pressed)
+  })
+
+  it('From’s sheet: each open account does something', async () => {
+    const report = await pressEverything((said) => (
+      <BottomSheet visible onClose={() => said('close')}>
+        <AccountChoice name="Company · USD" balance="$3,200.00" chosen onPress={() => said('usd')} />
+        <AccountChoice name="Company · GBP" balance="£1,000.00" chosen={false} onPress={() => said('gbp')} />
+      </BottomSheet>
+    ))
+    expect(report.dead).toEqual([])
+    expect(report.pressed).toBe(3)
   })
 })

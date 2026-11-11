@@ -90,12 +90,15 @@ export function Button({
   primary,
   variant = primary ? 'primary' : 'outline',
   disabled,
+  hint,
 }: {
   label: string
   onPress: () => void
   primary?: boolean
   variant?: ButtonVariant
   disabled?: boolean
+  /** why it is disabled, for a screen reader */
+  hint?: string
 }) {
   const { c } = useTheme()
   const look = {
@@ -109,6 +112,7 @@ export function Button({
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ disabled }}
+      accessibilityHint={disabled ? hint : undefined}
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [styles.button, box, variant === 'primary' && { alignSelf: 'stretch' }, (pressed || disabled) && { opacity: 0.6 }]}>
