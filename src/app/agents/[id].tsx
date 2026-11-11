@@ -114,7 +114,7 @@ export default function AgentScreen() {
                 setAmount(v)
                 setFundKey(Crypto.randomUUID())
               }}
-              style={{ flex: 1, borderWidth: 1, borderColor: c.lineStrong, borderRadius: 6, paddingHorizontal: 12, color: c.ink, fontFamily: fonts.mono, fontSize: 15 }}
+              style={{ flex: 1, borderWidth: 1, borderColor: c.lineStrong, borderRadius: 6, paddingHorizontal: 12, color: c.ink, fontFamily: fonts.ui, fontSize: 15 }}
             />
             <Button label="Fund" disabled={busy || micros === null} onPress={() => void fund()} />
           </View>

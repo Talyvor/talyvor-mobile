@@ -22,8 +22,8 @@
     "preset": "jest-expo"
   },
   "dependencies": {
-    "@expo-google-fonts/ibm-plex-mono": "^0.4.1",
-    "@expo-google-fonts/space-grotesk": "^0.4.1",
+    "@expo-google-fonts/bricolage-grotesque": "^0.4.1",
+    "@expo-google-fonts/figtree": "^0.4.1",
     "@expo/ui": "~58.0.20",
     "@picovoice/porcupine-react-native": "^4.0.0",
     "@picovoice/react-native-voice-processor": "^1.2.3",
@@ -52,6 +52,7 @@
     "react-native": "0.88.0",
     "react-native-safe-area-context": "~5.10.1",
     "react-native-screens": "~4.30.0",
+    "react-native-svg": "15.16.0",
     "react-native-web": "^0.21.4"
   },
   "devDependencies": {
@@ -62,6 +63,7 @@
     "eslint-config-expo": "^58.0.4",
     "jest": "^30.5.2",
     "jest-expo": "^58.0.11",
+    "playwright": "^1.65.0",
     "typescript": "^6.0.3"
   },
   "overrides": {
