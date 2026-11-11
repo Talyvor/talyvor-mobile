@@ -14,6 +14,7 @@ import { useWaiting } from '@/waiting'
 // B59.3 — a tab in an area the workspace does not have is not there, and a link to it opens Home.
 const TABS: { name: string; title: string; icon: IconName; area?: Area }[] = [
   { name: 'index', title: 'Home', icon: 'home' },
+  { name: 'cards', title: 'Cards', icon: 'card' },
   { name: 'chat', title: 'Chat', icon: 'chat', area: 'chat' },
   { name: 'approvals', title: 'Approvals', icon: 'approvals' },
   { name: 'spending', title: 'Spending', icon: 'spending' },

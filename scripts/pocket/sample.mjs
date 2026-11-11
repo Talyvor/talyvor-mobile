@@ -43,6 +43,15 @@ const ANSWERS = {
   '/api/pricing': { labels: { payments_out: 'sandbox' } },
   // B57.126: Research's rules as the reference's agent page reads them, so its page loads in the shots.
   '/api/agents/agt_research/rules': { max_per_request_ulxc: lxc(10_000), daily_limit_ulxc: 0, monthly_limit_ulxc: 0, approval_above_ulxc: lxc(2_500), allowed_models: null, allowed_providers: null, active_from: '', active_until: '', timezone: 'Europe/London' },
+  '/api/agents/agt_sales/rules': { max_per_request_ulxc: 0, daily_limit_ulxc: lxc(2_000), monthly_limit_ulxc: lxc(20_000), approval_above_ulxc: lxc(1_000), allowed_models: null, allowed_providers: null, active_from: '', active_until: '', timezone: 'Europe/London' },
+  '/api/agents/agt_ops/rules': { max_per_request_ulxc: 0, daily_limit_ulxc: 0, monthly_limit_ulxc: lxc(10_000), approval_above_ulxc: 0, allowed_models: null, allowed_providers: null, active_from: '', active_until: '', timezone: 'Europe/London' },
+  // B59.34 — Research's card (pounds) declined Compute shop, £24.00, yesterday: not one of its payees.
+  '/api/agents/agt_research/card': {
+    card: { id: 'ic_research', agent_id: 'agt_research', last4: '0005', exp_month: 9, exp_year: 2029, currency: 'gbp', livemode: false, created_at: '2026-09-14T09:00:00Z' },
+    authorizations: [
+      { id: 'ca_compute', approved: false, reason: 'Not one of its payees.', amount_minor: 2_400, currency: 'gbp', merchant_name: 'Compute shop', created_at: '2026-10-21T15:12:00Z' },
+    ],
+  },
   '/api/money/payment-requests': { requests: [] },
   '/api/lxc/topup-options': { usd_per_lxc: 0.1, min_usd_cents: 1000 },
   '/api/wallets/capabilities': {
