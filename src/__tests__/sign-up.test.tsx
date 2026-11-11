@@ -103,13 +103,13 @@ const texts = () => screen.getAllByText(/./).map((t) => [t.props.children].flat(
 
 async function stepOne(type: 'Personal' | 'Business', name: string) {
   await fireEvent.press(await screen.findByRole('radio', { name: new RegExp(`^${type}`) }))
-  if (type === 'Personal') fireEvent.changeText(screen.getByLabelText(WEB.labels.name), name)
+  if (type === 'Personal') await fireEvent.changeText(screen.getByLabelText(WEB.labels.name), name)
   else {
-    fireEvent.changeText(screen.getByLabelText(WEB.labels.companyName), name)
-    fireEvent.changeText(screen.getByLabelText(WEB.labels.registrationNumber), '12345678')
+    await fireEvent.changeText(screen.getByLabelText(WEB.labels.companyName), name)
+    await fireEvent.changeText(screen.getByLabelText(WEB.labels.registrationNumber), '12345678')
   }
   await fireEvent.press(screen.getByRole('button', { name: WEB.labels.country }))
-  await fireEvent.press(screen.getByText('United Kingdom'))
+  await fireEvent.press(screen.getByRole('button', { name: 'United Kingdom' }))
   await fireEvent.press(screen.getByRole('button', { name: 'Continue' }))
 }
 
@@ -166,8 +166,8 @@ test("step 2 shows the web's words for the kind of money, and waits for one", as
 
   await fireEvent.press(screen.getByRole('button', { name: 'Back' }))
   await fireEvent.press(screen.getByRole('radio', { name: /^Business/ }))
-  fireEvent.changeText(screen.getByLabelText(WEB.labels.companyName), 'Northwind Studio')
-  fireEvent.changeText(screen.getByLabelText(WEB.labels.registrationNumber), '12345678')
+  await fireEvent.changeText(screen.getByLabelText(WEB.labels.companyName), 'Northwind Studio')
+  await fireEvent.changeText(screen.getByLabelText(WEB.labels.registrationNumber), '12345678')
   await fireEvent.press(screen.getByRole('button', { name: 'Continue' }))
   expect(await screen.findByText('For Northwind Studio, a Business account.')).toBeTruthy()
   for (const item of WEB.lists.business[0]) expect(screen.getByText(item)).toBeTruthy()

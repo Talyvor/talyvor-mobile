@@ -45,6 +45,8 @@ function Navigator() {
         <Stack.Protected guard={!signedIn}>
           <Stack.Screen name="sign-in" />
         </Stack.Protected>
+        {/* B59.9 — open either way: steps 1 and 2 come before the session, step 3 after it. */}
+        <Stack.Screen name="sign-up" />
       </Stack>
     </>
   )
