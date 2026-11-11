@@ -3,6 +3,7 @@ import { Link } from 'expo-router'
 import { useCallback, useEffect } from 'react'
 import { Pressable, ScrollView, View } from 'react-native'
 
+import { useAccount } from '@/account'
 import { ApprovalCard } from '@/components/approval-card'
 import { AgentCard, agentCardLabel } from '@/components/card'
 import { Face } from '@/components/face'
@@ -25,6 +26,7 @@ export default function Home() {
     return { book, approvals: approvals.approvals ?? [], prepared }
   }, [client])
   const { data, error, loading, reload } = useLoad(load)
+  const { shows } = useAccount(client)
   useEffect(() => {
     if (data) void syncWidget(client, data)
   }, [client, data])
@@ -83,7 +85,8 @@ export default function Home() {
             </>
           ) : null}
 
-          <Eyebrow>Agents</Eyebrow>
+          {/* B59.11 — "Your agents", or a Business's "Your team’s agents", as the web's Home says. */}
+          <Eyebrow>{shows?.agents ?? 'Your agents'}</Eyebrow>
           {agents.length === 0 ? <Body muted>No agents yet.</Body> : null}
           {agents.map((a) => (
             <Link key={a.id} href={{ pathname: '/agents/[id]', params: { id: a.id } }} asChild>

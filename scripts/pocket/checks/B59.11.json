@@ -1,0 +1,10 @@
+[
+  { "route": "/", "screen": "p-home", "account": "business:stablecoin", "words": "report", "why": "B59.11 shoots each type's words; the rest of Home is earlier items'" },
+  { "route": "/", "screen": "p-home", "account": "personal:fiat", "words": "report", "why": "the same" },
+  { "route": "/pay", "screen": "p-pay", "account": "business:fiat", "words": "report", "why": "a Fiat account keeps its payees" },
+  { "route": "/pay", "screen": "p-pay", "account": "personal:stablecoin", "words": "report", "why": "a Stablecoin and crypto account has no bank transfers, so no payees" },
+  { "route": "/payees/py_kite", "screen": "p-pay-kite", "account": "personal:hybrid", "words": "report", "why": "a Personal account pays from Your account" },
+  { "route": "/settings", "screen": "p-home", "account": "business:hybrid", "words": "report", "why": "the reference draws no Settings; Home stands beside it" },
+  { "route": "/settings", "screen": "p-home", "account": "personal:stablecoin", "words": "report", "why": "the same" },
+  { "route": "/settings", "screen": "p-home", "account": "personal:stablecoin", "dark": true, "words": "report", "why": "the same, with the phone set to dark" }
+]
