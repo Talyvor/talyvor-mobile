@@ -1,0 +1,5 @@
+[
+  { "route": "/", "screen": "p-home", "scroll": "Cards", "words": "report", "why": "B57.126 adds the agents' cards above Agents; Home's words are B57.66's" },
+  { "route": "/", "screen": "p-home", "dark": true, "scroll": "Cards", "words": "report", "why": "the agents' cards in dark mode" },
+  { "route": "/agents/agt_research", "screen": "p-agent-research", "words": "report", "why": "B57.126 adds the agent's card at the top; the agent page's words are its own item's" }
+]

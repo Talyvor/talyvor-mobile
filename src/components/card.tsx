@@ -1,8 +1,9 @@
 import { Image, Text, View } from 'react-native'
 import Svg, { Defs, Line, LinearGradient, Rect, Stop } from 'react-native-svg'
 
-import type { CardFace } from '../cards'
-import { fonts, useTheme } from '../theme'
+import { CARDS, type CardFace } from '../cards'
+import { agentColours, fonts, useTheme } from '../theme'
+import { Face, faceOf } from './face'
 
 // B57.123 — one card face, drawn from the B57.121 manifest exactly as layout/Card.dc.html lays it out at 428 × 270 and
 // scaled with the card: the art, a left-to-right scrim, the logo top left 22 in, the tier, family and chip on owner
@@ -28,11 +29,13 @@ const family = { personal: 'Personal', corporate: 'Corporate', stablecoin: 'Stab
 
 /** The alt text: "Remy, Research's agent card" for an agent, "Sam Rivers's Premium personal card" for an owner. */
 export function cardLabel(face: CardFace, holder: string, sub: string): string {
-  if (face.family === 'agent') {
-    const job = sub.split(' · ')[0].trim()
-    return job ? `${holder}, ${job}'s agent card` : `${holder}'s agent card`
-  }
+  if (face.family === 'agent') return agentCardLabel(holder, sub)
   return `${holder}'s ${face.tier} ${family[face.family].toLowerCase()} card`
+}
+
+export function agentCardLabel(holder: string, sub: string): string {
+  const job = sub.split(' · ')[0].trim()
+  return job ? `${holder}, ${job}'s agent card` : `${holder}'s agent card`
 }
 
 function Chip({ k }: { k: number }) {
@@ -52,6 +55,41 @@ function Chip({ k }: { k: number }) {
       <Line x1="28.5" y1="0" x2="28.5" y2="34" stroke={line} strokeWidth="1" />
     </Svg>
   )
+}
+
+function Holder({ k, owner, ink, holder, sub }: { k: number; owner: boolean; ink: (typeof TEXT)[keyof typeof TEXT]; holder: string; sub: string }) {
+  return (
+    <View testID="card-holder" style={{ position: 'absolute', left: 22 * k, bottom: 20 * k, width: HOLDER_WIDTH * k }}>
+      <Text
+        allowFontScaling={false}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.5}
+        style={{
+          fontFamily: fonts.display,
+          fontSize: (owner ? 15 : 26) * k,
+          lineHeight: (owner ? 17 : 29) * k,
+          letterSpacing: (owner ? -0.15 : -0.26) * k,
+          color: ink.ink,
+        }}
+      >
+        {holder}
+      </Text>
+      <Text allowFontScaling={false} numberOfLines={1} style={{ fontFamily: fonts.uiMedium, fontSize: 12 * k, color: ink.ink2, marginTop: 4 * k }}>
+        {sub}
+      </Text>
+    </View>
+  )
+}
+
+/** The card's edge: the layout's shadow on a light page; on a dark one a hairline instead. */
+function frame(width: number, k: number, dark: boolean, line: string) {
+  return [
+    { width, height: H * k, borderRadius: 18 * k },
+    dark
+      ? { borderWidth: 1, borderColor: line }
+      : { shadowColor: '#111216', shadowOpacity: 0.18, shadowRadius: 17 * k, shadowOffset: { width: 0, height: 14 * k }, elevation: 6 },
+  ]
 }
 
 export function Card({
@@ -80,13 +118,7 @@ export function Card({
       accessible
       accessibilityRole="image"
       accessibilityLabel={cardLabel(face, holder, sub)}
-      style={[
-        { width, height: H * k, borderRadius: 18 * k },
-        // The layout's shadow reads on a light page; on a dark one the card's edge is a hairline instead.
-        dark
-          ? { borderWidth: 1, borderColor: c.line }
-          : { shadowColor: '#111216', shadowOpacity: 0.18, shadowRadius: 17 * k, shadowOffset: { width: 0, height: 14 * k }, elevation: 6 },
-      ]}
+      style={frame(width, k, dark, c.line)}
     >
       <View style={{ flex: 1, borderRadius: 18 * k, overflow: 'hidden', backgroundColor: '#111216' }}>
         <Image source={face.art} resizeMode="cover" style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%' }} />
@@ -132,26 +164,31 @@ export function Card({
             </Text>
           </View>
         )}
-        <View testID="card-holder" style={{ position: 'absolute', left: 22 * k, bottom: 20 * k, width: HOLDER_WIDTH * k }}>
-          <Text
-            allowFontScaling={false}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.5}
-            style={{
-              fontFamily: fonts.display,
-              fontSize: (owner ? 15 : 26) * k,
-              lineHeight: (owner ? 17 : 29) * k,
-              letterSpacing: (owner ? -0.15 : -0.26) * k,
-              color: ink.ink,
-            }}
-          >
-            {holder}
-          </Text>
-          <Text allowFontScaling={false} numberOfLines={1} style={{ fontFamily: fonts.uiMedium, fontSize: 12 * k, color: ink.ink2, marginTop: 4 * k }}>
-            {sub}
-          </Text>
+        <Holder k={k} owner={owner} ink={ink} holder={holder} sub={sub} />
+      </View>
+    </View>
+  )
+}
+
+/** B57.126 — an agent's own card: the helper drawn for its colour (Remy for cobalt, and so on), with the agent's own name
+ * and its job line. Lime has no helper yet, so a lime agent keeps today's face on a plain lime card (cards handoff,
+ * 10 Nov 2026). The colour is the one Lens stores for the agent, or the pick from its id, as its face uses. */
+export function AgentCard({ agent, width = W }: { agent: { id: string; name: string; description?: string; colour?: string; face?: string }; width?: number }) {
+  const { c, dark } = useTheme()
+  const { colour } = faceOf(agent)
+  const sub = agent.description ?? ''
+  const helper = CARDS.find((f) => f.family === 'agent' && f.colour.name === colour)
+  if (helper) return <Card face={helper} holder={agent.name} sub={sub} width={width} />
+
+  const k = width / W
+  return (
+    <View accessible accessibilityRole="image" accessibilityLabel={agentCardLabel(agent.name, sub)} style={frame(width, k, dark, c.line)}>
+      <View testID="agent-card-plain" style={{ flex: 1, borderRadius: 18 * k, overflow: 'hidden', backgroundColor: agentColours[colour] }}>
+        <Image source={LOGO['on-light']} resizeMode="contain" style={{ position: 'absolute', left: 22 * k, top: 22 * k, width: 112 * k, height: ((112 * 153) / 480) * k }} />
+        <View style={{ position: 'absolute', right: 22 * k, top: 22 * k }}>
+          <Face agent={agent} size={72 * k} />
         </View>
+        <Holder k={k} owner={false} ink={TEXT.ink} holder={agent.name} sub={sub} />
       </View>
     </View>
   )

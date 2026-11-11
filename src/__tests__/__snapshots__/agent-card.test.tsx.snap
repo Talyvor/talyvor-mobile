@@ -1,0 +1,1350 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`a cobalt agent draws its card 1`] = `
+<View
+  accessibilityLabel="Atlas, Research's agent card"
+  accessibilityRole="image"
+  accessible={true}
+  style={
+    [
+      {
+        "borderRadius": 14.383177570093459,
+        "height": 215.74766355140187,
+        "width": 342,
+      },
+      {
+        "elevation": 6,
+        "shadowColor": "#111216",
+        "shadowOffset": {
+          "height": 11.186915887850468,
+          "width": 0,
+        },
+        "shadowOpacity": 0.18,
+        "shadowRadius": 13.58411214953271,
+      },
+    ]
+  }
+>
+  <View
+    style={
+      {
+        "backgroundColor": "#111216",
+        "borderRadius": 14.383177570093459,
+        "flex": 1,
+        "overflow": "hidden",
+      }
+    }
+  >
+    <Image
+      resizeMode="cover"
+      source={
+        {
+          "testUri": "../../../assets/cards/agent-remy.jpg",
+        }
+      }
+      style={
+        {
+          "height": "100%",
+          "left": 0,
+          "position": "absolute",
+          "top": 0,
+          "width": "100%",
+        }
+      }
+    />
+    <RNSVGSvgView
+      bbHeight="100%"
+      bbWidth="100%"
+      focusable={false}
+      height="100%"
+      style={
+        [
+          {
+            "backgroundColor": "transparent",
+            "borderWidth": 0,
+          },
+          {
+            "left": 0,
+            "position": "absolute",
+            "top": 0,
+          },
+          {
+            "flex": 0,
+            "height": "100%",
+            "width": "100%",
+          },
+        ]
+      }
+      width="100%"
+    >
+      <RNSVGGroup
+        fill={
+          {
+            "payload": 4278190080,
+            "type": 0,
+          }
+        }
+      >
+        <RNSVGDefs>
+          <RNSVGLinearGradient
+            gradient={
+              [
+                0,
+                1930038030,
+                0.55,
+                658190,
+              ]
+            }
+            gradientTransform={null}
+            gradientUnits={0}
+            name="card-scrim-agent-remy"
+            x1="0"
+            x2="1"
+            y1="0"
+            y2="0"
+          />
+        </RNSVGDefs>
+        <RNSVGRect
+          fill={
+            {
+              "brushRef": "card-scrim-agent-remy",
+              "type": 1,
+            }
+          }
+          height="100%"
+          propList={
+            [
+              "fill",
+            ]
+          }
+          width="100%"
+          x="0"
+          y="0"
+        />
+      </RNSVGGroup>
+    </RNSVGSvgView>
+    <Image
+      resizeMode="contain"
+      source={
+        {
+          "testUri": "../../../assets/logo/talyvor-logo-small-on-dark-480.png",
+        }
+      }
+      style={
+        {
+          "height": 28.526635514018697,
+          "left": 17.57943925233645,
+          "position": "absolute",
+          "top": 17.57943925233645,
+          "width": 89.49532710280374,
+        }
+      }
+    />
+    <View
+      style={
+        {
+          "bottom": 15.981308411214954,
+          "left": 17.57943925233645,
+          "position": "absolute",
+          "width": 247.71028037383178,
+        }
+      }
+      testID="card-holder"
+    >
+      <Text
+        adjustsFontSizeToFit={true}
+        allowFontScaling={false}
+        minimumFontScale={0.5}
+        numberOfLines={1}
+        style={
+          {
+            "color": "#FFFFFF",
+            "fontFamily": "BricolageGrotesque_700Bold",
+            "fontSize": 20.77570093457944,
+            "letterSpacing": -0.2077570093457944,
+            "lineHeight": 23.172897196261683,
+          }
+        }
+      >
+        Atlas
+      </Text>
+      <Text
+        allowFontScaling={false}
+        numberOfLines={1}
+        style={
+          {
+            "color": "#D2D6DE",
+            "fontFamily": "Figtree_600SemiBold",
+            "fontSize": 9.588785046728972,
+            "marginTop": 3.196261682242991,
+          }
+        }
+      >
+        Research
+      </Text>
+    </View>
+  </View>
+</View>
+`;
+
+exports[`a lemon agent draws its card 1`] = `
+<View
+  accessibilityLabel="Atlas, Research's agent card"
+  accessibilityRole="image"
+  accessible={true}
+  style={
+    [
+      {
+        "borderRadius": 14.383177570093459,
+        "height": 215.74766355140187,
+        "width": 342,
+      },
+      {
+        "elevation": 6,
+        "shadowColor": "#111216",
+        "shadowOffset": {
+          "height": 11.186915887850468,
+          "width": 0,
+        },
+        "shadowOpacity": 0.18,
+        "shadowRadius": 13.58411214953271,
+      },
+    ]
+  }
+>
+  <View
+    style={
+      {
+        "backgroundColor": "#111216",
+        "borderRadius": 14.383177570093459,
+        "flex": 1,
+        "overflow": "hidden",
+      }
+    }
+  >
+    <Image
+      resizeMode="cover"
+      source={
+        {
+          "testUri": "../../../assets/cards/agent-max.jpg",
+        }
+      }
+      style={
+        {
+          "height": "100%",
+          "left": 0,
+          "position": "absolute",
+          "top": 0,
+          "width": "100%",
+        }
+      }
+    />
+    <RNSVGSvgView
+      bbHeight="100%"
+      bbWidth="100%"
+      focusable={false}
+      height="100%"
+      style={
+        [
+          {
+            "backgroundColor": "transparent",
+            "borderWidth": 0,
+          },
+          {
+            "left": 0,
+            "position": "absolute",
+            "top": 0,
+          },
+          {
+            "flex": 0,
+            "height": "100%",
+            "width": "100%",
+          },
+        ]
+      }
+      width="100%"
+    >
+      <RNSVGGroup
+        fill={
+          {
+            "payload": 4278190080,
+            "type": 0,
+          }
+        }
+      >
+        <RNSVGDefs>
+          <RNSVGLinearGradient
+            gradient={
+              [
+                0,
+                -1929379841,
+                0.55,
+                16777215,
+              ]
+            }
+            gradientTransform={null}
+            gradientUnits={0}
+            name="card-scrim-agent-max"
+            x1="0"
+            x2="1"
+            y1="0"
+            y2="0"
+          />
+        </RNSVGDefs>
+        <RNSVGRect
+          fill={
+            {
+              "brushRef": "card-scrim-agent-max",
+              "type": 1,
+            }
+          }
+          height="100%"
+          propList={
+            [
+              "fill",
+            ]
+          }
+          width="100%"
+          x="0"
+          y="0"
+        />
+      </RNSVGGroup>
+    </RNSVGSvgView>
+    <Image
+      resizeMode="contain"
+      source={
+        {
+          "testUri": "../../../assets/logo/talyvor-logo-small-on-light-480.png",
+        }
+      }
+      style={
+        {
+          "height": 28.526635514018697,
+          "left": 17.57943925233645,
+          "position": "absolute",
+          "top": 17.57943925233645,
+          "width": 89.49532710280374,
+        }
+      }
+    />
+    <View
+      style={
+        {
+          "bottom": 15.981308411214954,
+          "left": 17.57943925233645,
+          "position": "absolute",
+          "width": 247.71028037383178,
+        }
+      }
+      testID="card-holder"
+    >
+      <Text
+        adjustsFontSizeToFit={true}
+        allowFontScaling={false}
+        minimumFontScale={0.5}
+        numberOfLines={1}
+        style={
+          {
+            "color": "#111216",
+            "fontFamily": "BricolageGrotesque_700Bold",
+            "fontSize": 20.77570093457944,
+            "letterSpacing": -0.2077570093457944,
+            "lineHeight": 23.172897196261683,
+          }
+        }
+      >
+        Atlas
+      </Text>
+      <Text
+        allowFontScaling={false}
+        numberOfLines={1}
+        style={
+          {
+            "color": "#3E4452",
+            "fontFamily": "Figtree_600SemiBold",
+            "fontSize": 9.588785046728972,
+            "marginTop": 3.196261682242991,
+          }
+        }
+      >
+        Research
+      </Text>
+    </View>
+  </View>
+</View>
+`;
+
+exports[`a lime agent draws its card 1`] = `
+<View
+  accessibilityLabel="Atlas, Research's agent card"
+  accessibilityRole="image"
+  accessible={true}
+  style={
+    [
+      {
+        "borderRadius": 14.383177570093459,
+        "height": 215.74766355140187,
+        "width": 342,
+      },
+      {
+        "elevation": 6,
+        "shadowColor": "#111216",
+        "shadowOffset": {
+          "height": 11.186915887850468,
+          "width": 0,
+        },
+        "shadowOpacity": 0.18,
+        "shadowRadius": 13.58411214953271,
+      },
+    ]
+  }
+>
+  <View
+    style={
+      {
+        "backgroundColor": "#8EDC4E",
+        "borderRadius": 14.383177570093459,
+        "flex": 1,
+        "overflow": "hidden",
+      }
+    }
+    testID="agent-card-plain"
+  >
+    <Image
+      resizeMode="contain"
+      source={
+        {
+          "testUri": "../../../assets/logo/talyvor-logo-small-on-light-480.png",
+        }
+      }
+      style={
+        {
+          "height": 28.526635514018697,
+          "left": 17.57943925233645,
+          "position": "absolute",
+          "top": 17.57943925233645,
+          "width": 89.49532710280374,
+        }
+      }
+    />
+    <View
+      style={
+        {
+          "position": "absolute",
+          "right": 17.57943925233645,
+          "top": 17.57943925233645,
+        }
+      }
+    >
+      <View
+        accessibilityLabel="Atlas agent"
+        accessibilityRole="image"
+        accessible={true}
+        style={
+          {
+            "height": 57.532710280373834,
+            "width": 57.532710280373834,
+          }
+        }
+        testID="face-lime-circle-happy"
+      >
+        <RNSVGSvgView
+          align="xMidYMid"
+          bbHeight={57.532710280373834}
+          bbWidth={57.532710280373834}
+          focusable={false}
+          height={57.532710280373834}
+          meetOrSlice={0}
+          minX={0}
+          minY={0}
+          style={
+            [
+              {
+                "backgroundColor": "transparent",
+                "borderWidth": 0,
+              },
+              {
+                "flex": 0,
+                "height": 57,
+                "width": 57,
+              },
+            ]
+          }
+          vbHeight={100}
+          vbWidth={100}
+          width={57.532710280373834}
+        >
+          <RNSVGGroup
+            fill={
+              {
+                "payload": 4278190080,
+                "type": 0,
+              }
+            }
+          >
+            <RNSVGCircle
+              cx="50"
+              cy="50"
+              fill={
+                {
+                  "payload": 4287552590,
+                  "type": 0,
+                }
+              }
+              propList={
+                [
+                  "fill",
+                ]
+              }
+              r="50"
+            />
+            <RNSVGCircle
+              cx="37"
+              cy="45"
+              fill={
+                {
+                  "payload": 4279308822,
+                  "type": 0,
+                }
+              }
+              propList={
+                [
+                  "fill",
+                ]
+              }
+              r="6.6"
+            />
+            <RNSVGCircle
+              cx="63"
+              cy="45"
+              fill={
+                {
+                  "payload": 4279308822,
+                  "type": 0,
+                }
+              }
+              propList={
+                [
+                  "fill",
+                ]
+              }
+              r="6.6"
+            />
+            <RNSVGPath
+              d="M37 60 Q50 72 63 60"
+              fill={null}
+              propList={
+                [
+                  "fill",
+                  "stroke",
+                  "strokeWidth",
+                  "strokeLinecap",
+                ]
+              }
+              stroke={
+                {
+                  "payload": 4279308822,
+                  "type": 0,
+                }
+              }
+              strokeLinecap={1}
+              strokeWidth="5.8"
+            />
+          </RNSVGGroup>
+        </RNSVGSvgView>
+      </View>
+    </View>
+    <View
+      style={
+        {
+          "bottom": 15.981308411214954,
+          "left": 17.57943925233645,
+          "position": "absolute",
+          "width": 247.71028037383178,
+        }
+      }
+      testID="card-holder"
+    >
+      <Text
+        adjustsFontSizeToFit={true}
+        allowFontScaling={false}
+        minimumFontScale={0.5}
+        numberOfLines={1}
+        style={
+          {
+            "color": "#111216",
+            "fontFamily": "BricolageGrotesque_700Bold",
+            "fontSize": 20.77570093457944,
+            "letterSpacing": -0.2077570093457944,
+            "lineHeight": 23.172897196261683,
+          }
+        }
+      >
+        Atlas
+      </Text>
+      <Text
+        allowFontScaling={false}
+        numberOfLines={1}
+        style={
+          {
+            "color": "#3E4452",
+            "fontFamily": "Figtree_600SemiBold",
+            "fontSize": 9.588785046728972,
+            "marginTop": 3.196261682242991,
+          }
+        }
+      >
+        Research
+      </Text>
+    </View>
+  </View>
+</View>
+`;
+
+exports[`a mint agent draws its card 1`] = `
+<View
+  accessibilityLabel="Atlas, Research's agent card"
+  accessibilityRole="image"
+  accessible={true}
+  style={
+    [
+      {
+        "borderRadius": 14.383177570093459,
+        "height": 215.74766355140187,
+        "width": 342,
+      },
+      {
+        "elevation": 6,
+        "shadowColor": "#111216",
+        "shadowOffset": {
+          "height": 11.186915887850468,
+          "width": 0,
+        },
+        "shadowOpacity": 0.18,
+        "shadowRadius": 13.58411214953271,
+      },
+    ]
+  }
+>
+  <View
+    style={
+      {
+        "backgroundColor": "#111216",
+        "borderRadius": 14.383177570093459,
+        "flex": 1,
+        "overflow": "hidden",
+      }
+    }
+  >
+    <Image
+      resizeMode="cover"
+      source={
+        {
+          "testUri": "../../../assets/cards/agent-penny.jpg",
+        }
+      }
+      style={
+        {
+          "height": "100%",
+          "left": 0,
+          "position": "absolute",
+          "top": 0,
+          "width": "100%",
+        }
+      }
+    />
+    <RNSVGSvgView
+      bbHeight="100%"
+      bbWidth="100%"
+      focusable={false}
+      height="100%"
+      style={
+        [
+          {
+            "backgroundColor": "transparent",
+            "borderWidth": 0,
+          },
+          {
+            "left": 0,
+            "position": "absolute",
+            "top": 0,
+          },
+          {
+            "flex": 0,
+            "height": "100%",
+            "width": "100%",
+          },
+        ]
+      }
+      width="100%"
+    >
+      <RNSVGGroup
+        fill={
+          {
+            "payload": 4278190080,
+            "type": 0,
+          }
+        }
+      >
+        <RNSVGDefs>
+          <RNSVGLinearGradient
+            gradient={
+              [
+                0,
+                -1929379841,
+                0.55,
+                16777215,
+              ]
+            }
+            gradientTransform={null}
+            gradientUnits={0}
+            name="card-scrim-agent-penny"
+            x1="0"
+            x2="1"
+            y1="0"
+            y2="0"
+          />
+        </RNSVGDefs>
+        <RNSVGRect
+          fill={
+            {
+              "brushRef": "card-scrim-agent-penny",
+              "type": 1,
+            }
+          }
+          height="100%"
+          propList={
+            [
+              "fill",
+            ]
+          }
+          width="100%"
+          x="0"
+          y="0"
+        />
+      </RNSVGGroup>
+    </RNSVGSvgView>
+    <Image
+      resizeMode="contain"
+      source={
+        {
+          "testUri": "../../../assets/logo/talyvor-logo-small-on-light-480.png",
+        }
+      }
+      style={
+        {
+          "height": 28.526635514018697,
+          "left": 17.57943925233645,
+          "position": "absolute",
+          "top": 17.57943925233645,
+          "width": 89.49532710280374,
+        }
+      }
+    />
+    <View
+      style={
+        {
+          "bottom": 15.981308411214954,
+          "left": 17.57943925233645,
+          "position": "absolute",
+          "width": 247.71028037383178,
+        }
+      }
+      testID="card-holder"
+    >
+      <Text
+        adjustsFontSizeToFit={true}
+        allowFontScaling={false}
+        minimumFontScale={0.5}
+        numberOfLines={1}
+        style={
+          {
+            "color": "#111216",
+            "fontFamily": "BricolageGrotesque_700Bold",
+            "fontSize": 20.77570093457944,
+            "letterSpacing": -0.2077570093457944,
+            "lineHeight": 23.172897196261683,
+          }
+        }
+      >
+        Atlas
+      </Text>
+      <Text
+        allowFontScaling={false}
+        numberOfLines={1}
+        style={
+          {
+            "color": "#3E4452",
+            "fontFamily": "Figtree_600SemiBold",
+            "fontSize": 9.588785046728972,
+            "marginTop": 3.196261682242991,
+          }
+        }
+      >
+        Research
+      </Text>
+    </View>
+  </View>
+</View>
+`;
+
+exports[`a orchid agent draws its card 1`] = `
+<View
+  accessibilityLabel="Atlas, Research's agent card"
+  accessibilityRole="image"
+  accessible={true}
+  style={
+    [
+      {
+        "borderRadius": 14.383177570093459,
+        "height": 215.74766355140187,
+        "width": 342,
+      },
+      {
+        "elevation": 6,
+        "shadowColor": "#111216",
+        "shadowOffset": {
+          "height": 11.186915887850468,
+          "width": 0,
+        },
+        "shadowOpacity": 0.18,
+        "shadowRadius": 13.58411214953271,
+      },
+    ]
+  }
+>
+  <View
+    style={
+      {
+        "backgroundColor": "#111216",
+        "borderRadius": 14.383177570093459,
+        "flex": 1,
+        "overflow": "hidden",
+      }
+    }
+  >
+    <Image
+      resizeMode="cover"
+      source={
+        {
+          "testUri": "../../../assets/cards/agent-sunny.jpg",
+        }
+      }
+      style={
+        {
+          "height": "100%",
+          "left": 0,
+          "position": "absolute",
+          "top": 0,
+          "width": "100%",
+        }
+      }
+    />
+    <RNSVGSvgView
+      bbHeight="100%"
+      bbWidth="100%"
+      focusable={false}
+      height="100%"
+      style={
+        [
+          {
+            "backgroundColor": "transparent",
+            "borderWidth": 0,
+          },
+          {
+            "left": 0,
+            "position": "absolute",
+            "top": 0,
+          },
+          {
+            "flex": 0,
+            "height": "100%",
+            "width": "100%",
+          },
+        ]
+      }
+      width="100%"
+    >
+      <RNSVGGroup
+        fill={
+          {
+            "payload": 4278190080,
+            "type": 0,
+          }
+        }
+      >
+        <RNSVGDefs>
+          <RNSVGLinearGradient
+            gradient={
+              [
+                0,
+                1930038030,
+                0.55,
+                658190,
+              ]
+            }
+            gradientTransform={null}
+            gradientUnits={0}
+            name="card-scrim-agent-sunny"
+            x1="0"
+            x2="1"
+            y1="0"
+            y2="0"
+          />
+        </RNSVGDefs>
+        <RNSVGRect
+          fill={
+            {
+              "brushRef": "card-scrim-agent-sunny",
+              "type": 1,
+            }
+          }
+          height="100%"
+          propList={
+            [
+              "fill",
+            ]
+          }
+          width="100%"
+          x="0"
+          y="0"
+        />
+      </RNSVGGroup>
+    </RNSVGSvgView>
+    <Image
+      resizeMode="contain"
+      source={
+        {
+          "testUri": "../../../assets/logo/talyvor-logo-small-on-dark-480.png",
+        }
+      }
+      style={
+        {
+          "height": 28.526635514018697,
+          "left": 17.57943925233645,
+          "position": "absolute",
+          "top": 17.57943925233645,
+          "width": 89.49532710280374,
+        }
+      }
+    />
+    <View
+      style={
+        {
+          "bottom": 15.981308411214954,
+          "left": 17.57943925233645,
+          "position": "absolute",
+          "width": 247.71028037383178,
+        }
+      }
+      testID="card-holder"
+    >
+      <Text
+        adjustsFontSizeToFit={true}
+        allowFontScaling={false}
+        minimumFontScale={0.5}
+        numberOfLines={1}
+        style={
+          {
+            "color": "#FFFFFF",
+            "fontFamily": "BricolageGrotesque_700Bold",
+            "fontSize": 20.77570093457944,
+            "letterSpacing": -0.2077570093457944,
+            "lineHeight": 23.172897196261683,
+          }
+        }
+      >
+        Atlas
+      </Text>
+      <Text
+        allowFontScaling={false}
+        numberOfLines={1}
+        style={
+          {
+            "color": "#D2D6DE",
+            "fontFamily": "Figtree_600SemiBold",
+            "fontSize": 9.588785046728972,
+            "marginTop": 3.196261682242991,
+          }
+        }
+      >
+        Research
+      </Text>
+    </View>
+  </View>
+</View>
+`;
+
+exports[`a rose agent draws its card 1`] = `
+<View
+  accessibilityLabel="Atlas, Research's agent card"
+  accessibilityRole="image"
+  accessible={true}
+  style={
+    [
+      {
+        "borderRadius": 14.383177570093459,
+        "height": 215.74766355140187,
+        "width": 342,
+      },
+      {
+        "elevation": 6,
+        "shadowColor": "#111216",
+        "shadowOffset": {
+          "height": 11.186915887850468,
+          "width": 0,
+        },
+        "shadowOpacity": 0.18,
+        "shadowRadius": 13.58411214953271,
+      },
+    ]
+  }
+>
+  <View
+    style={
+      {
+        "backgroundColor": "#111216",
+        "borderRadius": 14.383177570093459,
+        "flex": 1,
+        "overflow": "hidden",
+      }
+    }
+  >
+    <Image
+      resizeMode="cover"
+      source={
+        {
+          "testUri": "../../../assets/cards/agent-ollie.jpg",
+        }
+      }
+      style={
+        {
+          "height": "100%",
+          "left": 0,
+          "position": "absolute",
+          "top": 0,
+          "width": "100%",
+        }
+      }
+    />
+    <RNSVGSvgView
+      bbHeight="100%"
+      bbWidth="100%"
+      focusable={false}
+      height="100%"
+      style={
+        [
+          {
+            "backgroundColor": "transparent",
+            "borderWidth": 0,
+          },
+          {
+            "left": 0,
+            "position": "absolute",
+            "top": 0,
+          },
+          {
+            "flex": 0,
+            "height": "100%",
+            "width": "100%",
+          },
+        ]
+      }
+      width="100%"
+    >
+      <RNSVGGroup
+        fill={
+          {
+            "payload": 4278190080,
+            "type": 0,
+          }
+        }
+      >
+        <RNSVGDefs>
+          <RNSVGLinearGradient
+            gradient={
+              [
+                0,
+                -1929379841,
+                0.55,
+                16777215,
+              ]
+            }
+            gradientTransform={null}
+            gradientUnits={0}
+            name="card-scrim-agent-ollie"
+            x1="0"
+            x2="1"
+            y1="0"
+            y2="0"
+          />
+        </RNSVGDefs>
+        <RNSVGRect
+          fill={
+            {
+              "brushRef": "card-scrim-agent-ollie",
+              "type": 1,
+            }
+          }
+          height="100%"
+          propList={
+            [
+              "fill",
+            ]
+          }
+          width="100%"
+          x="0"
+          y="0"
+        />
+      </RNSVGGroup>
+    </RNSVGSvgView>
+    <Image
+      resizeMode="contain"
+      source={
+        {
+          "testUri": "../../../assets/logo/talyvor-logo-small-on-light-480.png",
+        }
+      }
+      style={
+        {
+          "height": 28.526635514018697,
+          "left": 17.57943925233645,
+          "position": "absolute",
+          "top": 17.57943925233645,
+          "width": 89.49532710280374,
+        }
+      }
+    />
+    <View
+      style={
+        {
+          "bottom": 15.981308411214954,
+          "left": 17.57943925233645,
+          "position": "absolute",
+          "width": 247.71028037383178,
+        }
+      }
+      testID="card-holder"
+    >
+      <Text
+        adjustsFontSizeToFit={true}
+        allowFontScaling={false}
+        minimumFontScale={0.5}
+        numberOfLines={1}
+        style={
+          {
+            "color": "#111216",
+            "fontFamily": "BricolageGrotesque_700Bold",
+            "fontSize": 20.77570093457944,
+            "letterSpacing": -0.2077570093457944,
+            "lineHeight": 23.172897196261683,
+          }
+        }
+      >
+        Atlas
+      </Text>
+      <Text
+        allowFontScaling={false}
+        numberOfLines={1}
+        style={
+          {
+            "color": "#3E4452",
+            "fontFamily": "Figtree_600SemiBold",
+            "fontSize": 9.588785046728972,
+            "marginTop": 3.196261682242991,
+          }
+        }
+      >
+        Research
+      </Text>
+    </View>
+  </View>
+</View>
+`;
+
+exports[`a sky agent draws its card 1`] = `
+<View
+  accessibilityLabel="Atlas, Research's agent card"
+  accessibilityRole="image"
+  accessible={true}
+  style={
+    [
+      {
+        "borderRadius": 14.383177570093459,
+        "height": 215.74766355140187,
+        "width": 342,
+      },
+      {
+        "elevation": 6,
+        "shadowColor": "#111216",
+        "shadowOffset": {
+          "height": 11.186915887850468,
+          "width": 0,
+        },
+        "shadowOpacity": 0.18,
+        "shadowRadius": 13.58411214953271,
+      },
+    ]
+  }
+>
+  <View
+    style={
+      {
+        "backgroundColor": "#111216",
+        "borderRadius": 14.383177570093459,
+        "flex": 1,
+        "overflow": "hidden",
+      }
+    }
+  >
+    <Image
+      resizeMode="cover"
+      source={
+        {
+          "testUri": "../../../assets/cards/agent-nova.jpg",
+        }
+      }
+      style={
+        {
+          "height": "100%",
+          "left": 0,
+          "position": "absolute",
+          "top": 0,
+          "width": "100%",
+        }
+      }
+    />
+    <RNSVGSvgView
+      bbHeight="100%"
+      bbWidth="100%"
+      focusable={false}
+      height="100%"
+      style={
+        [
+          {
+            "backgroundColor": "transparent",
+            "borderWidth": 0,
+          },
+          {
+            "left": 0,
+            "position": "absolute",
+            "top": 0,
+          },
+          {
+            "flex": 0,
+            "height": "100%",
+            "width": "100%",
+          },
+        ]
+      }
+      width="100%"
+    >
+      <RNSVGGroup
+        fill={
+          {
+            "payload": 4278190080,
+            "type": 0,
+          }
+        }
+      >
+        <RNSVGDefs>
+          <RNSVGLinearGradient
+            gradient={
+              [
+                0,
+                -1929379841,
+                0.55,
+                16777215,
+              ]
+            }
+            gradientTransform={null}
+            gradientUnits={0}
+            name="card-scrim-agent-nova"
+            x1="0"
+            x2="1"
+            y1="0"
+            y2="0"
+          />
+        </RNSVGDefs>
+        <RNSVGRect
+          fill={
+            {
+              "brushRef": "card-scrim-agent-nova",
+              "type": 1,
+            }
+          }
+          height="100%"
+          propList={
+            [
+              "fill",
+            ]
+          }
+          width="100%"
+          x="0"
+          y="0"
+        />
+      </RNSVGGroup>
+    </RNSVGSvgView>
+    <Image
+      resizeMode="contain"
+      source={
+        {
+          "testUri": "../../../assets/logo/talyvor-logo-small-on-light-480.png",
+        }
+      }
+      style={
+        {
+          "height": 28.526635514018697,
+          "left": 17.57943925233645,
+          "position": "absolute",
+          "top": 17.57943925233645,
+          "width": 89.49532710280374,
+        }
+      }
+    />
+    <View
+      style={
+        {
+          "bottom": 15.981308411214954,
+          "left": 17.57943925233645,
+          "position": "absolute",
+          "width": 247.71028037383178,
+        }
+      }
+      testID="card-holder"
+    >
+      <Text
+        adjustsFontSizeToFit={true}
+        allowFontScaling={false}
+        minimumFontScale={0.5}
+        numberOfLines={1}
+        style={
+          {
+            "color": "#111216",
+            "fontFamily": "BricolageGrotesque_700Bold",
+            "fontSize": 20.77570093457944,
+            "letterSpacing": -0.2077570093457944,
+            "lineHeight": 23.172897196261683,
+          }
+        }
+      >
+        Atlas
+      </Text>
+      <Text
+        allowFontScaling={false}
+        numberOfLines={1}
+        style={
+          {
+            "color": "#3E4452",
+            "fontFamily": "Figtree_600SemiBold",
+            "fontSize": 9.588785046728972,
+            "marginTop": 3.196261682242991,
+          }
+        }
+      >
+        Research
+      </Text>
+    </View>
+  </View>
+</View>
+`;

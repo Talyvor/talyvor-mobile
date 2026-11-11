@@ -195,6 +195,18 @@ test('signs in, shows the pending approval first on Home, and pauses an agent', 
   )
 })
 
+test("B57.126: Home's cards and an agent's own screen draw the agent's card, named as the agent", async () => {
+  mockStore.set('talyvor.session', JSON.stringify({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }))
+  mockBff()
+  await renderRouter('./src/app', { initialUrl: '/' })
+  expect(await screen.findByRole('link', { name: "Researcher's agent card" })).toBeTruthy()
+  expect(screen.getByRole('link', { name: "Buyer's agent card" })).toBeTruthy()
+
+  await fireEvent.press(screen.getByRole('link', { name: "Researcher's agent card" }))
+  expect(await screen.findByText('Spends at most 1 LXC on one request.')).toBeTruthy()
+  expect(screen.getByLabelText("Researcher's agent card")).toBeTruthy()
+})
+
 const lastSnapshot = () => mockSnapshots[mockSnapshots.length - 1]
 
 // The 'widget' directive compiles a layout to its source; Android's widget runtime evaluates it with these as globals.

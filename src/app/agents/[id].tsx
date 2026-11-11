@@ -2,8 +2,9 @@ import { formatBalance, formatLXC, parseLXC, refusalText, rulesInWords } from '@
 import * as Crypto from 'expo-crypto'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useCallback, useState } from 'react'
-import { TextInput, View } from 'react-native'
+import { TextInput, useWindowDimensions, View } from 'react-native'
 
+import { AgentCard } from '@/components/card'
 import { AGENT_CREDIT, MoneyHeader } from '@/components/money-label'
 import { Body, Button, Card, Eyebrow, Figure, Headline, LoadState, Screen, useLoad } from '@/components/ui'
 import { biometricName, phoneKey, resumeWithThisPhone } from '@/keys'
@@ -16,6 +17,7 @@ export default function AgentScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const { client, peg } = useSession()
   const { c } = useTheme()
+  const { width } = useWindowDimensions()
   const load = useCallback(async () => {
     const [book, rules, pins, device] = await Promise.all([client.book(), client.rules(id), pinnedAgents(), phoneKey(client)])
     const agent = (book.agents ?? []).find((a) => a.id === id) ?? null
@@ -78,6 +80,8 @@ export default function AgentScreen() {
       {agent ? (
         <>
           <Eyebrow>Agent</Eyebrow>
+          {/* B57.126: its card first, as the agent's page draws it: its helper, its own name and job line. */}
+          <AgentCard agent={agent} width={Math.min(428, width - 36)} />
           <Headline>{agent.name}</Headline>
           {agent.description ? <Body muted>{agent.description}</Body> : null}
           <MoneyHeader capability={AGENT_CREDIT}>Balance</MoneyHeader>
