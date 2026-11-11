@@ -4,11 +4,13 @@
  *
  *   node scripts/pocket-shots.mjs <item> <checks.json>
  *
- * checks.json is a list of { route, screen, dark?, words?, why?, fill?, press? }: the app's address, the reference's phone
+ * checks.json is a list of { route, screen, dark?, account?, words?, why?, fill?, press?, scroll? }: the app's address, the reference's phone
  * screen id (design/pocket/README.md's tables, p-*, with `+<dialog>` for one of its sheets), whether to shoot it with the
  * phone set to dark, and `"words": "report"` with `why` for a screen whose words are a later item's (they are listed, not
  * failed). `fill` types into the app's fields by their labels and `press` then presses its buttons by their names, in
- * order, before the shot: a sheet the reference opens from a screen is shot the same way in the app.
+ * order, before the shot: a sheet the reference opens from a screen is shot the same way in the app. `scroll` names the
+ * words the app's shot scrolls to, for a part of a screen below the fold. `account` (B59.11) is the workspace's type and
+ * kind of money, "personal:stablecoin", for the shot and its file name; the sample's own is Business and Hybrid.
  *
  * It exports the app for the web once (npx expo export --platform web) with the sample session in the keychain
  * (metro.config.js, POCKET_SHOTS=1), serves it, answers every BFF request from scripts/pocket/sample.mjs, and shoots
@@ -151,7 +153,8 @@ async function app(c) {
   await page.clock.setFixedTime(new Date(SAMPLE_NOW))
   await page.route(`${BFF}/**`, (route) => {
     const url = new URL(route.request().url())
-    const body = sampleBodyFor(url.pathname)
+    const [account_type, money_kind] = (c.account ?? '').split(':')
+    const body = url.pathname === '/api/workspace/account' && c.account ? { account_type, money_kind } : sampleBodyFor(url.pathname)
     if (body === undefined) unanswered.add(`${route.request().method()} ${url.pathname}${url.search}`)
     return route.fulfill({ status: body === undefined ? 404 : 200, contentType: 'application/json', body: JSON.stringify(body ?? {}) })
   })
@@ -163,6 +166,7 @@ async function app(c) {
     await page.getByRole('button', { name, exact: true }).click()
     await page.waitForTimeout(500)
   }
+  if (c.scroll) await page.getByText(c.scroll, { exact: true }).first().scrollIntoViewIfNeeded()
   return { ctx, page }
 }
 
@@ -179,7 +183,7 @@ async function sideBySide(appPng, refPng, file) {
 }
 
 for (const c of checks) {
-  const label = `${c.screen}${c.dark ? '-dark' : ''}`
+  const label = `${c.screen}${c.account ? `-${c.account.replace(':', '-')}` : ''}${c.dark ? '-dark' : ''}`
   console.log(`\n${label} — the app at ${c.route}`)
   const ref = await reference(c)
   const { ctx, page } = await app(c)

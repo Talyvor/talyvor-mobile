@@ -1,9 +1,11 @@
 import { safeToSpend } from '@talyvor/bff-client'
 import { Link } from 'expo-router'
 import { useCallback, useEffect } from 'react'
-import { Pressable, View } from 'react-native'
+import { Pressable, ScrollView, View } from 'react-native'
 
+import { useAccount } from '@/account'
 import { ApprovalCard } from '@/components/approval-card'
+import { AgentCard, agentCardLabel } from '@/components/card'
 import { Face } from '@/components/face'
 import { Icon } from '@/components/icon'
 import { AGENT_CREDIT, MoneyHeader, approvalCapability } from '@/components/money-label'
@@ -24,6 +26,7 @@ export default function Home() {
     return { book, approvals: approvals.approvals ?? [], prepared }
   }, [client])
   const { data, error, loading, reload } = useLoad(load)
+  const { shows } = useAccount(client)
   useEffect(() => {
     if (data) void syncWidget(client, data)
   }, [client, data])
@@ -66,7 +69,24 @@ export default function Home() {
             </Pressable>
           </Link>
 
-          <Eyebrow>Agents</Eyebrow>
+          {/* B57.126: each agent's card, its helper with its own name and job line, opening the agent. */}
+          {agents.length ? (
+            <>
+              <Eyebrow>Cards</Eyebrow>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -18 }} contentContainerStyle={{ gap: 12, paddingHorizontal: 18, paddingBottom: 18 }}>
+                {agents.map((a) => (
+                  <Link key={a.id} href={{ pathname: '/agents/[id]', params: { id: a.id } }} asChild>
+                    <Pressable accessibilityRole="link" accessibilityLabel={agentCardLabel(a.name, a.description ?? '')}>
+                      <AgentCard agent={a} width={152} />
+                    </Pressable>
+                  </Link>
+                ))}
+              </ScrollView>
+            </>
+          ) : null}
+
+          {/* B59.11 — "Your agents", or a Business's "Your team’s agents", as the web's Home says. */}
+          <Eyebrow>{shows?.agents ?? 'Your agents'}</Eyebrow>
           {agents.length === 0 ? <Body muted>No agents yet.</Body> : null}
           {agents.map((a) => (
             <Link key={a.id} href={{ pathname: '/agents/[id]', params: { id: a.id } }} asChild>

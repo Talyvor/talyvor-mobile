@@ -325,6 +325,15 @@ export interface MobileSession {
   expires_at: string
 }
 
+/** B59.9 — what sign-up asks before the identity provider (suite B59.8): the BFF sends them to Lens when it makes the
+ * workspace, and refuses a set that lacks one. Signing in sends none. */
+export interface SignupAnswers {
+  account_type: 'personal' | 'business'
+  money_kind: 'fiat' | 'stablecoin' | 'hybrid'
+  /** the person's name or the company's: the workspace's name */
+  name: string
+}
+
 export class BffError extends Error {
   constructor(
     readonly status: number,
@@ -368,8 +377,9 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
       if (usdPerLXC === null) usdPerLXC = (await call<{ usd_per_lxc?: number }>('GET', '/api/lxc/topup-options').catch(() => null))?.usd_per_lxc ?? null
       return usdPerLXC
     },
-    /** Trades the identity provider's ID token, got in the system browser with PKCE, for a BFF session. */
-    signIn: (idToken: string) => call<MobileSession>('POST', '/auth/mobile/session', { id_token: idToken }),
+    /** Trades the identity provider's ID token, got in the system browser with PKCE, for a BFF session; with sign-up's
+     * answers when the person is signing up. */
+    signIn: (idToken: string, signup?: SignupAnswers) => call<MobileSession>('POST', '/auth/mobile/session', { id_token: idToken, ...signup }),
     /** Whose workspace this session is in. */
     me: () => call<{ workspace_id: string }>('GET', '/auth/me'),
     /** The workspace's name; Lens answers its id until it is named. */

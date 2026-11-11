@@ -2,6 +2,7 @@ import { router } from 'expo-router'
 import { useCallback } from 'react'
 import { Text, View } from 'react-native'
 
+import { KIND_LABEL, KIND_LINE, TYPE_FIXED, TYPE_LABEL, accountChip, useAccount } from '@/account'
 import { Icon } from '@/components/icon'
 import { NoticeSettingsCard } from '@/components/notice-settings'
 import { Back, Button, Card, Eyebrow, Headline, LoadState, Row, Screen, useLoad } from '@/components/ui'
@@ -12,6 +13,7 @@ import { fonts, useTheme } from '@/theme'
 // when notices arrive, Activity and its exports, and signing out of this phone. Security keys, team and roles, and
 // limits are authorisation and come in B59.39; closing the account and your data in B59.29.
 // B57.132 — drawn in Pocket: its own Back and headline, the account's avatar as the switcher draws it, rows in cloud cards.
+// B59.11 — the account's chip under its name ("Business · Hybrid"), and its kind of money and type in the web's words.
 
 export default function SettingsScreen() {
   const { client, signOut } = useSession()
@@ -21,6 +23,7 @@ export default function SettingsScreen() {
     return { id: me.workspace_id, name: name.name, settings: notices.settings }
   }, [client])
   const { data, error, loading, reload } = useLoad(load)
+  const { account } = useAccount(client)
   const tile = { width: 36, height: 36, borderRadius: 18, alignItems: 'center' as const, justifyContent: 'center' as const, backgroundColor: c.cloud2 }
 
   return (
@@ -40,10 +43,23 @@ export default function SettingsScreen() {
                 </View>
               }
               title={data.name || data.id}
-              sub="Account"
+              sub={account ? accountChip(account) : 'Account'}
             />
             <Row title={data.id} sub="Account ID" />
           </Card>
+
+          {account ? (
+            <>
+              <Eyebrow>Kind of money</Eyebrow>
+              <Card>
+                <Row first title={KIND_LABEL[account.money_kind]} sub={KIND_LINE[account.money_kind]} />
+              </Card>
+              <Eyebrow>Account type</Eyebrow>
+              <Card>
+                <Row first title={TYPE_LABEL[account.account_type]} sub={TYPE_FIXED} />
+              </Card>
+            </>
+          ) : null}
 
           <Eyebrow>Notifications</Eyebrow>
           <NoticeSettingsCard initial={data.settings} />

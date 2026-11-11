@@ -1,4 +1,4 @@
-import { createBffClient, type BffClient, type MobileSession } from '@talyvor/bff-client'
+import { createBffClient, type BffClient, type MobileSession, type SignupAnswers } from '@talyvor/bff-client'
 import * as SecureStore from 'expo-secure-store'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 
@@ -16,8 +16,8 @@ interface Session {
   client: BffClient
   /** USD per LXC once read, for formatLXC; null until then, or while Lens does not supply it. */
   peg: number | null
-  /** Trades an ID token for a BFF session and keeps it in the phone's keychain. */
-  signIn: (idToken: string) => Promise<void>
+  /** Trades an ID token for a BFF session and keeps it in the phone's keychain; sign-up sends its answers with it. */
+  signIn: (idToken: string, signup?: SignupAnswers) => Promise<void>
   signOut: () => Promise<void>
 }
 
@@ -43,8 +43,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const signIn = useCallback(
-    async (idToken: string) => {
-      const s = await client.signIn(idToken)
+    async (idToken: string, signup?: SignupAnswers) => {
+      const s = await client.signIn(idToken, signup)
       await SecureStore.setItemAsync(KEY, JSON.stringify(s))
       await recheckPhoneKey(createBffClient(config.bffUrl, () => s.token)).catch((err) => console.warn('device: not checked', err))
       setToken(s.token)

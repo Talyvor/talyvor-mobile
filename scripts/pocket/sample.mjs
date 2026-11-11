@@ -39,6 +39,8 @@ const sandbox = (capability, name) => ({ capability, name, class: 'GREEN', real_
 const ANSWERS = {
   '/api/agents': { workspace_balance_ulxc: lxc(124_800), allocated_ulxc: lxc(33_900), unallocated_ulxc: lxc(90_900), spent_ulxc: lxc(28_000), agents },
   '/api/agents/approvals': { approvals },
+  // B57.126: Research's rules as the reference's agent page reads them, so its page loads in the shots.
+  '/api/agents/agt_research/rules': { max_per_request_ulxc: lxc(10_000), daily_limit_ulxc: 0, monthly_limit_ulxc: 0, approval_above_ulxc: lxc(2_500), allowed_models: null, allowed_providers: null, active_from: '', active_until: '', timezone: 'Europe/London' },
   '/api/money/payment-requests': { requests: [] },
   '/api/lxc/topup-options': { usd_per_lxc: 0.1, min_usd_cents: 1000 },
   '/api/wallets/capabilities': {
@@ -65,6 +67,8 @@ const ANSWERS = {
   // B59.35 — Settings and Activity.
   '/auth/me': { workspace_id: 'ws_northwind' },
   '/api/workspace/name': { id: 'ws_northwind', name: 'Northwind Studio' },
+  // B59.11 — every workspace Lens had before B59.6 is Business and Hybrid.
+  '/api/workspace/account': { workspace_id: 'ws_northwind', account_type: 'business', money_kind: 'hybrid' },
   '/api/money/notices': { settings: { timezone: 'Europe/London', quiet_from: '22:00', quiet_until: '07:00', off: ['digest'] }, notices: [] },
   '/api/agents/statement': {
     from: '2026-10-01',

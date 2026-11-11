@@ -12,8 +12,9 @@ const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 /** B40.13: approving on this phone with its hardware key — off, turning on, or on. B55.53: a key made in another
  * workspace is off here, since Lens refuses it, and moving it here strands that workspace, so it asks first. B55.4: in a
  * workspace that already has a key, the new one waits, with its code, until the web lets it in. B55.17: Turn off asks
- * first too, and the key leaves the phone only once Lens has revoked it. */
-export function PhoneKeyCard() {
+ * first too, and the key leaves the phone only once Lens has revoked it. B59.9: `onOn` hears when this phone's key is on
+ * here, so sign-up's step 3 can open the app. */
+export function PhoneKeyCard({ onOn }: { onOn?: () => void } = {}) {
   const { client } = useSession()
   const { c } = useTheme()
   const [key, setKey] = useState<Awaited<ReturnType<typeof phoneKey>> | undefined>(undefined)
@@ -30,6 +31,9 @@ export function PhoneKeyCard() {
     phoneKey(client).then(setKey, () => undefined)
     void workspaceName(client).then(setHere)
   }, [client])
+  useEffect(() => {
+    if (key?.here) onOn?.()
+  }, [key, onOn])
   if (key === undefined) return null
   // Words for a workspace the phone cannot name: the signed-in one before it is named, another it never learnt.
   const b = here || 'this workspace'
