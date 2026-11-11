@@ -1,5 +1,5 @@
 import { BricolageGrotesque_700Bold, BricolageGrotesque_800ExtraBold } from '@expo-google-fonts/bricolage-grotesque'
-import { Figtree_400Regular, Figtree_600SemiBold, Figtree_700Bold } from '@expo-google-fonts/figtree'
+import { Figtree_400Regular, Figtree_600SemiBold, Figtree_700Bold, Figtree_800ExtraBold } from '@expo-google-fonts/figtree'
 import { useFonts } from 'expo-font'
 import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
@@ -53,6 +53,7 @@ export default function RootLayout() {
     Figtree_400Regular,
     Figtree_600SemiBold,
     Figtree_700Bold,
+    Figtree_800ExtraBold,
     BricolageGrotesque_700Bold,
     BricolageGrotesque_800ExtraBold,
   })

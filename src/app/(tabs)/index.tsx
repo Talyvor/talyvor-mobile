@@ -11,6 +11,7 @@ import { PreparedPaymentCard, pendingPrepared } from '@/components/prepared-paym
 import { Body, Card, Eyebrow, Headline, LoadState, Screen, useLoad } from '@/components/ui'
 import { useSession } from '@/session'
 import { useTheme } from '@/theme'
+import { setWaiting } from '@/waiting'
 import { syncWidget } from '@/widget-sync'
 
 /** Home: what waits for you first, then what you can safely spend, then each agent. */
@@ -29,6 +30,9 @@ export default function Home() {
   const pending = (data?.approvals ?? []).filter((a) => a.status === 'pending')
   const waiting = pending.length + (data?.prepared.length ?? 0)
   const nameOf = (id: string) => agents.find((a) => a.id === id)?.name ?? id
+  useEffect(() => {
+    if (data) setWaiting(waiting)
+  }, [data, waiting])
 
   return (
     <Screen onRefresh={reload} refreshing={loading && !!data}>

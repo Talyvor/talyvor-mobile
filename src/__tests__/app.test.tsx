@@ -1,7 +1,8 @@
 import { labelOf } from '@talyvor/bff-client'
 import { render } from '@testing-library/react-native'
-import { fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library'
+import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library'
 import * as compose from '@expo/ui/jetpack-compose'
+import * as Notifications from 'expo-notifications'
 import * as modifiers from '@expo/ui/jetpack-compose/modifiers'
 import { isValidElement, type ReactNode } from 'react'
 import { Fragment, jsx, jsxs } from 'react/jsx-runtime'
@@ -722,5 +723,47 @@ describe('B56.12 labels on the phone', () => {
     )
     expect(await view.findByTestId('money-label-sandbox')).toBeTruthy()
     expect(paths).toEqual(['/api/pricing'])
+  })
+})
+
+describe('B57.65 the tab bar', () => {
+  beforeEach(() => {
+    mockStore.clear()
+    mockStore.set('talyvor.session', JSON.stringify({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }))
+  })
+  const preq = { id: 'preq_1', status: 'pending_approval', summary: '', client: 'mcp:claude-desktop', totals: { GBP: 4200 }, items: [], created_at: '2026-11-09T08:00:00Z' }
+  // The bar draws each tab's icon twice, on and off, and fades between them.
+  const badges = () => screen.queryAllByTestId('approvals-badge').map((b) => within(b).getByText(/\d/).props.children)
+
+  test('each tab has its icon over its word, and pressing it opens it', async () => {
+    mockBff()
+    await renderRouter('./src/app', { initialUrl: '/' })
+    await screen.findByText('1 waiting for you')
+    for (const icon of ['home', 'chat', 'approvals', 'spending', 'statements', 'payments']) expect(screen.getAllByTestId(`icon-${icon}`, { includeHiddenElements: true }).length).toBeGreaterThan(0)
+    for (const word of ['Home', 'Chat', 'Approvals', 'Spending', 'Statement', 'Pay']) expect(screen.getAllByText(word).length).toBeGreaterThan(0)
+    // Every tab, pressed, is the one you are on: none leads nowhere. Chat's own test opens Chat, with its recorder
+    // stood in for; B59.3 takes the tab away for a workspace without it.
+    for (const name of ['Approvals', 'Spending', 'Statement', 'Pay', 'Home']) {
+      const label = name === 'Approvals' ? 'Approvals, 1 waiting' : name
+      await fireEvent.press(screen.getByRole('button', { name: label }))
+      await waitFor(() => expect(screen.getByRole('button', { name: label, selected: true })).toBeTruthy())
+    }
+  })
+
+  test('the Approvals badge counts agents’ requests and prepared payments, and is gone at zero after a push', async () => {
+    const start = { approvals: undefined as unknown[] | undefined, requests: [preq] }
+    mockBff(start)
+    await renderRouter('./src/app', { initialUrl: '/' })
+    expect(await screen.findByText('2 waiting for you')).toBeTruthy()
+    await waitFor(() => expect(badges()).toEqual([2, 2]))
+    expect(screen.getByLabelText('Approvals, 2 waiting')).toBeTruthy()
+
+    // Both are decided elsewhere; the next push refreshes the badge, and at zero it is not drawn.
+    start.approvals = []
+    start.requests = []
+    const { __receive } = Notifications as unknown as { __receive: (d: Record<string, unknown>) => void }
+    __receive({ type: 'agent_approval', approval_id: 'apr_9' })
+    await waitFor(() => expect(badges()).toEqual([]))
+    expect(screen.getByLabelText('Approvals')).toBeTruthy()
   })
 })
