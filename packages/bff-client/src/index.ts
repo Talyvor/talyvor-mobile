@@ -294,6 +294,16 @@ export interface SpendNotice {
   created_at: string
 }
 
+/** Lens economy.CapabilityStatus (B22.1): one money capability the workspace has, and (B56.7) whether it moves real money
+ * for this workspace: label is "live" or "sandbox", on each capability that moves money. */
+export interface WalletCapability {
+  capability: string
+  name: string
+  class: 'GREEN' | 'AMBER' | 'RED'
+  real_money: boolean
+  label?: string
+}
+
 export interface MobileSession {
   token: string
   expires_at: string
@@ -392,6 +402,9 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     approveEnrolment: (id: string, assertion: DeviceAssertion) => call<KeyEnrolment>('POST', `/api/agents/keys/enrolments/${e(id)}/approve`, { assertion }),
     /** It can never be let in after. */
     declineEnrolment: (id: string) => call<KeyEnrolment>('POST', `/api/agents/keys/enrolments/${e(id)}/decline`),
+    /** Revokes one device key: Lens refuses its signatures from then on, and never revokes the workspace's last key or
+     * one that owns an agent's account (409, B55.15). */
+    revokeDevice: (id: string) => call<DeviceKey>('POST', `/api/money/devices/${e(id)}/revoke`),
     /** The APNs or FCM token Lens pushes this device's approvals to (B40.15). */
     setPushToken: (deviceId: string, push_token: string) => call<DeviceKey>('POST', `/api/money/devices/${e(deviceId)}/push-token`, { push_token }),
     /** Payments Chat prepared for the person to approve: Lens judges each and moves no money, and one said aloud always
@@ -437,6 +450,11 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     coach: () => call<{ lines: CoachLine[] | null }>('GET', '/api/money/coach'),
     notices: () => call<{ settings: NoticeSettings; notices: SpendNotice[] | null }>('GET', '/api/money/notices'),
     setNoticeSettings: (s: NoticeSettings) => call<NoticeSettings>('PUT', '/api/money/notices/settings', s),
+    // B56.12 — Live or Sandbox, as Lens answers it (talyvor-lens B56.7, through the BFF's B56.9 passthrough).
+    /** The workspace's money capabilities, each with its label for this workspace. */
+    capabilities: () => call<{ capabilities: WalletCapability[] | null }>('GET', '/api/wallets/capabilities'),
+    /** The public pricing; its labels are Lens's public answer per capability, left out when Lens did not say. */
+    pricingLabels: async () => (await call<{ labels?: Record<string, string> }>('GET', '/api/pricing')).labels,
   }
 }
 
@@ -508,6 +526,19 @@ export function rulesInWords(r: AgentRules): string[] {
   if (r.blocked_payees?.length) out.push(`Never pays ${r.blocked_payees.length} blocked payee${r.blocked_payees.length === 1 ? '' : 's'}.`)
   if (r.active_from && r.active_until) out.push(`Works only from ${r.active_from} to ${r.active_until} (${r.timezone || 'UTC'}).`)
   return out.length ? out : ['No limits: it can spend everything it holds.']
+}
+
+/** Each capability's label, by key, from the workspace's capabilities; one without a label is left out. */
+export function workspaceLabels(caps: WalletCapability[] | null): Record<string, string> {
+  return Object.fromEntries((caps ?? []).flatMap((c) => (c.label ? [[c.capability, c.label]] : [])))
+}
+
+/** Live only when Lens says live for every key; Sandbox when each is live or sandbox and one is sandbox; null while the
+ * labels are unread, or when a key has no label or an answer that is neither, because a label not backed is worse than none. */
+export function labelOf(labels: Record<string, string> | undefined, keys: readonly string[]): 'live' | 'sandbox' | null {
+  const states = keys.map((k) => labels?.[k])
+  if (!states.length || states.some((l) => l !== 'live' && l !== 'sandbox')) return null
+  return states.every((l) => l === 'live') ? 'live' : 'sandbox'
 }
 
 /** Why a write did not happen, in Lens's words where it gave some. */

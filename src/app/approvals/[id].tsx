@@ -3,6 +3,7 @@ import { useLocalSearchParams } from 'expo-router'
 import { useCallback } from 'react'
 
 import { ApprovalCard } from '@/components/approval-card'
+import { approvalCapability } from '@/components/money-label'
 import { Body, Eyebrow, Headline, LoadState, Screen, useLoad } from '@/components/ui'
 import { useSession } from '@/session'
 
@@ -21,7 +22,7 @@ export default function ApprovalScreen() {
   const load = useCallback(async () => {
     const [book, approvals] = await Promise.all([client.book(), client.approvals()])
     const approval = (approvals.approvals ?? []).find((a) => a.id === id) ?? null
-    return { approval, agentName: book.agents?.find((a) => a.id === approval?.agent_id)?.name ?? approval?.agent_id ?? '' }
+    return { approval, agents: book.agents ?? [], agentName: book.agents?.find((a) => a.id === approval?.agent_id)?.name ?? approval?.agent_id ?? '' }
   }, [client, id])
   const { data, error, loading, reload } = useLoad(load)
   const a = data?.approval
@@ -33,7 +34,7 @@ export default function ApprovalScreen() {
       <Headline>{!a ? 'Approval' : a.status === 'pending' ? `${agentName} is waiting for you` : `${agentName}’s request`}</Headline>
       <LoadState loading={loading && !data} error={error} />
       {data && !a ? <Body muted>There is no approval at this address. It may belong to another workspace.</Body> : null}
-      {a?.status === 'pending' ? <ApprovalCard approval={a} agentName={agentName} onDecided={reload} /> : null}
+      {a?.status === 'pending' ? <ApprovalCard approval={a} agentName={agentName} capability={approvalCapability(a, data?.agents ?? [])} onDecided={reload} /> : null}
       {a && a.status !== 'pending' ? <Body muted>{ended(a)}. Nothing is waiting for you here.</Body> : null}
     </Screen>
   )

@@ -1,4 +1,4 @@
-import { BffError, type BffClient, type DeviceAssertion, type DeviceKey, type KeyEnrolment, type OutsidePaymentRequest } from '@talyvor/bff-client'
+import { BffError, refusalText, type BffClient, type DeviceAssertion, type DeviceKey, type KeyEnrolment, type OutsidePaymentRequest } from '@talyvor/bff-client'
 import * as Crypto from 'expo-crypto'
 import * as SecureStore from 'expo-secure-store'
 import { Platform } from 'react-native'
@@ -122,6 +122,22 @@ export async function waitForTheWeb(client: BffClient, enrolment: Pick<KeyEnrolm
   }
   await forgetThisPhone()
   return null
+}
+
+/** B55.17 — turns approving on this phone off: Lens revokes the key first, and only then does it leave the phone, so Lens
+ * never lists a key nothing holds. A refusal keeps the key: Lens never revokes the workspace's last key. */
+export async function turnOffPhoneApprovals(client: BffClient): Promise<void> {
+  const id = await thisPhoneDevice()
+  if (!id) return
+  await client.revokeDevice(id)
+  await forgetThisPhone()
+}
+
+/** What the person is told when Lens refuses to revoke the phone's key. */
+export function turnOffRefusal(err: unknown): string {
+  if (err instanceof BffError && err.status === 409 && /last key/i.test(err.sentence))
+    return 'This phone’s key is your last key. With none, nobody could approve, so add a passkey on the web first.'
+  return refusalText(err)
 }
 
 /** This phone's signature over a Lens approval or mandate challenge, after the biometric check; `reason` is shown in it.

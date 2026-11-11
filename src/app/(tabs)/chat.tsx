@@ -6,6 +6,7 @@ import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import { AppState, Pressable, Switch, Text, TextInput, View } from 'react-native'
 
 import { bareAmount, currencyOf, parsePay, payeesCalled, PAUSE_ALL, RESUME_ALL, spendOf, WHATS_DUE, type Amount, type PayAsk } from '@/chat-commands'
+import { AGENT_CREDIT, MoneyLabel, PAY_OUT, paymentRequestCapabilities } from '@/components/money-label'
 import { Body, Button, Card, Eyebrow, Headline, Screen } from '@/components/ui'
 import { biometricName, phoneKey, resumeWithThisPhone } from '@/keys'
 import { useSession } from '@/session'
@@ -30,6 +31,8 @@ interface Turn {
   approve?: string
   /** a screen the answer came from */
   open?: { label: string; go: () => void }
+  /** the money capabilities the answer is about, labelled Live or Sandbox (B56.12) */
+  money?: readonly string[]
   settled?: boolean
 }
 
@@ -100,7 +103,7 @@ export default function ChatScreen() {
   const prepare = async (to: { ask: PayAsk; payee: OutsidePayee }, much: Amount, voiced: boolean) => {
     const item = { payee_id: to.payee.id, currency: much.currency ?? currencyOf(to.payee), amount_minor: much.minor, reference: to.ask.reference }
     const r = await client.preparePayment(voiced, [item], Crypto.randomUUID())
-    reply({ text: readBack(r), voiced, approve: r.status === 'pending_approval' ? r.id : undefined })
+    reply({ text: readBack(r), voiced, approve: r.status === 'pending_approval' ? r.id : undefined, money: PAY_OUT })
   }
 
   /** One thing the person said or typed: a command Chat answers itself, or a question for the model. */
@@ -115,7 +118,12 @@ export default function ChatScreen() {
       if (RESUME_ALL.test(text)) return reply({ text: CONFIRM['resume-all'].said, voiced, confirm: 'resume-all' })
       if (WHATS_DUE.test(text)) {
         const due = ((await client.pendingPaymentRequests()).requests ?? []).filter((r) => r.status === 'pending_approval')
-        return reply({ text: dueText(due), voiced, open: due.length > 0 ? { label: 'See what is due', go: () => router.push('/bills') } : undefined })
+        return reply({
+          text: dueText(due),
+          voiced,
+          open: due.length > 0 ? { label: 'See what is due', go: () => router.push('/bills') } : undefined,
+          money: paymentRequestCapabilities(due),
+        })
       }
       const spender = spendOf(text)
       const agent = spender ? payeesCalled((await client.book()).agents ?? [], spender) : []
@@ -124,6 +132,7 @@ export default function ChatScreen() {
         return reply({
           text: `${a.name} has spent ${formatULXC(a.spent_ulxc)} so far, and holds ${formatULXC(a.balance_ulxc)}.${a.paused_at ? ' It is paused.' : ''}`,
           voiced,
+          money: AGENT_CREDIT,
           open: { label: `Open ${a.name}`, go: () => router.push({ pathname: '/agents/[id]', params: { id: a.id } }) },
         })
       }
@@ -259,6 +268,7 @@ export default function ChatScreen() {
           ) : (
             <Card>
               <Body>{t.text}</Body>
+              {t.money?.length ? <MoneyLabel capability={t.money} /> : null}
               {t.confirm && !t.settled ? (
                 <Button primary label={t.confirm === 'resume-all' && signs ? `Start them with ${biometricName}` : CONFIRM[t.confirm].yes} onPress={() => void decide(t)} />
               ) : null}

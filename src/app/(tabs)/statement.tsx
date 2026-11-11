@@ -2,6 +2,7 @@ import { formatULXC } from '@talyvor/bff-client'
 import { useCallback } from 'react'
 import { View } from 'react-native'
 
+import { AGENT_CREDIT, MoneyHeader } from '@/components/money-label'
 import { Body, Card, Eyebrow, Figure, Headline, LoadState, Screen, useLoad } from '@/components/ui'
 import { useSession } from '@/session'
 import { useTheme } from '@/theme'
@@ -26,7 +27,7 @@ export default function StatementScreen() {
 
   return (
     <Screen onRefresh={reload} refreshing={loading && !!data}>
-      <Eyebrow>Statement</Eyebrow>
+      <MoneyHeader capability={AGENT_CREDIT}>Statement</MoneyHeader>
       <Headline>This month</Headline>
       <LoadState loading={loading && !data} error={error} />
       {(data?.statement.accounts ?? []).map((a) => (

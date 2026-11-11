@@ -4,6 +4,7 @@ import { View } from 'react-native'
 
 import { ApprovalCard } from '@/components/approval-card'
 import { KeyEnrolmentCards } from '@/components/key-enrolment-cards'
+import { approvalCapability } from '@/components/money-label'
 import { PhoneKeyCard } from '@/components/phone-key-card'
 import { PreparedPaymentCard, pendingPrepared } from '@/components/prepared-payment-card'
 import { Body, Card, Eyebrow, Figure, Headline, LoadState, Screen, useLoad } from '@/components/ui'
@@ -35,7 +36,7 @@ export default function Approvals() {
         <PreparedPaymentCard key={r.id} request={r} />
       ))}
       {pending.map((a) => (
-        <ApprovalCard key={a.id} approval={a} agentName={nameOf(a.agent_id)} onDecided={reload} />
+        <ApprovalCard key={a.id} approval={a} agentName={nameOf(a.agent_id)} capability={approvalCapability(a, data?.agents ?? [])} onDecided={reload} />
       ))}
       {decided.length ? <Eyebrow>Decided</Eyebrow> : null}
       {decided.map((a) => (
