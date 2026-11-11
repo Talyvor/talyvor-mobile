@@ -92,6 +92,13 @@ export type StatementFormat = 'csv' | 'json' | 'pdf' | 'journal'
 
 const STATEMENT_ACCEPT: Record<StatementFormat, string> = { csv: 'text/csv', json: 'application/json', pdf: 'application/pdf', journal: 'text/csv' }
 
+/** Lens economy.WorkspaceAccount (B59.6): who the account is for and the kind of money it holds, both set when it is made. */
+export interface WorkspaceAccount {
+  workspace_id: string
+  account_type: 'business' | 'personal'
+  money_kind: 'fiat' | 'stablecoin' | 'hybrid'
+}
+
 /** Lens economy.CurrencyAccount:the company's or an agent's account in one currency, in minor units. */
 export interface CurrencyAccount {
   id: string
@@ -367,6 +374,8 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     me: () => call<{ workspace_id: string }>('GET', '/auth/me'),
     /** The workspace's name; Lens answers its id until it is named. */
     workspaceName: () => call<{ id: string; name: string }>('GET', '/api/workspace/name'),
+    /** B57.128 — the workspace's type and kind of money (Lens B59.6). */
+    account: () => call<WorkspaceAccount>('GET', '/api/workspace/account'),
     /** B59.3 — the areas the operator switched on for this workspace (Lens B59.1); none until then. */
     areas: async () => (await call<{ areas: string[] | null }>('GET', '/api/workspace/areas')).areas ?? [],
     book: () => call<AgentBook>('GET', '/api/agents'),
