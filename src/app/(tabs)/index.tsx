@@ -1,12 +1,14 @@
-import { formatLXC, safeToSpend } from '@talyvor/bff-client'
+import { safeToSpend } from '@talyvor/bff-client'
 import { Link } from 'expo-router'
 import { useCallback, useEffect } from 'react'
 import { Pressable, View } from 'react-native'
 
 import { ApprovalCard } from '@/components/approval-card'
+import { Face } from '@/components/face'
 import { AGENT_CREDIT, MoneyHeader, approvalCapability } from '@/components/money-label'
+import { Money } from '@/components/money'
 import { PreparedPaymentCard, pendingPrepared } from '@/components/prepared-payment-card'
-import { Body, Card, Eyebrow, Figure, Headline, LoadState, Screen, useLoad } from '@/components/ui'
+import { Body, Card, Eyebrow, Headline, LoadState, Screen, useLoad } from '@/components/ui'
 import { useSession } from '@/session'
 import { useTheme } from '@/theme'
 import { syncWidget } from '@/widget-sync'
@@ -43,7 +45,7 @@ export default function Home() {
           ))}
 
           <MoneyHeader capability={AGENT_CREDIT}>Safe to spend</MoneyHeader>
-          <Figure size={32}>{formatLXC(safeToSpend(data.book, data.approvals), peg)}</Figure>
+          <Money micros={safeToSpend(data.book, data.approvals)} peg={peg} />
           <Body muted>Your workspace balance, less what is waiting for your approval.</Body>
 
           <Eyebrow>Agents</Eyebrow>
@@ -52,12 +54,13 @@ export default function Home() {
             <Link key={a.id} href={{ pathname: '/agents/[id]', params: { id: a.id } }} asChild>
               <Pressable accessibilityRole="link" accessibilityLabel={`${a.name}, ${a.paused_at ? 'paused' : 'active'}`}>
                 <Card>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                    <Face agent={a} state={a.paused_at ? 'asleep' : 'happy'} waiting={pending.some((p) => p.agent_id === a.id)} size={44} />
                     <View style={{ flex: 1 }}>
                       <Body>{a.name}</Body>
                       <Body muted style={{ color: a.paused_at ? c.caution : c.positive }}>{a.paused_at ? 'Paused' : 'Active'}</Body>
                     </View>
-                    <Figure>{formatLXC(a.balance_ulxc, peg)}</Figure>
+                    <Money micros={a.balance_ulxc} peg={peg} size={17} />
                   </View>
                 </Card>
               </Pressable>

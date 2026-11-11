@@ -1,5 +1,5 @@
-import { IBMPlexMono_400Regular, IBMPlexMono_500Medium } from '@expo-google-fonts/ibm-plex-mono'
-import { SpaceGrotesk_400Regular, SpaceGrotesk_500Medium, SpaceGrotesk_600SemiBold } from '@expo-google-fonts/space-grotesk'
+import { BricolageGrotesque_700Bold, BricolageGrotesque_800ExtraBold } from '@expo-google-fonts/bricolage-grotesque'
+import { Figtree_400Regular, Figtree_600SemiBold, Figtree_700Bold } from '@expo-google-fonts/figtree'
 import { useFonts } from 'expo-font'
 import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
@@ -23,10 +23,11 @@ function Navigator() {
       <Stack
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: c.canvas },
-          headerStyle: { backgroundColor: c.surface },
+          contentStyle: { backgroundColor: c.page },
+          headerStyle: { backgroundColor: c.page },
+          headerShadowVisible: false,
           headerTintColor: c.ink,
-          headerTitleStyle: { fontFamily: fonts.uiMedium },
+          headerTitleStyle: { fontFamily: fonts.uiBold },
         }}>
         <Stack.Protected guard={signedIn}>
           <Stack.Screen name="(tabs)" />
@@ -49,11 +50,11 @@ function Navigator() {
 
 export default function RootLayout() {
   const [loaded] = useFonts({
-    SpaceGrotesk_400Regular,
-    SpaceGrotesk_500Medium,
-    SpaceGrotesk_600SemiBold,
-    IBMPlexMono_400Regular,
-    IBMPlexMono_500Medium,
+    Figtree_400Regular,
+    Figtree_600SemiBold,
+    Figtree_700Bold,
+    BricolageGrotesque_700Bold,
+    BricolageGrotesque_800ExtraBold,
   })
   if (!loaded) return null
   return (

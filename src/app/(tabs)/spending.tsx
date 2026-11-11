@@ -65,7 +65,7 @@ export default function SpendingScreen() {
       setSaving(false)
     }
   }
-  const input = { borderWidth: 1, borderColor: c.lineStrong, borderRadius: 6, paddingHorizontal: 12, paddingVertical: 8, color: c.ink, fontSize: 15, fontFamily: fonts.mono, width: 96 }
+  const input = { borderWidth: 1, borderColor: c.lineStrong, borderRadius: 6, paddingHorizontal: 12, paddingVertical: 8, color: c.ink, fontSize: 15, fontFamily: fonts.ui, width: 96 }
   const row = { flexDirection: 'row' as const, justifyContent: 'space-between' as const, gap: 12 }
 
   const totals = (title: string, cats: [string, string][]) => (
@@ -107,9 +107,9 @@ export default function SpendingScreen() {
                   <View style={{ width: `${pct}%`, height: 8, backgroundColor: b.percent >= 100 ? c.critical : b.percent >= 80 ? c.caution : c.accent }} />
                 </View>
                 <Body muted>
-                  <Text style={{ fontFamily: fonts.mono }}>{formatMinor(b.spent_minor, b.currency)}</Text> of{' '}
-                  <Text style={{ fontFamily: fonts.mono }}>{formatMinor(b.amount_minor, b.currency)}</Text> this {b.period} ·{' '}
-                  <Text style={{ fontFamily: fonts.mono }}>{formatMinor(Math.abs(b.left_minor), b.currency)}</Text> {b.left_minor >= 0 ? 'left' : 'over'}
+                  <Text style={{ fontFamily: fonts.uiMedium, fontVariant: ['tabular-nums'] }}>{formatMinor(b.spent_minor, b.currency)}</Text> of{' '}
+                  <Text style={{ fontFamily: fonts.uiMedium, fontVariant: ['tabular-nums'] }}>{formatMinor(b.amount_minor, b.currency)}</Text> this {b.period} ·{' '}
+                  <Text style={{ fontFamily: fonts.uiMedium, fontVariant: ['tabular-nums'] }}>{formatMinor(Math.abs(b.left_minor), b.currency)}</Text> {b.left_minor >= 0 ? 'left' : 'over'}
                 </Body>
               </Card>
             )

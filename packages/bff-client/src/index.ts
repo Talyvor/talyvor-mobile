@@ -16,6 +16,9 @@ export interface Agent {
   paused_reason?: string
   description?: string
   archived_at?: string
+  /** B57.10: the colour and face Lens picked from the id (or the owner chose); the phone draws them. */
+  colour?: string
+  face?: string
 }
 
 /** Lens economy.AgentBook: workspace = allocated + unallocated. */

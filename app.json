@@ -7,7 +7,7 @@
     "icon": "./assets/logo/app-icon-1024.png",
     "scheme": "talyvor",
     "userInterfaceStyle": "automatic",
-    "backgroundColor": "#060A12",
+    "backgroundColor": "#FFFFFF",
     "ios": {
       "bundleIdentifier": "com.talyvor.app",
       "supportsTablet": false,

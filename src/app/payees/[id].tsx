@@ -151,7 +151,7 @@ export default function PayeeScreen() {
             keyboardType="decimal-pad"
             value={amount}
             onChangeText={typed(setAmount)}
-            style={[input, { fontFamily: fonts.mono }]}
+            style={[input, { fontFamily: fonts.ui }]}
           />
           <TextInput
             accessibilityLabel="Reference"

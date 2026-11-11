@@ -237,8 +237,8 @@ describe('B55.27 money dollars first', () => {
   test('Home writes dollars first beside LXC by the peg', async () => {
     mockBff({ usdPerLXC: 0.1 })
     await renderRouter('./src/app', { initialUrl: '/' })
-    expect(await screen.findByText('$1.80 (18 LXC)')).toBeTruthy() // 20 LXC less the 2 LXC waiting, at $0.10 an LXC
-    expect(screen.getByText('$1.25 (12.5 LXC)')).toBeTruthy()
+    expect(await screen.findByLabelText('$1.80 (18 LXC)')).toBeTruthy() // 20 LXC less the 2 LXC waiting, at $0.10 an LXC
+    expect(screen.getByLabelText('$1.25 (12.5 LXC)')).toBeTruthy()
     expect(screen.getByText('$0.20 (2 LXC)')).toBeTruthy()
   })
 
