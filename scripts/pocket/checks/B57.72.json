@@ -1,0 +1,8 @@
+[
+  { "route": "/pay", "screen": "p-pay", "words": "report", "why": "the Bills due row is B57.78's, the Chat tab is gone in a workspace without Chat (B59.3), and the Approvals badge counts the sample's requests" },
+  { "route": "/payees/py_kite", "screen": "p-pay-kite", "fill": { "Amount in USD": "450", "Reference": "November bookkeeping" }, "words": "report", "why": "the reference draws the fields as buttons holding their values, and the tab bar under a pushed screen" },
+  { "route": "/payees/py_north", "screen": "p-pay-north", "fill": { "Amount in USD": "180", "Reference": "Invoice 1042" }, "words": "report", "why": "the same; its prepared-payment line shows only while one waits" },
+  { "route": "/payees/py_kite", "screen": "p-pay-kite+ppay-k", "fill": { "Amount in USD": "450", "Reference": "November bookkeeping" }, "press": ["Pay $450.00"], "words": "report", "why": "the shots' phone has no key, so the sheet offers Approvals on this phone (the reference's r3=1), and on the web the phone's check is named as on Android" },
+  { "route": "/payees/py_north", "screen": "p-pay-north+ppay-n", "fill": { "Amount in USD": "180", "Reference": "Invoice 1042" }, "press": ["Pay $180.00"], "words": "report", "why": "the same" },
+  { "route": "/payees/py_kite", "screen": "p-pay-kite", "dark": true, "fill": { "Amount in USD": "450", "Reference": "November bookkeeping" }, "words": "report", "why": "the same, with the phone set to dark" }
+]

@@ -51,7 +51,17 @@ const ANSWERS = {
     ],
   },
   '/api/payees': { payees: [] },
-  '/api/money/payments': { payments: [] },
+  // B57.72: the reference's saved payees, the last payment to Kite Accounting, and the company's dollar account.
+  '/api/money/payees': {
+    payees: [
+      { id: 'py_kite', name: 'Kite Accounting', country: 'GB', needs_confirmation: false, created_at: '2026-09-20T09:00:00Z' },
+      { id: 'py_north', name: 'Northwind Data', country: 'GB', needs_confirmation: false, created_at: '2026-10-20T09:00:00Z' },
+    ],
+  },
+  '/api/money/payments': {
+    payments: [{ id: 'pm_kite', payee_id: 'py_kite', payee_name: 'Kite Accounting', amount_minor: 45_000, currency: 'USD', reference: 'October bookkeeping', status: 'completed', created_at: '2026-10-01T10:00:00Z' }],
+  },
+  '/api/money/accounts': { accounts: [{ id: 'acc_usd', currency: 'USD', purpose: 'company', status: 'open', name: '', balance_minor: 320_000 }] },
 }
 
 /** The sample's answer for a path, or undefined when it has none. */

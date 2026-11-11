@@ -4,9 +4,11 @@
  *
  *   node scripts/pocket-shots.mjs <item> <checks.json>
  *
- * checks.json is a list of { route, screen, dark?, words?, why? }: the app's address, the reference's phone screen id
- * (design/pocket/README.md's tables, p-*), whether to shoot it with the phone set to dark, and `"words": "report"` with
- * `why` for a screen whose words are a later item's (they are listed, not failed).
+ * checks.json is a list of { route, screen, dark?, words?, why?, fill?, press? }: the app's address, the reference's phone
+ * screen id (design/pocket/README.md's tables, p-*, with `+<dialog>` for one of its sheets), whether to shoot it with the
+ * phone set to dark, and `"words": "report"` with `why` for a screen whose words are a later item's (they are listed, not
+ * failed). `fill` types into the app's fields by their labels and `press` then presses its buttons by their names, in
+ * order, before the shot: a sheet the reference opens from a screen is shot the same way in the app.
  *
  * It exports the app for the web once (npx expo export --platform web) with the sample session in the keychain
  * (metro.config.js, POCKET_SHOTS=1), serves it, answers every BFF request from scripts/pocket/sample.mjs, and shoots
@@ -156,6 +158,11 @@ async function app(c) {
   await page.goto(BASE + c.route)
   await page.waitForLoadState('networkidle')
   await page.waitForTimeout(500)
+  for (const [label, value] of Object.entries(c.fill ?? {})) await page.getByLabel(label, { exact: true }).fill(value)
+  for (const name of c.press ?? []) {
+    await page.getByRole('button', { name, exact: true }).click()
+    await page.waitForTimeout(500)
+  }
   return { ctx, page }
 }
 
