@@ -16,6 +16,7 @@ import * as SecureStore from 'expo-secure-store'
 import { useCallback, useRef, useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
 
+import { useAccount } from '@/account'
 import { Icon } from '@/components/icon'
 import { MoneyLabel, PAY_OUT } from '@/components/money-label'
 import { AccountChoice, BottomSheet, ConfirmPayment } from '@/components/pay-sheet'
@@ -36,7 +37,10 @@ function outcome(p: Pick<OutsidePayment, 'payee_name' | 'amount_minor' | 'curren
 
 const notPaid = (status: string) => status === 'failed' || status === 'returned'
 
-const accountName = (a: CurrencyAccount) => a.name || `${a.purpose === 'agent' ? 'Agent' : 'Company'} · ${a.currency}`
+// B59.11 — the owner's own account by the workspace's type, as the web's Pay names it: "Your account · GBP" for a Personal
+// account, "The company · GBP" for a Business. An account given its own name, such as "Payroll · GBP", keeps it.
+const accountName = (a: CurrencyAccount, owner: string) =>
+  a.purpose === 'company' && (!a.name || a.name.startsWith('The company')) ? `${owner} · ${a.currency}` : a.name || `Agent · ${a.currency}`
 
 // B57.72 — a prepared payment the payee screen saw waiting, by payee: Lens lists only the waiting ones, so once one is
 // approved the screen reads it back by its id to say it is paid, on the day it last saw it waiting.
@@ -86,6 +90,8 @@ export default function PayeeScreen() {
     }
   }, [client, id])
   const { data, error, loading, reload } = useLoad(load)
+  const { shows } = useAccount(client)
+  const owner = shows?.owner ?? 'The company'
   // Back from a prepared payment's approval card, the screen reads again.
   const shown = useRef(false)
   useFocusEffect(
@@ -207,10 +213,10 @@ export default function PayeeScreen() {
             {account ? (
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={`From ${accountName(account)}, ${formatMinor(account.balance_minor, account.currency)}`}
+                accessibilityLabel={`From ${accountName(account, owner)}, ${formatMinor(account.balance_minor, account.currency)}`}
                 onPress={() => setChoosing(true)}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 12, height: 46, borderRadius: 14, borderWidth: 1.5, borderColor: c.control, paddingHorizontal: 14, backgroundColor: c.page }}>
-                <Body style={{ flex: 1 }}>{accountName(account)}</Body>
+                <Body style={{ flex: 1 }}>{accountName(account, owner)}</Body>
                 <Text style={{ fontFamily: fonts.ui, fontSize: 13, color: c.ink3, fontVariant: ['tabular-nums'] }}>{formatMinor(account.balance_minor, account.currency)}</Text>
                 <View style={{ transform: [{ rotate: '90deg' }] }}>
                   <Icon name="chev" size={16} color={c.ink3} />
@@ -244,7 +250,7 @@ export default function PayeeScreen() {
             <Card>
               <Body style={{ fontFamily: fonts.uiBold, color: notPaid(made.payment.status) ? c.danger : c.ink }}>{outcome(made.payment)}</Body>
               {notPaid(made.payment.status) ? null : (
-                <Body muted>{`Sent today from ${made.from.purpose === 'company' ? 'the company’s account' : accountName(made.from)}.`}</Body>
+                <Body muted>{`Sent today from ${made.from.purpose === 'company' ? (shows?.team === false ? 'your account' : 'the company’s account') : accountName(made.from, owner)}.`}</Body>
               )}
             </Card>
           ) : (
@@ -262,7 +268,7 @@ export default function PayeeScreen() {
             {data.accounts.map((a) => (
               <AccountChoice
                 key={a.id}
-                name={accountName(a)}
+                name={accountName(a, owner)}
                 balance={formatMinor(a.balance_minor, a.currency)}
                 chosen={a.id === account?.id}
                 onPress={() => {
@@ -276,7 +282,7 @@ export default function PayeeScreen() {
             {account ? (
               <ConfirmPayment
                 payee={payee.name}
-                from={accountName(account)}
+                from={accountName(account, owner)}
                 amount={total}
                 reference={reference.trim()}
                 first={first}

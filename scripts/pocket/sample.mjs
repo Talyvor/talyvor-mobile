@@ -67,6 +67,8 @@ const ANSWERS = {
   // B59.35 — Settings and Activity.
   '/auth/me': { workspace_id: 'ws_northwind' },
   '/api/workspace/name': { id: 'ws_northwind', name: 'Northwind Studio' },
+  // B59.11 — every workspace Lens had before B59.6 is Business and Hybrid.
+  '/api/workspace/account': { workspace_id: 'ws_northwind', account_type: 'business', money_kind: 'hybrid' },
   '/api/money/notices': { settings: { timezone: 'Europe/London', quiet_from: '22:00', quiet_until: '07:00', off: ['digest'] }, notices: [] },
   '/api/agents/statement': {
     from: '2026-10-01',

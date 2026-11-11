@@ -2,6 +2,7 @@ import { Link } from 'expo-router'
 import { useCallback } from 'react'
 import { Pressable, View } from 'react-native'
 
+import { PAY_ON_CHAIN, useAccount } from '@/account'
 import { Icon } from '@/components/icon'
 import { MoneyLabel, PAY_OUT } from '@/components/money-label'
 import { Body, Card, Eyebrow, Headline, LoadState, Row, Screen, useLoad } from '@/components/ui'
@@ -9,7 +10,8 @@ import { useSession } from '@/session'
 import { useTheme } from '@/theme'
 import { lastPaid } from '@/widget-sync'
 
-/** Your saved payees, each with its last payment; a tap opens its payment screen. */
+/** Your saved payees, each with its last payment; a tap opens its payment screen. B59.11: a Stablecoin and crypto account
+ * has no bank transfers, so it has no payees here, only where its agents' addresses are. */
 export default function PayScreen() {
   const { client } = useSession()
   const { c } = useTheme()
@@ -18,6 +20,7 @@ export default function PayScreen() {
     return { payees: payees.payees ?? [], payments: payments.payments ?? [] }
   }, [client])
   const { data, error, loading, reload } = useLoad(load)
+  const { shows } = useAccount(client)
 
   return (
     <Screen onRefresh={reload} refreshing={loading && !!data}>
@@ -25,10 +28,16 @@ export default function PayScreen() {
         <Headline>Pay</Headline>
         <MoneyLabel capability={PAY_OUT} />
       </View>
-      <Eyebrow>Saved payees</Eyebrow>
-      <LoadState loading={loading && !data} error={error} />
-      {data && data.payees.length === 0 ? <Body muted>No payees yet</Body> : null}
-      {data && data.payees.length > 0 ? (
+      {shows && !shows.bankTransfers ? (
+        <Body muted>{PAY_ON_CHAIN}</Body>
+      ) : (
+        <>
+          <Eyebrow>Saved payees</Eyebrow>
+          <LoadState loading={(loading && !data) || !shows} error={error} />
+        </>
+      )}
+      {shows?.bankTransfers && data && data.payees.length === 0 ? <Body muted>No payees yet</Body> : null}
+      {shows?.bankTransfers && data && data.payees.length > 0 ? (
         <Card white>
           {data.payees.map((p, i) => (
             <Link key={p.id} href={{ pathname: '/payees/[id]', params: { id: p.id } }} asChild>
@@ -49,7 +58,7 @@ export default function PayScreen() {
           ))}
         </Card>
       ) : null}
-      {data ? <Body muted>Payees are added in Talyvor on the web.</Body> : null}
+      {shows?.bankTransfers && data ? <Body muted>Payees are added in Talyvor on the web.</Body> : null}
     </Screen>
   )
 }
