@@ -81,6 +81,7 @@ export const fonts = {
   ui: 'Figtree_400Regular',
   uiMedium: 'Figtree_600SemiBold',
   uiBold: 'Figtree_700Bold',
+  uiHeavy: 'Figtree_800ExtraBold',
   display: 'BricolageGrotesque_700Bold',
   displayBold: 'BricolageGrotesque_800ExtraBold',
 }

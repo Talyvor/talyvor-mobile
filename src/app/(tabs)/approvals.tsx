@@ -1,5 +1,5 @@
 import { formatLXC } from '@talyvor/bff-client'
-import { useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
 import { View } from 'react-native'
 
 import { ApprovalCard } from '@/components/approval-card'
@@ -8,6 +8,7 @@ import { PhoneKeyCard } from '@/components/phone-key-card'
 import { PreparedPaymentCard, pendingPrepared } from '@/components/prepared-payment-card'
 import { Body, Card, Eyebrow, Figure, Headline, LoadState, Screen, useLoad } from '@/components/ui'
 import { useSession } from '@/session'
+import { setWaiting } from '@/waiting'
 
 const DECIDED: Record<string, string> = { approved: 'Approved', denied: 'Denied', used: 'Approved and spent', expired: 'Expired' }
 
@@ -22,6 +23,9 @@ export default function Approvals() {
   const nameOf = (id: string) => data?.agents.find((a) => a.id === id)?.name ?? id
   const pending = (data?.approvals ?? []).filter((a) => a.status === 'pending')
   const decided = (data?.approvals ?? []).filter((a) => a.status !== 'pending')
+  useEffect(() => {
+    if (data) setWaiting(pending.length + data.prepared.length)
+  }, [data, pending.length])
 
   return (
     <Screen onRefresh={reload} refreshing={loading && !!data}>
