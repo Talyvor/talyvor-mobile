@@ -1,0 +1,6 @@
+[
+  { "route": "/settings", "screen": "p-spending", "words": "report", "why": "the reference draws no phone Settings (the launch pack's P11 is its frame); the nearest is Spending, which draws the same notice settings, and the words are B59.35's" },
+  { "route": "/settings", "screen": "p-spending", "dark": true, "words": "report", "why": "the same, with the phone set to dark" },
+  { "route": "/activity", "screen": "p-statement", "words": "report", "why": "the reference draws no phone Activity; the nearest is the Statement, whose rows it draws, and the words are B59.35's" },
+  { "route": "/activity", "screen": "p-statement", "dark": true, "words": "report", "why": "the same, with the phone set to dark" }
+]

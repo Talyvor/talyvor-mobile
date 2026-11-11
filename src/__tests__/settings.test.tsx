@@ -122,6 +122,13 @@ describe('Settings', () => {
     expect(calls.find((c) => c.method === 'PUT')?.body).toEqual({ timezone: 'Europe/London', quiet_from: '22:00', quiet_until: '07:00', off: ['digest'] })
   })
 
+  test('B57.132: draws its own Back, which leads Home when nothing is behind it', async () => {
+    mockBff()
+    await renderRouter('./src/app', { initialUrl: '/settings' })
+    await fireEvent.press(await screen.findByRole('button', { name: 'Back' }))
+    expect(await screen.findByText('See all in Activity')).toBeTruthy()
+  })
+
   test('signs out of this phone', async () => {
     mockBff()
     await renderRouter('./src/app', { initialUrl: '/settings' })
@@ -168,6 +175,16 @@ describe('Activity', () => {
     expect(await screen.findByText('October top-up')).toBeTruthy()
     const read = calls.filter((c) => c.path === '/api/agents/statement' && c.query.get('format') === 'json').at(-1)!
     expect([read.query.get('from'), read.query.get('to')]).toEqual(['2026-10-01', '2026-11-01'])
+  })
+
+  test('B57.132: each movement reads as Pocket’s statement, its agent then when it moved', async () => {
+    mockBff()
+    await renderRouter('./src/app', { initialUrl: '/activity' })
+    expect(await screen.findByText('Northwind Data')).toBeTruthy()
+    expect(screen.getByText(/^Sales · 4 Nov, \d\d:\d\d$/)).toBeTruthy()
+    expect(screen.getByText('This month: November')).toBeTruthy()
+    await fireEvent.press(await screen.findByRole('button', { name: 'Back' }))
+    expect(await screen.findByText('See all in Activity')).toBeTruthy()
   })
 
   test('an agent’s screen opens its own Activity', async () => {
