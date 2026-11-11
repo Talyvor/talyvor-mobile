@@ -4,6 +4,8 @@ if (process.env.EXPO_PUBLIC_BFF_URL !== 'https://bff.pocket-shots.invalid') thro
 const SESSION = JSON.stringify({ token: 'pocket-shots', expires_at: '2099-01-01T00:00:00Z' })
 
 export async function getItemAsync(key) {
+  // B57.135: a shot that sets this opens signed out (scripts/pocket-shots.mjs, `signedOut`).
+  if (globalThis.__POCKET_SHOTS_SIGNED_OUT) return null
   return key === 'talyvor.session' ? SESSION : null
 }
 export async function setItemAsync() {}

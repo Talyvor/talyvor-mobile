@@ -11,6 +11,9 @@
  * order, before the shot: a sheet the reference opens from a screen is shot the same way in the app. `scroll` names the
  * words the app's shot scrolls to, for a part of a screen below the fold. `account` (B59.11) is the workspace's type and
  * kind of money, "personal:stablecoin", for the shot and its file name; the sample's own is Business and Hybrid.
+ * B57.135: `signedOut` opens the app with an empty keychain (sign-in, sign-up); `steps` is a list of ["press", name] and
+ * ["fill", label, value] run in order before `fill` and `press`, where a press finds a button or a radio by its name; and
+ * `launchPack` names a launch-pack screen (P1, P2) to stand beside the app in place of the Pocket one `screen` names.
  *
  * It exports the app for the web once (npx expo export --platform web) with the sample session in the keychain
  * (metro.config.js, POCKET_SHOTS=1), serves it, answers every BFF request from scripts/pocket/sample.mjs, and shoots
@@ -20,7 +23,8 @@
  *   · the layout check: no sideways scroll, no text past its box.
  * The press check is jest's: src/testing/press-everything.tsx.
  *
- * The reference folder is POCKET_REFERENCE, default ~/talyvor-queue/design/pocket.
+ * The reference folder is POCKET_REFERENCE, default ~/talyvor-queue/design/pocket; the launch pack's is
+ * LAUNCH_PACK_REFERENCE, default ~/talyvor-queue/design/launch-pack/design.
  */
 import { spawnSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
@@ -38,6 +42,7 @@ const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const DIST = join(REPO, '.pocket-shots')
 const BFF = 'https://bff.pocket-shots.invalid'
 const REFERENCE = resolve(process.env.POCKET_REFERENCE || join(homedir(), 'talyvor-queue/design/pocket'))
+const LAUNCH_PACK = resolve(process.env.LAUNCH_PACK_REFERENCE || join(homedir(), 'talyvor-queue/design/launch-pack/design'))
 const SIZE = { width: 390, height: 844 }
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.ttf': 'font/ttf', '.ico': 'image/x-icon' }
 
@@ -133,6 +138,7 @@ function normalise(s) {
 }
 
 async function reference(c) {
+  if (c.launchPack) return launchPackReference(c)
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } })
   await page.goto('file://' + join(REFERENCE, 'index.html'))
   await page.waitForFunction(() => window.__proto)
@@ -147,8 +153,23 @@ async function reference(c) {
   return { words, png }
 }
 
+/** A launch-pack screen (index.html's figure #P1 and so on): its phone artboard and its words. */
+async function launchPackReference(c) {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } })
+  await page.goto('file://' + join(LAUNCH_PACK, 'index.html'))
+  const board = page.locator(`#${c.launchPack} > .ab`)
+  if (!(await board.count())) throw new Error(`the launch pack has no screen ${c.launchPack}`)
+  await page.waitForTimeout(300)
+  const words = await board.evaluate((el, f) => new Function(`return (${f})`)()(el), wordsOf.toString())
+  const png = await board.screenshot()
+  await page.close()
+  return { words, png }
+}
+
 async function app(c) {
   const ctx = await browser.newContext({ viewport: SIZE, deviceScaleFactor: 2, timezoneId: SAMPLE_TIME_ZONE, colorScheme: c.dark ? 'dark' : 'light' })
+  // The keychain shim reads this before the app starts: an empty keychain, so the app opens signed out.
+  if (c.signedOut) await ctx.addInitScript(() => (globalThis.__POCKET_SHOTS_SIGNED_OUT = true))
   const page = await ctx.newPage()
   await page.clock.setFixedTime(new Date(SAMPLE_NOW))
   await page.route(`${BFF}/**`, (route) => {
@@ -161,34 +182,39 @@ async function app(c) {
   await page.goto(BASE + c.route)
   await page.waitForLoadState('networkidle')
   await page.waitForTimeout(500)
-  for (const [label, value] of Object.entries(c.fill ?? {})) await page.getByLabel(label, { exact: true }).fill(value)
-  for (const name of c.press ?? []) {
-    await page.getByRole('button', { name, exact: true }).click()
+  const press = async (name) => {
+    await page.getByRole('button', { name, exact: true }).or(page.getByRole('radio', { name, exact: true })).click()
     await page.waitForTimeout(500)
   }
+  for (const [what, name, value] of c.steps ?? []) {
+    if (what === 'press') await press(name)
+    else await page.getByLabel(name, { exact: true }).fill(value)
+  }
+  for (const [label, value] of Object.entries(c.fill ?? {})) await page.getByLabel(label, { exact: true }).fill(value)
+  for (const name of c.press ?? []) await press(name)
   if (c.scroll) await page.getByText(c.scroll, { exact: true }).first().scrollIntoViewIfNeeded()
   return { ctx, page }
 }
 
-async function sideBySide(appPng, refPng, file) {
+async function sideBySide(appPng, refPng, file, caption) {
   const page = await browser.newPage({ viewport: { width: 800, height: 600 } })
   const img = (b, w) => `<img style="display:block;width:${w}px" src="data:image/png;base64,${b.toString('base64')}">`
   await page.setContent(
     `<body style="margin:0;background:#888;font:14px sans-serif"><div style="display:flex;gap:24px;align-items:flex-start;padding:16px;width:max-content">` +
       `<figure style="margin:0">${img(appPng, SIZE.width)}<figcaption>The app at 390x844</figcaption></figure>` +
-      `<figure style="margin:0">${img(refPng, SIZE.width)}<figcaption>Pocket reference</figcaption></figure></div></body>`,
+      `<figure style="margin:0">${img(refPng, SIZE.width)}<figcaption>${caption}</figcaption></figure></div></body>`,
   )
   await page.locator('body > div').screenshot({ path: file })
   await page.close()
 }
 
 for (const c of checks) {
-  const label = `${c.screen}${c.account ? `-${c.account.replace(':', '-')}` : ''}${c.dark ? '-dark' : ''}`
+  const label = `${c.launchPack ?? c.screen}${c.account ? `-${c.account.replace(':', '-')}` : ''}${c.dark ? '-dark' : ''}`
   console.log(`\n${label} — the app at ${c.route}`)
   const ref = await reference(c)
   const { ctx, page } = await app(c)
   const file = join(OUT, `${label}-390.png`)
-  await sideBySide(await page.screenshot(), ref.png, file)
+  await sideBySide(await page.screenshot(), ref.png, file, c.launchPack ? `Launch pack ${c.launchPack}` : 'Pocket reference')
   console.log(`  wrote ${file.slice(REPO.length + 1)}`)
   const hay = normalise(await page.evaluate(`(${haystackOf})(document.body)`))
   const missing = ref.words.filter((w) => !hay.includes(normalise(w.text))).map((w) => `${w.kind} “${w.text}”`)

@@ -1,6 +1,6 @@
 import { BffError } from '@talyvor/bff-client'
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, type TextInputProps, type TextStyle } from 'react-native'
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, type TextInputProps, type TextStyle } from 'react-native'
 import { router, type Href } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
@@ -38,15 +38,28 @@ export function useLoad<T>(load: () => Promise<T>) {
   return { data, error, loading, reload }
 }
 
-export function Screen({ children, onRefresh, refreshing = false }: { children: ReactNode; onRefresh?: () => void; refreshing?: boolean }) {
+/** A screen that scrolls; `footer` holds its decisions at the foot, out of the scroll, as Pocket's .pfoot does. */
+export function Screen({ children, onRefresh, refreshing = false, footer }: { children: ReactNode; onRefresh?: () => void; refreshing?: boolean; footer?: ReactNode }) {
   const { c } = useTheme()
+  const body = (
+    <ScrollView
+      contentContainerStyle={styles.screen}
+      refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={c.ink} /> : undefined}>
+      {children}
+    </ScrollView>
+  )
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: c.page }} edges={['top', 'left', 'right']}>
-      <ScrollView
-        contentContainerStyle={styles.screen}
-        refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={c.ink} /> : undefined}>
-        {children}
-      </ScrollView>
+    <SafeAreaView style={{ flex: 1, backgroundColor: c.page }} edges={footer ? ['top', 'left', 'right', 'bottom'] : ['top', 'left', 'right']}>
+      {footer ? (
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          {body}
+          <View testID="screen-footer" style={styles.footer}>
+            {footer}
+          </View>
+        </KeyboardAvoidingView>
+      ) : (
+        body
+      )}
     </SafeAreaView>
   )
 }
@@ -101,7 +114,7 @@ export function Card({ children, white }: { children: ReactNode; white?: boolean
   return <View style={[styles.card, white ? [{ backgroundColor: c.page }, styles.shadow] : { backgroundColor: c.cloud }]}>{children}</View>
 }
 
-type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'danger'
+type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'danger' | 'ghost'
 
 /** 52 tall and round; the primary one is ink and full width. `primary` is today's name for the primary variant. */
 export function Button({
@@ -126,6 +139,7 @@ export function Button({
     secondary: { backgroundColor: c.cloud2, color: c.ink },
     outline: { borderWidth: 1.5, borderColor: c.control, color: c.ink },
     danger: { borderWidth: 1.5, borderColor: c.danger, color: c.danger },
+    ghost: { color: c.ink },
   }[variant]
   const { color, ...box } = look
   return (
@@ -254,9 +268,10 @@ export function LoadState({ loading, error }: { loading: boolean; error: unknown
   return null
 }
 
-// pocket.css: .pk.phone .pbody, .eyebrow, .h-page, .card, .btn, .chip, .toggle, .input, .li, .sheet.bottomsheet.
+// pocket.css: .pk.phone .pbody, .pfoot, .eyebrow, .h-page, .card, .btn, .chip, .toggle, .input, .li, .sheet.bottomsheet.
 const styles = StyleSheet.create({
   screen: { paddingHorizontal: 18, paddingTop: 6, paddingBottom: 40, gap: 14 },
+  footer: { paddingHorizontal: 18, paddingTop: 12, paddingBottom: 12, gap: 4 },
   eyebrow: { fontFamily: fonts.uiMedium, fontSize: 12, lineHeight: 16, letterSpacing: 0.48, textTransform: 'uppercase', marginTop: 10 },
   headline: { fontFamily: fonts.display, fontSize: 29, lineHeight: 34, letterSpacing: -0.45 },
   body: { fontFamily: fonts.ui, fontSize: 15, lineHeight: 22 },

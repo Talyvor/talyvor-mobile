@@ -1,9 +1,12 @@
 import { exchangeCodeAsync, makeRedirectUri, useAuthRequest, useAutoDiscovery } from 'expo-auth-session'
+import { Image } from 'expo-image'
 import { Redirect, router } from 'expo-router'
 import * as WebBrowser from 'expo-web-browser'
 import { useCallback, useState, type ReactNode } from 'react'
 import { Pressable, Text, View } from 'react-native'
 
+import { CARDS, type CardFace } from '@/cards'
+import { Card } from '@/components/card'
 import { Icon } from '@/components/icon'
 import { MoneyLabel, useMoneyLabels } from '@/components/money-label'
 import { PhoneKeyCard } from '@/components/phone-key-card'
@@ -29,6 +32,9 @@ import { fonts, useTheme } from '@/theme'
 // and P2). Steps 1 and 2 are asked BEFORE the identity provider, because Lens sets the type and the kind only on the call
 // that makes the workspace: the answers ride the ID token to the BFF's /auth/mobile/session, which refuses a partial set.
 // Step 3 makes this phone's key with Face ID, through the same card Approvals uses.
+//
+// B57.135 — drawn in Pocket as the launch pack's P1 and P2: the logo (or Back) with Sandbox at the top, the step bars,
+// each type on its card face, and the decisions held at the foot. Step 3 is not drawn there, so it takes the same look.
 //
 // The name is the workspace's name. Country and the registration number are asked as the spec says, and kept on this
 // screen only: Lens has nowhere to hold them yet (the web does the same).
@@ -67,24 +73,53 @@ function SandboxLabel() {
   return <MoneyLabel capability={Object.keys(labels ?? {})} />
 }
 
-/** The phone's step bars: three bars, tangerine when reached, then "Step n of 3". */
-function Steps({ at }: { at: 1 | 2 | 3 }) {
-  const { c } = useTheme()
+/** The top of each step (P1, P2's .phead): the logo, or Back where there is a step behind, and Sandbox on the right. */
+function Header({ onBack }: { onBack?: () => void }) {
+  const { c, dark } = useTheme()
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 }}>
-      <View accessible accessibilityLabel={`Step ${at} of 3, ${SIGNUP_STEPS[at - 1]}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-        {[1, 2, 3].map((n) => (
-          <View key={n} style={{ width: 28, height: 6, borderRadius: 3, backgroundColor: n <= at ? c.tangerine : c.cloud2 }} />
-        ))}
-        <Text style={{ marginLeft: 6, fontFamily: fonts.uiMedium, fontSize: 13, color: c.ink2 }}>{`Step ${at} of 3`}</Text>
+    <View style={{ height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+      {onBack ? (
+        <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={onBack} style={{ width: 48, height: 48, marginLeft: -14, borderRadius: 24, alignItems: 'center', justifyContent: 'center' }}>
+          <View style={{ transform: [{ scaleX: -1 }] }}>
+            <Icon name="chev" color={c.ink} />
+          </View>
+        </Pressable>
+      ) : (
+        <Image
+          source={dark ? require('../../assets/logo/talyvor-logo-small-on-dark-480.png') : require('../../assets/logo/talyvor-logo-small-on-light-480.png')}
+          style={{ width: 132, height: 42 }}
+          contentFit="contain"
+          accessibilityLabel="Talyvor"
+        />
+      )}
+      <View>
+        <SandboxLabel />
       </View>
-      <SandboxLabel />
     </View>
   )
 }
 
-/** The choice card (P1, P2): radio semantics; cloud when off, white with a 2px ink ring when on. */
-function Choice({ picked, onPick, title, line, children }: { picked: boolean; onPick: () => void; title: string; line: string; children?: ReactNode }) {
+/** The phone's step bars: three bars, tangerine when reached, then "Step n of 3". */
+function Steps({ at }: { at: 1 | 2 | 3 }) {
+  const { c } = useTheme()
+  return (
+    <View accessible accessibilityLabel={`Step ${at} of 3, ${SIGNUP_STEPS[at - 1]}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+      {[1, 2, 3].map((n) => (
+        <View key={n} style={{ width: 28, height: 6, borderRadius: 3, backgroundColor: n <= at ? c.tangerine : c.cloud2 }} />
+      ))}
+      <Text style={{ marginLeft: 6, fontFamily: fonts.uiMedium, fontSize: 13, color: c.ink2 }}>{`Step ${at} of 3`}</Text>
+    </View>
+  )
+}
+
+/** The card face each type opens with (P1): Daily for Personal, Team for Business. */
+const TYPE_FACE: Record<AccountType, CardFace> = {
+  personal: CARDS.find((f) => f.id === 'daily')!,
+  business: CARDS.find((f) => f.id === 'team')!,
+}
+
+/** The choice card (P1, P2): radio semantics; cloud when off, white with a 2px ink ring when on; the dot leads, a face may end it. */
+function Choice({ picked, onPick, title, line, face, children }: { picked: boolean; onPick: () => void; title: string; line: string; face?: CardFace; children?: ReactNode }) {
   const { c } = useTheme()
   return (
     <Pressable
@@ -92,17 +127,28 @@ function Choice({ picked, onPick, title, line, children }: { picked: boolean; on
       accessibilityLabel={`${title}. ${line}`}
       accessibilityState={{ checked: picked }}
       onPress={onPick}
-      style={{ borderRadius: 20, padding: 16, gap: 4, backgroundColor: picked ? c.page : c.cloud, borderWidth: 2, borderColor: picked ? c.ink : c.cloud }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-        <Text style={{ flex: 1, fontFamily: fonts.uiBold, fontSize: 16.5, color: c.ink }}>{title}</Text>
-        <View style={{ width: 18, height: 18, borderRadius: 9, borderWidth: 1.5, borderColor: picked ? c.ink : c.control, backgroundColor: picked ? c.ink : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
-          {picked ? <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: c.page }} /> : null}
-        </View>
+      style={{ borderRadius: 18, paddingVertical: 14, paddingHorizontal: 16, flexDirection: 'row', alignItems: face ? 'center' : 'flex-start', gap: 14, backgroundColor: picked ? c.page : c.cloud, borderWidth: 2, borderColor: picked ? c.ink : c.cloud }}>
+      <View style={{ width: 18, height: 18, marginTop: face ? 0 : 2, borderRadius: 9, borderWidth: 1.5, borderColor: picked ? c.ink : c.control, backgroundColor: picked ? c.ink : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
+        {picked ? <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: c.page }} /> : null}
       </View>
-      <Text style={{ fontFamily: fonts.ui, fontSize: 14, lineHeight: 20, color: c.ink2 }}>{line}</Text>
-      {children}
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text style={{ fontFamily: fonts.uiBold, fontSize: 16.5, lineHeight: 22, color: c.ink }}>{title}</Text>
+        <Text style={{ fontFamily: fonts.ui, fontSize: 14, lineHeight: 20, color: c.ink2 }}>{line}</Text>
+        {children}
+      </View>
+      {face ? (
+        <View testID={`choice-face-${face.id}`} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+          <Card face={face} holder="" sub="" width={84} />
+        </View>
+      ) : null}
     </Pressable>
   )
+}
+
+/** A note under the choices (P1, P2's faint small line). */
+function Note({ children }: { children: string }) {
+  const { c } = useTheme()
+  return <Text style={{ fontFamily: fonts.ui, fontSize: 13, lineHeight: 19, color: c.ink3 }}>{children}</Text>
 }
 
 /** Red text always has an icon beside it. */
@@ -181,12 +227,29 @@ function StepWho({ type, setType, profile, setProfile, onContinue }: {
     </View>
   )
   return (
-    <>
+    <Screen
+      footer={
+        <>
+          <Button
+            primary
+            label="Continue"
+            disabled={!type}
+            hint={PICK_TYPE}
+            onPress={() => {
+              if (!type) return
+              setTried(true)
+              if (!Object.keys(missing(type, profile)).length) onContinue()
+            }}
+          />
+          <Button variant="ghost" label="Sign in instead" onPress={() => router.replace('/sign-in')} />
+        </>
+      }>
+      <Header />
       <Steps at={1} />
       <Headline>{SIGNUP_STEPS[0]}</Headline>
       <View accessibilityRole="radiogroup" style={{ gap: 10 }}>
         {ACCOUNT_TYPES.map((t) => (
-          <Choice key={t.value} picked={type === t.value} onPick={() => setType(t.value)} title={t.title} line={t.line} />
+          <Choice key={t.value} picked={type === t.value} onPick={() => setType(t.value)} title={t.title} line={t.line} face={TYPE_FACE[t.value]} />
         ))}
       </View>
       {type ? (
@@ -198,20 +261,8 @@ function StepWho({ type, setType, profile, setProfile, onContinue }: {
           </View>
         </View>
       ) : null}
-      <Body muted>{TYPE_NOTE}</Body>
-      <Button
-        primary
-        label="Continue"
-        disabled={!type}
-        hint={PICK_TYPE}
-        onPress={() => {
-          if (!type) return
-          setTried(true)
-          if (!Object.keys(missing(type, profile)).length) onContinue()
-        }}
-      />
-      <Button variant="secondary" label="Sign in instead" onPress={() => router.replace('/sign-in')} />
-    </>
+      <Note>{TYPE_NOTE}</Note>
+    </Screen>
   )
 }
 
@@ -228,14 +279,21 @@ function StepKind({ type, name, kind, setKind, busy, failed, onContinue, onBack 
 }) {
   const { c } = useTheme()
   return (
-    <>
+    <Screen
+      footer={
+        <>
+          {failed ? <FieldError>{SAVE_FAILED}</FieldError> : null}
+          <Button primary label={busy ? 'Saving…' : failed ? 'Try again' : 'Continue'} disabled={!kind || busy} hint={kind ? undefined : PICK_KIND} onPress={onContinue} />
+        </>
+      }>
+      <Header onBack={busy ? undefined : onBack} />
       <Steps at={2} />
       <Headline>{SIGNUP_STEPS[1]}</Headline>
       <Body muted>{kindFor(name, type)}</Body>
       <View accessibilityRole="radiogroup" style={{ gap: 10 }}>
         {MONEY_KINDS.map((k) => (
           <Choice key={k.value} picked={kind === k.value} onPick={() => setKind(k.value)} title={k.title} line={k.line}>
-            <View style={{ marginTop: 8, paddingTop: 10, borderTopWidth: 1, borderTopColor: c.line, gap: 6 }}>
+            <View style={{ marginTop: 8, gap: 6 }}>
               {k.list(type).map((item) => (
                 <View key={item} style={{ flexDirection: 'row', gap: 8 }}>
                   <Icon name="check" size={16} color={c.ink} />
@@ -246,11 +304,8 @@ function StepKind({ type, name, kind, setKind, busy, failed, onContinue, onBack 
           </Choice>
         ))}
       </View>
-      <Body muted>{KIND_NOTE}</Body>
-      {failed ? <FieldError>{SAVE_FAILED}</FieldError> : null}
-      <Button primary label={busy ? 'Saving…' : failed ? 'Try again' : 'Continue'} disabled={!kind || busy} hint={kind ? undefined : PICK_KIND} onPress={onContinue} />
-      <Button variant="secondary" label="Back" disabled={busy} onPress={onBack} />
-    </>
+      <Note>{KIND_NOTE}</Note>
+    </Screen>
   )
 }
 
@@ -259,16 +314,13 @@ function StepKey() {
   const [on, setOn] = useState(false)
   const onOn = useCallback(() => setOn(true), [])
   return (
-    <>
+    <Screen
+      footer={on ? <Button primary label="Open the app" onPress={() => router.replace('/')} /> : <Button variant="ghost" label="Do this later" onPress={() => router.replace('/')} />}>
+      <Header />
       <Steps at={3} />
       <Headline>{SIGNUP_STEPS[2]}</Headline>
       <PhoneKeyCard onOn={onOn} />
-      {on ? (
-        <Button primary label="Open the app" onPress={() => router.replace('/')} />
-      ) : (
-        <Button variant="secondary" label="Do this later" onPress={() => router.replace('/')} />
-      )}
-    </>
+    </Screen>
   )
 }
 
@@ -315,15 +367,11 @@ export default function SignUp() {
     }
   }
 
-  return (
-    <Screen>
-      {step === 3 ? (
-        <StepKey />
-      ) : step === 2 && type ? (
-        <StepKind type={type} name={name} kind={kind} setKind={setKind} busy={busy} failed={failed} onContinue={() => void finish()} onBack={() => setStep(1)} />
-      ) : (
-        <StepWho type={type} setType={setType} profile={profile} setProfile={setProfile} onContinue={() => setStep(2)} />
-      )}
-    </Screen>
+  return step === 3 ? (
+    <StepKey />
+  ) : step === 2 && type ? (
+    <StepKind type={type} name={name} kind={kind} setKind={setKind} busy={busy} failed={failed} onContinue={() => void finish()} onBack={() => setStep(1)} />
+  ) : (
+    <StepWho type={type} setType={setType} profile={profile} setProfile={setProfile} onContinue={() => setStep(2)} />
   )
 }
