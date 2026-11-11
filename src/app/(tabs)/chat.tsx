@@ -1,4 +1,4 @@
-import { BffError, formatLXC, formatMinor, refusalText, type OutsidePayee, type PaymentRequest } from '@talyvor/bff-client'
+import { BffError, formatBalance, formatLXC, formatMinor, refusalText, type OutsidePayee, type PaymentRequest } from '@talyvor/bff-client'
 import { RecordingPresets, requestRecordingPermissionsAsync, setAudioModeAsync, useAudioRecorder } from 'expo-audio'
 import * as Crypto from 'expo-crypto'
 import { router } from 'expo-router'
@@ -130,7 +130,7 @@ export default function ChatScreen() {
       if (agent.length === 1) {
         const a = agent[0]
         return reply({
-          text: `${a.name} has spent ${formatLXC(a.spent_ulxc, peg)} so far, and holds ${formatLXC(a.balance_ulxc, peg)}.${a.paused_at ? ' It is paused.' : ''}`,
+          text: `${a.name} has spent ${formatLXC(a.spent_ulxc, peg)} so far, and holds ${formatBalance(a.balance_ulxc, peg)}.${a.paused_at ? ' It is paused.' : ''}`,
           voiced,
           money: AGENT_CREDIT,
           open: { label: `Open ${a.name}`, go: () => router.push({ pathname: '/agents/[id]', params: { id: a.id } }) },

@@ -1,4 +1,6 @@
-import { createBffClient, formatLXC, formatMinor, MONEY_ORDER } from '@talyvor/bff-client'
+import { createBffClient, formatBalance, formatLXC, formatMinor, MONEY_ORDER } from '@talyvor/bff-client'
+
+import { widgetProps } from '../widget-sync'
 
 // B55.27: the phone writes $450.00, dollars first beside LXC, and USDC to its six decimals.
 
@@ -22,6 +24,21 @@ test('LXC is dollars first by the peg, LXC first when the switch flips, and LXC 
   expect(formatLXC(900_000_000, 0.1, 'lxc-first')).toBe('900 LXC ($90.00)')
   expect(formatLXC(900_000_000, null)).toBe('900 LXC')
   expect(formatLXC(-40_000_000, 0.1)).toBe('-$4.00 (-40 LXC)')
+})
+
+// B59.36: a balance never shows more than it holds, so its dollars round down to the cent. An amount to approve or a
+// charge keeps the nearest cent, as the web's figures do.
+test('a balance of 1,255,000 µLXC at 0.1 USD per LXC reads $0.12; the same amount to approve reads $0.13', () => {
+  const book = { workspace_balance_ulxc: 1_255_000, allocated_ulxc: 1_255_000, unallocated_ulxc: 0, spent_ulxc: 0, agents: [{ id: 'ag-1', name: 'Scout', balance_ulxc: 1_255_000, spent_ulxc: 0, created_at: '2026-11-11T00:00:00Z' }] }
+  const widget = widgetProps(book, [], [], 'token-1', undefined, 0.1)
+  expect(widget.safeToSpend).toBe('$0.12 (1.255 LXC)')
+  expect(widget.agents[0].balance).toBe('$0.12 (1.255 LXC)')
+  expect(formatBalance(1_255_000, 0.1)).toBe('$0.12 (1.255 LXC)')
+  expect(formatBalance(1_255_000, 0.1, 'lxc-first')).toBe('1.255 LXC ($0.12)')
+  expect(formatBalance(900_000_000, 0.1)).toBe('$90.00 (900 LXC)')
+  expect(formatBalance(-1_255_000, 0.1)).toBe('-$0.13 (-1.255 LXC)')
+  expect(formatBalance(1_255_000, null)).toBe('1.255 LXC')
+  expect(formatLXC(1_255_000, 0.1)).toBe('$0.13 (1.255 LXC)')
 })
 
 test('the peg is read once from the top-up options, and a failed read leaves it unread', async () => {

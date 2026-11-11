@@ -58,7 +58,7 @@ export default function Home() {
           ))}
 
           <MoneyHeader capability={AGENT_CREDIT}>Safe to spend</MoneyHeader>
-          <Money micros={safeToSpend(data.book, data.approvals)} peg={peg} />
+          <Money micros={safeToSpend(data.book, data.approvals)} peg={peg} balance />
           <Body muted>Your workspace balance, less what is waiting for your approval.</Body>
           <Link href="/activity" asChild>
             <Pressable accessibilityRole="link" style={{ minHeight: 48, justifyContent: 'center' }}>
@@ -78,7 +78,7 @@ export default function Home() {
                       <Body>{a.name}</Body>
                       <Body muted style={{ color: a.paused_at ? c.caution : c.positive }}>{a.paused_at ? 'Paused' : 'Active'}</Body>
                     </View>
-                    <Money micros={a.balance_ulxc} peg={peg} size={17} />
+                    <Money micros={a.balance_ulxc} peg={peg} size={17} balance />
                   </View>
                 </Card>
               </Pressable>
