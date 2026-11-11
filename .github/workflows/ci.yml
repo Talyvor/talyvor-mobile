@@ -18,6 +18,8 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      # B58.19 — what ships in the app; a high or critical advisory fails the build.
+      - run: npm audit --omit=dev --audit-level=high
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test -- --ci
@@ -36,6 +38,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx expo prebuild --platform ${{ matrix.platform }} --no-install
+      - if: matrix.platform == 'ios'
+        run: node scripts/check-privacy-manifest.js ios
       - run: npx expo export --platform ${{ matrix.platform }}
       # The Android widget's provider is Kotlin written by plugins/with-android-widget-links.js; only a compile proves it.
       - if: matrix.platform == 'android'
