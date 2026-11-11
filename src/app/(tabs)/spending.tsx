@@ -1,11 +1,12 @@
-import { formatMinor, refusalText, type NoticeSettings } from '@talyvor/bff-client'
+import { formatMinor } from '@talyvor/bff-client'
 import { Link } from 'expo-router'
-import { useCallback, useState } from 'react'
-import { Pressable, Switch, Text, TextInput, View } from 'react-native'
+import { useCallback } from 'react'
+import { Pressable, Text, View } from 'react-native'
 
-import { Body, Button, Card, Eyebrow, Figure, Headline, LoadState, Screen, useLoad } from '@/components/ui'
+import { NoticeSettingsCard } from '@/components/notice-settings'
+import { Body, Card, Eyebrow, Figure, Headline, LoadState, Screen, useLoad } from '@/components/ui'
 import { useSession } from '@/session'
-import { byCategory, categoryName, day, NOTICE_KINDS, RULES, spendPeriod } from '@/spending'
+import { byCategory, categoryName, day, RULES, spendPeriod } from '@/spending'
 import { fonts, useTheme } from '@/theme'
 
 /** B53.9 — the web's Spending screen (B53.8) on the phone: every number from Lens, this week and this month by category,
@@ -48,24 +49,6 @@ export default function SpendingScreen() {
   const whose = (id: string | undefined) =>
     !id ? 'Your own wallet' : id === 'all' ? 'Every wallet' : (data?.agents.find((a) => a.id === id)?.name ?? 'An agent')
 
-  // What the person has changed, over Lens's settings, until they save.
-  const [edits, setSettings] = useState<NoticeSettings | null>(null)
-  const settings = edits ?? data?.settings ?? null
-  const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState<string | null>(null)
-  const save = async () => {
-    if (!settings) return
-    setSaving(true)
-    try {
-      setSettings(await client.setNoticeSettings({ ...settings, timezone: settings.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone }))
-      setSaved('Saved.')
-    } catch (err) {
-      setSaved(refusalText(err))
-    } finally {
-      setSaving(false)
-    }
-  }
-  const input = { borderWidth: 1, borderColor: c.lineStrong, borderRadius: 6, paddingHorizontal: 12, paddingVertical: 8, color: c.ink, fontSize: 15, fontFamily: fonts.ui, width: 96 }
   const row = { flexDirection: 'row' as const, justifyContent: 'space-between' as const, gap: 12 }
 
   const totals = (title: string, cats: [string, string][]) => (
@@ -163,32 +146,7 @@ export default function SpendingScreen() {
           ))}
 
           <Eyebrow>Notices</Eyebrow>
-          {settings ? (
-            <Card>
-              <Body muted>Quiet hours hold every notice but an unusual payment until they end. Leave both empty for none.</Body>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <TextInput accessibilityLabel="Quiet from" placeholder="22:00" placeholderTextColor={c.inkMuted} value={settings.quiet_from} onChangeText={(v) => setSettings({ ...settings, quiet_from: v })} style={input} />
-                <Body muted>to</Body>
-                <TextInput accessibilityLabel="Quiet until" placeholder="07:00" placeholderTextColor={c.inkMuted} value={settings.quiet_until} onChangeText={(v) => setSettings({ ...settings, quiet_until: v })} style={input} />
-              </View>
-              {NOTICE_KINDS.map(([kind, name]) => {
-                const off = settings.off ?? []
-                return (
-                  <View key={kind} style={[row, { alignItems: 'center' }]}>
-                    <Body>{name}</Body>
-                    <Switch
-                      accessibilityLabel={name}
-                      value={!off.includes(kind)}
-                      onValueChange={(on) => setSettings({ ...settings, off: on ? off.filter((k) => k !== kind) : [...off, kind] })}
-                      trackColor={{ true: c.accent, false: c.lineStrong }}
-                    />
-                  </View>
-                )
-              })}
-              <Button primary label={saving ? 'Saving…' : 'Save notice settings'} disabled={saving} onPress={() => void save()} />
-              {saved ? <Body muted>{saved}</Body> : null}
-            </Card>
-          ) : null}
+          <NoticeSettingsCard initial={data.settings} />
           {data.notices.slice(0, 10).map((n) => (
             <Link key={n.id} href={{ pathname: '/notices/[id]', params: { id: n.id } }} asChild>
               <Pressable accessibilityRole="link">
