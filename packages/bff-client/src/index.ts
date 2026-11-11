@@ -361,6 +361,8 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     me: () => call<{ workspace_id: string }>('GET', '/auth/me'),
     /** The workspace's name; Lens answers its id until it is named. */
     workspaceName: () => call<{ id: string; name: string }>('GET', '/api/workspace/name'),
+    /** B59.3 — the areas the operator switched on for this workspace (Lens B59.1); none until then. */
+    areas: async () => (await call<{ areas: string[] | null }>('GET', '/api/workspace/areas')).areas ?? [],
     book: () => call<AgentBook>('GET', '/api/agents'),
     approvals: () => call<{ approvals: AgentApproval[] | null }>('GET', '/api/agents/approvals'),
     /** The challenge approving or denying one approval is signed over. */
