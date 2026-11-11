@@ -1,0 +1,5 @@
+[
+  { "route": "/", "screen": "p-home", "words": "report", "why": "B59.35 adds Settings at the top right and See all in Activity; Home's words are B57.66's" },
+  { "route": "/settings", "screen": "p-home", "words": "report", "why": "the reference draws no phone Settings; the words are the web's and listed on the PR" },
+  { "route": "/activity", "screen": "p-statement", "words": "report", "why": "the reference draws no phone Activity; the nearest is the Statement, the words are the web's" }
+]

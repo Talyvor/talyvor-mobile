@@ -86,7 +86,13 @@ export interface Statement {
   lines: StatementLine[] | null
 }
 
-/** Lens economy.CurrencyAccount: the company's or an agent's account in one currency, in minor units. */
+/** A statement file's type: the CSV, the JSON or the PDF Lens writes, or the period as a CSV of double-entry journal
+ * lines Xero and QuickBooks import (the web's StatementFormat). */
+export type StatementFormat = 'csv' | 'json' | 'pdf' | 'journal'
+
+const STATEMENT_ACCEPT: Record<StatementFormat, string> = { csv: 'text/csv', json: 'application/json', pdf: 'application/pdf', journal: 'text/csv' }
+
+/** Lens economy.CurrencyAccount:the company's or an agent's account in one currency, in minor units. */
 export interface CurrencyAccount {
   id: string
   /** "" for the company's own */
@@ -387,6 +393,13 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     /** Every agent wallet's statement for [from, to), YYYY-MM-DD at midnight UTC. */
     statement: (from: string, to: string) =>
       call<Statement>('GET', `/api/agents/statement?${new URLSearchParams({ from, to, format: 'json' })}`),
+    /** B59.35 — the statement for [from, to) as the file Lens writes (the web's Download, suite B28.55): one agent's, or
+     * with no agent every agent's. */
+    statementFile: async (agentId: string | null, from: string, to: string, format: StatementFormat) => {
+      const query = new URLSearchParams({ from, to, format })
+      const path = agentId ? `/api/agents/${e(agentId)}/statement?${query}` : `/api/agents/statement?${query}`
+      return (await send('GET', path, undefined, { Accept: STATEMENT_ACCEPT[format] })).arrayBuffer()
+    },
     moneyAccounts: () => call<{ accounts: CurrencyAccount[] | null }>('GET', '/api/money/accounts'),
     payees: () => call<{ payees: OutsidePayee[] | null }>('GET', '/api/money/payees'),
     /** The payments out, newest first. */

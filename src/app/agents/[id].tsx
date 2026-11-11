@@ -1,6 +1,6 @@
 import { formatLXC, parseLXC, refusalText, rulesInWords } from '@talyvor/bff-client'
 import * as Crypto from 'expo-crypto'
-import { useLocalSearchParams } from 'expo-router'
+import { router, useLocalSearchParams } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { TextInput, View } from 'react-native'
 
@@ -125,6 +125,7 @@ export default function AgentScreen() {
           {rulesInWords(data.rules, peg).map((r) => (
             <Body key={r}>{r}</Body>
           ))}
+          <Button label="See all in Activity" onPress={() => router.push({ pathname: '/activity', params: { agent: agent.id } })} />
         </>
       ) : null}
     </Screen>

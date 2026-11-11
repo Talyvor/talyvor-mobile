@@ -62,6 +62,20 @@ const ANSWERS = {
     payments: [{ id: 'pm_kite', payee_id: 'py_kite', payee_name: 'Kite Accounting', amount_minor: 45_000, currency: 'USD', reference: 'October bookkeeping', status: 'completed', created_at: '2026-10-01T10:00:00Z' }],
   },
   '/api/money/accounts': { accounts: [{ id: 'acc_usd', currency: 'USD', purpose: 'company', status: 'open', name: '', balance_minor: 320_000 }] },
+  // B59.35 — Settings and Activity.
+  '/auth/me': { workspace_id: 'ws_northwind' },
+  '/api/workspace/name': { id: 'ws_northwind', name: 'Northwind Studio' },
+  '/api/money/notices': { settings: { timezone: 'Europe/London', quiet_from: '22:00', quiet_until: '07:00', off: ['digest'] }, notices: [] },
+  '/api/agents/statement': {
+    from: '2026-10-01',
+    to: '2026-11-01',
+    accounts: [],
+    lines: [
+      { posting_id: 3, entry_id: 'ent_3', at: '2026-10-21T15:12:00Z', account: 'agent:agt_sales', kind: 'pay', amount_ulxc: -lxc(900), counterparty: 'outside', balance_after_ulxc: lxc(12_000), label: 'Lead finder' },
+      { posting_id: 2, entry_id: 'ent_2', at: '2026-10-14T10:05:00Z', account: 'agent:agt_research', kind: 'card', amount_ulxc: -lxc(1_250), counterparty: 'outside', balance_after_ulxc: lxc(16_500), label: 'Northwind Data' },
+      { posting_id: 1, entry_id: 'ent_1', at: '2026-10-02T09:00:00Z', account: 'agent:agt_research', kind: 'fund', amount_ulxc: lxc(5_000), counterparty: 'workspace', balance_after_ulxc: lxc(17_750), label: 'Funded by you' },
+    ],
+  },
 }
 
 /** The sample's answer for a path, or undefined when it has none. */

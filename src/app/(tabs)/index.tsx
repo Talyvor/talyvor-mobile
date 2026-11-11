@@ -5,6 +5,7 @@ import { Pressable, View } from 'react-native'
 
 import { ApprovalCard } from '@/components/approval-card'
 import { Face } from '@/components/face'
+import { Icon } from '@/components/icon'
 import { AGENT_CREDIT, MoneyHeader, approvalCapability } from '@/components/money-label'
 import { Money } from '@/components/money'
 import { PreparedPaymentCard, pendingPrepared } from '@/components/prepared-payment-card'
@@ -36,7 +37,15 @@ export default function Home() {
 
   return (
     <Screen onRefresh={reload} refreshing={loading && !!data}>
-      <Eyebrow>Home</Eyebrow>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Eyebrow>Home</Eyebrow>
+        {/* B59.35 — Settings opens from the top right of Home (launch pack design, DECISIONS 3). */}
+        <Link href="/settings" asChild>
+          <Pressable accessibilityRole="button" accessibilityLabel="Settings" style={{ width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: c.cloud }}>
+            <Icon name="settings" color={c.ink} />
+          </Pressable>
+        </Link>
+      </View>
       <Headline>{waiting ? `${waiting} waiting for you` : 'Nothing waiting for you'}</Headline>
       <LoadState loading={loading && !data} error={error} />
       {data ? (
@@ -51,6 +60,11 @@ export default function Home() {
           <MoneyHeader capability={AGENT_CREDIT}>Safe to spend</MoneyHeader>
           <Money micros={safeToSpend(data.book, data.approvals)} peg={peg} />
           <Body muted>Your workspace balance, less what is waiting for your approval.</Body>
+          <Link href="/activity" asChild>
+            <Pressable accessibilityRole="link" style={{ minHeight: 48, justifyContent: 'center' }}>
+              <Body style={{ color: c.tangerineInk }}>See all in Activity</Body>
+            </Pressable>
+          </Link>
 
           <Eyebrow>Agents</Eyebrow>
           {agents.length === 0 ? <Body muted>No agents yet.</Body> : null}

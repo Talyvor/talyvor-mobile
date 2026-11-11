@@ -104,6 +104,7 @@
       "expo-web-browser",
       "expo-font",
       "expo-image",
+      "expo-sharing",
       "./plugins/with-android-widget-links",
       "./plugins/with-app-shortcuts",
       "./plugins/with-tls-only",
