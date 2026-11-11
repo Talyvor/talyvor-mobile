@@ -39,6 +39,8 @@ const sandbox = (capability, name) => ({ capability, name, class: 'GREEN', real_
 const ANSWERS = {
   '/api/agents': { workspace_balance_ulxc: lxc(124_800), allocated_ulxc: lxc(33_900), unallocated_ulxc: lxc(90_900), spent_ulxc: lxc(28_000), agents },
   '/api/agents/approvals': { approvals },
+  // B57.135: Lens's public labels, which a signed-out screen (sign-up) reads for its Sandbox label.
+  '/api/pricing': { labels: { payments_out: 'sandbox' } },
   // B57.126: Research's rules as the reference's agent page reads them, so its page loads in the shots.
   '/api/agents/agt_research/rules': { max_per_request_ulxc: lxc(10_000), daily_limit_ulxc: 0, monthly_limit_ulxc: 0, approval_above_ulxc: lxc(2_500), allowed_models: null, allowed_providers: null, active_from: '', active_until: '', timezone: 'Europe/London' },
   '/api/money/payment-requests': { requests: [] },

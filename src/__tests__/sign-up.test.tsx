@@ -1,5 +1,5 @@
 /// <reference types="node" />
-import { fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library'
+import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library'
 
 // B59.9 — sign-up on the phone shows the web's words (talyvor-suite B59.8, apps/web/src/areas/auth/signupWords.ts at
 // a8240e4), asks who the account is for and the kind of money before the identity provider, sends both with the name to
@@ -219,4 +219,29 @@ test('a sign-up the BFF refuses says nothing changed and offers to try again', a
   expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy()
   await waitFor(() => expect(mockStore.get('talyvor.session')).toBeUndefined())
   expect(screen.queryByText(WEB.steps[2])).toBeNull()
+})
+
+test('B57.135: sign-up is drawn in Pocket: the logo or Back with Sandbox at the top, each type on its card face, the actions held at the foot', async () => {
+  mockBff()
+  await renderRouter('./src/app', { initialUrl: '/sign-up' })
+  expect(await screen.findByTestId('money-label-sandbox')).toBeTruthy()
+  expect(screen.getByLabelText('Talyvor')).toBeTruthy()
+  expect(within(screen.getByRole('radio', { name: /^Personal/ })).getByTestId('choice-face-daily', { includeHiddenElements: true })).toBeTruthy()
+  expect(within(screen.getByRole('radio', { name: /^Business/ })).getByTestId('choice-face-team', { includeHiddenElements: true })).toBeTruthy()
+  let foot = within(screen.getByTestId('screen-footer'))
+  expect(foot.getByRole('button', { name: 'Continue' })).toBeTruthy()
+  expect(foot.getByRole('button', { name: 'Sign in instead' })).toBeTruthy()
+
+  await stepOne('Personal', 'Maya Lind')
+  expect(await screen.findByText(WEB.steps[1])).toBeTruthy()
+  // Back is the header's round button, a word only for a screen reader; the foot holds Continue alone.
+  expect(screen.getByRole('button', { name: 'Back' })).toBeTruthy()
+  expect(screen.queryByText('Back')).toBeNull()
+  foot = within(screen.getByTestId('screen-footer'))
+  expect(foot.getAllByRole('button').map((b) => b.props.accessibilityLabel ?? within(b).getByText(/./).props.children)).toEqual(['Continue'])
+
+  await fireEvent.press(screen.getByRole('radio', { name: /^Hybrid\./ }))
+  await fireEvent.press(foot.getByRole('button', { name: 'Continue' }))
+  expect(await screen.findByText(WEB.steps[2])).toBeTruthy()
+  expect(within(screen.getByTestId('screen-footer')).getByRole('button', { name: 'Do this later' })).toBeTruthy()
 })
