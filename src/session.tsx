@@ -14,6 +14,8 @@ interface Session {
   ready: boolean
   signedIn: boolean
   client: BffClient
+  /** USD per LXC once read, for formatLXC; null until then, or while Lens does not supply it. */
+  peg: number | null
   /** Trades an ID token for a BFF session and keeps it in the phone's keychain. */
   signIn: (idToken: string) => Promise<void>
   signOut: () => Promise<void>
@@ -25,6 +27,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
   const client = useMemo(() => createBffClient(config.bffUrl, () => token), [token])
+  const [peg, setPeg] = useState<number | null>(null)
+  // Lens's one public rate, the same for every workspace, so a new sign-in need not clear it.
+  useEffect(() => {
+    if (token) void client.peg().then(setPeg)
+  }, [client, token])
 
   useEffect(() => {
     SecureStore.getItemAsync(KEY)
@@ -51,7 +58,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setToken(null)
   }, [])
 
-  const value = useMemo(() => ({ ready, signedIn: token !== null, client, signIn, signOut }), [ready, token, client, signIn, signOut])
+  const value = useMemo(() => ({ ready, signedIn: token !== null, client, peg, signIn, signOut }), [ready, token, client, peg, signIn, signOut])
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
 }
 

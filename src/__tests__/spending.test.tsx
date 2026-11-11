@@ -74,7 +74,7 @@ test('the Spending tab shows totals, budgets, the unusual payment with the Coach
   expect(screen.getByLabelText('Eating out · Your own wallet: budget used').props.accessibilityValue).toEqual({ min: 0, max: 100, now: 82 })
   expect(screen.getByText('Possibly paid twice · Tesco')).toBeTruthy()
   expect(screen.getByText('You paid Tesco 30.00 GBP twice within a minute.')).toBeTruthy()
-  expect(screen.getByText('131.88 GBP a year')).toBeTruthy()
+  expect(screen.getByText('£131.88 a year')).toBeTruthy()
 
   await fireEvent(screen.getByLabelText('Each payment'), 'valueChange', false)
   await fireEvent.changeText(screen.getByLabelText('Quiet from'), '22:00')
@@ -91,7 +91,7 @@ test("a payment's push opens that payment", async () => {
   await renderRouter('./src/app', { initialUrl: '/' })
 
   expect(await screen.findByText('Pret A Manger', {}, { timeout: 5000 })).toBeTruthy()
-  await waitFor(() => expect(screen.getByText('12.50 GBP')).toBeTruthy())
+  await waitFor(() => expect(screen.getByText('£12.50')).toBeTruthy())
   expect(screen.getByText('Eating out')).toBeTruthy()
   expect(screen.getByText('Eating out · 9.00 GBP left of this month’s eating out budget')).toBeTruthy()
 })

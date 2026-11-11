@@ -67,6 +67,8 @@ function mockLens() {
         return json({ workspace_balance_ulxc: 0, allocated_ulxc: 0, unallocated_ulxc: 0, spent_ulxc: 0, agents: [{ id: 'ag_1', name: 'Buyer', balance_ulxc: 0, spent_ulxc: 0, created_at: '2026-10-01T00:00:00Z' }] })
       case 'GET /api/agents/approvals':
         return json({ approvals: [{ id: 'apr_1', agent_id: 'ag_1', amount_ulxc: 2_000_000, model: '', payee: { kind: 'listing', id: 'l_1', name: 'GPU hour' }, status: lens.approvalApproved ? 'approved' : 'pending', created_at: '2026-10-24T08:00:00Z' }] })
+      case 'GET /api/lxc/topup-options':
+        return json({ usd_per_lxc: 0.1, min_usd_cents: 1000 })
       case 'POST /api/agents/approvals/apr_1/challenge':
         return json({ challenge: 'ch_apr_1' })
       case 'POST /api/agents/approvals/apr_1/approve': {
@@ -125,7 +127,7 @@ test('a request notification opens its approval card; approving the ticked payme
   expect(lens.pushTokens).toEqual({ dev_1: 'a1b2c3d4' })
 
   // Untick Bolt Couriers: the key signs a statement naming Acme Hosting alone.
-  await fireEvent.press(screen.getByLabelText('Approve 9.00 GBP to Bolt Couriers'))
+  await fireEvent.press(screen.getByLabelText('Approve £9.00 to Bolt Couriers'))
   await fireEvent.press(await screen.findByText('Approve 1 payment with Face ID'))
   expect(await screen.findByText('Approved. Each payment you approved is paid once.')).toBeTruthy()
   expect(JSON.parse(lens.approvedStatement).items.map((it: { position: number }) => it.position)).toEqual([1])
@@ -179,7 +181,7 @@ test("Approve with Face ID on a request's notification signs the hash of exactly
   expect(await screen.findByText('Approved. Each payment you approved is paid once.')).toBeTruthy()
   // mockLens approves only a device-key signature over the statement's SHA-256, the batch hash.
   expect(JSON.parse(lens.approvedStatement).items).toEqual(shownItems.map(({ payee_name: _, ...it }) => it))
-  expect(mockReasons.at(-1)).toBe('Approve 2 payments, 34.00 GBP: Acme Hosting 25.00 GBP, Bolt Couriers 9.00 GBP')
+  expect(mockReasons.at(-1)).toBe('Approve 2 payments, £34.00: Acme Hosting £25.00, Bolt Couriers £9.00')
   expect(mockCategories.payment_request).toEqual([expect.objectContaining({ identifier: 'approve', buttonTitle: 'Approve with Face ID' })])
 })
 
@@ -219,7 +221,7 @@ test("Approve with Face ID on an agent's approval signs exactly that approval's 
 
   expect(await screen.findByText('Approved. Nothing is waiting for you here.')).toBeTruthy()
   expect(lens.approvalApproved).toBe(true)
-  expect(mockReasons.at(-1)).toBe('Approve 2 LXC for Buyer')
+  expect(mockReasons.at(-1)).toBe('Approve $0.20 (2 LXC) for Buyer')
   expect(mockCategories.agent_approval).toEqual([expect.objectContaining({ identifier: 'approve', buttonTitle: 'Approve with Face ID' })])
 })
 

@@ -1,4 +1,4 @@
-import { formatULXC, parseLXC, refusalText, rulesInWords } from '@talyvor/bff-client'
+import { formatLXC, parseLXC, refusalText, rulesInWords } from '@talyvor/bff-client'
 import * as Crypto from 'expo-crypto'
 import { useLocalSearchParams } from 'expo-router'
 import { useCallback, useState } from 'react'
@@ -14,7 +14,7 @@ import { pinnedAgents, setPinned, syncWidget } from '@/widget-sync'
 /** One agent: what it holds, its rules in plain words, pause or resume, fund, and its place on the home-screen widget. */
 export default function AgentScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
-  const { client } = useSession()
+  const { client, peg } = useSession()
   const { c } = useTheme()
   const load = useCallback(async () => {
     const [book, rules, pins, device] = await Promise.all([client.book(), client.rules(id), pinnedAgents(), phoneKey(client)])
@@ -81,8 +81,8 @@ export default function AgentScreen() {
           <Headline>{agent.name}</Headline>
           {agent.description ? <Body muted>{agent.description}</Body> : null}
           <MoneyHeader capability={AGENT_CREDIT}>Balance</MoneyHeader>
-          <Figure size={32}>{formatULXC(agent.balance_ulxc)}</Figure>
-          <Body muted>Spent so far: {formatULXC(agent.spent_ulxc)}</Body>
+          <Figure size={32}>{formatLXC(agent.balance_ulxc, peg)}</Figure>
+          <Body muted>Spent so far: {formatLXC(agent.spent_ulxc, peg)}</Body>
           <Body style={{ color: agent.paused_at ? c.caution : c.positive }}>
             {agent.paused_at ? `Paused${agent.paused_reason ? `: ${agent.paused_reason}` : ''}. It can spend nothing until you resume it.` : 'Active.'}
           </Body>
@@ -102,7 +102,7 @@ export default function AgentScreen() {
           {note ? <Body>{note}</Body> : null}
           {refusal ? <Body style={{ color: c.critical }}>{refusal}</Body> : null}
           <Eyebrow>Fund</Eyebrow>
-          <Body muted>Unallocated in your workspace: {formatULXC(data.unallocated)}</Body>
+          <Body muted>Unallocated in your workspace: {formatLXC(data.unallocated, peg)}</Body>
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <TextInput
               accessibilityLabel="Amount in LXC"
@@ -122,7 +122,7 @@ export default function AgentScreen() {
           <Body muted>{data.pinned ? 'Pinned: it shows on your home-screen widget with Pause and Fund.' : 'Pin it to show it on your home-screen widget.'}</Body>
           <Button label={data.pinned ? 'Unpin from widget' : 'Pin to widget'} disabled={busy} onPress={() => void pin()} />
           <Eyebrow>Rules</Eyebrow>
-          {rulesInWords(data.rules).map((r) => (
+          {rulesInWords(data.rules, peg).map((r) => (
             <Body key={r}>{r}</Body>
           ))}
         </>

@@ -1,4 +1,4 @@
-import { formatULXC, safeToSpend } from '@talyvor/bff-client'
+import { formatLXC, safeToSpend } from '@talyvor/bff-client'
 import { Link } from 'expo-router'
 import { useCallback, useEffect } from 'react'
 import { Pressable, View } from 'react-native'
@@ -13,7 +13,7 @@ import { syncWidget } from '@/widget-sync'
 
 /** Home: what waits for you first, then what you can safely spend, then each agent. */
 export default function Home() {
-  const { client } = useSession()
+  const { client, peg } = useSession()
   const { c } = useTheme()
   const load = useCallback(async () => {
     const [book, approvals, prepared] = await Promise.all([client.book(), client.approvals(), pendingPrepared(client)])
@@ -43,7 +43,7 @@ export default function Home() {
           ))}
 
           <MoneyHeader capability={AGENT_CREDIT}>Safe to spend</MoneyHeader>
-          <Figure size={32}>{formatULXC(safeToSpend(data.book, data.approvals))}</Figure>
+          <Figure size={32}>{formatLXC(safeToSpend(data.book, data.approvals), peg)}</Figure>
           <Body muted>Your workspace balance, less what is waiting for your approval.</Body>
 
           <Eyebrow>Agents</Eyebrow>
@@ -57,7 +57,7 @@ export default function Home() {
                       <Body>{a.name}</Body>
                       <Body muted style={{ color: a.paused_at ? c.caution : c.positive }}>{a.paused_at ? 'Paused' : 'Active'}</Body>
                     </View>
-                    <Figure>{formatULXC(a.balance_ulxc)}</Figure>
+                    <Figure>{formatLXC(a.balance_ulxc, peg)}</Figure>
                   </View>
                 </Card>
               </Pressable>

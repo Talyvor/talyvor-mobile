@@ -50,7 +50,16 @@ jest.mock('../../modules/talyvor-keys', () => ({
 /** The BFF as the app sees it: one workspace, two agents, one approval waiting. The workspace has a key, so Lens refuses
  * an unsigned resume. */
 function mockBff(
-  start: { paused?: boolean; allPaused?: boolean; approvals?: unknown[]; requests?: { id: string }[]; refuseSigned?: boolean; sessionEnded?: boolean; labels?: 'live' | 'sandbox' | 'unread' } = {},
+  start: {
+    paused?: boolean
+    allPaused?: boolean
+    approvals?: unknown[]
+    requests?: { id: string }[]
+    refuseSigned?: boolean
+    sessionEnded?: boolean
+    labels?: 'live' | 'sandbox' | 'unread'
+    usdPerLXC?: number
+  } = {},
 ) {
   const calls: { method: string; path: string; auth: string | undefined; body?: string; key?: string }[] = []
   let pausedAt = start.paused ? '2026-10-17T09:00:00Z' : undefined
@@ -112,6 +121,7 @@ function mockBff(
     'GET /api/money/payment-requests?status=pending_approval': () => ({ requests: start.requests ?? [] }),
     ...Object.fromEntries((start.requests ?? []).map((r) => [`GET /api/money/payment-requests/${r.id}`, () => r])),
     ...Object.fromEntries((start.requests ?? []).map((r) => [`POST /api/money/payment-requests/${r.id}/cancel`, () => ({ ...r, status: 'cancelled' })])),
+    ...(start.usdPerLXC ? { 'GET /api/lxc/topup-options': () => ({ usd_per_lxc: start.usdPerLXC, min_usd_cents: 1000 }) } : {}),
     'POST /api/agents/ag_1/pause': () => {
       pausedAt = '2026-10-17T09:00:00Z'
       return agents()[0]
@@ -218,6 +228,29 @@ describe('B55.8 expired approvals', () => {
   })
 })
 
+describe('B55.27 money dollars first', () => {
+  beforeEach(() => {
+    mockStore.clear()
+    mockStore.set('talyvor.session', JSON.stringify({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }))
+  })
+
+  test('Home writes dollars first beside LXC by the peg', async () => {
+    mockBff({ usdPerLXC: 0.1 })
+    await renderRouter('./src/app', { initialUrl: '/' })
+    expect(await screen.findByText('$1.80 (18 LXC)')).toBeTruthy() // 20 LXC less the 2 LXC waiting, at $0.10 an LXC
+    expect(screen.getByText('$1.25 (12.5 LXC)')).toBeTruthy()
+    expect(screen.getByText('$0.20 (2 LXC)')).toBeTruthy()
+  })
+
+  test('Home writes LXC alone when the peg cannot be read', async () => {
+    const calls = mockBff()
+    await renderRouter('./src/app', { initialUrl: '/' })
+    expect(await screen.findByText('18 LXC')).toBeTruthy()
+    await waitFor(() => expect(calls.some((c) => c.path === '/api/lxc/topup-options')).toBe(true))
+    expect(screen.queryByText(/\$/)).toBeNull()
+  })
+})
+
 describe('B41.35 home-screen widget', () => {
   beforeEach(() => {
     mockStore.clear()
@@ -284,7 +317,7 @@ describe('B41.35 home-screen widget', () => {
     const calls = mockBff()
     await renderRouter('./src/app', { initialUrl: '/payees/py_1' })
     await fireEvent.press(await screen.findByText('Pin to widget'))
-    await waitFor(() => expect(lastSnapshot()?.payees).toEqual([{ id: 'py_1', name: 'Acme Hosting', last: '25.00 GBP on 3 Oct', openUrl: 'talyvor://payees/py_1' }]))
+    await waitFor(() => expect(lastSnapshot()?.payees).toEqual([{ id: 'py_1', name: 'Acme Hosting', last: '£25.00 on 3 Oct', openUrl: 'talyvor://payees/py_1' }]))
     const pay = draw().buttons.find((b) => b.label === 'Pay')!
     expect(pay.target).toBe('talyvor://payees/py_1')
 
@@ -298,7 +331,7 @@ describe('B41.35 home-screen widget', () => {
     await fireEvent.changeText(screen.getByLabelText('Reference'), 'October')
     await fireEvent.press(screen.getByRole('button', { name: 'Pay' }))
     await fireEvent.press(await screen.findByRole('button', { name: 'Pay with Face ID' }))
-    expect(await screen.findByText('12.50 GBP to Acme Hosting is on its way.')).toBeTruthy()
+    expect(await screen.findByText('£12.50 to Acme Hosting is on its way.')).toBeTruthy()
     const sent = calls.filter((c) => c.method === 'POST' && c.path === '/api/money/payments')
     expect(sent).toHaveLength(1)
     expect(JSON.parse(sent[0].body!)).toEqual({
@@ -439,7 +472,7 @@ describe('B55.25 a payment from the phone confirms with Face ID', () => {
   test('Pay sends nothing; a cancelled check sends nothing; a passing check posts once with its idempotency key', async () => {
     const calls = mockBff()
     await typePayment('py_1')
-    expect(await screen.findByText('Pay Acme Hosting 12.50 GBP?')).toBeTruthy()
+    expect(await screen.findByText('Pay Acme Hosting £12.50?')).toBeTruthy()
     expect(screen.getAllByText('The company · GBP')).toHaveLength(2) // the From button and the confirm step
     expect(screen.getByText('October')).toBeTruthy()
     expect(posted(calls)).toHaveLength(0)
@@ -447,12 +480,12 @@ describe('B55.25 a payment from the phone confirms with Face ID', () => {
     mockPhone.face = false
     await fireEvent.press(screen.getByRole('button', { name: 'Pay with Face ID' }))
     expect(await screen.findByText('Nothing was paid.')).toBeTruthy()
-    expect(mockPhone.reasons).toEqual(['Pay Acme Hosting 12.50 GBP'])
+    expect(mockPhone.reasons).toEqual(['Pay Acme Hosting £12.50'])
     expect(posted(calls)).toHaveLength(0)
 
     mockPhone.face = true
     await fireEvent.press(screen.getByRole('button', { name: 'Pay with Face ID' }))
-    expect(await screen.findByText('12.50 GBP to Acme Hosting is on its way.')).toBeTruthy()
+    expect(await screen.findByText('£12.50 to Acme Hosting is on its way.')).toBeTruthy()
     expect(posted(calls)).toHaveLength(1)
     expect(JSON.parse(posted(calls)[0].body!).idempotency_key).toMatch(/^uuid-\d+$/)
   })
@@ -461,7 +494,7 @@ describe('B55.25 a payment from the phone confirms with Face ID', () => {
     const calls = mockBff()
     await typePayment('py_1')
     await fireEvent.press(await screen.findByRole('button', { name: 'Pay with Face ID' }))
-    expect(await screen.findByText('12.50 GBP to Acme Hosting is on its way.')).toBeTruthy()
+    expect(await screen.findByText('£12.50 to Acme Hosting is on its way.')).toBeTruthy()
     expect(challenged(calls)).toHaveLength(1)
     const { assertion, ...payment } = JSON.parse(posted(calls)[0].body!)
     expect(JSON.parse(challenged(calls)[0].body!)).toEqual(payment)
@@ -512,7 +545,7 @@ describe('B55.25 a payment from the phone confirms with Face ID', () => {
     const calls = mockBff()
     await typePayment('py_1')
     await fireEvent.press(await screen.findByRole('button', { name: 'Cancel' }))
-    await waitFor(() => expect(screen.queryByText('Pay Acme Hosting 12.50 GBP?')).toBeNull())
+    await waitFor(() => expect(screen.queryByText('Pay Acme Hosting £12.50?')).toBeNull())
     expect(mockPhone.reasons).toEqual([])
     expect(posted(calls)).toHaveLength(0)
   })
@@ -530,7 +563,7 @@ describe('B55.25 a payment from the phone confirms with Face ID', () => {
   test('a first payment needs both answers, and a Yes also the box', async () => {
     const calls = mockBff()
     await typePayment('py_2')
-    expect(await screen.findByText('Pay Kite Accounting 12.50 GBP?')).toBeTruthy()
+    expect(await screen.findByText('Pay Kite Accounting £12.50?')).toBeTruthy()
     const payWithFace = (disabled: boolean) => screen.getByRole('button', { name: 'Pay with Face ID', disabled })
     expect(payWithFace(true)).toBeTruthy()
 
@@ -557,13 +590,13 @@ describe('B55.25 a payment from the phone confirms with Face ID', () => {
     pay('completed')
     await typePayment('py_1')
     await fireEvent.press(await screen.findByRole('button', { name: 'Pay with Face ID' }))
-    expect(await screen.findByText('Paid Acme Hosting 12.50 GBP.')).toBeTruthy()
+    expect(await screen.findByText('Paid Acme Hosting £12.50.')).toBeTruthy()
 
     mockBff()
     pay('failed', 'the payee’s bank refused it')
     await typePayment('py_1')
     await fireEvent.press(await screen.findByRole('button', { name: 'Pay with Face ID' }))
-    expect(await screen.findByText('12.50 GBP to Acme Hosting was not paid: the payee’s bank refused it.')).toBeTruthy()
+    expect(await screen.findByText('£12.50 to Acme Hosting was not paid: the payee’s bank refused it.')).toBeTruthy()
   })
 })
 
@@ -583,7 +616,7 @@ describe('B55.11 prepared payments on Home and Approvals', () => {
     expect(screen.getByText('2 waiting for you')).toBeTruthy()
     const texts = screen.getAllByText(/./).map((t) => [t.props.children].flat().join(''))
     expect(texts.findIndex((t) => t.startsWith('Your assistant prepared'))).toBeLessThan(texts.findIndex((t) => t.startsWith('Buyer wants to pay')))
-    expect(screen.getByText('42.00 GBP')).toBeTruthy()
+    expect(screen.getByText('£42.00')).toBeTruthy()
 
     await renderRouter('./src/app', { initialUrl: '/approvals' })
     await fireEvent.press(await screen.findByText('Your assistant prepared a payment to Acme Hosting'))

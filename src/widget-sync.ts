@@ -1,4 +1,4 @@
-import { formatMinor, formatULXC, safeToSpend, type AgentApproval, type AgentBook, type BffClient, type OutsidePayee, type OutsidePayment } from '@talyvor/bff-client'
+import { formatLXC, formatMinor, safeToSpend, type AgentApproval, type AgentBook, type BffClient, type OutsidePayee, type OutsidePayment } from '@talyvor/bff-client'
 import * as Crypto from 'expo-crypto'
 import * as SecureStore from 'expo-secure-store'
 
@@ -59,17 +59,18 @@ export function widgetProps(
   pins: string[],
   token: string,
   payees: { pins: string[]; saved: OutsidePayee[]; payments: OutsidePayment[] } = { pins: [], saved: [], payments: [] },
+  peg: number | null = null,
 ): AgentsWidgetProps {
   const live = (book.agents ?? []).filter((a) => !a.archived_at)
   const shown = pins.length ? pins.flatMap((id) => live.filter((a) => a.id === id)) : live
   return {
     signedIn: true,
-    safeToSpend: formatULXC(safeToSpend(book, approvals)),
+    safeToSpend: formatLXC(safeToSpend(book, approvals), peg),
     pending: approvals.filter((a) => a.status === 'pending').length,
     agents: shown.map((a) => ({
       id: a.id,
       name: a.name,
-      balance: formatULXC(a.balance_ulxc),
+      balance: formatLXC(a.balance_ulxc, peg),
       paused: !!a.paused_at,
       pauseUrl: `talyvor://widget?${new URLSearchParams({ do: 'pause', agent: a.id, t: token })}`,
       openUrl: `talyvor://agents/${encodeURIComponent(a.id)}`,
@@ -89,15 +90,16 @@ export function widgetProps(
 export async function syncWidget(client: BffClient, loaded?: { book: AgentBook; approvals: AgentApproval[] }) {
   try {
     const payeePins = await pinnedPayees()
-    const [book, approvals, pins, token, saved, payments] = await Promise.all([
+    const [book, approvals, pins, token, saved, payments, peg] = await Promise.all([
       loaded?.book ?? client.book(),
       loaded?.approvals ?? client.approvals().then((r) => r.approvals ?? []),
       pinnedAgents(),
       linkToken(),
       payeePins.length ? client.payees().then((r) => r.payees ?? []) : [],
       payeePins.length ? client.payments().then((r) => r.payments ?? []) : [],
+      client.peg(),
     ])
-    pushWidget(widgetProps(book, approvals, pins, token, { pins: payeePins, saved, payments }))
+    pushWidget(widgetProps(book, approvals, pins, token, { pins: payeePins, saved, payments }, peg))
   } catch {
     // the next screen load or action tries again
   }
