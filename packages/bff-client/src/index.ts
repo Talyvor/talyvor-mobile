@@ -522,8 +522,18 @@ export const MONEY_ORDER: 'usd-first' | 'lxc-first' = 'usd-first'
 
 /** 900,000,000 µLXC at 0.1 USD per LXC → `$90.00 (900 LXC)`; `900 LXC` while the peg is unread. */
 export function formatLXC(micros: number, peg: number | null, order: typeof MONEY_ORDER = MONEY_ORDER): string {
+  return writeLXC(micros, peg, order, Math.round)
+}
+
+/** B59.36 — a balance as formatLXC writes it, its dollars rounded down to the cent: 1,255,000 µLXC at 0.1 → `$0.12 (1.255 LXC)`. */
+export function formatBalance(micros: number, peg: number | null, order: typeof MONEY_ORDER = MONEY_ORDER): string {
+  return writeLXC(micros, peg, order, Math.floor)
+}
+
+function writeLXC(micros: number, peg: number | null, order: typeof MONEY_ORDER, toCents: (cents: number) => number): string {
   if (!peg) return formatULXC(micros)
-  const usd = formatMinor(Math.round((micros * peg) / 10_000), 'USD')
+  // Whole µUSD first, so 0.1's float error never pulls an exact cent down a cent.
+  const usd = formatMinor(toCents(Math.round(micros * peg) / 10_000), 'USD')
   return order === 'usd-first' ? `${usd} (${formatULXC(micros)})` : `${formatULXC(micros)} (${usd})`
 }
 

@@ -1,4 +1,4 @@
-import { formatLXC, formatMinor } from '@talyvor/bff-client'
+import { formatBalance, formatLXC, formatMinor } from '@talyvor/bff-client'
 import { Text, View } from 'react-native'
 
 import { fonts, useTheme } from '../theme'
@@ -12,12 +12,14 @@ export function moneyParts(written: string): { large: string; small: string | nu
   return m ? { large: m[1], small: m[2] } : { large: written, small: null }
 }
 
-type Amount = { micros: number; peg: number | null } | { minor: number; currency: string }
+// `balance` marks a figure the owner holds, which rounds down to the cent (B59.36); an amount to approve or a charge does not.
+type Amount = { micros: number; peg: number | null; balance?: boolean } | { minor: number; currency: string }
 
 /** An amount: µLXC beside the peg, or minor units of a currency ($450.00, £24.00, 400.00 USDC). */
 export function Money({ size = 32, tone, ...amount }: Amount & { size?: number; tone?: string }) {
   const { c } = useTheme()
-  const written = 'micros' in amount ? formatLXC(amount.micros, amount.peg) : formatMinor(amount.minor, amount.currency)
+  const written =
+    'micros' in amount ? (amount.balance ? formatBalance : formatLXC)(amount.micros, amount.peg) : formatMinor(amount.minor, amount.currency)
   const { large, small } = moneyParts(written)
   return (
     <View accessible accessibilityLabel={written} style={{ flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', columnGap: 6 }}>

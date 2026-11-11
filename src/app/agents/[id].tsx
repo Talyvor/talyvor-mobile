@@ -1,4 +1,4 @@
-import { formatLXC, parseLXC, refusalText, rulesInWords } from '@talyvor/bff-client'
+import { formatBalance, formatLXC, parseLXC, refusalText, rulesInWords } from '@talyvor/bff-client'
 import * as Crypto from 'expo-crypto'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useCallback, useState } from 'react'
@@ -81,7 +81,7 @@ export default function AgentScreen() {
           <Headline>{agent.name}</Headline>
           {agent.description ? <Body muted>{agent.description}</Body> : null}
           <MoneyHeader capability={AGENT_CREDIT}>Balance</MoneyHeader>
-          <Figure size={32}>{formatLXC(agent.balance_ulxc, peg)}</Figure>
+          <Figure size={32}>{formatBalance(agent.balance_ulxc, peg)}</Figure>
           <Body muted>Spent so far: {formatLXC(agent.spent_ulxc, peg)}</Body>
           <Body style={{ color: agent.paused_at ? c.caution : c.positive }}>
             {agent.paused_at ? `Paused${agent.paused_reason ? `: ${agent.paused_reason}` : ''}. It can spend nothing until you resume it.` : 'Active.'}
@@ -102,7 +102,7 @@ export default function AgentScreen() {
           {note ? <Body>{note}</Body> : null}
           {refusal ? <Body style={{ color: c.critical }}>{refusal}</Body> : null}
           <Eyebrow>Fund</Eyebrow>
-          <Body muted>Unallocated in your workspace: {formatLXC(data.unallocated, peg)}</Body>
+          <Body muted>Unallocated in your workspace: {formatBalance(data.unallocated, peg)}</Body>
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <TextInput
               accessibilityLabel="Amount in LXC"

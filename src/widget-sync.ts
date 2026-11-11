@@ -1,4 +1,4 @@
-import { formatLXC, formatMinor, safeToSpend, type AgentApproval, type AgentBook, type BffClient, type OutsidePayee, type OutsidePayment } from '@talyvor/bff-client'
+import { formatBalance, formatMinor, safeToSpend, type AgentApproval, type AgentBook, type BffClient, type OutsidePayee, type OutsidePayment } from '@talyvor/bff-client'
 import * as Crypto from 'expo-crypto'
 import * as SecureStore from 'expo-secure-store'
 
@@ -65,12 +65,12 @@ export function widgetProps(
   const shown = pins.length ? pins.flatMap((id) => live.filter((a) => a.id === id)) : live
   return {
     signedIn: true,
-    safeToSpend: formatLXC(safeToSpend(book, approvals), peg),
+    safeToSpend: formatBalance(safeToSpend(book, approvals), peg),
     pending: approvals.filter((a) => a.status === 'pending').length,
     agents: shown.map((a) => ({
       id: a.id,
       name: a.name,
-      balance: formatLXC(a.balance_ulxc, peg),
+      balance: formatBalance(a.balance_ulxc, peg),
       paused: !!a.paused_at,
       pauseUrl: `talyvor://widget?${new URLSearchParams({ do: 'pause', agent: a.id, t: token })}`,
       openUrl: `talyvor://agents/${encodeURIComponent(a.id)}`,

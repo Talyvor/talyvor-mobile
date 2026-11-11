@@ -1,4 +1,4 @@
-import { formatLXC } from '@talyvor/bff-client'
+import { formatBalance, formatLXC } from '@talyvor/bff-client'
 import { useCallback } from 'react'
 import { View } from 'react-native'
 
@@ -33,7 +33,7 @@ export default function StatementScreen() {
       {(data?.statement.accounts ?? []).map((a) => (
         <View key={a.account} style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
           <Body>{accountName(a.account)}</Body>
-          <Figure>{formatLXC(a.closing_ulxc, peg)}</Figure>
+          <Figure>{formatBalance(a.closing_ulxc, peg)}</Figure>
         </View>
       ))}
       {data && lines.length === 0 ? <Body muted>No money moved this month.</Body> : null}
