@@ -5,14 +5,17 @@ import * as Sharing from 'expo-sharing'
 import { useCallback, useState } from 'react'
 import { Pressable, ScrollView, Text, View } from 'react-native'
 
-import { AGENT_CREDIT, MoneyHeader } from '@/components/money-label'
-import { Body, Button, Card, Eyebrow, Field, Figure, Headline, LoadState, Screen, useLoad } from '@/components/ui'
-import { ACTIVITY_KINDS, day, filterLines, monthPeriod } from '@/activity'
+import { AGENT_CREDIT, MoneyLabel } from '@/components/money-label'
+import { moneyParts } from '@/components/money'
+import { Back, Body, Button, Card, Eyebrow, Field, Headline, LoadState, Row, Screen, useLoad } from '@/components/ui'
+import { ACTIVITY_KINDS, day, filterLines, monthName, monthPeriod, when } from '@/activity'
 import { useSession } from '@/session'
 import { fonts, useTheme } from '@/theme'
 
 // B59.35 — Activity, from Home and from an agent: every movement in a month, filtered by agent, by kind and by words as
 // the web's statement is (suite B28.51), and the statement for the period to download as the web's Download writes it.
+// B57.132 — drawn in Pocket: its own Back and headline with the label, the period as the statement's line under it, the
+// filters as Pocket's tabs, and every movement as the statement's rows, the dollars over the LXC.
 
 const FORMATS: readonly [StatementFormat, string][] = [
   ['csv', 'CSV'],
@@ -23,7 +26,21 @@ const FORMATS: readonly [StatementFormat, string][] = [
 
 const MIME: Record<StatementFormat, string> = { csv: 'text/csv', json: 'application/json', pdf: 'application/pdf', journal: 'text/csv' }
 
-/** A choice of one, as a row of pills that scrolls sideways. */
+/** A movement's amount as the statement draws it: the first figure over the one beside it, at the right. */
+function Amount({ micros, peg }: { micros: number; peg: number | null }) {
+  const { c } = useTheme()
+  const sign = micros > 0 ? '+' : ''
+  const written = formatLXC(micros, peg)
+  const { large, small } = moneyParts(written)
+  return (
+    <View accessible accessibilityLabel={sign + written} style={{ alignItems: 'flex-end' }}>
+      <Text style={{ fontFamily: fonts.display, fontSize: 15, color: c.ink, fontVariant: ['tabular-nums'] }}>{sign + large}</Text>
+      {small ? <Text style={{ fontFamily: fonts.uiMedium, fontSize: 12.5, color: c.ink3, fontVariant: ['tabular-nums'] }}>{sign + small}</Text> : null}
+    </View>
+  )
+}
+
+/** A choice of one, as a row of Pocket's tabs that scrolls sideways: cloud, the one chosen in ink. */
 function Pills<T extends string | number | null>({ label, options, value, onChange }: { label: string; options: readonly [T, string][]; value: T; onChange: (v: T) => void }) {
   const { c } = useTheme()
   return (
@@ -36,8 +53,9 @@ function Pills<T extends string | number | null>({ label, options, value, onChan
             accessibilityRole="radio"
             accessibilityState={{ checked: on }}
             onPress={() => onChange(v)}
-            style={{ minHeight: 48, justifyContent: 'center', paddingHorizontal: 16, borderRadius: 999, backgroundColor: on ? c.ink : c.cloud2 }}>
-            <Text style={{ fontFamily: fonts.uiMedium, fontSize: 15, color: on ? c.page : c.ink }}>{words}</Text>
+            hitSlop={{ top: 6, bottom: 6 }}
+            style={{ height: 36, justifyContent: 'center', paddingHorizontal: 14, borderRadius: 999, backgroundColor: on ? c.primary : c.cloud }}>
+            <Text style={{ fontFamily: fonts.uiBold, fontSize: 14, color: on ? c.onPrimary : c.ink }}>{words}</Text>
           </Pressable>
         )
       })}
@@ -47,7 +65,6 @@ function Pills<T extends string | number | null>({ label, options, value, onChan
 
 export default function ActivityScreen() {
   const { client, peg } = useSession()
-  const { c } = useTheme()
   const params = useLocalSearchParams<{ agent?: string }>()
   const [month, setMonth] = useState<'this' | 'last'>('this')
   const [agent, setAgent] = useState<string | null>(params.agent ?? null)
@@ -91,28 +108,33 @@ export default function ActivityScreen() {
 
   return (
     <Screen onRefresh={reload} refreshing={loading && !!data}>
-      <MoneyHeader capability={AGENT_CREDIT}>Activity</MoneyHeader>
-      <Headline>{month === 'this' ? 'This month' : 'Last month'}</Headline>
+      <Back home="/" />
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+        <Headline>Activity</Headline>
+        <MoneyLabel capability={AGENT_CREDIT} />
+      </View>
+      <Body muted>
+        {month === 'this' ? 'This month' : 'Last month'}: {monthName(period.from)}
+      </Body>
       <Pills label="Period" options={[['this', 'This month'], ['last', 'Last month']] as const} value={month} onChange={setMonth} />
       <Pills label="Agent" options={[[null, 'Every agent'], ...agents.map((a): [string, string] => [a.id, a.name])]} value={agent} onChange={setAgent} />
       <Pills label="Kind of line" options={ACTIVITY_KINDS.map((k, i): [number, string] => [i, k.label])} value={kindAt} onChange={setKindAt} />
       <Field label="Search" placeholder="Search" maxLength={200} value={q} onChangeText={setQ} />
       <LoadState loading={loading && !data} error={error} />
       {data && lines.length === 0 ? <Body muted>{data.lines.length > 0 ? 'No line matches.' : month === 'this' ? 'No money moved this month.' : 'No money moved last month.'}</Body> : null}
-      {lines.map((l) => (
-        <Card key={l.posting_id}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12 }}>
-            <Body style={{ flex: 1 }}>{l.label || l.memo || `${l.kind} · ${l.counterparty}`}</Body>
-            <Figure tone={l.amount_ulxc < 0 ? c.ink : c.positive}>
-              {l.amount_ulxc > 0 ? '+' : ''}
-              {formatLXC(l.amount_ulxc, peg)}
-            </Figure>
-          </View>
-          <Body muted>
-            {accountName(l.account)} · {new Date(l.at).toLocaleString()}
-          </Body>
+      {lines.length > 0 ? (
+        <Card>
+          {lines.map((l, i) => (
+            <Row
+              key={l.posting_id}
+              first={i === 0}
+              title={l.label || l.memo || `${l.kind} · ${l.counterparty}`}
+              sub={`${accountName(l.account)} · ${when(l.at)}`}
+              right={<Amount micros={l.amount_ulxc} peg={peg} />}
+            />
+          ))}
         </Card>
-      ))}
+      ) : null}
 
       <Eyebrow>Download</Eyebrow>
       <Card>

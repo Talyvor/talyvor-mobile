@@ -35,3 +35,18 @@ export function filterLines(lines: readonly StatementLine[], f: { agent: string 
     .filter((l) => q === '' || [l.label, l.memo, l.counterparty, l.kind].some((w) => w?.toLowerCase().includes(q)))
     .sort((a, b) => b.at.localeCompare(a.at))
 }
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+/** When a line moved, as Pocket's statement writes it, on the phone's clock: "Today, 10:24", "Yesterday, 11:12", "21 Oct, 16:12". */
+export function when(at: string, now = new Date()): string {
+  const d = new Date(at)
+  const clock = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  const days = Math.round((new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() - new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()) / 86_400_000)
+  if (days === 0) return `Today, ${clock}`
+  if (days === 1) return `Yesterday, ${clock}`
+  return `${d.getDate()} ${MONTHS[d.getMonth()]}, ${clock}`
+}
+
+/** The month a period reads, by name: "November". */
+export const monthName = (from: string) => new Date(`${from}T00:00:00Z`).toLocaleString('en-GB', { month: 'long', timeZone: 'UTC' })

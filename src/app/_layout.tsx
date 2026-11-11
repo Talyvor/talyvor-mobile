@@ -38,8 +38,8 @@ function Navigator() {
           <Stack.Screen name="notices/[id]" options={{ headerShown: true, title: 'Payment' }} />
           <Stack.Screen name="bills" options={{ headerShown: true, title: 'Bills due' }} />
           <Stack.Screen name="pause-all" options={{ headerShown: true, title: 'Pause agents' }} />
-          <Stack.Screen name="settings" options={{ headerShown: true, title: 'Settings' }} />
-          <Stack.Screen name="activity" options={{ headerShown: true, title: 'Activity' }} />
+          <Stack.Screen name="settings" />
+          <Stack.Screen name="activity" />
           <Stack.Screen name="widget" />
         </Stack.Protected>
         <Stack.Protected guard={!signedIn}>

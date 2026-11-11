@@ -1,10 +1,12 @@
 import { BffError } from '@talyvor/bff-client'
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, type TextInputProps, type TextStyle } from 'react-native'
+import { router, type Href } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { useSession } from '../session'
 import { fonts, useTheme } from '../theme'
+import { Icon } from './icon'
 
 /** Loads once and on reload (pull-to-refresh, or after a change); a 401 means the session ended, so it signs out. */
 export function useLoad<T>(load: () => Promise<T>) {
@@ -52,6 +54,24 @@ export function Screen({ children, onRefresh, refreshing = false }: { children: 
 export function Eyebrow({ children }: { children: ReactNode }) {
   const { c } = useTheme()
   return <Text style={[styles.eyebrow, { color: c.ink3 }]}>{children}</Text>
+}
+
+/** A pushed screen's way back: to the screen behind it, or to `home` when it was opened from a link with nothing behind. */
+export function Back({ home }: { home: Href }) {
+  const { c } = useTheme()
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Back"
+      hitSlop={10}
+      onPress={() => (router.canGoBack() ? router.back() : router.replace(home))}
+      style={{ flexDirection: 'row', alignItems: 'center', gap: 2, alignSelf: 'flex-start' }}>
+      <View style={{ transform: [{ scaleX: -1 }] }}>
+        <Icon name="chev" size={16} color={c.ink2} />
+      </View>
+      <Text style={{ fontFamily: fonts.uiMedium, fontSize: 15, color: c.ink2 }}>Back</Text>
+    </Pressable>
+  )
 }
 
 /** A screen's headline, in the display face: one per screen. */
