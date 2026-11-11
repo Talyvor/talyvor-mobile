@@ -77,6 +77,8 @@ function mockLens() {
         lens.approvalApproved = true
         return json({})
       }
+      case 'GET /api/agents/keys/enrolments':
+        return json({ enrolments: [{ id: 'enr_1', kind: 'passkey', name: 'Chrome on Mac', code: '042917', status: 'waiting', created_at: '2026-10-24T08:00:00Z', expires_at: '2026-10-24T08:10:00Z' }] })
       case 'GET /api/money/payees':
         return json({ payees: [{ id: 'py_1', name: 'Acme Hosting', country: 'GB', needs_confirmation: false, created_at: '2026-10-01T00:00:00Z' }] })
       case 'GET /api/money/payments':
@@ -158,6 +160,17 @@ test('without this phone\'s key, Approve on a held payment sends nothing and ask
   const sent = (globalThis.fetch as jest.Mock).mock.calls.map(([url, init]) => `${init?.method ?? 'GET'} ${url}`)
   expect(sent.filter((r: string) => /\/approvals\/apr_1\/(approve|challenge)/.test(r))).toEqual([])
   expect(lens.approvalApproved).toBeFalsy()
+})
+
+// B55.4: Lens (B55.1) pushes the workspace's phones when a key asks to join it; tapping it opens Approvals, where the
+// browser waits with its code.
+test('a key_enrolment notification opens Approvals, where the waiting browser shows with its code', async () => {
+  mockLens()
+  tap({ type: 'key_enrolment', enrolment_id: 'enr_1', workspace_id: 'ws_1' })
+  await renderRouter('./src/app', { initialUrl: '/statement' })
+
+  expect(await screen.findByText('A browser asks to approve payments too. Let it in only if you are adding it now and its code is 042917.')).toBeTruthy()
+  expect(screen.getByText('Let it approve')).toBeTruthy()
 })
 
 test('talyvor://approve/<id> opens the same card', async () => {

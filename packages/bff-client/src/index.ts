@@ -148,6 +148,21 @@ export interface OutsidePaymentRequest {
   idempotency_key: string
 }
 
+/** Lens economy.KeyEnrolment (B55.1): a key registered unsigned in a workspace that has one, waiting for a key the workspace
+ * has to let it in. `code` is the six digits both devices show. */
+export interface KeyEnrolment {
+  id: string
+  /** passkey | device */
+  kind: string
+  name: string
+  platform?: string
+  code: string
+  /** waiting | approved | declined | expired */
+  status: string
+  created_at: string
+  expires_at: string
+}
+
 /** A device key's signature, where Lens takes an approval's, a mandate's or a payment's assertion (B40.4). */
 export interface DeviceAssertion {
   device_id: string
@@ -384,9 +399,19 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     devices: () => call<{ devices: DeviceKey[] | null }>('GET', '/api/money/devices'),
     /** The single-use challenge a new device key signs and binds its attestation to. */
     deviceChallenge: () => call<{ challenge: string }>('POST', '/api/money/devices/challenge'),
-    /** Keeps this phone's key as the person's; every byte string is base64url. */
+    /** Keeps this phone's key as the person's; every byte string is base64url. In a workspace that has a key, Lens keeps it
+     * waiting instead (202) until a key the workspace has lets it in (B55.1). */
     registerDevice: (body: { platform: string; name: string; public_key: string; challenge: string; signature: string; attestation: string }) =>
-      call<DeviceKey>('POST', '/api/money/devices', body),
+      call<DeviceKey | { enrolment: Pick<KeyEnrolment, 'id' | 'code' | 'expires_at'> }>('POST', '/api/money/devices', body),
+    /** B55.4 — the keys waiting to join the workspace, and letting one in or turning it away (Lens B55.1, BFF B55.3). */
+    enrolments: () => call<{ enrolments: KeyEnrolment[] | null }>('GET', '/api/agents/keys/enrolments'),
+    /** One enrolment, whatever its status. */
+    enrolment: (id: string) => call<KeyEnrolment>('GET', `/api/agents/keys/enrolments/${e(id)}`),
+    /** The challenge letting enrolment `id` in is signed over. */
+    enrolmentChallenge: (id: string) => call<{ challenge: string }>('POST', `/api/agents/keys/enrolments/${e(id)}/challenge`),
+    approveEnrolment: (id: string, assertion: DeviceAssertion) => call<KeyEnrolment>('POST', `/api/agents/keys/enrolments/${e(id)}/approve`, { assertion }),
+    /** It can never be let in after. */
+    declineEnrolment: (id: string) => call<KeyEnrolment>('POST', `/api/agents/keys/enrolments/${e(id)}/decline`),
     /** Revokes one device key: Lens refuses its signatures from then on, and never revokes the workspace's last key or
      * one that owns an agent's account (409, B55.15). */
     revokeDevice: (id: string) => call<DeviceKey>('POST', `/api/money/devices/${e(id)}/revoke`),

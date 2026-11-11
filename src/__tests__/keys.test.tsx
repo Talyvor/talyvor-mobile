@@ -250,6 +250,62 @@ test("Use this phone moves the key only after the confirm, and Keep it leaves th
   expect(mockStore.get('talyvor.device-workspace-name')).toBe('Beta')
 })
 
+/** B55.4 — Lens in a workspace that already has a key: the phone's key waits as enr_1, code 123456, until `lens.status`
+ * moves on. Let in, Lens lists it as dev_2 beside the workspace's older keys. */
+function mockWaitingLens() {
+  const lens = { status: 'waiting', polls: 0 }
+  globalThis.fetch = jest.fn(async (url: string, init: RequestInit = {}) => {
+    const route = `${init.method ?? 'GET'} ${url.replace('https://bff.test', '')}`
+    const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status })
+    const device = (id: string, created_at: string) => ({ id, platform: 'ios', name: 'iPhone', person: 'owner@acme.test', created_at })
+    if (route === 'GET /auth/me') return json({ workspace_id: 'ws_1' })
+    if (route === 'GET /api/workspace/name') return json({ id: 'ws_1', name: 'Acme' })
+    if (route === 'POST /api/money/devices/challenge') return json({ challenge: 'ch_register' })
+    if (route === 'POST /api/money/devices') return json({ enrolment: { id: 'enr_1', code: '123456', expires_at: '2026-11-10T10:10:00.123456789Z' } }, 202)
+    if (route === 'GET /api/agents/keys/enrolments/enr_1') {
+      lens.polls++
+      return json({ id: 'enr_1', kind: 'device', name: 'iPhone', platform: 'ios', code: '123456', status: lens.status, created_at: '2026-11-10T10:00:00.123456789Z', expires_at: '2026-11-10T10:10:00.123456789Z' })
+    }
+    if (route === 'GET /api/money/devices')
+      return json({ devices: [device('dev_1', '2026-10-23T16:00:00Z'), ...(lens.status === 'approved' ? [device('dev_2', '2026-11-10T10:01:00.5Z')] : [])] })
+    if (route === 'GET /api/agents') return json({ workspace_balance_ulxc: 0, allocated_ulxc: 0, unallocated_ulxc: 0, spent_ulxc: 0, agents: [] })
+    if (route === 'GET /api/agents/approvals') return json({ approvals: [] })
+    return json({ error: 'no' }, 404)
+  }) as unknown as typeof fetch
+  return lens
+}
+
+const waitingText = 'Waiting for the web. In Talyvor on the web, let this phone in from Approvals. The code there should be 123456.'
+
+test('in a workspace that has a passkey, Turn on shows the code and keeps the device id only once the web lets the phone in', async () => {
+  const lens = mockWaitingLens()
+  await renderRouter('./src/app', { initialUrl: '/approvals' })
+  await fireEvent.press(await screen.findByText('Turn on'))
+  expect(await screen.findByText(waitingText)).toBeTruthy()
+  await waitFor(() => expect(lens.polls).toBeGreaterThan(0), { timeout: 5000 })
+  expect(mockStore.get('talyvor.device-key')).toBeUndefined()
+  expect(mockPhone.keys.size).toBe(1)
+
+  lens.status = 'approved'
+  expect(await screen.findByText(/^On\. This phone signs your approvals/, {}, { timeout: 5000 })).toBeTruthy()
+  expect(mockStore.get('talyvor.device-key')).toBe('dev_2')
+  expect(mockStore.get('talyvor.device-workspace')).toBe('ws_1')
+  expect(mockPhone.keys.size).toBe(1)
+})
+
+test('when the web turns the phone away, its key is deleted from the chip and nothing changed', async () => {
+  const lens = mockWaitingLens()
+  await renderRouter('./src/app', { initialUrl: '/approvals' })
+  await fireEvent.press(await screen.findByText('Turn on'))
+  expect(await screen.findByText(waitingText)).toBeTruthy()
+
+  lens.status = 'declined'
+  expect(await screen.findByText('This phone was not added. Nothing changed.', {}, { timeout: 5000 })).toBeTruthy()
+  expect(mockPhone.keys.size).toBe(0)
+  expect(mockStore.get('talyvor.device-key')).toBeUndefined()
+  expect(screen.getByText('Turn on')).toBeTruthy()
+})
+
 // B55.17 — Turn off revokes the phone's key in Lens first, and deletes it from the phone only once Lens has.
 /** mockLens for ws_1, whose revoke answers `status` with `error`; each revoke is kept with whether the phone still held
  * its key when Lens was asked. */

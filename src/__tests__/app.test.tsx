@@ -58,6 +58,7 @@ function mockBff(
     requests?: { id: string }[]
     refuseSigned?: boolean
     sessionEnded?: boolean
+    enrolments?: { id: string }[]
     labels?: 'live' | 'sandbox' | 'unread'
     usdPerLXC?: number
   } = {},
@@ -68,7 +69,20 @@ function mockBff(
     { id: 'ag_1', name: 'Researcher', balance_ulxc: 12_500_000, spent_ulxc: 0, created_at: '2026-10-01T00:00:00Z', paused_at: pausedAt },
     { id: 'ag_2', name: 'Buyer', balance_ulxc: 3_000_000, spent_ulxc: 0, created_at: '2026-10-01T00:00:00Z' },
   ]
+  let enrolments = start.enrolments ?? []
   const routes: Partial<Record<string, (body?: string) => unknown>> = {
+    // B55.4 — keys waiting to join (Lens B55.1): letting one in takes a phone key's signature over its own challenge.
+    'GET /api/agents/keys/enrolments': () => ({ enrolments }),
+    ...Object.fromEntries(enrolments.map((en) => [`POST /api/agents/keys/enrolments/${en.id}/challenge`, () => ({ challenge: `ch_${en.id}`, allow_credentials: [] })])),
+    ...Object.fromEntries(enrolments.map((en) => [`POST /api/agents/keys/enrolments/${en.id}/approve`, (body?: string) => {
+      if (JSON.parse(body ?? '{}').assertion?.challenge !== `ch_${en.id}`) return new Response(JSON.stringify({ error: 'economy: a passkey assertion is required' }), { status: 403 })
+      enrolments = enrolments.filter((x) => x.id !== en.id)
+      return { ...en, status: 'approved' }
+    }])),
+    ...Object.fromEntries(enrolments.map((en) => [`POST /api/agents/keys/enrolments/${en.id}/decline`, () => {
+      enrolments = enrolments.filter((x) => x.id !== en.id)
+      return { ...en, status: 'declined' }
+    }])),
     'POST /auth/mobile/session': () => ({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }),
     'GET /auth/me': () => ({ workspace_id: 'ws_1' }),
     'GET /api/agents': () => ({
@@ -663,6 +677,42 @@ describe('B55.11 prepared payments on Home and Approvals', () => {
     const text = allText()
     expect(text).not.toMatch(/\(|\)|R-APPROVE|mandate/i)
     expect(text).not.toContain('not_paid')
+  })
+})
+
+describe('B55.4 a browser waiting to approve payments too', () => {
+  const enrolment = { id: 'enr_1', kind: 'passkey', name: 'Chrome on Mac', code: '042917', status: 'waiting', created_at: '2026-11-10T10:00:00Z', expires_at: '2026-11-10T10:10:00Z' }
+  const asks = 'A browser asks to approve payments too. Let it in only if you are adding it now and its code is 042917.'
+  const decisions = (calls: ReturnType<typeof mockBff>) => calls.filter((c) => c.method === 'POST' && c.path.startsWith('/api/agents/keys/enrolments/'))
+  beforeEach(() => {
+    mockStore.clear()
+    mockStore.set('talyvor.session', JSON.stringify({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }))
+    mockStore.set('talyvor.device-key', 'dev_1')
+    mockStore.set('talyvor.device-workspace', 'ws_1')
+    mockPhone.face = true
+    mockPhone.reasons = []
+  })
+
+  test('Let it approve signs the enrolment challenge with Face ID and posts the assertion', async () => {
+    const calls = mockBff({ enrolments: [enrolment] })
+    await renderRouter('./src/app', { initialUrl: '/approvals' })
+    expect(await screen.findByText(asks)).toBeTruthy()
+    await fireEvent.press(screen.getByText('Let it approve'))
+
+    await waitFor(() => expect(screen.queryByText(asks)).toBeNull())
+    expect(decisions(calls).map((c) => c.path)).toEqual(['/api/agents/keys/enrolments/enr_1/challenge', '/api/agents/keys/enrolments/enr_1/approve'])
+    expect(JSON.parse(decisions(calls)[1].body!)).toEqual({ assertion: { device_id: 'dev_1', challenge: 'ch_enr_1', signature: 'signed:talyvor-device-v1:ch_enr_1' } })
+    expect(mockPhone.reasons).toEqual(['Let a browser approve payments'])
+  })
+
+  test('Not this one turns it away, signing nothing', async () => {
+    const calls = mockBff({ enrolments: [enrolment] })
+    await renderRouter('./src/app', { initialUrl: '/approvals' })
+    await fireEvent.press(await screen.findByText('Not this one'))
+
+    await waitFor(() => expect(screen.queryByText(asks)).toBeNull())
+    expect(decisions(calls).map((c) => c.path)).toEqual(['/api/agents/keys/enrolments/enr_1/decline'])
+    expect(mockPhone.reasons).toEqual([])
   })
 })
 

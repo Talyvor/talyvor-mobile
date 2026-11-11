@@ -1,8 +1,9 @@
 import { formatLXC } from '@talyvor/bff-client'
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { View } from 'react-native'
 
 import { ApprovalCard } from '@/components/approval-card'
+import { KeyEnrolmentCards } from '@/components/key-enrolment-cards'
 import { approvalCapability } from '@/components/money-label'
 import { PhoneKeyCard } from '@/components/phone-key-card'
 import { PreparedPaymentCard, pendingPrepared } from '@/components/prepared-payment-card'
@@ -20,6 +21,7 @@ export default function Approvals() {
     return { agents: book.agents ?? [], approvals: approvals.approvals ?? [], prepared }
   }, [client])
   const { data, error, loading, reload } = useLoad(load)
+  const [keysWaiting, setKeysWaiting] = useState(0)
   const nameOf = (id: string) => data?.agents.find((a) => a.id === id)?.name ?? id
   const pending = (data?.approvals ?? []).filter((a) => a.status === 'pending')
   const decided = (data?.approvals ?? []).filter((a) => a.status !== 'pending')
@@ -32,7 +34,8 @@ export default function Approvals() {
       <Eyebrow>Approvals</Eyebrow>
       <Headline>What your agents asked for</Headline>
       <LoadState loading={loading && !data} error={error} />
-      {data && pending.length === 0 && data.prepared.length === 0 ? <Body muted>Nothing is waiting for you.</Body> : null}
+      <KeyEnrolmentCards onWaiting={setKeysWaiting} />
+      {data && pending.length === 0 && data.prepared.length === 0 && !keysWaiting ? <Body muted>Nothing is waiting for you.</Body> : null}
       {data?.prepared.map((r) => (
         <PreparedPaymentCard key={r.id} request={r} />
       ))}
