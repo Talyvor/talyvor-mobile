@@ -93,6 +93,9 @@ function mockLens(heard: string, labels?: 'live' | 'sandbox' | 'unread') {
     switch (route) {
       case 'GET /auth/me':
         return json({ workspace_id: 'ws_1' })
+      // B59.3: Chat is there only for a workspace the operator switched it on for (Lens B59.1).
+      case 'GET /api/workspace/areas':
+        return json({ areas: ['chat'] })
       case 'POST /api/chat/voice/transcriptions':
         lens.uploads++
         return json({ text: (body as FormData).get('file') ? heard : '' })

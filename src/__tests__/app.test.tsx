@@ -61,6 +61,7 @@ function mockBff(
     enrolments?: { id: string }[]
     labels?: 'live' | 'sandbox' | 'unread'
     usdPerLXC?: number
+    areas?: string[]
   } = {},
 ) {
   const calls: { method: string; path: string; auth: string | undefined; body?: string; key?: string }[] = []
@@ -136,6 +137,8 @@ function mockBff(
     'GET /api/money/payment-requests?status=pending_approval': () => ({ requests: start.requests ?? [] }),
     ...Object.fromEntries((start.requests ?? []).map((r) => [`GET /api/money/payment-requests/${r.id}`, () => r])),
     ...Object.fromEntries((start.requests ?? []).map((r) => [`POST /api/money/payment-requests/${r.id}/cancel`, () => ({ ...r, status: 'cancelled' })])),
+    // B59.3: the areas the operator switched on for this workspace (Lens B59.1); a default workspace has none.
+    ...(start.areas ? { 'GET /api/workspace/areas': () => ({ areas: start.areas }) } : {}),
     ...(start.usdPerLXC ? { 'GET /api/lxc/topup-options': () => ({ usd_per_lxc: start.usdPerLXC, min_usd_cents: 1000 }) } : {}),
     'POST /api/agents/ag_1/pause': () => {
       pausedAt = '2026-10-17T09:00:00Z'
@@ -789,10 +792,10 @@ describe('B57.65 the tab bar', () => {
     mockBff()
     await renderRouter('./src/app', { initialUrl: '/' })
     await screen.findByText('1 waiting for you')
-    for (const icon of ['home', 'chat', 'approvals', 'spending', 'statements', 'payments']) expect(screen.getAllByTestId(`icon-${icon}`, { includeHiddenElements: true }).length).toBeGreaterThan(0)
-    for (const word of ['Home', 'Chat', 'Approvals', 'Spending', 'Statement', 'Pay']) expect(screen.getAllByText(word).length).toBeGreaterThan(0)
+    for (const icon of ['home', 'approvals', 'spending', 'statements', 'payments']) expect(screen.getAllByTestId(`icon-${icon}`, { includeHiddenElements: true }).length).toBeGreaterThan(0)
+    for (const word of ['Home', 'Approvals', 'Spending', 'Statement', 'Pay']) expect(screen.getAllByText(word).length).toBeGreaterThan(0)
     // Every tab, pressed, is the one you are on: none leads nowhere. Chat's own test opens Chat, with its recorder
-    // stood in for; B59.3 takes the tab away for a workspace without it.
+    // stood in for, in a workspace that has it (B59.3).
     for (const name of ['Approvals', 'Spending', 'Statement', 'Pay', 'Home']) {
       const label = name === 'Approvals' ? 'Approvals, 1 waiting' : name
       await fireEvent.press(screen.getByRole('button', { name: label }))
@@ -816,4 +819,32 @@ describe('B57.65 the tab bar', () => {
     await waitFor(() => expect(badges()).toEqual([]))
     expect(screen.getByLabelText('Approvals')).toBeTruthy()
   })
+})
+
+describe('B59.3 a hidden area is not there', () => {
+  beforeEach(() => {
+    mockStore.clear()
+    mockStore.set('talyvor.session', JSON.stringify({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }))
+  })
+  const chatTab = () => [...screen.queryAllByTestId('icon-chat', { includeHiddenElements: true }), ...screen.queryAllByText('Chat', { includeHiddenElements: true })]
+
+  test('a default workspace has no Chat tab, and a link to Chat opens Home', async () => {
+    mockBff({ areas: [] })
+    await renderRouter('./src/app', { initialUrl: '/' })
+    await screen.findByText('1 waiting for you')
+    expect(chatTab()).toHaveLength(0)
+
+    await renderRouter('./src/app', { initialUrl: '/chat' })
+    expect(await screen.findByText('1 waiting for you')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Home', selected: true })).toBeTruthy()
+    expect(chatTab()).toHaveLength(0)
+  })
+
+  test('a workspace whose areas cannot be read has no Chat tab either', async () => {
+    mockBff()
+    await renderRouter('./src/app', { initialUrl: '/' })
+    await screen.findByText('1 waiting for you')
+    expect(chatTab()).toHaveLength(0)
+  })
+
 })
