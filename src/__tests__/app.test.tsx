@@ -1,7 +1,8 @@
 import { labelOf } from '@talyvor/bff-client'
 import { render } from '@testing-library/react-native'
-import { fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library'
+import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library'
 import * as compose from '@expo/ui/jetpack-compose'
+import * as Notifications from 'expo-notifications'
 import * as modifiers from '@expo/ui/jetpack-compose/modifiers'
 import { isValidElement, type ReactNode } from 'react'
 import { Fragment, jsx, jsxs } from 'react/jsx-runtime'
@@ -59,6 +60,7 @@ function mockBff(
     sessionEnded?: boolean
     enrolments?: { id: string }[]
     labels?: 'live' | 'sandbox' | 'unread'
+    usdPerLXC?: number
   } = {},
 ) {
   const calls: { method: string; path: string; auth: string | undefined; body?: string; key?: string }[] = []
@@ -134,6 +136,7 @@ function mockBff(
     'GET /api/money/payment-requests?status=pending_approval': () => ({ requests: start.requests ?? [] }),
     ...Object.fromEntries((start.requests ?? []).map((r) => [`GET /api/money/payment-requests/${r.id}`, () => r])),
     ...Object.fromEntries((start.requests ?? []).map((r) => [`POST /api/money/payment-requests/${r.id}/cancel`, () => ({ ...r, status: 'cancelled' })])),
+    ...(start.usdPerLXC ? { 'GET /api/lxc/topup-options': () => ({ usd_per_lxc: start.usdPerLXC, min_usd_cents: 1000 }) } : {}),
     'POST /api/agents/ag_1/pause': () => {
       pausedAt = '2026-10-17T09:00:00Z'
       return agents()[0]
@@ -240,6 +243,29 @@ describe('B55.8 expired approvals', () => {
   })
 })
 
+describe('B55.27 money dollars first', () => {
+  beforeEach(() => {
+    mockStore.clear()
+    mockStore.set('talyvor.session', JSON.stringify({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }))
+  })
+
+  test('Home writes dollars first beside LXC by the peg', async () => {
+    mockBff({ usdPerLXC: 0.1 })
+    await renderRouter('./src/app', { initialUrl: '/' })
+    expect(await screen.findByLabelText('$1.80 (18 LXC)')).toBeTruthy() // 20 LXC less the 2 LXC waiting, at $0.10 an LXC
+    expect(screen.getByLabelText('$1.25 (12.5 LXC)')).toBeTruthy()
+    expect(screen.getByText('$0.20 (2 LXC)')).toBeTruthy()
+  })
+
+  test('Home writes LXC alone when the peg cannot be read', async () => {
+    const calls = mockBff()
+    await renderRouter('./src/app', { initialUrl: '/' })
+    expect(await screen.findByText('18 LXC')).toBeTruthy()
+    await waitFor(() => expect(calls.some((c) => c.path === '/api/lxc/topup-options')).toBe(true))
+    expect(screen.queryByText(/\$/)).toBeNull()
+  })
+})
+
 describe('B41.35 home-screen widget', () => {
   beforeEach(() => {
     mockStore.clear()
@@ -306,7 +332,7 @@ describe('B41.35 home-screen widget', () => {
     const calls = mockBff()
     await renderRouter('./src/app', { initialUrl: '/payees/py_1' })
     await fireEvent.press(await screen.findByText('Pin to widget'))
-    await waitFor(() => expect(lastSnapshot()?.payees).toEqual([{ id: 'py_1', name: 'Acme Hosting', last: '25.00 GBP on 3 Oct', openUrl: 'talyvor://payees/py_1' }]))
+    await waitFor(() => expect(lastSnapshot()?.payees).toEqual([{ id: 'py_1', name: 'Acme Hosting', last: '£25.00 on 3 Oct', openUrl: 'talyvor://payees/py_1' }]))
     const pay = draw().buttons.find((b) => b.label === 'Pay')!
     expect(pay.target).toBe('talyvor://payees/py_1')
 
@@ -320,7 +346,7 @@ describe('B41.35 home-screen widget', () => {
     await fireEvent.changeText(screen.getByLabelText('Reference'), 'October')
     await fireEvent.press(screen.getByRole('button', { name: 'Pay' }))
     await fireEvent.press(await screen.findByRole('button', { name: 'Pay with Face ID' }))
-    expect(await screen.findByText('12.50 GBP to Acme Hosting is on its way.')).toBeTruthy()
+    expect(await screen.findByText('£12.50 to Acme Hosting is on its way.')).toBeTruthy()
     const sent = calls.filter((c) => c.method === 'POST' && c.path === '/api/money/payments')
     expect(sent).toHaveLength(1)
     expect(JSON.parse(sent[0].body!)).toEqual({
@@ -461,7 +487,7 @@ describe('B55.25 a payment from the phone confirms with Face ID', () => {
   test('Pay sends nothing; a cancelled check sends nothing; a passing check posts once with its idempotency key', async () => {
     const calls = mockBff()
     await typePayment('py_1')
-    expect(await screen.findByText('Pay Acme Hosting 12.50 GBP?')).toBeTruthy()
+    expect(await screen.findByText('Pay Acme Hosting £12.50?')).toBeTruthy()
     expect(screen.getAllByText('The company · GBP')).toHaveLength(2) // the From button and the confirm step
     expect(screen.getByText('October')).toBeTruthy()
     expect(posted(calls)).toHaveLength(0)
@@ -469,12 +495,12 @@ describe('B55.25 a payment from the phone confirms with Face ID', () => {
     mockPhone.face = false
     await fireEvent.press(screen.getByRole('button', { name: 'Pay with Face ID' }))
     expect(await screen.findByText('Nothing was paid.')).toBeTruthy()
-    expect(mockPhone.reasons).toEqual(['Pay Acme Hosting 12.50 GBP'])
+    expect(mockPhone.reasons).toEqual(['Pay Acme Hosting £12.50'])
     expect(posted(calls)).toHaveLength(0)
 
     mockPhone.face = true
     await fireEvent.press(screen.getByRole('button', { name: 'Pay with Face ID' }))
-    expect(await screen.findByText('12.50 GBP to Acme Hosting is on its way.')).toBeTruthy()
+    expect(await screen.findByText('£12.50 to Acme Hosting is on its way.')).toBeTruthy()
     expect(posted(calls)).toHaveLength(1)
     expect(JSON.parse(posted(calls)[0].body!).idempotency_key).toMatch(/^uuid-\d+$/)
   })
@@ -483,7 +509,7 @@ describe('B55.25 a payment from the phone confirms with Face ID', () => {
     const calls = mockBff()
     await typePayment('py_1')
     await fireEvent.press(await screen.findByRole('button', { name: 'Pay with Face ID' }))
-    expect(await screen.findByText('12.50 GBP to Acme Hosting is on its way.')).toBeTruthy()
+    expect(await screen.findByText('£12.50 to Acme Hosting is on its way.')).toBeTruthy()
     expect(challenged(calls)).toHaveLength(1)
     const { assertion, ...payment } = JSON.parse(posted(calls)[0].body!)
     expect(JSON.parse(challenged(calls)[0].body!)).toEqual(payment)
@@ -534,7 +560,7 @@ describe('B55.25 a payment from the phone confirms with Face ID', () => {
     const calls = mockBff()
     await typePayment('py_1')
     await fireEvent.press(await screen.findByRole('button', { name: 'Cancel' }))
-    await waitFor(() => expect(screen.queryByText('Pay Acme Hosting 12.50 GBP?')).toBeNull())
+    await waitFor(() => expect(screen.queryByText('Pay Acme Hosting £12.50?')).toBeNull())
     expect(mockPhone.reasons).toEqual([])
     expect(posted(calls)).toHaveLength(0)
   })
@@ -552,7 +578,7 @@ describe('B55.25 a payment from the phone confirms with Face ID', () => {
   test('a first payment needs both answers, and a Yes also the box', async () => {
     const calls = mockBff()
     await typePayment('py_2')
-    expect(await screen.findByText('Pay Kite Accounting 12.50 GBP?')).toBeTruthy()
+    expect(await screen.findByText('Pay Kite Accounting £12.50?')).toBeTruthy()
     const payWithFace = (disabled: boolean) => screen.getByRole('button', { name: 'Pay with Face ID', disabled })
     expect(payWithFace(true)).toBeTruthy()
 
@@ -579,13 +605,13 @@ describe('B55.25 a payment from the phone confirms with Face ID', () => {
     pay('completed')
     await typePayment('py_1')
     await fireEvent.press(await screen.findByRole('button', { name: 'Pay with Face ID' }))
-    expect(await screen.findByText('Paid Acme Hosting 12.50 GBP.')).toBeTruthy()
+    expect(await screen.findByText('Paid Acme Hosting £12.50.')).toBeTruthy()
 
     mockBff()
     pay('failed', 'the payee’s bank refused it')
     await typePayment('py_1')
     await fireEvent.press(await screen.findByRole('button', { name: 'Pay with Face ID' }))
-    expect(await screen.findByText('12.50 GBP to Acme Hosting was not paid: the payee’s bank refused it.')).toBeTruthy()
+    expect(await screen.findByText('£12.50 to Acme Hosting was not paid: the payee’s bank refused it.')).toBeTruthy()
   })
 })
 
@@ -605,7 +631,7 @@ describe('B55.11 prepared payments on Home and Approvals', () => {
     expect(screen.getByText('2 waiting for you')).toBeTruthy()
     const texts = screen.getAllByText(/./).map((t) => [t.props.children].flat().join(''))
     expect(texts.findIndex((t) => t.startsWith('Your assistant prepared'))).toBeLessThan(texts.findIndex((t) => t.startsWith('Buyer wants to pay')))
-    expect(screen.getByText('42.00 GBP')).toBeTruthy()
+    expect(screen.getByText('£42.00')).toBeTruthy()
 
     await renderRouter('./src/app', { initialUrl: '/approvals' })
     await fireEvent.press(await screen.findByText('Your assistant prepared a payment to Acme Hosting'))
@@ -747,5 +773,47 @@ describe('B56.12 labels on the phone', () => {
     )
     expect(await view.findByTestId('money-label-sandbox')).toBeTruthy()
     expect(paths).toEqual(['/api/pricing'])
+  })
+})
+
+describe('B57.65 the tab bar', () => {
+  beforeEach(() => {
+    mockStore.clear()
+    mockStore.set('talyvor.session', JSON.stringify({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }))
+  })
+  const preq = { id: 'preq_1', status: 'pending_approval', summary: '', client: 'mcp:claude-desktop', totals: { GBP: 4200 }, items: [], created_at: '2026-11-09T08:00:00Z' }
+  // The bar draws each tab's icon twice, on and off, and fades between them.
+  const badges = () => screen.queryAllByTestId('approvals-badge').map((b) => within(b).getByText(/\d/).props.children)
+
+  test('each tab has its icon over its word, and pressing it opens it', async () => {
+    mockBff()
+    await renderRouter('./src/app', { initialUrl: '/' })
+    await screen.findByText('1 waiting for you')
+    for (const icon of ['home', 'chat', 'approvals', 'spending', 'statements', 'payments']) expect(screen.getAllByTestId(`icon-${icon}`, { includeHiddenElements: true }).length).toBeGreaterThan(0)
+    for (const word of ['Home', 'Chat', 'Approvals', 'Spending', 'Statement', 'Pay']) expect(screen.getAllByText(word).length).toBeGreaterThan(0)
+    // Every tab, pressed, is the one you are on: none leads nowhere. Chat's own test opens Chat, with its recorder
+    // stood in for; B59.3 takes the tab away for a workspace without it.
+    for (const name of ['Approvals', 'Spending', 'Statement', 'Pay', 'Home']) {
+      const label = name === 'Approvals' ? 'Approvals, 1 waiting' : name
+      await fireEvent.press(screen.getByRole('button', { name: label }))
+      await waitFor(() => expect(screen.getByRole('button', { name: label, selected: true })).toBeTruthy())
+    }
+  })
+
+  test('the Approvals badge counts agents’ requests and prepared payments, and is gone at zero after a push', async () => {
+    const start = { approvals: undefined as unknown[] | undefined, requests: [preq] }
+    mockBff(start)
+    await renderRouter('./src/app', { initialUrl: '/' })
+    expect(await screen.findByText('2 waiting for you')).toBeTruthy()
+    await waitFor(() => expect(badges()).toEqual([2, 2]))
+    expect(screen.getByLabelText('Approvals, 2 waiting')).toBeTruthy()
+
+    // Both are decided elsewhere; the next push refreshes the badge, and at zero it is not drawn.
+    start.approvals = []
+    start.requests = []
+    const { __receive } = Notifications as unknown as { __receive: (d: Record<string, unknown>) => void }
+    __receive({ type: 'agent_approval', approval_id: 'apr_9' })
+    await waitFor(() => expect(badges()).toEqual([]))
+    expect(screen.getByLabelText('Approvals')).toBeTruthy()
   })
 })

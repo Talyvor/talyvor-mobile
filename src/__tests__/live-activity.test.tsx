@@ -38,12 +38,13 @@ test('a held payment stays on the lock screen until it is approved or declined',
       approvals: [{ id: 'apr_1', agent_id: 'ag_1', amount_ulxc: 2_000_000, model: '', payee: { kind: 'merchant', id: 'm_1', name: 'Bolt Couriers' }, status: lens.approval, created_at: '2026-10-24T08:00:00Z' }],
     }),
     book: async () => ({ agents: [{ id: 'ag_1', name: 'Research' }] }),
+    peg: async () => 0.1,
   } as unknown as BffClient
 
   await syncLiveActivities(client)
   expect(mockActivities.map((a) => [a.url, a.props.state, a.props.title, a.props.amount])).toEqual([
-    ['talyvor://approve/preq_1', 'waiting', 'Acme Hosting', '25.00 GBP'],
-    ['talyvor://approvals/apr_1', 'waiting', 'Bolt Couriers', '2 LXC'],
+    ['talyvor://approve/preq_1', 'waiting', 'Acme Hosting', '£25.00'],
+    ['talyvor://approvals/apr_1', 'waiting', 'Bolt Couriers', '$0.20 (2 LXC)'],
   ])
   expect(mockActivities[0].props.hint).toBe('Tap to approve with Face ID')
 
@@ -78,6 +79,7 @@ test('B55.8: an approval or request nobody answered in time ends Expired, and a 
     paymentRequest: async (id: string) => request(id, lens.requests[ids.indexOf(id)]),
     approvals: async () => ({ approvals: [{ id: 'apr_1', agent_id: 'ag_1', amount_ulxc: 2_000_000, model: 'gpt', status: lens.approval, created_at: '2026-10-24T08:00:00Z' }] }),
     book: async () => ({ agents: [{ id: 'ag_1', name: 'Research' }] }),
+    peg: async () => null,
   } as unknown as BffClient
 
   await syncLiveActivities(client)

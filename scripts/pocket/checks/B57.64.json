@@ -1,0 +1,4 @@
+[
+  { "route": "/", "screen": "p-home", "words": "report", "why": "B57.64 gives Home Pocket's look; its layout and words are B57.66's" },
+  { "route": "/", "screen": "p-home", "dark": true, "words": "report", "why": "the same, with the phone set to dark" }
+]

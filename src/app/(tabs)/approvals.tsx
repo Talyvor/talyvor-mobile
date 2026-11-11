@@ -1,5 +1,5 @@
-import { formatULXC } from '@talyvor/bff-client'
-import { useCallback, useState } from 'react'
+import { formatLXC } from '@talyvor/bff-client'
+import { useCallback, useEffect, useState } from 'react'
 import { View } from 'react-native'
 
 import { ApprovalCard } from '@/components/approval-card'
@@ -9,12 +9,13 @@ import { PhoneKeyCard } from '@/components/phone-key-card'
 import { PreparedPaymentCard, pendingPrepared } from '@/components/prepared-payment-card'
 import { Body, Card, Eyebrow, Figure, Headline, LoadState, Screen, useLoad } from '@/components/ui'
 import { useSession } from '@/session'
+import { setWaiting } from '@/waiting'
 
 const DECIDED: Record<string, string> = { approved: 'Approved', denied: 'Denied', used: 'Approved and spent', expired: 'Expired' }
 
 /** Every approval: payments prepared for you and agents' requests waiting first, then what was decided. */
 export default function Approvals() {
-  const { client } = useSession()
+  const { client, peg } = useSession()
   const load = useCallback(async () => {
     const [book, approvals, prepared] = await Promise.all([client.book(), client.approvals(), pendingPrepared(client)])
     return { agents: book.agents ?? [], approvals: approvals.approvals ?? [], prepared }
@@ -24,6 +25,9 @@ export default function Approvals() {
   const nameOf = (id: string) => data?.agents.find((a) => a.id === id)?.name ?? id
   const pending = (data?.approvals ?? []).filter((a) => a.status === 'pending')
   const decided = (data?.approvals ?? []).filter((a) => a.status !== 'pending')
+  useEffect(() => {
+    if (data) setWaiting(pending.length + data.prepared.length)
+  }, [data, pending.length])
 
   return (
     <Screen onRefresh={reload} refreshing={loading && !!data}>
@@ -43,7 +47,7 @@ export default function Approvals() {
         <Card key={a.id}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12 }}>
             <Body style={{ flex: 1 }}>{nameOf(a.agent_id)}</Body>
-            <Figure>{formatULXC(a.amount_ulxc)}</Figure>
+            <Figure>{formatLXC(a.amount_ulxc, peg)}</Figure>
           </View>
           <Body muted>
             {DECIDED[a.status] ?? 'Closed'} · {new Date(a.decided_at ?? a.created_at).toLocaleDateString()}

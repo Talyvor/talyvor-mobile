@@ -1,4 +1,4 @@
-import { BffError, formatULXC, refusalText, type AgentApproval } from '@talyvor/bff-client'
+import { BffError, formatLXC, refusalText, type AgentApproval } from '@talyvor/bff-client'
 import { useState } from 'react'
 import { View } from 'react-native'
 
@@ -22,7 +22,7 @@ export function ApprovalCard({
   capability: string
   onDecided: () => void
 }) {
-  const { client } = useSession()
+  const { client, peg } = useSession()
   const { c } = useTheme()
   const [busy, setBusy] = useState(false)
   const [refusal, setRefusal] = useState('')
@@ -39,7 +39,7 @@ export function ApprovalCard({
       if (decision === 'approve' && !key) throw new Error(`turn on approving with ${biometricName} on this phone first.`)
       if (decision === 'approve' && !key?.here) throw new Error(`approving with ${biometricName} is off for this workspace.`)
       const assertion = key?.here
-        ? await signWithThisPhone(client, (await client.approvalChallenge(approval.id)).challenge, `${decision === 'approve' ? 'Approve' : 'Deny'} ${formatULXC(approval.amount_ulxc)} for ${agentName}`)
+        ? await signWithThisPhone(client, (await client.approvalChallenge(approval.id)).challenge, `${decision === 'approve' ? 'Approve' : 'Deny'} ${formatLXC(approval.amount_ulxc, peg)} for ${agentName}`)
         : undefined
       await client[decision](approval.id, assertion)
       void syncLiveActivities(client)
@@ -57,7 +57,7 @@ export function ApprovalCard({
         <Body style={{ flex: 1 }}>
           {agentName} wants to {what.charAt(0).toLowerCase() + what.slice(1)}
         </Body>
-        <Figure>{formatULXC(approval.amount_ulxc)}</Figure>
+        <Figure>{formatLXC(approval.amount_ulxc, peg)}</Figure>
       </View>
       <MoneyLabel capability={capability} />
       {approval.reason ? <Body muted>“{approval.reason}”</Body> : null}

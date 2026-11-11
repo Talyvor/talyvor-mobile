@@ -1,4 +1,4 @@
-import { BffError, formatULXC, refusalText, type BffClient } from '@talyvor/bff-client'
+import { BffError, formatLXC, refusalText, type BffClient } from '@talyvor/bff-client'
 import * as Notifications from 'expo-notifications'
 import { router, type Href } from 'expo-router'
 import { useEffect, useRef } from 'react'
@@ -53,7 +53,7 @@ export async function approveAgentApproval(client: BffClient, data: Record<strin
     data.currency === 'LXC' && String(a.amount_ulxc) === String(data.amount_minor)
   if (!a || !same) throw new Error('what you were asked to sign is not what was shown, so nothing was signed')
   const agentName = String(data.agent_name || a.agent_id)
-  await client.approve(a.id, await signWithThisPhone(client, (await client.approvalChallenge(a.id)).challenge, `Approve ${formatULXC(a.amount_ulxc)} for ${agentName}`))
+  await client.approve(a.id, await signWithThisPhone(client, (await client.approvalChallenge(a.id)).challenge, `Approve ${formatLXC(a.amount_ulxc, await client.peg())} for ${agentName}`))
 }
 
 /** Gives Lens this phone's push token, once its approval key is on and the person allows notifications. */

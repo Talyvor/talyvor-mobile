@@ -16,6 +16,9 @@ export interface Agent {
   paused_reason?: string
   description?: string
   archived_at?: string
+  /** B57.10: the colour and face Lens picked from the id (or the owner chose); the phone draws them. */
+  colour?: string
+  face?: string
 }
 
 /** Lens economy.AgentBook: workspace = allocated + unallocated. */
@@ -344,7 +347,14 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     return (await (await send(method, path, body ? JSON.stringify(body) : undefined, headers)).json()) as T
   }
 
+  let usdPerLXC: number | null = null
+
   return {
+    /** USD per LXC, read once from the top-up options; null while Lens does not supply it or the read fails. */
+    peg: async () => {
+      if (usdPerLXC === null) usdPerLXC = (await call<{ usd_per_lxc?: number }>('GET', '/api/lxc/topup-options').catch(() => null))?.usd_per_lxc ?? null
+      return usdPerLXC
+    },
     /** Trades the identity provider's ID token, got in the system browser with PKCE, for a BFF session. */
     signIn: (idToken: string) => call<MobileSession>('POST', '/auth/mobile/session', { id_token: idToken }),
     /** Whose workspace this session is in. */
@@ -486,11 +496,20 @@ export function parseLXC(text: string): number | null {
   return micros > 0 && Number.isSafeInteger(micros) ? micros : null
 }
 
-/** 1250, GBP → `12.50 GBP`. */
+/** 45000, USD → `$450.00`; 1250, GBP → `£12.50`; USDC counts six decimals, so 1,500,000 → `1.50 USDC`. */
 export function formatMinor(minor: number, currency: string): string {
-  const sign = minor < 0 ? '-' : ''
-  const m = Math.abs(minor)
-  return `${sign}${Math.floor(m / 100)}.${String(m % 100).padStart(2, '0')} ${currency}`
+  if (currency === 'USDC') return `${(minor / 1_000_000).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 })} USDC`
+  return (minor / 100).toLocaleString('en-US', { style: 'currency', currency, minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+/** The one switch for every figure the phone draws in LXC: dollars first, or LXC first. */
+export const MONEY_ORDER: 'usd-first' | 'lxc-first' = 'usd-first'
+
+/** 900,000,000 µLXC at 0.1 USD per LXC → `$90.00 (900 LXC)`; `900 LXC` while the peg is unread. */
+export function formatLXC(micros: number, peg: number | null, order: typeof MONEY_ORDER = MONEY_ORDER): string {
+  if (!peg) return formatULXC(micros)
+  const usd = formatMinor(Math.round((micros * peg) / 10_000), 'USD')
+  return order === 'usd-first' ? `${usd} (${formatULXC(micros)})` : `${formatULXC(micros)} (${usd})`
 }
 
 /** `12.5` → 1250 minor units; null for anything that is not a positive amount with at most 2 decimals. */
@@ -508,10 +527,10 @@ export function safeToSpend(book: AgentBook, approvals: AgentApproval[]): number
 }
 
 /** The agent's rules as sentences a person reads; a zero limit or an empty list is no rule and says nothing. */
-export function rulesInWords(r: AgentRules): string[] {
+export function rulesInWords(r: AgentRules, peg: number | null = null): string[] {
   const out: string[] = []
   const limit = (micros: number | undefined, words: (amount: string) => string) => {
-    if (micros && micros > 0) out.push(words(formatULXC(micros)))
+    if (micros && micros > 0) out.push(words(formatLXC(micros, peg)))
   }
   limit(r.max_per_request_ulxc, (x) => `Spends at most ${x} on one request.`)
   limit(r.hourly_limit_ulxc, (x) => `Spends at most ${x} an hour.`)
