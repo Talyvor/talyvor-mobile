@@ -22,6 +22,8 @@ export function approvalHref(data: Record<string, unknown> | undefined): Href | 
   if (data?.type === 'agent_approval' && typeof data.approval_id === 'string') return { pathname: '/approvals/[id]', params: { id: data.approval_id } }
   // B55.4 — a key waiting to join the workspace (Lens B55.1) is let in or turned away from Approvals.
   if (data?.type === 'key_enrolment') return '/approvals'
+  // B55.55 — a recovery started without the code (Lens B55.48) is shown, and cancelled, on Home.
+  if (data?.type === 'key_recovery_started') return '/'
   return null
 }
 

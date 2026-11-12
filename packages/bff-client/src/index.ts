@@ -193,6 +193,19 @@ export interface DeviceKey {
   created_at: string
   last_used_at?: string
   revoked_at?: string
+  /** B55.55: answered once, with the workspace's first key (Lens B55.48). */
+  recovery_code?: string
+}
+
+/** B55.55 — a recovery started without the code (Lens economy.KeyRecovery): a key can be added from ready_at. */
+export interface KeyRecovery {
+  id: string
+  status: 'waiting' | 'cancelled' | 'completed' | 'expired'
+  created_at: string
+  ready_at: string
+  expires_at: string
+  /** started by the person asking, who alone adds its key */
+  mine: boolean
 }
 
 /** A payment to a saved payee, exactly as it is asked a challenge for and then sent. */
@@ -536,6 +549,10 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     approveEnrolment: (id: string, assertion: DeviceAssertion) => call<KeyEnrolment>('POST', `/api/agents/keys/enrolments/${e(id)}/approve`, { assertion }),
     /** It can never be let in after. */
     declineEnrolment: (id: string) => call<KeyEnrolment>('POST', `/api/agents/keys/enrolments/${e(id)}/decline`),
+    /** B55.55 — the recovery waiting in this workspace, or null, and cancelling it: Lens lets any owner or admin (B55.48,
+     * BFF B55.54). */
+    waitingRecovery: () => call<{ recovery: KeyRecovery | null }>('GET', '/api/agents/keys/recover'),
+    cancelRecovery: () => call<{ recovery: KeyRecovery }>('POST', '/api/agents/keys/recover/cancel'),
     /** Revokes one device key: Lens refuses its signatures from then on, and never revokes the workspace's last key or
      * one that owns an agent's account (409, B55.15). */
     revokeDevice: (id: string) => call<DeviceKey>('POST', `/api/money/devices/${e(id)}/revoke`),
