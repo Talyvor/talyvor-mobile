@@ -26,6 +26,11 @@ const approvals = [
     payee: { kind: 'outside', id: 'py_acme', name: 'Acme Hosting' },
     status: 'pending',
     created_at: '2026-10-22T08:17:00Z',
+    // B57.11: what pays it, the amount that made it ask and the month's budget left after (the reference's psheet-A).
+    expires_at: '2026-10-23T08:17:00Z',
+    paid_from: { kind: 'account', account_id: 'acc_research_usd', name: 'Research’s US dollar account', currency: 'USD', amount_minor: 34_000, balance_minor: 40_000 },
+    asks_above_ulxc: lxc(2_500),
+    budget_left_after_ulxc: lxc(4_200),
   },
   {
     id: 'apr_lead',
@@ -36,6 +41,10 @@ const approvals = [
     memo: 'One use of Lead finder (version 3), $90.00 (900 LXC) on your monthly marketplace bill',
     status: 'pending',
     created_at: '2026-10-22T07:41:00Z',
+    expires_at: '2026-10-23T07:41:00Z',
+    paid_from: { kind: 'marketplace_bill', account_id: '', name: 'Your monthly marketplace bill', currency: 'USD', amount_minor: 9_000, balance_minor: null },
+    asks_above_ulxc: lxc(500),
+    budget_left_after_ulxc: lxc(3_100),
   },
 ]
 
@@ -44,6 +53,14 @@ const sandbox = (capability, name) => ({ capability, name, class: 'GREEN', real_
 const ANSWERS = {
   '/api/agents': { workspace_balance_ulxc: lxc(124_800), allocated_ulxc: lxc(33_900), unallocated_ulxc: lxc(90_900), spent_ulxc: lxc(28_000), agents },
   '/api/agents/approvals': { approvals },
+  // B57.67: deciding in the approval sheet, signed with the shots' phone key (`phoneKey`).
+  ...Object.fromEntries(
+    approvals.flatMap(({ id }) => [
+      [`/api/agents/approvals/${id}/challenge`, { challenge: `ch_${id}` }],
+      [`/api/agents/approvals/${id}/approve`, {}],
+      [`/api/agents/approvals/${id}/deny`, {}],
+    ]),
+  ),
   // B57.135: Lens's public labels, which a signed-out screen (sign-up) reads for its Sandbox label.
   '/api/pricing': { labels: { payments_out: 'sandbox' } },
   // B57.126: Research's rules as the reference's agent page reads them, so its page loads in the shots.

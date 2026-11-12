@@ -91,6 +91,25 @@ export interface AgentApproval {
   created_at: string
   /** when it was approved or denied; on an expired one, set only if it was approved and then not used */
   decided_at?: string
+  /** when it stops being usable: a pending one 24 hours after it was filed, an approved one 24 hours after the tap */
+  expires_at?: string
+  /** B57.11 — what pays it, with its balance now; null on one filed before Lens kept it */
+  paid_from?: ApprovalPaidFrom | null
+  /** B57.11 — the approval amount it was above, and the monthly limit less the month's spend and this amount; null with
+   * no monthly limit, and both null on one filed before Lens kept them */
+  asks_above_ulxc?: number | null
+  budget_left_after_ulxc?: number | null
+}
+
+/** Lens economy.PaidFrom (B57.11): what pays an approval, named in words, its amount in that currency and its balance now. */
+export interface ApprovalPaidFrom {
+  kind: 'lxc' | 'account' | 'marketplace_bill' | 'card'
+  account_id: string
+  name: string
+  currency: string
+  amount_minor: number
+  /** µLXC for an agent's LXC balance, minor units for an account; null for the bill and a card */
+  balance_minor: number | null
 }
 
 /** Lens economy.StatementLine. */

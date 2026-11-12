@@ -185,7 +185,7 @@ test('signs in, shows the pending approval first on Home, and pauses an agent', 
   expect(calls.filter((c) => c.path.startsWith('/api/')).every((c) => c.auth === 'Bearer session-1')).toBe(true)
 
   // Pending approval first: it comes before safe-to-spend and the agents.
-  const order = ['Buyer wants to pay GPU hour', 'Safe to spend', 'Researcher']
+  const order = ['Buyer wants to use GPU hour', 'Safe to spend', 'Researcher']
   const texts = screen.getAllByText(/./).map((t) => [t.props.children].flat().join(''))
   const at = order.map((o) => texts.findIndex((t) => t.startsWith(o)))
   expect(at.every((i) => i >= 0)).toBe(true)
@@ -253,7 +253,7 @@ describe('B55.8 expired approvals', () => {
     ] })
     await renderRouter('./src/app', { initialUrl: '/approvals' })
     expect(await screen.findByText(`Expired · ${day('2026-10-10T08:00:00Z')}`)).toBeTruthy()
-    expect(screen.getByText(`Approved and spent · ${day('2026-10-14T08:00:00Z')}`)).toBeTruthy()
+    expect(screen.getByText(`Approved and used · ${day('2026-10-14T08:00:00Z')}`)).toBeTruthy()
 
     await renderRouter('./src/app', { initialUrl: '/approvals/apr_2' })
     expect(await screen.findByText('Expired: nobody answered within 24 hours. Nothing is waiting for you here.')).toBeTruthy()
@@ -277,11 +277,12 @@ describe('B55.20 decline on the phone', () => {
   test('Decline asks why, signs with Face ID and posts the assertion and the reason, then says what declining does', async () => {
     const calls = mockBff()
     await renderRouter('./src/app', { initialUrl: '/approvals' })
+    await fireEvent.press(await screen.findByRole('button', { name: 'Review: Buyer wants to use GPU hour' }))
     await fireEvent.press(await screen.findByRole('button', { name: 'Decline' }))
     await fireEvent.changeText(screen.getByLabelText('Why (optional, the agent sees it)'), 'not this month')
     await fireEvent.press(screen.getByRole('button', { name: 'Decline' }))
 
-    expect(await screen.findByText('Declined. Buyer’s payment is refused, and the same request is refused without asking you for 24 hours.')).toBeTruthy()
+    expect(await screen.findByText('Declined. Buyer’s request is refused, and the same request is refused without asking you for 24 hours.')).toBeTruthy()
     expect(mockPhone.reasons).toEqual(['Decline 2 LXC for Buyer'])
     expect(JSON.parse(calls.find((c) => c.path === '/api/agents/approvals/apr_1/deny')!.body!)).toEqual({
       assertion: { device_id: 'dk_1', challenge: 'ch_apr_1', signature: 'signed:talyvor-device-v1:ch_apr_1' },
@@ -293,6 +294,7 @@ describe('B55.20 decline on the phone', () => {
   test('Cancel closes the reason and sends nothing', async () => {
     const calls = mockBff()
     await renderRouter('./src/app', { initialUrl: '/approvals' })
+    await fireEvent.press(await screen.findByRole('button', { name: 'Review: Buyer wants to use GPU hour' }))
     await fireEvent.press(await screen.findByRole('button', { name: 'Decline' }))
     await fireEvent.press(screen.getByRole('button', { name: 'Cancel' }))
     expect(screen.queryByLabelText('Why (optional, the agent sees it)')).toBeNull()
@@ -833,7 +835,7 @@ describe('B55.11 prepared payments on Home and Approvals', () => {
     expect(await screen.findByText('Your assistant prepared a payment to Acme Hosting')).toBeTruthy()
     expect(screen.getByText('2 waiting for you')).toBeTruthy()
     const texts = screen.getAllByText(/./).map((t) => [t.props.children].flat().join(''))
-    expect(texts.findIndex((t) => t.startsWith('Your assistant prepared'))).toBeLessThan(texts.findIndex((t) => t.startsWith('Buyer wants to pay')))
+    expect(texts.findIndex((t) => t.startsWith('Your assistant prepared'))).toBeLessThan(texts.findIndex((t) => t.startsWith('Buyer wants to use')))
     expect(screen.getByText('£42.00')).toBeTruthy()
 
     await renderRouter('./src/app', { initialUrl: '/approvals' })
@@ -930,9 +932,10 @@ describe('B56.12 labels on the phone', () => {
   // its prepared payment and its approval; Approvals' prepared payment and approval; one on every other screen.
   const screens: [string, string, string, number][] = [
     ['Home', '/', 'Safe to spend', 3],
-    ['Approvals', '/approvals', 'Buyer wants to pay GPU hour', 2],
+    ['Approvals', '/approvals', 'Buyer wants to use GPU hour', 2],
     ['the approval sheet', '/approve/preq_1', 'Acme Hosting', 1],
-    ["an agent's approval", '/approvals/apr_1', 'Buyer wants to pay GPU hour', 1],
+    // Where a notification lands, the approval's row and its sheet, open over it (B57.67).
+    ["an agent's approval", '/approvals/apr_1', 'Buyer wants to use GPU hour', 2],
     ['the statement', '/statement', 'Researcher', 1],
     ["an agent's money", '/agents/ag_1', 'Spent so far: 0 LXC', 1],
   ]

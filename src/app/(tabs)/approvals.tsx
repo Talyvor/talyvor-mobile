@@ -2,32 +2,23 @@ import { formatLXC } from '@talyvor/bff-client'
 import { useCallback, useEffect, useState } from 'react'
 import { View } from 'react-native'
 
-import { ApprovalCard } from '@/components/approval-card'
+import { PendingApprovals, decidedWords } from '@/components/approval-card'
 import { KeyEnrolmentCards } from '@/components/key-enrolment-cards'
-import { approvalCapability } from '@/components/money-label'
 import { PhoneKeyCard } from '@/components/phone-key-card'
 import { PreparedPaymentCard, pendingPrepared } from '@/components/prepared-payment-card'
 import { Body, Card, Eyebrow, Figure, Headline, LoadState, Screen, useLoad } from '@/components/ui'
 import { useSession } from '@/session'
 import { setWaiting } from '@/waiting'
 
-const DECIDED: Record<string, string> = { approved: 'Approved', denied: 'Declined', used: 'Approved and spent', expired: 'Expired' }
-
 /** Every approval: payments prepared for you and agents' requests waiting first, then what was decided. */
 export default function Approvals() {
   const { client, peg } = useSession()
   const load = useCallback(async () => {
     const [book, approvals, prepared] = await Promise.all([client.book(), client.approvals(), pendingPrepared(client)])
-    return { agents: book.agents ?? [], approvals: approvals.approvals ?? [], prepared }
+    return { agents: book.agents ?? [], allPaused: !!book.all_paused_at, approvals: approvals.approvals ?? [], prepared }
   }, [client])
   const { data, error, loading, reload } = useLoad(load)
   const [keysWaiting, setKeysWaiting] = useState(0)
-  const [said, setSaid] = useState('')
-  // B55.20: what a decline did, said once its card is gone.
-  const afterDecision = (what?: string) => {
-    setSaid(what ?? '')
-    reload()
-  }
   const nameOf = (id: string) => data?.agents.find((a) => a.id === id)?.name ?? id
   const pending = (data?.approvals ?? []).filter((a) => a.status === 'pending')
   const decided = (data?.approvals ?? []).filter((a) => a.status !== 'pending')
@@ -41,14 +32,11 @@ export default function Approvals() {
       <Headline>What your agents asked for</Headline>
       <LoadState loading={loading && !data} error={error} />
       <KeyEnrolmentCards onWaiting={setKeysWaiting} />
-      {said ? <Body>{said}</Body> : null}
       {data && pending.length === 0 && data.prepared.length === 0 && !keysWaiting ? <Body muted>Nothing is waiting for you.</Body> : null}
       {data?.prepared.map((r) => (
         <PreparedPaymentCard key={r.id} request={r} />
       ))}
-      {pending.map((a) => (
-        <ApprovalCard key={a.id} approval={a} agentName={nameOf(a.agent_id)} capability={approvalCapability(a, data?.agents ?? [])} onDecided={afterDecision} />
-      ))}
+      {data ? <PendingApprovals pending={pending} agents={data.agents} allPaused={data.allPaused} onDecided={reload} /> : null}
       {decided.length ? <Eyebrow>Decided</Eyebrow> : null}
       {decided.map((a) => (
         <Card key={a.id}>
@@ -57,7 +45,7 @@ export default function Approvals() {
             <Figure>{formatLXC(a.amount_ulxc, peg)}</Figure>
           </View>
           <Body muted>
-            {DECIDED[a.status] ?? 'Closed'} · {new Date(a.decided_at ?? a.created_at).toLocaleDateString()}
+            {decidedWords(a)} · {new Date(a.decided_at ?? a.created_at).toLocaleDateString()}
           </Body>
         </Card>
       ))}

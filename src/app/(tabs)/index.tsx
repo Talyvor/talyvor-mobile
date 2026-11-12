@@ -1,15 +1,15 @@
 import { safeToSpend } from '@talyvor/bff-client'
 import { Link } from 'expo-router'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect } from 'react'
 import { Pressable, ScrollView, View } from 'react-native'
 
 import { useAccount } from '@/account'
-import { ApprovalCard } from '@/components/approval-card'
+import { PendingApprovals } from '@/components/approval-card'
 import { AgentCard, agentCardLabel } from '@/components/card'
 import { Face } from '@/components/face'
 import { KeyRecoveryCard } from '@/components/key-recovery-card'
 import { Icon } from '@/components/icon'
-import { AGENT_CREDIT, MoneyHeader, approvalCapability } from '@/components/money-label'
+import { AGENT_CREDIT, MoneyHeader } from '@/components/money-label'
 import { Money } from '@/components/money'
 import { PreparedPaymentCard, pendingPrepared } from '@/components/prepared-payment-card'
 import { Body, Card, Eyebrow, Headline, LoadState, Screen, useLoad } from '@/components/ui'
@@ -34,13 +34,6 @@ export default function Home() {
   const agents = (data?.book.agents ?? []).filter((a) => !a.archived_at)
   const pending = (data?.approvals ?? []).filter((a) => a.status === 'pending')
   const waiting = pending.length + (data?.prepared.length ?? 0)
-  const nameOf = (id: string) => agents.find((a) => a.id === id)?.name ?? id
-  const [said, setSaid] = useState('')
-  // B55.20: what a decline did, said once its card is gone.
-  const afterDecision = (what?: string) => {
-    setSaid(what ?? '')
-    reload()
-  }
   useEffect(() => {
     if (data) setWaiting(waiting)
   }, [data, waiting])
@@ -61,13 +54,10 @@ export default function Home() {
       <KeyRecoveryCard />
       {data ? (
         <>
-          {said ? <Body>{said}</Body> : null}
           {data.prepared.map((r) => (
             <PreparedPaymentCard key={r.id} request={r} />
           ))}
-          {pending.map((a) => (
-            <ApprovalCard key={a.id} approval={a} agentName={nameOf(a.agent_id)} capability={approvalCapability(a, data.book.agents ?? [])} onDecided={afterDecision} />
-          ))}
+          <PendingApprovals pending={pending} agents={data.book.agents ?? []} allPaused={!!data.book.all_paused_at} onDecided={reload} />
 
           <MoneyHeader capability={AGENT_CREDIT}>Safe to spend</MoneyHeader>
           <Money micros={safeToSpend(data.book, data.approvals)} peg={peg} balance />
