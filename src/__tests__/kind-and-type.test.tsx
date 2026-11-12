@@ -146,7 +146,7 @@ test.each(COMBINATIONS)('%s and %s: Home, Pay, a payee, an agent, Statement and 
   nothingHidden()
 
   await renderRouter('./src/app', { initialUrl: '/statement' })
-  expect(await screen.findByText('This month')).toBeTruthy()
+  expect(await screen.findByText(/^This month: /)).toBeTruthy()
   nothingHidden()
 
   await renderRouter('./src/app', { initialUrl: '/settings' })

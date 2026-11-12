@@ -105,6 +105,12 @@ export interface StatementLine {
   balance_after_ulxc: number
   label?: string
   memo?: string
+  /** the model a question's posting was for; empty on every other posting */
+  model?: string
+  /** B57.13 — on a statement read by day: the day a model's line covers, in the statement's time zone, and how many
+   * questions it is */
+  day?: string
+  requests?: number
 }
 
 /** Lens economy.Statement: every agent wallet a workspace has over [from, to). */
@@ -113,6 +119,15 @@ export interface Statement {
   to: string
   accounts: { account: string; opening_ulxc: number; in_ulxc: number; out_ulxc: number; closing_ulxc: number }[] | null
   lines: StatementLine[] | null
+  /** "day" when the lines are read by model and day (B57.13), time_zone the zone those days are counted in */
+  group?: string
+  time_zone?: string
+}
+
+/** A model the deployment offers, as Lens's catalog names it. */
+export interface CatalogModel {
+  id: string
+  display_name?: string
 }
 
 /** A statement file's type: the CSV, the JSON or the PDF Lens writes, or the period as a CSV of double-entry journal
@@ -452,6 +467,12 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     /** Every agent wallet's statement for [from, to), YYYY-MM-DD at midnight UTC. */
     statement: (from: string, to: string) =>
       call<Statement>('GET', `/api/agents/statement?${new URLSearchParams({ from, to, format: 'json' })}`),
+    /** B57.73 — the same statement with its lines by model and day (Lens B57.13): each model's questions on a day one
+     * line, its platform fee the line under it, newest first. */
+    statementByDay: (from: string, to: string) =>
+      call<Statement>('GET', `/api/agents/statement?${new URLSearchParams({ from, to, format: 'json', group: 'day' })}`),
+    /** The models the deployment offers, to name a statement's model lines. */
+    models: () => call<CatalogModel[] | null>('GET', '/api/models'),
     /** B59.35 — the statement for [from, to) as the file Lens writes (the web's Download, suite B28.55): one agent's, or
      * with no agent every agent's. */
     statementFile: async (agentId: string | null, from: string, to: string, format: StatementFormat) => {
