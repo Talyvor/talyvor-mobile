@@ -249,7 +249,6 @@ describe('B55.8 expired approvals', () => {
     mockStore.clear()
     mockStore.set('talyvor.session', JSON.stringify({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }))
   })
-  const day = (at: string) => new Date(at).toLocaleDateString()
 
   test('an expired approval reads Expired in the list and on its screen, and decided rows are dated when decided', async () => {
     mockBff({ approvals: [
@@ -258,8 +257,8 @@ describe('B55.8 expired approvals', () => {
       { id: 'apr_4', agent_id: 'ag_1', amount_ulxc: 1_000_000, model: '', status: 'used', created_at: '2026-10-12T08:00:00Z', decided_at: '2026-10-14T08:00:00Z' },
     ] })
     await renderRouter('./src/app', { initialUrl: '/approvals' })
-    expect(await screen.findByText(`Expired · ${day('2026-10-10T08:00:00Z')}`)).toBeTruthy()
-    expect(screen.getByText(`Approved and used · ${day('2026-10-14T08:00:00Z')}`)).toBeTruthy()
+    expect(await screen.findByText('Expired · 10 Oct')).toBeTruthy()
+    expect(screen.getByText('Approved and used · 14 Oct')).toBeTruthy()
 
     await renderRouter('./src/app', { initialUrl: '/approvals/apr_2' })
     expect(await screen.findByText('Expired: nobody answered within 24 hours. Nothing is waiting for you here.')).toBeTruthy()
@@ -311,7 +310,7 @@ describe('B55.20 decline on the phone', () => {
   test('a declined approval reads Declined in the Decided list and on its own screen', async () => {
     mockBff({ approvals: [{ id: 'apr_5', agent_id: 'ag_2', amount_ulxc: 2_000_000, model: '', status: 'denied', created_at: '2026-10-10T08:00:00Z', decided_at: '2026-10-11T09:00:00Z' }] })
     await renderRouter('./src/app', { initialUrl: '/approvals' })
-    expect(await screen.findByText(`Declined · ${new Date('2026-10-11T09:00:00Z').toLocaleDateString()}`)).toBeTruthy()
+    expect(await screen.findByText('Declined · 11 Oct')).toBeTruthy()
     expect(screen.queryByText(/Denied/)).toBeNull()
 
     await renderRouter('./src/app', { initialUrl: '/approvals/apr_5' })
@@ -914,10 +913,10 @@ describe('B55.11 prepared payments on Home and Approvals', () => {
     expect(screen.getByText('2 payments wait for your yes')).toBeTruthy()
     const texts = screen.getAllByText(/./).map((t) => [t.props.children].flat().join(''))
     expect(texts.findIndex((t) => t.startsWith('Your assistant prepared'))).toBeLessThan(texts.findIndex((t) => t.startsWith('Buyer wants to use')))
-    expect(screen.getByText('£42.00')).toBeTruthy()
+    expect(screen.getByText('November hosting · asked 9 Nov · £42.00')).toBeTruthy()
 
     await renderRouter('./src/app', { initialUrl: '/approvals' })
-    await fireEvent.press(await screen.findByText('Your assistant prepared a payment to Acme Hosting'))
+    await fireEvent.press(await screen.findByRole('button', { name: 'Review: Your assistant prepared a payment to Acme Hosting' }))
     await waitFor(() => expect(calls.some((c) => c.path === '/api/money/payment-requests/preq_1')).toBe(true))
     expect(await screen.findByRole('button', { name: 'Decline' })).toBeTruthy()
   })
@@ -960,6 +959,55 @@ describe('B55.11 prepared payments on Home and Approvals', () => {
     const text = allText()
     expect(text).not.toMatch(/\(|\)|R-APPROVE|mandate/i)
     expect(text).not.toContain('not_paid')
+  })
+})
+
+describe('B57.68 Approvals', () => {
+  beforeEach(() => {
+    mockStore.clear()
+    mockStore.set('talyvor.session', JSON.stringify({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }))
+  })
+  const preq = { id: 'preq_1', status: 'pending_approval', summary: '', client: 'chat', totals: { USD: 18_000 }, items: [{ position: 1, payee_id: 'py_1', payee_name: 'Northwind Data', currency: 'USD', amount_minor: 18_000, reference: 'Invoice 1042', decision: 'needs_approval', reason: '' }], created_at: '2026-11-09T08:00:00Z' }
+  const acme = { kind: 'outside', id: 'py_1', name: 'Acme Hosting' }
+  const now = new Date()
+  const clock = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+
+  test('Approvals, its label, what waits with Review, and each decision by agent and payee, dated when decided, dollars first', async () => {
+    const calls = mockBff({
+      usdPerLXC: 0.1,
+      labels: 'sandbox',
+      requests: [preq],
+      approvals: [
+        { id: 'apr_1', agent_id: 'ag_2', amount_ulxc: 900_000_000, model: '', payee: { kind: 'listing', id: 'l_1', name: 'Lead finder' }, status: 'pending', created_at: '2026-11-12T08:00:00Z' },
+        { id: 'apr_5', agent_id: 'ag_2', amount_ulxc: 3_400_000_000, model: '', payee: acme, status: 'denied', created_at: '2026-10-10T08:00:00Z', decided_at: '2026-10-14T09:00:00Z' },
+        { id: 'apr_6', agent_id: 'ag_1', amount_ulxc: 3_100_000_000, model: '', payee: acme, status: 'used', created_at: '2026-10-10T08:00:00Z', decided_at: now.toISOString() },
+      ],
+    })
+    await renderRouter('./src/app', { initialUrl: '/approvals' })
+    expect(await screen.findByRole('header', { name: 'Approvals' })).toBeTruthy()
+    expect(screen.getByText('What your agents asked for')).toBeTruthy()
+    expect(await screen.findAllByTestId('money-label-sandbox')).not.toHaveLength(0)
+
+    expect(await screen.findByText('Buyer · Acme Hosting')).toBeTruthy()
+    expect(screen.getByText('Declined · 14 Oct')).toBeTruthy()
+    expect(screen.getByText('$340.00')).toBeTruthy()
+    expect(screen.getByText('3,400 LXC')).toBeTruthy()
+    expect(screen.getByText('Researcher · Acme Hosting')).toBeTruthy()
+    expect(screen.getByText(`Approved and paid · today at ${clock}`)).toBeTruthy()
+    expect(screen.queryByText(/Denied/)).toBeNull()
+
+    expect(screen.getByText('Invoice 1042 · asked 9 Nov · $180.00')).toBeTruthy()
+    await fireEvent.press(screen.getByRole('button', { name: 'Review: Chat prepared a payment to Northwind Data' }))
+    await waitFor(() => expect(calls.some((c) => c.path === '/api/money/payment-requests/preq_1')).toBe(true))
+  })
+
+  test('nothing waiting says so, and this phone reads Off with Turn on', async () => {
+    mockBff({ approvals: [] })
+    await renderRouter('./src/app', { initialUrl: '/approvals' })
+    expect(await screen.findByText('Nothing is waiting for you.')).toBeTruthy()
+    expect(await screen.findByText('This phone: Approve with Face ID')).toBeTruthy()
+    expect(screen.getByText('Off. This phone has no key, so it cannot approve or decline.')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Turn on' })).toBeTruthy()
   })
 })
 
@@ -1007,10 +1055,10 @@ describe('B56.12 labels on the phone', () => {
   const preq = { id: 'preq_1', status: 'pending_approval', summary: '', client: 'mcp:claude-desktop', totals: { GBP: 4200 }, items: [{ position: 1, payee_id: 'py_1', payee_name: 'Acme Hosting', currency: 'GBP', amount_minor: 4200, reference: 'November hosting', decision: 'needs_approval', reason: 'above the approval amount' }], created_at: '2026-11-09T08:00:00Z' }
 
   // Each money screen, where it lands, the words that say it has loaded, and how many chips it draws: Home's top, its
-  // prepared payment and its approval; Approvals' prepared payment and approval; one on every other screen.
+  // prepared payment and its approval; one on every other screen, Approvals' at its top (B57.68).
   const screens: [string, string, string, number][] = [
     ['Home', '/', 'Your team’s agents', 3],
-    ['Approvals', '/approvals', 'Buyer wants to use GPU hour', 2],
+    ['Approvals', '/approvals', 'Buyer wants to use GPU hour', 1],
     ['the approval sheet', '/approve/preq_1', 'Acme Hosting', 1],
     // Where a notification lands, the approval's row and its sheet, open over it (B57.67).
     ["an agent's approval", '/approvals/apr_1', 'Buyer wants to use GPU hour', 2],

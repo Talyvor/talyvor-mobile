@@ -1,12 +1,15 @@
 import { BffError, formatMinor, type BffClient, type PaymentRequest } from '@talyvor/bff-client'
-import { Link } from 'expo-router'
-import { Pressable, View } from 'react-native'
+import { router } from 'expo-router'
+import { Text, View } from 'react-native'
 
+import { onDay } from '../activity'
+import { fonts, useTheme } from '../theme'
+import { Icon } from './icon'
 import { MoneyLabel, paymentRequestCapabilities } from './money-label'
-import { Body, Card, Figure } from './ui'
+import { Body, Button, Card } from './ui'
 
 // B55.11 — a payment Chat, an assistant or an agent prepared, listed on Home and Approvals above the agents' requests;
-// it opens its approval card, where it is approved or declined.
+// it opens its approval card, where it is approved or declined. B57.68: drawn as Pocket's p-approvals row, with Review.
 
 /** Who prepared it: Lens names the client "chat", "voice", "mcp:<client id>" or "key:<key id>" (B40.3). */
 export const preparedBy = (client: string) =>
@@ -22,31 +25,29 @@ export async function pendingPrepared(client: BffClient): Promise<PaymentRequest
   }
 }
 
-const asked = (at: string) => {
-  const d = new Date(at)
-  return d.toDateString() === new Date().toDateString() ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : d.toLocaleDateString()
-}
-
-export function PreparedPaymentCard({ request: r }: { request: PaymentRequest }) {
+export function PreparedPaymentCard({ request: r, label = true }: { request: PaymentRequest; label?: boolean }) {
+  const { c } = useTheme()
   const who = preparedBy(r.client)
   const what = r.items.length === 1 ? `${who} prepared a payment to ${r.items[0].payee_name || r.items[0].listing_id}` : `${who} prepared ${r.items.length} payments`
   const reference = r.items.map((it) => it.reference).filter(Boolean).join(', ')
+  const total = Object.entries(r.totals)
+    .map(([cur, minor]) => formatMinor(minor, cur))
+    .join(' + ')
   return (
-    <Link href={{ pathname: '/approve/[id]', params: { id: r.id } }} asChild>
-      <Pressable accessibilityRole="link">
-        <Card>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12 }}>
-            <Body style={{ flex: 1 }}>{what}</Body>
-            <Figure>
-              {Object.entries(r.totals)
-                .map(([cur, minor]) => formatMinor(minor, cur))
-                .join(' + ')}
-            </Figure>
-          </View>
-          <Body muted>{`${reference ? `${reference} · ` : ''}asked ${asked(r.created_at)}`}</Body>
-          <MoneyLabel capability={paymentRequestCapabilities([r])} />
-        </Card>
-      </Pressable>
-    </Link>
+    <Card white>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: c.cloud }}>
+          <Icon name="chat" color={c.ink} />
+        </View>
+        <View style={{ flex: 1, gap: 2 }}>
+          <Body style={{ fontFamily: fonts.uiMedium }}>{what}</Body>
+          <Text style={{ fontFamily: fonts.uiMedium, fontSize: 13, color: c.ink3, fontVariant: ['tabular-nums'] }}>
+            {[reference, `asked ${onDay(r.created_at)}`, total].filter(Boolean).join(' · ')}
+          </Text>
+        </View>
+        <Button primary small label="Review" accessibilityLabel={`Review: ${what}`} onPress={() => router.push({ pathname: '/approve/[id]', params: { id: r.id } })} />
+      </View>
+      {label ? <MoneyLabel capability={paymentRequestCapabilities([r])} /> : null}
+    </Card>
   )
 }
