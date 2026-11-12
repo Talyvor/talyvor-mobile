@@ -82,6 +82,10 @@ function mockBff(refuseSession = false) {
     if ((init.headers as Record<string, string>).Authorization !== 'Bearer session-1') return json({}, 401)
     if (route === 'GET /auth/me') return json({ workspace_id: 'ws_new' })
     if (route === 'GET /api/workspace/name') return json({ id: 'ws_new', name: 'Maya Lind' })
+    // B59.32 — the workspace is what sign-up asked for; only a Business has company details.
+    const made = sessions[0] as { account_type?: string; money_kind?: string } | undefined
+    if (route === 'GET /api/workspace/account' && made) return json({ account_type: made.account_type, money_kind: made.money_kind })
+    if (route === 'GET /api/workspace/business' && made?.account_type === 'business') return json({ company_name: '', registration_number: '', country: '', people: [] })
     if (route === 'GET /api/money/devices') return json({ devices })
     if (route === 'POST /api/money/devices/challenge') return json({ challenge: 'ch_register' })
     if (route === 'POST /api/money/devices') {
@@ -207,6 +211,30 @@ test("step 3 makes this phone's key with Face ID, and then the app opens", async
   expect(bff.devices).toHaveLength(1)
   expect(mockStore.get('talyvor.device-key')).toBe('dev_1')
   expect(screen.getByRole('button', { name: 'Open the app' })).toBeTruthy()
+})
+
+test('B59.32: at step 3 a Business adds its company details and the people with control', async () => {
+  mockBff()
+  await renderRouter('./src/app', { initialUrl: '/sign-up' })
+  await stepOne('Business', 'Northwind Studio')
+  await fireEvent.press(await screen.findByRole('radio', { name: /^Hybrid\./ }))
+  await fireEvent.press(screen.getByRole('button', { name: 'Continue' }))
+  expect(await screen.findByText('Company details')).toBeTruthy()
+  expect(screen.getByText('These go to our partner’s identity check later. No identity documents are asked for.')).toBeTruthy()
+  expect(screen.getByText('Add a person')).toBeTruthy()
+  expect(screen.getByText(WEB.steps[2])).toBeTruthy()
+})
+
+test('B59.32: a Personal sign-up is never asked for company details', async () => {
+  mockBff()
+  await renderRouter('./src/app', { initialUrl: '/sign-up' })
+  await stepOne('Personal', 'Maya Lind')
+  await fireEvent.press(await screen.findByRole('radio', { name: /^Hybrid\./ }))
+  await fireEvent.press(screen.getByRole('button', { name: 'Continue' }))
+  expect(await screen.findByText(WEB.steps[2])).toBeTruthy()
+  await waitFor(() => expect((globalThis.fetch as jest.Mock).mock.calls.some(([u]) => String(u).endsWith('/api/workspace/account'))).toBe(true))
+  expect(screen.queryByText('Company details')).toBeNull()
+  expect((globalThis.fetch as jest.Mock).mock.calls.some(([u]) => String(u).endsWith('/api/workspace/business'))).toBe(false)
 })
 
 test('a sign-up the BFF refuses says nothing changed and offers to try again', async () => {
