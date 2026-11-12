@@ -102,7 +102,7 @@ test('the push opens the card check’s own screen, where the sheet shows the me
   expect(sheet().getAllByText('Research’s card')).toHaveLength(2)
   expect(sheet().getByText('$120.00')).toBeTruthy()
   expect(sheet().getByText('Northwind Books')).toBeTruthy()
-  expect(sheet().getByLabelText('Sandbox. Works. No real money moves.')).toBeTruthy()
+  expect(sheet().getByLabelText('Sandbox')).toBeTruthy()
   expect(sheet().getByLabelText('Why it’s asking: Northwind Books asked the card to check with you')).toBeTruthy()
   expect(sheet().getByLabelText('Paid from: Research’s card')).toBeTruthy()
   expect(sheet().getByLabelText('Expires: Today at 23:58')).toBeTruthy()
