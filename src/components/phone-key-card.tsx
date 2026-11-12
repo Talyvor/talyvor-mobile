@@ -1,19 +1,24 @@
 import { BffError, refusalText } from '@talyvor/bff-client'
+import * as Clipboard from 'expo-clipboard'
 import { useEffect, useRef, useState } from 'react'
 
 import { biometricName, keysAvailable, phoneKey, turnOffPhoneApprovals, turnOffRefusal, turnOnPhoneApprovals, waitForTheWeb, workspaceName } from '../keys'
 import { registerPush } from '../push'
 import { useSession } from '../session'
 import { useTheme } from '../theme'
-import { Body, Button, Card, Eyebrow } from './ui'
+import { Body, Button, Card, Eyebrow, Figure } from './ui'
 
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
+
+/** The code as Lens writes it, in five groups of four, however it arrives. */
+const grouped = (code: string) => code.replace(/\s+/g, '').replace(/(.{4})(?=.)/g, '$1 ')
 
 /** B40.13: approving on this phone with its hardware key — off, turning on, or on. B55.53: a key made in another
  * workspace is off here, since Lens refuses it, and moving it here strands that workspace, so it asks first. B55.4: in a
  * workspace that already has a key, the new one waits, with its code, until the web lets it in. B55.17: Turn off asks
  * first too, and the key leaves the phone only once Lens has revoked it. B59.9: `onOn` hears when this phone's key is on
- * here, so sign-up's step 3 can open the app. */
+ * here, so sign-up's step 3 can open the app. B55.55: a first key comes with the workspace's recovery code (Lens B55.48),
+ * shown once in the web's words (B55.54) until "I saved it", and held only in this card's state; `onOn` waits for it. */
 export function PhoneKeyCard({ onOn }: { onOn?: () => void } = {}) {
   const { client } = useSession()
   const { c } = useTheme()
@@ -24,6 +29,7 @@ export function PhoneKeyCard({ onOn }: { onOn?: () => void } = {}) {
   const [busy, setBusy] = useState(false)
   const [refusal, setRefusal] = useState('')
   const [code, setCode] = useState('')
+  const [recoveryCode, setRecoveryCode] = useState('')
   const mounted = useRef(true)
   useEffect(() => () => void (mounted.current = false), [])
   useEffect(() => {
@@ -32,8 +38,8 @@ export function PhoneKeyCard({ onOn }: { onOn?: () => void } = {}) {
     void workspaceName(client).then(setHere)
   }, [client])
   useEffect(() => {
-    if (key?.here) onOn?.()
-  }, [key, onOn])
+    if (key?.here && !recoveryCode) onOn?.()
+  }, [key, recoveryCode, onOn])
   if (key === undefined) return null
   // Words for a workspace the phone cannot name: the signed-in one before it is named, another it never learnt.
   const b = here || 'this workspace'
@@ -53,6 +59,7 @@ export function PhoneKeyCard({ onOn }: { onOn?: () => void } = {}) {
         setRefusal('This phone was not added. Nothing changed.')
         return
       }
+      if (device.recovery_code) setRecoveryCode(device.recovery_code)
       setKey({ id: device.id, here: true, owner: here })
       setMoving(false)
       registerPush(client).catch((err) => console.warn('push: not registered', err))
@@ -87,7 +94,15 @@ export function PhoneKeyCard({ onOn }: { onOn?: () => void } = {}) {
       <Eyebrow>This phone</Eyebrow>
       <Card>
         <Body>Approve with {biometricName}</Body>
-        {code ? (
+        {recoveryCode ? (
+          <>
+            <Body>Save your recovery code</Body>
+            <Body muted>If you ever lose every passkey and phone, this code lets you add a new key at once. We show it only now.</Body>
+            <Figure size={20}>{grouped(recoveryCode)}</Figure>
+            <Button label="Copy" onPress={() => void Clipboard.setStringAsync(recoveryCode)} />
+            <Button primary label="I saved it" onPress={() => setRecoveryCode('')} />
+          </>
+        ) : code ? (
           <Body muted>Waiting for the web. In Talyvor on the web, let this phone in from Approvals. The code there should be {code}.</Body>
         ) : key?.here && ending ? (
           <>

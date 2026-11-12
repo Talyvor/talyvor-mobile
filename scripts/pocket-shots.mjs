@@ -14,6 +14,7 @@
  * B57.135: `signedOut` opens the app with an empty keychain (sign-in, sign-up); `steps` is a list of ["press", name] and
  * ["fill", label, value] run in order before `fill` and `press`, where a press finds a button or a radio by its name; and
  * `launchPack` names a launch-pack screen (P1, P2) to stand beside the app in place of the Pocket one `screen` names.
+ * B55.55: `answers` maps a BFF path to the body the shot's app gets for it in place of the sample's.
  *
  * It exports the app for the web once (npx expo export --platform web) with the sample session in the keychain
  * (metro.config.js, POCKET_SHOTS=1), serves it, answers every BFF request from scripts/pocket/sample.mjs, and shoots
@@ -175,7 +176,7 @@ async function app(c) {
   await page.route(`${BFF}/**`, (route) => {
     const url = new URL(route.request().url())
     const [account_type, money_kind] = (c.account ?? '').split(':')
-    const body = url.pathname === '/api/workspace/account' && c.account ? { account_type, money_kind } : sampleBodyFor(url.pathname)
+    const body = url.pathname === '/api/workspace/account' && c.account ? { account_type, money_kind } : (c.answers?.[url.pathname] ?? sampleBodyFor(url.pathname))
     if (body === undefined) unanswered.add(`${route.request().method()} ${url.pathname}${url.search}`)
     return route.fulfill({ status: body === undefined ? 404 : 200, contentType: 'application/json', body: JSON.stringify(body ?? {}) })
   })

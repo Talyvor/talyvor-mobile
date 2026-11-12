@@ -7,6 +7,7 @@ import { useAccount } from '@/account'
 import { ApprovalCard } from '@/components/approval-card'
 import { AgentCard, agentCardLabel } from '@/components/card'
 import { Face } from '@/components/face'
+import { KeyRecoveryCard } from '@/components/key-recovery-card'
 import { Icon } from '@/components/icon'
 import { AGENT_CREDIT, MoneyHeader, approvalCapability } from '@/components/money-label'
 import { Money } from '@/components/money'
@@ -51,6 +52,7 @@ export default function Home() {
       </View>
       <Headline>{waiting ? `${waiting} waiting for you` : 'Nothing waiting for you'}</Headline>
       <LoadState loading={loading && !data} error={error} />
+      <KeyRecoveryCard />
       {data ? (
         <>
           {data.prepared.map((r) => (
