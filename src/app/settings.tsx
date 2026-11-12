@@ -3,7 +3,7 @@ import { useCallback } from 'react'
 import { Text, View } from 'react-native'
 
 import { KIND_LABEL, KIND_LINE, TYPE_FIXED, TYPE_LABEL, accountChip, useAccount } from '@/account'
-import { Icon } from '@/components/icon'
+import { Icon, type IconName } from '@/components/icon'
 import { NoticeSettingsCard } from '@/components/notice-settings'
 import { Back, Button, Card, Eyebrow, Headline, LoadState, Row, Screen, useLoad } from '@/components/ui'
 import { useSession } from '@/session'
@@ -11,9 +11,16 @@ import { fonts, useTheme } from '@/theme'
 
 // B59.35 — Settings, from the button at the top right of Home (launch pack design, DECISIONS 3): whose account this is,
 // when notices arrive, Activity and its exports, and signing out of this phone. Security keys, team and roles, and
-// limits are authorisation and come in B59.39; closing the account and your data in B59.29.
+// limits are authorisation and come in B59.39.
 // B57.132 — drawn in Pocket: its own Back and headline, the account's avatar as the switcher draws it, rows in cloud cards.
 // B59.11 — the account's chip under its name ("Business · Hybrid"), and its kind of money and type in the web's words.
+// B59.29 — Help and complaints, Your data and Close this account, as the web's Settings lists them (suite B59.28).
+
+const HELP_ROWS: readonly { to: '/settings/help' | '/settings/data' | '/settings/close'; icon: IconName; title: string; line: string }[] = [
+  { to: '/settings/help', icon: 'send', title: 'Help and complaints', line: 'Ask us something, or make a complaint' },
+  { to: '/settings/data', icon: 'download', title: 'Your data', line: 'A copy of your data, or ask for it to be deleted' },
+  { to: '/settings/close', icon: 'lock', title: 'Close this account', line: 'What must be empty first, and asking to close' },
+]
 
 export default function SettingsScreen() {
   const { client, signOut } = useSession()
@@ -77,6 +84,25 @@ export default function SettingsScreen() {
               right={<Icon name="chev" size={16} color={c.ink3} />}
               onPress={() => router.push('/activity')}
             />
+          </Card>
+
+          <Eyebrow>Help and your account</Eyebrow>
+          <Card>
+            {HELP_ROWS.map((r, i) => (
+              <Row
+                key={r.to}
+                first={i === 0}
+                left={
+                  <View style={tile}>
+                    <Icon name={r.icon} size={18} color={c.ink} />
+                  </View>
+                }
+                title={r.title}
+                sub={r.line}
+                right={<Icon name="chev" size={16} color={c.ink3} />}
+                onPress={() => router.push(r.to)}
+              />
+            ))}
           </Card>
 
           <Button variant="secondary" label="Sign out" onPress={() => void signOut()} />

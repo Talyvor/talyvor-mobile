@@ -1,0 +1,7 @@
+[
+  { "route": "/settings", "screen": "p-spending", "words": "report", "scroll": "Help and your account", "why": "the reference draws no phone Settings; the nearest is Spending, as B59.35's shot has it, and the rows are the web's Settings rows (suite B59.28)" },
+  { "route": "/settings/help", "screen": "p-chat", "words": "report", "why": "the reference draws no Help and complaints; the nearest is Chat, where a message is written, and the words are the web's (suite B59.28)" },
+  { "route": "/settings/help", "screen": "p-chat", "dark": true, "words": "report", "why": "the same, with the phone set to dark" },
+  { "route": "/settings/close", "screen": "p-pause-all", "words": "report", "why": "the reference draws no Close this account; the nearest is Pause agents, a request with its reason, and the words are the web's (suite B59.28)" },
+  { "route": "/settings/data", "screen": "p-statement", "words": "report", "why": "the reference draws no Your data; the nearest is the Statement, which downloads a file, and the words are the web's (suite B59.28)" }
+]

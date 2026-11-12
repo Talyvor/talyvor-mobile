@@ -388,6 +388,34 @@ export class BffError extends Error {
   }
 }
 
+/** B59.29 — closing the account was refused: what each currency still holds, in minor units (Lens B59.27). */
+export class BalancesHeldError extends BffError {
+  constructor(
+    path: string,
+    sentence: string,
+    readonly balances: Record<string, number>,
+  ) {
+    super(409, path, sentence)
+  }
+}
+
+/** B59.29 — help and complaints, closing the account and the workspace's data: each a request a person at Talyvor
+ * answers (Lens B59.27, through the BFF's workspace_requests.go, suite B59.28). */
+export type RequestKind = 'support' | 'complaint' | 'account_closure' | 'data_export' | 'data_deletion'
+
+export interface AccountRequest {
+  id: number
+  kind: RequestKind
+  state: 'received' | 'in_progress' | 'done'
+  /** a complaint's, e.g. C-ABCD-EFGH; "" for every other kind */
+  reference: string
+  message: string
+  /** what Talyvor wrote back; "" until then */
+  answer: string
+  filed_at: string
+  updated_at: string
+}
+
 const e = encodeURIComponent
 
 export function createBffClient(baseUrl: string, token: () => string | null, fetchImpl: typeof fetch = fetch) {
@@ -396,13 +424,14 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     if (t) headers.Authorization = `Bearer ${t}`
     const res = await fetchImpl(baseUrl + path, { method, headers, body })
     if (!res.ok) {
-      let sentence = ''
+      let body: { error?: string; code?: string; balances?: Record<string, number> } = {}
       try {
-        sentence = ((await res.json()) as { error?: string }).error ?? ''
+        body = (await res.json()) as typeof body
       } catch {
         // a body that is not JSON carries no sentence
       }
-      throw new BffError(res.status, path, sentence)
+      if (res.status === 409 && body.code === 'balances_not_empty' && body.balances) throw new BalancesHeldError(path, body.error ?? '', body.balances)
+      throw new BffError(res.status, path, body.error ?? '')
     }
     return res
   }
@@ -560,6 +589,12 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     capabilities: () => call<{ capabilities: WalletCapability[] | null }>('GET', '/api/wallets/capabilities'),
     /** The public pricing; its labels are Lens's public answer per capability, left out when Lens did not say. */
     pricingLabels: async () => (await call<{ labels?: Record<string, string> }>('GET', '/api/pricing')).labels,
+    /** B59.29 — the workspace's requests, newest first: all of them for the owner, the ones they sent for anyone else. */
+    requests: async () => (await call<{ requests: AccountRequest[] | null }>('GET', '/api/workspace/requests')).requests ?? [],
+    /** Sends one request; a closure refused while the account holds money throws BalancesHeldError. */
+    sendRequest: (kind: RequestKind, message: string) => call<AccountRequest>('POST', '/api/workspace/requests', { kind, message }),
+    /** The data file of an export Talyvor has marked done. */
+    requestExport: async (id: number) => (await send('GET', `/api/workspace/requests/${id}/export`, undefined, { Accept: 'application/json' })).arrayBuffer(),
   }
 }
 
