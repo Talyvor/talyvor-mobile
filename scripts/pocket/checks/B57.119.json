@@ -1,0 +1,7 @@
+[
+  { "route": "/", "screen": "p-home", "words": "report", "why": "Home's words are B57.66's; this item draws only its Sandbox label" },
+  { "route": "/approvals", "screen": "p-approvals", "words": "report", "why": "Approvals' words are B57.68's; this item draws only its Sandbox label" },
+  { "route": "/statement", "screen": "p-statement", "words": "report", "why": "the statement's words are its own B57 item's; this item draws only its Sandbox label" },
+  { "route": "/agents/agt_research", "screen": "p-agent-research", "words": "report", "why": "an agent's words are its own B57 item's; this item draws only the Balance label" },
+  { "route": "/statement", "screen": "p-statement", "dark": true, "words": "report", "why": "the label in dark" }
+]

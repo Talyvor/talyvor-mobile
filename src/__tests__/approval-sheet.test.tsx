@@ -124,7 +124,7 @@ test('Review opens the sheet over Home: what pays it, the budget left after, whe
   await waitFor(() => expect(sheet().getByText('$420.00 of $2,000.00 (4,200 of 20,000 LXC)')).toBeTruthy())
   expect(sheet().getByText('Research wants to pay')).toBeTruthy()
   expect(sheet().getByText('October hosting invoice')).toBeTruthy()
-  expect(sheet().getByLabelText('Sandbox. Works. No real money moves.')).toBeTruthy()
+  expect(sheet().getByLabelText('Sandbox')).toBeTruthy()
   expect(sheet().getByText('$340.00')).toBeTruthy()
   expect(sheet().getByText('Acme Hosting')).toBeTruthy()
   for (const [label, value] of [

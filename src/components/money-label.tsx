@@ -1,6 +1,7 @@
 import { labelOf, workspaceLabels, type AgentApproval, type BffClient, type PaymentRequest } from '@talyvor/bff-client'
 import { useEffect, useState, type ReactNode } from 'react'
 import { Text, View } from 'react-native'
+import Svg, { Circle, Rect } from 'react-native-svg'
 
 import { useSession } from '../session'
 import { fonts, useTheme } from '../theme'
@@ -11,12 +12,16 @@ import { Eyebrow } from './ui'
 // A money screen says Live or Sandbox as Lens answers it: signed in, each capability's label for THIS workspace from
 // /api/wallets/capabilities (talyvor-lens B56.7: sandbox while its plan has no live money, while it is synthetic, or
 // while a rail is in test); signed out, Lens's public answer from /api/pricing. Until Lens answers, or for a capability
-// it gave no label, nothing is drawn. The phone draws no Building label: it names no feature that is not shipped. The
-// lock-screen Live Activity and the widget carry no label.
+// it gave no label, nothing is drawn; a read that failed says Status unknown, so the label never vanishes for a reason
+// the owner cannot see (B57.119, the launch pack's S-06, as the web's top bar says it). The phone draws no Building
+// label: it names no feature that is not shipped. The lock-screen Live Activity and the widget carry no label.
 
 /** What each label means, in one plain line: the web's StatusLabel lines (suite B56.9). */
 const LINES = { live: 'Moves real money.', sandbox: 'Works. No real money moves.' } as const
 const WORDS = { live: 'Live', sandbox: 'Sandbox' } as const
+/** A read that failed: the web's top-bar words (suite B57.118). */
+const UNKNOWN = 'Status unknown'
+const UNKNOWN_LINE = 'Talyvor could not read whether this workspace moves real money.'
 
 /** Credit the workspace hands its agents: Home's safe-to-spend, the statement and an agent's balance (the web's AGENT_CREDIT). */
 export const AGENT_CREDIT = ['spend_on_talyvor', 'move_between_own_agents'] as const
@@ -61,54 +66,73 @@ function labelsFor(client: BffClient, signedIn: boolean) {
 
 /** Lens's label for each money capability, by key; undefined until it answers. */
 export function useMoneyLabels(): Record<string, string> | undefined {
+  return useMoneyRead().labels
+}
+
+/** Lens's labels, and whether the last read for this session failed. */
+function useMoneyRead(): { labels?: Record<string, string>; failed?: boolean } {
   const { client, signedIn } = useSession()
   // Kept with the session it was read for: a new session's screens draw nothing until Lens answers for it.
-  const [answer, setAnswer] = useState<{ client: BffClient; labels: Record<string, string> | undefined } | null>(null)
+  const [answer, setAnswer] = useState<{ client: BffClient; labels?: Record<string, string>; failed?: boolean } | null>(null)
   useEffect(() => {
     let live = true
     labelsFor(client, signedIn).then(
       (labels) => live && setAnswer({ client, labels }),
-      () => undefined,
+      () => live && setAnswer({ client, failed: true }),
     )
     return () => {
       live = false
     }
   }, [client, signedIn])
-  return answer?.client === client ? answer.labels : undefined
+  return answer?.client === client ? answer : {}
 }
 
-/** The one chip: Live only when Lens says live for every capability given, else Sandbox, else nothing. */
+// B57.119 — drawn as pocket.css .status: a 24-high pill on the page colour, its 1.5px edge in success for Live and in
+// the control edge for Sandbox, the word at 12 in the UI face, and the reference's own 12-unit mark before it.
+function Mark({ state, color }: { state: 'live' | 'sandbox'; color: string }) {
+  return (
+    <Svg testID={`money-label-mark-${state}`} width={12} height={12} viewBox="0 0 12 12">
+      {state === 'live' ? (
+        <>
+          <Circle cx="6" cy="6" r="2.1" fill={color} />
+          <Circle cx="6" cy="6" r="4.6" fill="none" stroke={color} strokeWidth={1.4} />
+        </>
+      ) : (
+        <Rect x="1.6" y="1.6" width="8.8" height="8.8" rx="2" fill="none" stroke={color} strokeWidth={1.6} strokeDasharray="2.2 1.8" />
+      )}
+    </Svg>
+  )
+}
+
+/** The one chip: Live only when Lens says live for every capability given, else Sandbox, else nothing; Status unknown
+ * when the read failed. */
 export function MoneyLabel({ capability }: { capability: string | readonly string[] }) {
   const { c } = useTheme()
-  const state = labelOf(useMoneyLabels(), typeof capability === 'string' ? [capability] : capability)
-  if (!state) return null
-  const tone = state === 'live' ? c.positive : c.inkMuted
+  const { labels, failed } = useMoneyRead()
+  const state = labelOf(labels, typeof capability === 'string' ? [capability] : capability)
+  if (!state && !failed) return null
+  const tone = state === 'live' ? c.success : c.ink2
   return (
     <View
       accessible
-      accessibilityLabel={`${WORDS[state]}. ${LINES[state]}`}
-      testID={`money-label-${state}`}
+      accessibilityLabel={state ? WORDS[state] : UNKNOWN}
+      accessibilityHint={state ? LINES[state] : UNKNOWN_LINE}
+      testID={state ? `money-label-${state}` : 'money-label-unknown'}
       style={{
         alignSelf: 'flex-start',
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
         height: 24,
-        paddingLeft: 8,
-        paddingRight: 9,
+        paddingLeft: state ? 8 : 10,
+        paddingRight: state ? 9 : 10,
         borderRadius: 999,
         borderWidth: 1.5,
-        borderColor: state === 'live' ? c.positive : c.lineStrong,
-        backgroundColor: c.canvas,
+        borderColor: state === 'live' ? c.success : c.control,
+        backgroundColor: c.page,
       }}>
-      {state === 'live' ? (
-        <View style={{ width: 10, height: 10, borderRadius: 5, borderWidth: 1.4, borderColor: tone, alignItems: 'center', justifyContent: 'center' }}>
-          <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: tone }} />
-        </View>
-      ) : (
-        <View style={{ width: 10, height: 10, borderRadius: 2, borderWidth: 1.5, borderStyle: 'dashed', borderColor: tone }} />
-      )}
-      <Text style={{ fontFamily: fonts.uiBold, fontSize: 12, color: state === 'live' ? c.positive : c.ink }}>{WORDS[state]}</Text>
+      {state ? <Mark state={state} color={tone} /> : null}
+      <Text style={{ fontFamily: fonts.uiBold, fontSize: 12, letterSpacing: 0.12, color: tone }}>{state ? WORDS[state] : UNKNOWN}</Text>
     </View>
   )
 }
