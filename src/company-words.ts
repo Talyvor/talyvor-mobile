@@ -1,13 +1,14 @@
 import type { ControlRole } from '@talyvor/bff-client'
 
 // company-words.ts — B59.32: the company details' words, copied word for word from the web's (talyvor-suite B59.31,
-// apps/web/src/areas/lens/companyDetailsApi.ts and PageLinks.tsx at cd14b62), so the phone and the web say the same
+// apps/web/src/areas/lens/companyDetailsApi.ts and PageLinks.tsx at cd14b62; `company` from B57.145 at bbde88c), so the phone and the web say the same
 // thing. A change to one is a change to both: src/__tests__/company-details.test.tsx holds the web's strings and checks
 // the phone's screen against them.
 
 export const COMPANY_WORDS = {
   title: 'Company details',
   line: 'These go to our partner’s identity check later. No identity documents are asked for.',
+  company: 'The company',
   people: 'People with control',
   peopleLine: 'Each director, and anyone who owns or controls part of the company.',
   name: 'Name',
