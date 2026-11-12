@@ -1,6 +1,6 @@
 import { safeToSpend } from '@talyvor/bff-client'
 import { Link } from 'expo-router'
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Pressable, ScrollView, View } from 'react-native'
 
 import { useAccount } from '@/account'
@@ -35,6 +35,12 @@ export default function Home() {
   const pending = (data?.approvals ?? []).filter((a) => a.status === 'pending')
   const waiting = pending.length + (data?.prepared.length ?? 0)
   const nameOf = (id: string) => agents.find((a) => a.id === id)?.name ?? id
+  const [said, setSaid] = useState('')
+  // B55.20: what a decline did, said once its card is gone.
+  const afterDecision = (what?: string) => {
+    setSaid(what ?? '')
+    reload()
+  }
   useEffect(() => {
     if (data) setWaiting(waiting)
   }, [data, waiting])
@@ -55,11 +61,12 @@ export default function Home() {
       <KeyRecoveryCard />
       {data ? (
         <>
+          {said ? <Body>{said}</Body> : null}
           {data.prepared.map((r) => (
             <PreparedPaymentCard key={r.id} request={r} />
           ))}
           {pending.map((a) => (
-            <ApprovalCard key={a.id} approval={a} agentName={nameOf(a.agent_id)} capability={approvalCapability(a, data.book.agents ?? [])} onDecided={reload} />
+            <ApprovalCard key={a.id} approval={a} agentName={nameOf(a.agent_id)} capability={approvalCapability(a, data.book.agents ?? [])} onDecided={afterDecision} />
           ))}
 
           <MoneyHeader capability={AGENT_CREDIT}>Safe to spend</MoneyHeader>

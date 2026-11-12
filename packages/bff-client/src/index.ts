@@ -476,13 +476,14 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     areas: async () => (await call<{ areas: string[] | null }>('GET', '/api/workspace/areas')).areas ?? [],
     book: () => call<AgentBook>('GET', '/api/agents'),
     approvals: () => call<{ approvals: AgentApproval[] | null }>('GET', '/api/agents/approvals'),
-    /** The challenge approving or denying one approval is signed over. */
+    /** The challenge approving or declining one approval is signed over. */
     approvalChallenge: (id: string) => call<{ challenge: string }>('POST', `/api/agents/approvals/${e(id)}/challenge`),
     // Without an assertion Lens says whether this workspace may decide without one.
     approve: (id: string, assertion?: DeviceAssertion) =>
       call<AgentApproval>('POST', `/api/agents/approvals/${e(id)}/approve`, assertion ? { assertion } : undefined),
-    deny: (id: string, assertion?: DeviceAssertion) =>
-      call<AgentApproval>('POST', `/api/agents/approvals/${e(id)}/deny`, assertion ? { assertion } : undefined),
+    /** B55.18 — `reason`, up to 200 characters, is kept on the approval and told to the agent. */
+    deny: (id: string, assertion?: DeviceAssertion, reason?: string) =>
+      call<AgentApproval>('POST', `/api/agents/approvals/${e(id)}/deny`, assertion || reason ? { assertion, reason: reason || undefined } : undefined),
     /** Every agent's next request or payment is refused until resume-all; each agent's own pause stays as it was. */
     pauseAll: (reason: string) => call<{ all_paused: boolean }>('POST', '/api/agents/pause-all', { reason }),
     /** The challenge resume-all, or resume(id), is signed over once the workspace has a passkey or phone key (B55.5). */

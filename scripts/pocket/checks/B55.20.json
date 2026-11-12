@@ -1,0 +1,61 @@
+[
+  {
+    "route": "/approvals",
+    "screen": "p-approvals",
+    "press": [
+      "Decline"
+    ],
+    "words": "report",
+    "why": "the reference draws no reason field; its words are the web's (B55.19). One request waits, so one Decline is pressed",
+    "answers": {
+      "/api/agents/approvals": {
+        "approvals": [
+          {
+            "id": "apr_acme",
+            "agent_id": "agt_research",
+            "amount_ulxc": 3400000000,
+            "model": "",
+            "reason": "October hosting invoice",
+            "payee": {
+              "kind": "outside",
+              "id": "py_acme",
+              "name": "Acme Hosting"
+            },
+            "status": "pending",
+            "created_at": "2026-10-22T08:17:00Z"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "route": "/approvals",
+    "screen": "p-approvals",
+    "dark": true,
+    "press": [
+      "Decline"
+    ],
+    "words": "report",
+    "why": "the same, with the phone set to dark",
+    "answers": {
+      "/api/agents/approvals": {
+        "approvals": [
+          {
+            "id": "apr_acme",
+            "agent_id": "agt_research",
+            "amount_ulxc": 3400000000,
+            "model": "",
+            "reason": "October hosting invoice",
+            "payee": {
+              "kind": "outside",
+              "id": "py_acme",
+              "name": "Acme Hosting"
+            },
+            "status": "pending",
+            "created_at": "2026-10-22T08:17:00Z"
+          }
+        ]
+      }
+    }
+  }
+]

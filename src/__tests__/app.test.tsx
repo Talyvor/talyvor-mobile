@@ -278,7 +278,7 @@ describe('B55.20 decline on the phone', () => {
     const calls = mockBff()
     await renderRouter('./src/app', { initialUrl: '/approvals' })
     await fireEvent.press(await screen.findByRole('button', { name: 'Decline' }))
-    fireEvent.changeText(screen.getByLabelText('Why (optional, the agent sees it)'), 'not this month')
+    await fireEvent.changeText(screen.getByLabelText('Why (optional, the agent sees it)'), 'not this month')
     await fireEvent.press(screen.getByRole('button', { name: 'Decline' }))
 
     expect(await screen.findByText('Declined. Buyer’s payment is refused, and the same request is refused without asking you for 24 hours.')).toBeTruthy()

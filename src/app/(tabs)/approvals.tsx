@@ -11,7 +11,7 @@ import { Body, Card, Eyebrow, Figure, Headline, LoadState, Screen, useLoad } fro
 import { useSession } from '@/session'
 import { setWaiting } from '@/waiting'
 
-const DECIDED: Record<string, string> = { approved: 'Approved', denied: 'Denied', used: 'Approved and spent', expired: 'Expired' }
+const DECIDED: Record<string, string> = { approved: 'Approved', denied: 'Declined', used: 'Approved and spent', expired: 'Expired' }
 
 /** Every approval: payments prepared for you and agents' requests waiting first, then what was decided. */
 export default function Approvals() {
@@ -22,6 +22,12 @@ export default function Approvals() {
   }, [client])
   const { data, error, loading, reload } = useLoad(load)
   const [keysWaiting, setKeysWaiting] = useState(0)
+  const [said, setSaid] = useState('')
+  // B55.20: what a decline did, said once its card is gone.
+  const afterDecision = (what?: string) => {
+    setSaid(what ?? '')
+    reload()
+  }
   const nameOf = (id: string) => data?.agents.find((a) => a.id === id)?.name ?? id
   const pending = (data?.approvals ?? []).filter((a) => a.status === 'pending')
   const decided = (data?.approvals ?? []).filter((a) => a.status !== 'pending')
@@ -35,12 +41,13 @@ export default function Approvals() {
       <Headline>What your agents asked for</Headline>
       <LoadState loading={loading && !data} error={error} />
       <KeyEnrolmentCards onWaiting={setKeysWaiting} />
+      {said ? <Body>{said}</Body> : null}
       {data && pending.length === 0 && data.prepared.length === 0 && !keysWaiting ? <Body muted>Nothing is waiting for you.</Body> : null}
       {data?.prepared.map((r) => (
         <PreparedPaymentCard key={r.id} request={r} />
       ))}
       {pending.map((a) => (
-        <ApprovalCard key={a.id} approval={a} agentName={nameOf(a.agent_id)} capability={approvalCapability(a, data?.agents ?? [])} onDecided={reload} />
+        <ApprovalCard key={a.id} approval={a} agentName={nameOf(a.agent_id)} capability={approvalCapability(a, data?.agents ?? [])} onDecided={afterDecision} />
       ))}
       {decided.length ? <Eyebrow>Decided</Eyebrow> : null}
       {decided.map((a) => (
