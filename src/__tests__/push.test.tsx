@@ -48,7 +48,7 @@ const signedBy = (challenge: string, signature: string) => verify('sha256', Buff
 /** Lens behind the BFF: one request prepared for approval, one agent's held payment, and dev_1 as this phone's key. */
 function mockLens() {
   const lens = { pushTokens: {} as Record<string, string>, approvedStatement: '', approvalApproved: false }
-  const items = [
+  const items: { position: number; payee_id: string; payee_name: string; currency: string; amount_minor: number; reference: string; decision: string; reason: string; pay_status?: string }[] = [
     { position: 1, payee_id: 'py_1', payee_name: 'Acme Hosting', currency: 'GBP', amount_minor: 2500, reference: 'Oct', decision: 'needs_approval', reason: 'a new payee' },
     { position: 2, payee_id: 'py_2', payee_name: 'Bolt Couriers', currency: 'GBP', amount_minor: 900, reference: 'Run 4', decision: 'needs_approval', reason: 'above 5.00 GBP' },
   ]
@@ -95,6 +95,9 @@ function mockLens() {
         const challenge = createHash('sha256').update(body.statement).digest('base64url')
         if (body.assertion?.device_id !== 'dev_1' || !signedBy(challenge, body.assertion.signature)) return json({ error: 'passkey: the assertion is not valid' }, 400)
         lens.approvedStatement = body.statement
+        // What Lens did with each: the signed ones paid, the rest left out.
+        const signed = (JSON.parse(body.statement).items as { position: number }[]).map((it) => it.position)
+        for (const it of items) it.pay_status = signed.includes(it.position) ? 'completed' : 'not_approved'
         return json(request())
       }
     }
@@ -125,7 +128,7 @@ test('a request notification opens its approval card; approving the ticked payme
 
   expect(await screen.findByText('Pay October suppliers')).toBeTruthy()
   expect(screen.queryByText(/test money|preview/i)).toBeNull()
-  expect(screen.getByText('New payee · Verified')).toBeTruthy()
+  expect(screen.getByText('Known payee · Verified · First payment · Reference: Oct')).toBeTruthy()
   expect(lens.pushTokens).toEqual({ dev_1: 'a1b2c3d4' })
 
   // Untick Bolt Couriers: the key signs a statement naming Acme Hosting alone.
@@ -172,6 +175,19 @@ test('a key_enrolment notification opens Approvals, where the waiting browser sh
 
   expect(await screen.findByText('A browser asks to approve payments too. Let it in only if you are adding it now and its code is 042917.')).toBeTruthy()
   expect(screen.getByText('Let it approve')).toBeTruthy()
+})
+
+// B57.74: after Face ID, a line for each payment says what happened to it.
+test('approving on the card signs exactly the ticked payment, and a line for each says what happened', async () => {
+  const lens = mockLens()
+  await renderRouter('./src/app', { initialUrl: '/approve/preq_1' })
+  await fireEvent.press(await screen.findByLabelText('Approve £9.00 to Bolt Couriers'))
+  await fireEvent.press(await screen.findByText('Approve 1 payment with Face ID'))
+  expect(await screen.findByText('Approved. Each payment you approved is paid once.')).toBeTruthy()
+  expect(screen.getByText('Acme Hosting, £25.00: Paid.')).toBeTruthy()
+  expect(screen.getByText('Bolt Couriers, £9.00: Not paid: you left it out.')).toBeTruthy()
+  expect(JSON.parse(lens.approvedStatement).items).toEqual([{ position: 1, payee_id: 'py_1', currency: 'GBP', amount_minor: 2500, reference: 'Oct' }])
+  expect(mockReasons.at(-1)).toBe('Approve 1 payment, £25.00: Acme Hosting £25.00')
 })
 
 test('talyvor://approve/<id> opens the same card', async () => {

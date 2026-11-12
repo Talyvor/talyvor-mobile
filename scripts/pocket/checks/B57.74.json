@@ -1,0 +1,193 @@
+[
+  {
+    "route": "/approve/preq_north",
+    "screen": "p-approve-req",
+    "phoneKey": true,
+    "answers": {
+      "/api/money/payment-requests/preq_north": {
+        "id": "preq_north",
+        "status": "pending_approval",
+        "summary": "",
+        "client": "chat",
+        "totals": {
+          "USD": 18000
+        },
+        "items": [
+          {
+            "position": 1,
+            "payee_id": "py_north",
+            "payee_name": "Northwind Data",
+            "currency": "USD",
+            "amount_minor": 18000,
+            "reference": "Invoice 1042",
+            "decision": "needs_approval",
+            "reason": "no permission you signed covers it"
+          }
+        ],
+        "created_at": "2026-10-22T09:31:00Z"
+      }
+    },
+    "words": "report",
+    "why": "the tab bar and the Sandbox chip are Home's and B56.9's; the payment's words are checked by src/__tests__/app.test.tsx (B57.74) and push.test.tsx"
+  },
+  {
+    "route": "/approve/preq_north",
+    "screen": "p-approve-req",
+    "name": "approved",
+    "phoneKey": true,
+    "refState": {
+      "nw": "1"
+    },
+    "press": [
+      "Approve 1 payment with your fingerprint"
+    ],
+    "answers": {
+      "/api/money/payment-requests/preq_north": {
+        "id": "preq_north",
+        "status": "pending_approval",
+        "summary": "",
+        "client": "chat",
+        "totals": {
+          "USD": 18000
+        },
+        "items": [
+          {
+            "position": 1,
+            "payee_id": "py_north",
+            "payee_name": "Northwind Data",
+            "currency": "USD",
+            "amount_minor": 18000,
+            "reference": "Invoice 1042",
+            "decision": "needs_approval",
+            "reason": "no permission you signed covers it"
+          }
+        ],
+        "created_at": "2026-10-22T09:31:00Z"
+      },
+      "/api/money/payment-requests/preq_north/approval": {
+        "statement": "{\"request_id\":\"preq_north\",\"items\":[{\"position\":1,\"payee_id\":\"py_north\",\"currency\":\"USD\",\"amount_minor\":18000,\"reference\":\"Invoice 1042\"}],\"expires_at\":\"2026-10-23T09:31:00Z\"}",
+        "challenge": ""
+      },
+      "/api/money/payment-requests/preq_north/approve": {
+        "id": "preq_north",
+        "status": "approved",
+        "summary": "",
+        "client": "chat",
+        "totals": {
+          "USD": 18000
+        },
+        "items": [
+          {
+            "position": 1,
+            "payee_id": "py_north",
+            "payee_name": "Northwind Data",
+            "currency": "USD",
+            "amount_minor": 18000,
+            "reference": "Invoice 1042",
+            "decision": "needs_approval",
+            "reason": "no permission you signed covers it",
+            "pay_status": "completed"
+          }
+        ],
+        "created_at": "2026-10-22T09:31:00Z"
+      }
+    },
+    "words": "report",
+    "why": "the tab bar and the Sandbox chip are Home's and B56.9's; the payment's words are checked by src/__tests__/app.test.tsx (B57.74) and push.test.tsx"
+  },
+  {
+    "route": "/approve/preq_north",
+    "screen": "p-approve-req+pdecline-req",
+    "phoneKey": true,
+    "press": [
+      "Decline"
+    ],
+    "answers": {
+      "/api/money/payment-requests/preq_north": {
+        "id": "preq_north",
+        "status": "pending_approval",
+        "summary": "",
+        "client": "chat",
+        "totals": {
+          "USD": 18000
+        },
+        "items": [
+          {
+            "position": 1,
+            "payee_id": "py_north",
+            "payee_name": "Northwind Data",
+            "currency": "USD",
+            "amount_minor": 18000,
+            "reference": "Invoice 1042",
+            "decision": "needs_approval",
+            "reason": "no permission you signed covers it"
+          }
+        ],
+        "created_at": "2026-10-22T09:31:00Z"
+      }
+    },
+    "words": "report",
+    "why": "the tab bar and the Sandbox chip are Home's and B56.9's; the payment's words are checked by src/__tests__/app.test.tsx (B57.74) and push.test.tsx"
+  },
+  {
+    "route": "/approve/preq_north",
+    "screen": "p-approve-req",
+    "name": "declined",
+    "phoneKey": true,
+    "refState": {
+      "nw": "2"
+    },
+    "press": [
+      "Decline",
+      "Decline"
+    ],
+    "answers": {
+      "/api/money/payment-requests/preq_north": {
+        "id": "preq_north",
+        "status": "pending_approval",
+        "summary": "",
+        "client": "chat",
+        "totals": {
+          "USD": 18000
+        },
+        "items": [
+          {
+            "position": 1,
+            "payee_id": "py_north",
+            "payee_name": "Northwind Data",
+            "currency": "USD",
+            "amount_minor": 18000,
+            "reference": "Invoice 1042",
+            "decision": "needs_approval",
+            "reason": "no permission you signed covers it"
+          }
+        ],
+        "created_at": "2026-10-22T09:31:00Z"
+      },
+      "/api/money/payment-requests/preq_north/cancel": {
+        "id": "preq_north",
+        "status": "cancelled",
+        "summary": "",
+        "client": "chat",
+        "totals": {
+          "USD": 18000
+        },
+        "items": [
+          {
+            "position": 1,
+            "payee_id": "py_north",
+            "payee_name": "Northwind Data",
+            "currency": "USD",
+            "amount_minor": 18000,
+            "reference": "Invoice 1042",
+            "decision": "needs_approval",
+            "reason": "no permission you signed covers it"
+          }
+        ],
+        "created_at": "2026-10-22T09:31:00Z"
+      }
+    },
+    "words": "report",
+    "why": "the tab bar and the Sandbox chip are Home's and B56.9's; the payment's words are checked by src/__tests__/app.test.tsx (B57.74) and push.test.tsx"
+  }
+]
