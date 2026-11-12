@@ -1,0 +1,92 @@
+[
+  {
+    "route": "/approvals",
+    "screen": "p-approvals",
+    "phoneKey": true,
+    "answers": {
+      "/auth/me": {
+        "workspace_id": "ws_lab"
+      },
+      "/api/workspace/name": {
+        "id": "ws_lab",
+        "name": "Northwind Lab"
+      },
+      "/api/agents/approvals": {
+        "approvals": []
+      }
+    },
+    "scroll": "Use this phone for Northwind Lab",
+    "words": "report",
+    "why": "the reference draws only the On and Off states of this card; this one is B55.53's, its words from the item, the nearest reference the Off card",
+    "name": "other-workspace"
+  },
+  {
+    "route": "/approvals",
+    "screen": "p-approvals",
+    "phoneKey": true,
+    "dark": true,
+    "answers": {
+      "/auth/me": {
+        "workspace_id": "ws_lab"
+      },
+      "/api/workspace/name": {
+        "id": "ws_lab",
+        "name": "Northwind Lab"
+      },
+      "/api/agents/approvals": {
+        "approvals": []
+      }
+    },
+    "scroll": "Use this phone for Northwind Lab",
+    "words": "report",
+    "why": "the reference draws only the On and Off states of this card; this one is B55.53's, its words from the item, the nearest reference the Off card",
+    "name": "other-workspace"
+  },
+  {
+    "route": "/approvals",
+    "screen": "p-approvals+pturnoff",
+    "phoneKey": true,
+    "answers": {
+      "/auth/me": {
+        "workspace_id": "ws_lab"
+      },
+      "/api/workspace/name": {
+        "id": "ws_lab",
+        "name": "Northwind Lab"
+      },
+      "/api/agents/approvals": {
+        "approvals": []
+      }
+    },
+    "press": [
+      "Use this phone for Northwind Lab"
+    ],
+    "words": "report",
+    "why": "the reference's confirm for this phone's key is Turn off's; Move it's words are B55.53's",
+    "name": "move-key"
+  },
+  {
+    "route": "/approvals",
+    "screen": "p-approvals+pturnoff",
+    "phoneKey": true,
+    "dark": true,
+    "answers": {
+      "/auth/me": {
+        "workspace_id": "ws_lab"
+      },
+      "/api/workspace/name": {
+        "id": "ws_lab",
+        "name": "Northwind Lab"
+      },
+      "/api/agents/approvals": {
+        "approvals": []
+      }
+    },
+    "press": [
+      "Use this phone for Northwind Lab"
+    ],
+    "words": "report",
+    "why": "the reference's confirm for this phone's key is Turn off's; Move it's words are B55.53's",
+    "name": "move-key"
+  }
+]

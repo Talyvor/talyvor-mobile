@@ -7,7 +7,8 @@ import { biometricName, keysAvailable, phoneKey, turnOffPhoneApprovals, turnOffR
 import { registerPush } from '../push'
 import { useSession } from '../session'
 import { fonts, useTheme } from '../theme'
-import { Body, Button, Card, Figure } from './ui'
+import { BottomSheet } from './pay-sheet'
+import { Body, Button, Card, Figure, Headline } from './ui'
 
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
@@ -19,7 +20,8 @@ const grouped = (code: string) => code.replace(/\s+/g, '').replace(/(.{4})(?=.)/
  * workspace that already has a key, the new one waits, with its code, until the web lets it in. B55.17: Turn off asks
  * first too, and the key leaves the phone only once Lens has revoked it. B59.9: `onOn` hears when this phone's key is on
  * here, so sign-up's step 3 can open the app. B55.55: a first key comes with the workspace's recovery code (Lens B55.48),
- * shown once in the web's words (B55.54) until "I saved it", and held only in this card's state; `onOn` waits for it. */
+ * shown once in the web's words (B55.54) until "I saved it", and held only in this card's state; `onOn` waits for it.
+ * B57.102: another workspace's key is drawn as p-approvals draws a setting, and moving it asks in Pocket's bottom sheet. */
 export function PhoneKeyCard({ onOn }: { onOn?: () => void } = {}) {
   const { client } = useSession()
   const { c } = useTheme()
@@ -93,18 +95,41 @@ export function PhoneKeyCard({ onOn }: { onOn?: () => void } = {}) {
   const failed = refusal ? <Body style={{ color: c.critical }}>{refusal}</Body> : null
   const title = `This phone: Approve with ${biometricName}`
   // On or Off as Pocket's p-approvals draws them: the title and its line, the one button beside them.
-  const setting = recoveryCode || code ? null : key?.here && !ending ? 'on' : !key && keysAvailable() ? 'off' : null
+  const setting = recoveryCode || code ? null : key?.here && !ending ? 'on' : !key && keysAvailable() ? 'off' : key && !key.here ? 'elsewhere' : null
+  const words = (line: string, refused = false) => <Text style={{ fontFamily: fonts.ui, fontSize: 12.5, lineHeight: 17, color: refused ? c.critical : c.ink3 }}>{line}</Text>
+  // Another workspace's key: its name is too long to sit beside the words, so the button goes under them, as p-approvals
+  // draws the browser's card. The confirm is a sheet over it until the move is made or kept.
+  if (setting === 'elsewhere')
+    return (
+      <Card tight>
+        <View style={{ gap: 2 }}>
+          <Text style={{ fontFamily: fonts.uiBold, fontSize: 14, color: c.ink }}>{title}</Text>
+          {words(`Off for ${b}. This phone’s key approves for ${a}, and a phone holds one key.`)}
+        </View>
+        <View style={{ flexDirection: 'row', marginTop: 8 }}>
+          <Button small label={`Use this phone for ${b}`} onPress={() => setMoving(true)} />
+        </View>
+        <BottomSheet visible={moving} onClose={() => !busy && setMoving(false)}>
+          <Headline>Move this phone’s key to {b}?</Headline>
+          <Body muted>{capital(a)} then approves on the web, or on another phone, until you move it back.</Body>
+          {failed}
+          <Button primary label="Move it" disabled={busy} hint="Moving…" onPress={() => void turnOn()} />
+          <Button variant="secondary" label={`Keep it for ${a}`} disabled={busy} onPress={() => setMoving(false)} />
+        </BottomSheet>
+      </Card>
+    )
   if (setting)
     return (
       <Card tight>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
           <View style={{ flex: 1, gap: 2 }}>
             <Text style={{ fontFamily: fonts.uiBold, fontSize: 14, color: c.ink }}>{title}</Text>
-            <Text style={{ fontFamily: fonts.ui, fontSize: 12.5, lineHeight: 17, color: refusal ? c.critical : c.ink3 }}>
-              {setting === 'on'
+            {words(
+              setting === 'on'
                 ? `On. This phone signs your approvals with a key that never leaves its secure chip and works only with ${biometricName}.`
-                : refusal || 'Off. This phone has no key, so it cannot approve or decline.'}
-            </Text>
+                : refusal || 'Off. This phone has no key, so it cannot approve or decline.',
+              !!refusal,
+            )}
           </View>
           {setting === 'on' ? (
             <Button
@@ -151,22 +176,6 @@ export function PhoneKeyCard({ onOn }: { onOn?: () => void } = {}) {
             {failed}
             <Button label="Keep it" disabled={busy} onPress={() => setEnding(false)} />
             <Button primary label="Turn it off" disabled={busy} onPress={() => void turnOff()} />
-          </>
-        ) : key && moving ? (
-          <>
-            <Body>Move this phone’s key to {b}?</Body>
-            <Body muted>{capital(a)} then approves on the web, or on another phone, until you move it back.</Body>
-            {failed}
-            <Button label={`Keep it for ${a}`} disabled={busy} onPress={() => setMoving(false)} />
-            <Button primary label="Move it" disabled={busy} onPress={() => void turnOn()} />
-          </>
-        ) : key ? (
-          <>
-            <Body muted>
-              Off for {b}. This phone’s key approves for {a}, and a phone holds one key.
-            </Body>
-            {failed}
-            <Button primary label={`Use this phone for ${b}`} onPress={() => setMoving(true)} />
           </>
         ) : (
           <Body muted>To approve on this phone, set up Face ID or a fingerprint in the phone’s settings.</Body>

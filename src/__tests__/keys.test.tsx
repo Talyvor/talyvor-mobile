@@ -2,6 +2,7 @@
 import { createHash, createPublicKey, generateKeyPairSync, verify, type KeyObject } from 'node:crypto'
 import { createBffClient } from '@talyvor/bff-client'
 import { fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library'
+import { StyleSheet } from 'react-native'
 
 import { signWithThisPhone } from '../keys'
 
@@ -250,6 +251,32 @@ test("Use this phone moves the key only after the confirm, and Keep it leaves th
   expect(registered.map((d) => d.id)).toEqual(['dev_1'])
   expect(mockStore.get('talyvor.device-workspace')).toBe('ws_b')
   expect(mockStore.get('talyvor.device-workspace-name')).toBe('Beta')
+})
+
+// B57.102 — both states in Pocket's components: the card as p-approvals draws a setting, the confirm as Pocket's bottom sheet.
+test("the card for another workspace's key is Pocket's setting: its title, the line in the setting's words, a small Use this phone", async () => {
+  holdKey('ws_a')
+  mockStore.set('talyvor.device-workspace-name', 'Acme')
+  mockLens('ws_b', 'Beta')
+  await renderRouter('./src/app', { initialUrl: '/approvals' })
+  const line = await screen.findByText('Off for Beta. This phone’s key approves for Acme, and a phone holds one key.')
+  expect(StyleSheet.flatten(line.props.style)).toMatchObject({ fontSize: 12.5 })
+  expect(StyleSheet.flatten(screen.getByText('This phone: Approve with Face ID').props.style)).toMatchObject({ fontSize: 14 })
+  expect(StyleSheet.flatten(screen.getByRole('button', { name: 'Use this phone for Beta' }).props.style)).toMatchObject({ height: 34 })
+})
+
+test('Use this phone asks in a bottom sheet headed by the question, and Close leaves the key where it is', async () => {
+  holdKey('ws_a')
+  mockStore.set('talyvor.device-workspace-name', 'Acme')
+  const registered = mockLens('ws_b', 'Beta')
+  await renderRouter('./src/app', { initialUrl: '/approvals' })
+  await fireEvent.press(await screen.findByRole('button', { name: 'Use this phone for Beta' }))
+  expect(await screen.findByRole('header', { name: 'Move this phone’s key to Beta?' })).toBeTruthy()
+  expect(StyleSheet.flatten(screen.getByRole('button', { name: 'Move it' }).props.style)).toMatchObject({ height: 52, alignSelf: 'stretch' })
+  await fireEvent.press(screen.getByRole('button', { name: 'Close' }))
+  await waitFor(() => expect(screen.queryByText('Move this phone’s key to Beta?')).toBeNull())
+  expect(screen.getByRole('button', { name: 'Use this phone for Beta' })).toBeTruthy()
+  expect(registered).toEqual([])
 })
 
 /** B55.4 — Lens in a workspace that already has a key: the phone's key waits as enr_1, code 123456, until `lens.status`
