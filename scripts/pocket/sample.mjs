@@ -114,6 +114,16 @@ const ANSWERS = {
       { id: 1, kind: 'support', state: 'done', reference: '', message: 'How do I add a payee?', answer: 'Open Payees and press Add. The payee is ready to pay at once.', filed_at: '2026-10-20T10:00:00Z', updated_at: '2026-10-20T14:00:00Z' },
     ],
   },
+  // B59.32 — the company details: a director and a shareholder.
+  '/api/workspace/business': {
+    company_name: 'Northwind Studio Ltd',
+    registration_number: '14298811',
+    country: 'GB',
+    people: [
+      { name: 'Maya Lind', role: 'director', share_bps: 6000 },
+      { name: 'Tom Okafor', role: 'shareholder', share_bps: 4000 },
+    ],
+  },
   '/api/money/notices': { settings: { timezone: 'Europe/London', quiet_from: '22:00', quiet_until: '07:00', off: ['digest'] }, notices: [] },
   // B57.73 — the reference's statement read by model and day (London), each wallet's balance and the catalog's names.
   '/api/models': [

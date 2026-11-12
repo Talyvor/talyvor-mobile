@@ -448,6 +448,24 @@ export interface AccountRequest {
   updated_at: string
 }
 
+/** B59.32 — a Business workspace's company details and the people with control, for the partner's identity check later
+ * (Lens B59.30, through the BFF's workspace_business.go, suite B59.31). No identity document is asked for. */
+export type ControlRole = 'director' | 'shareholder' | 'other'
+
+/** One person with control; share_bps is their share in hundredths of a percent (2500 is 25%). */
+export interface ControlPerson {
+  name: string
+  role: ControlRole
+  share_bps: number
+}
+
+export interface CompanyDetails {
+  company_name: string
+  registration_number: string
+  country: string
+  people: ControlPerson[]
+}
+
 const e = encodeURIComponent
 
 export function createBffClient(baseUrl: string, token: () => string | null, fetchImpl: typeof fetch = fetch) {
@@ -631,6 +649,21 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     /** Sends one request; a closure refused while the account holds money throws BalancesHeldError. */
     sendRequest: (kind: RequestKind, message: string) => call<AccountRequest>('POST', '/api/workspace/requests', { kind, message }),
     /** The data file of an export Talyvor has marked done. */
+    /** B59.32 — the company details; null for a Personal workspace, which has none. */
+    companyDetails: async (): Promise<CompanyDetails | null> => {
+      try {
+        const got = await call<CompanyDetails>('GET', '/api/workspace/business')
+        return { ...got, people: got.people ?? [] }
+      } catch (err) {
+        if (err instanceof BffError && err.status === 404) return null
+        throw err
+      }
+    },
+    /** Saves the company details, replacing what was saved, and answers what Lens kept. */
+    saveCompanyDetails: async (details: CompanyDetails) => {
+      const got = await call<CompanyDetails>('PUT', '/api/workspace/business', details)
+      return { ...got, people: got.people ?? [] }
+    },
     requestExport: async (id: number) => (await send('GET', `/api/workspace/requests/${id}/export`, undefined, { Accept: 'application/json' })).arrayBuffer(),
   }
 }
