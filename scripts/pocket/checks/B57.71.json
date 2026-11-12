@@ -1,0 +1,76 @@
+[
+  {
+    "route": "/pause-all",
+    "screen": "p-pause-all",
+    "phoneKey": true,
+    "name": "ask",
+    "words": "report",
+    "why": "the tab bar is the tabs' own: Pause every agent opens over them, as an agent's screen does; on the web the phone's check is named as on Android, so it reads “your fingerprint”; the Face ID words are checked by src/__tests__/app.test.tsx"
+  },
+  {
+    "route": "/pause-all",
+    "screen": "p-pause-all",
+    "phoneKey": true,
+    "name": "paused",
+    "press": [
+      "Pause every agent"
+    ],
+    "refState": {
+      "K": "1"
+    },
+    "words": "report",
+    "why": "the tab bar is the tabs' own: Pause every agent opens over them, as an agent's screen does; on the web the phone's check is named as on Android, so it reads “your fingerprint”; the Face ID words are checked by src/__tests__/app.test.tsx"
+  },
+  {
+    "route": "/",
+    "screen": "p-home+pkilloff",
+    "phoneKey": true,
+    "press": [
+      "Start them with your fingerprint"
+    ],
+    "answers": {
+      "/api/agents": {
+        "workspace_balance_ulxc": 124800000000,
+        "allocated_ulxc": 33900000000,
+        "unallocated_ulxc": 90900000000,
+        "spent_ulxc": 28000000000,
+        "agents": [
+          {
+            "id": "agt_research",
+            "name": "Research",
+            "colour": "cobalt",
+            "face": "circle",
+            "balance_ulxc": 16500000000,
+            "spent_ulxc": 12400000000,
+            "created_at": "2026-09-14T09:00:00Z"
+          },
+          {
+            "id": "agt_sales",
+            "name": "Sales",
+            "colour": "orchid",
+            "face": "squircle",
+            "balance_ulxc": 12000000000,
+            "spent_ulxc": 11000000000,
+            "created_at": "2026-10-05T09:00:00Z"
+          },
+          {
+            "id": "agt_ops",
+            "name": "Ops",
+            "colour": "lemon",
+            "face": "flower",
+            "balance_ulxc": 5400000000,
+            "spent_ulxc": 4600000000,
+            "created_at": "2026-10-09T09:00:00Z",
+            "paused_at": "2026-10-21T17:00:00Z"
+          }
+        ],
+        "all_paused_at": "2026-10-22T09:29:00Z"
+      }
+    },
+    "refState": {
+      "K": "1"
+    },
+    "words": "report",
+    "why": "the screen behind the sheet is Home's own item (B57.66), and so is the tab bar; on the web the phone's check is named as on Android, so it reads “your fingerprint”; the Face ID words are checked by src/__tests__/app.test.tsx"
+  }
+]

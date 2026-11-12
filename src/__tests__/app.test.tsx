@@ -70,6 +70,7 @@ function mockBff(
 ) {
   const calls: { method: string; path: string; auth: string | undefined; body?: string; key?: string }[] = []
   let pausedAt = start.paused ? '2026-10-17T09:00:00Z' : undefined
+  let allPausedAt = start.allPaused ? '2026-10-17T08:30:00Z' : undefined
   const agents = () => [
     { id: 'ag_1', name: 'Researcher', balance_ulxc: 12_500_000, spent_ulxc: 0, created_at: '2026-10-01T00:00:00Z', paused_at: pausedAt },
     { id: 'ag_2', name: 'Buyer', balance_ulxc: 3_000_000, spent_ulxc: 0, created_at: '2026-10-01T00:00:00Z' },
@@ -97,7 +98,7 @@ function mockBff(
       unallocated_ulxc: 4_500_000,
       spent_ulxc: 0,
       agents: agents(),
-      all_paused_at: start.allPaused ? '2026-10-17T08:30:00Z' : undefined,
+      all_paused_at: allPausedAt,
     }),
     'GET /api/agents/approvals': () => ({
       approvals: start.approvals ?? [{ id: 'apr_1', agent_id: 'ag_2', amount_ulxc: 2_000_000, model: '', payee: { kind: 'listing', id: 'l_1', name: 'GPU hour' }, status: approvalStatus, created_at: '2026-10-17T08:00:00Z' }],
@@ -159,6 +160,17 @@ function mockBff(
       return agents()[0]
     },
     'POST /api/agents/ag_1/resume-challenge': () => ({ challenge: 'ch_resume_1' }),
+    // B57.71: pausing every agent is instant; starting them again takes a signature over Lens's resume-all challenge.
+    'POST /api/agents/pause-all': () => {
+      allPausedAt = '2026-10-17T09:30:00Z'
+      return { all_paused: true }
+    },
+    'POST /api/agents/resume-all/challenge': () => ({ challenge: 'ch_resume_all' }),
+    'POST /api/agents/resume-all': (body) => {
+      if (!body) return new Response(JSON.stringify({ error: "economy: this workspace approves with a passkey — sign this approval's challenge" }), { status: 403 })
+      allPausedAt = undefined
+      return { all_paused: false }
+    },
     'POST /api/agents/ag_1/resume': (body) => {
       if (!body) return new Response(JSON.stringify({ error: "economy: this workspace approves with a passkey — sign this approval's challenge" }), { status: 403 })
       if (start.refuseSigned) return new Response(JSON.stringify({ error: 'economy: device key revoked' }), { status: 403 })
@@ -373,7 +385,8 @@ describe('B57.66 Home', () => {
   test('nothing waiting draws no waiting row; every agent paused says so, with no Pause every agent', async () => {
     mockBff({ approvals: [], allPaused: true })
     await renderRouter('./src/app', { initialUrl: '/' })
-    expect(await screen.findByText('Every agent is paused. Nothing they ask for is paid until you resume them.')).toBeTruthy()
+    expect(await screen.findByText('Every agent is paused.')).toBeTruthy()
+    expect(screen.getByText('Nothing they ask for is paid until you start them again.')).toBeTruthy()
     expect(screen.queryByText(/for your yes/)).toBeNull()
     expect(screen.queryByText('Pause every agent')).toBeNull()
   })
@@ -1176,4 +1189,75 @@ describe('B59.3 a hidden area is not there', () => {
     expect(chatTab()).toHaveLength(0)
   })
 
+})
+
+describe('B57.71 Pause every agent, and starting again with Face ID', () => {
+  beforeEach(() => {
+    mockStore.clear()
+    mockStore.set('talyvor.session', JSON.stringify({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }))
+    mockPhone.face = true
+    mockPhone.reasons = []
+  })
+  const allCalls = (calls: ReturnType<typeof mockBff>) => calls.filter((c) => c.method === 'POST' && /^\/api\/agents\/(pause|resume)-all/.test(c.path))
+  const signOn = () => {
+    mockStore.set('talyvor.device-key', 'dev_1')
+    mockStore.set('talyvor.device-workspace', 'ws_1')
+  }
+
+  test('pausing is instant: one press pauses every agent with no Face ID, and the screen says how to start them again', async () => {
+    signOn()
+    const calls = mockBff()
+    await renderRouter('./src/app', { initialUrl: '/pause-all' })
+    expect(await screen.findByText('Pause every agent?')).toBeTruthy()
+    expect(screen.getByText('Each agent’s next request or payment is refused until you start them again. Starting them again needs Face ID.')).toBeTruthy()
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Pause every agent' }))
+    expect(await screen.findByText('Every agent is paused')).toBeTruthy()
+    expect(screen.getByText('Nothing they ask for is paid until you start them again.')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Start them with Face ID' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Home' })).toBeTruthy()
+    expect(allCalls(calls).map((c) => c.path)).toEqual(['/api/agents/pause-all'])
+    expect(mockPhone.reasons).toEqual([])
+  })
+
+  test("starting again from Home is a sheet first, then signed with this phone's key over the resume-all challenge", async () => {
+    signOn()
+    const calls = mockBff({ allPaused: true })
+    await renderRouter('./src/app', { initialUrl: '/' })
+    expect(await screen.findByText('Every agent is paused.')).toBeTruthy()
+
+    await fireEvent.press(await screen.findByRole('button', { name: 'Start them with Face ID' }))
+    expect(await screen.findByText('Start every agent again?')).toBeTruthy()
+    expect(screen.getByText('An agent you paused on its own stays paused.')).toBeTruthy()
+    expect(allCalls(calls)).toEqual([])
+    const buttons = screen.getAllByRole('button', { name: 'Start them with Face ID' })
+    await fireEvent.press(buttons[buttons.length - 1])
+
+    await waitFor(() => expect(screen.queryByText('Every agent is paused.')).toBeNull())
+    expect(allCalls(calls).map((c) => c.path)).toEqual(['/api/agents/resume-all/challenge', '/api/agents/resume-all'])
+    expect(JSON.parse(allCalls(calls)[1].body!)).toEqual({ assertion: { device_id: 'dev_1', challenge: 'ch_resume_all', signature: 'signed:talyvor-device-v1:ch_resume_all' } })
+    expect(mockPhone.reasons).toEqual(['Start every agent'])
+  })
+
+  test('a cancelled Face ID starts nothing and says so', async () => {
+    signOn()
+    mockPhone.face = false
+    const calls = mockBff({ allPaused: true })
+    await renderRouter('./src/app', { initialUrl: '/pause-all' })
+    await fireEvent.press(await screen.findByRole('button', { name: 'Start them with Face ID' }))
+    const buttons = await screen.findAllByRole('button', { name: 'Start them with Face ID' })
+    await fireEvent.press(buttons[buttons.length - 1])
+
+    expect(await screen.findByText('Nothing changed. You can try again.')).toBeTruthy()
+    expect(allCalls(calls).map((c) => c.path)).toEqual(['/api/agents/resume-all/challenge'])
+  })
+
+  test("with this phone's key off, the sheet sends nothing and says where to start them", async () => {
+    const calls = mockBff({ allPaused: true })
+    await renderRouter('./src/app', { initialUrl: '/pause-all' })
+    await fireEvent.press(await screen.findByRole('button', { name: 'Start them again' }))
+    expect(await screen.findByText('Start your agents again on the web with your passkey, or turn on Approve with Face ID on this phone.')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Approvals on this phone' })).toBeTruthy()
+    expect(allCalls(calls)).toEqual([])
+  })
 })

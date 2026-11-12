@@ -17,6 +17,7 @@
  * B55.55: `answers` maps a BFF path to the body the shot's app gets for it in place of the sample's.
  * B57.67: `phoneKey` opens the app holding this phone's approval key, so Face ID's buttons show and sign.
  * B57.68: `name` tells apart two shots of one screen in their file names, as "lower" for a scroll.
+ * B57.71: `refState` sets the reference's own state before its shot, as {"K": "1"} for every agent paused.
  *
  * It exports the app for the web once (npx expo export --platform web) with the sample session in the keychain
  * (metro.config.js, POCKET_SHOTS=1), serves it, answers every BFF request from scripts/pocket/sample.mjs, and shoots
@@ -147,6 +148,7 @@ async function reference(c) {
   await page.waitForFunction(() => window.__proto)
   await page.evaluate((s) => window.__proto.open(s), c.screen)
   if ((await page.evaluate(() => window.__proto.current())) !== c.screen) throw new Error(`the reference has no screen ${c.screen}`)
+  if (c.refState) await page.evaluate((o) => window.__proto.setState(o), c.refState)
   if (c.dark) await page.evaluate(() => document.querySelectorAll('#proto .phold .pk').forEach((el) => el.classList.replace('pk-light', 'pk-dark') || el.classList.add('pk-dark')))
   await page.waitForTimeout(300)
   const hold = page.locator('#proto .phold > *').first()

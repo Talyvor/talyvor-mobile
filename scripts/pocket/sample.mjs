@@ -53,6 +53,10 @@ const sandbox = (capability, name) => ({ capability, name, class: 'GREEN', real_
 const ANSWERS = {
   '/api/agents': { workspace_balance_ulxc: lxc(124_800), allocated_ulxc: lxc(33_900), unallocated_ulxc: lxc(90_900), spent_ulxc: lxc(28_000), agents },
   '/api/agents/approvals': { approvals },
+  // B57.71: Pause every agent, instant; starting them again is signed over the resume-all challenge.
+  '/api/agents/pause-all': { all_paused: true },
+  '/api/agents/resume-all/challenge': { challenge: 'ch_resume_all' },
+  '/api/agents/resume-all': { all_paused: false },
   // B57.67: deciding in the approval sheet, signed with the shots' phone key (`phoneKey`).
   ...Object.fromEntries(
     approvals.flatMap(({ id }) => [

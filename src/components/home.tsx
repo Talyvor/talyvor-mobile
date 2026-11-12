@@ -1,5 +1,6 @@
 import { formatMinor, type Agent, type AgentApproval, type AgentBook, type CurrencyAccount, type PaymentRequest } from '@talyvor/bff-client'
 import { Link } from 'expo-router'
+import { useState } from 'react'
 import { Pressable, ScrollView, Text, View } from 'react-native'
 
 import { accountChip, type Account, type Shows } from '../account'
@@ -12,6 +13,7 @@ import { Money } from './money'
 import { AGENT_CREDIT, MoneyLabel, PAY_OUT } from './money-label'
 import { OwnerCard } from './owner-card'
 import { PreparedPaymentCard } from './prepared-payment-card'
+import { StartEveryAgentButton, StartEveryAgentSheet, useSigns } from './start-every-agent'
 import { Body, Button } from './ui'
 
 // B57.66 — the phone's Home as the launch pack draws it (design P3 to P5): the account and the Sandbox label, the total
@@ -245,16 +247,29 @@ export function HomeView({
   const pending = data.approvals.filter((a) => a.status === 'pending')
   const waiting = pending.length + data.prepared.length
   const allPaused = !!data.book.all_paused_at
+  const signs = useSigns()
+  const [starting, setStarting] = useState(false)
   return (
     <>
       <Total business={shows.team} shows={shows} accounts={data.accounts} />
       <Actions />
+      {/* B57.71 — Pocket's .killp: every agent is paused, and the way to start them again, signed. */}
       {allPaused ? (
-        <View style={{ flexDirection: 'row', gap: 10, padding: 14, borderRadius: 14, backgroundColor: c.cloud }}>
-          <Icon name="pause" color={c.ink2} />
-          <Text style={{ flex: 1, fontFamily: fonts.ui, fontSize: 13.5, lineHeight: 19, color: c.ink2 }}>Every agent is paused. Nothing they ask for is paid until you resume them.</Text>
+        <View style={{ gap: 4, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 20, backgroundColor: c.danger50 }}>
+          <Text style={{ fontFamily: fonts.uiBold, fontSize: 15, lineHeight: 21, color: c.ink }}>Every agent is paused.</Text>
+          <Text style={{ fontFamily: fonts.ui, fontSize: 13.5, lineHeight: 19, color: c.ink2, marginBottom: 8 }}>Nothing they ask for is paid until you start them again.</Text>
+          <StartEveryAgentButton small signs={signs} onPress={() => setStarting(true)} />
         </View>
       ) : null}
+      <StartEveryAgentSheet
+        visible={starting}
+        signs={signs}
+        onClose={() => setStarting(false)}
+        onStarted={() => {
+          setStarting(false)
+          onDecided()
+        }}
+      />
       {waiting ? <WaitingRow count={waiting} /> : null}
       {data.prepared.map((r) => (
         <PreparedPaymentCard key={r.id} request={r} />
