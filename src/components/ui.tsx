@@ -124,6 +124,7 @@ export function Button({
   variant = primary ? 'primary' : 'outline',
   disabled,
   hint,
+  accessibilityLabel,
 }: {
   label: string
   onPress: () => void
@@ -132,6 +133,8 @@ export function Button({
   disabled?: boolean
   /** why it is disabled, for a screen reader */
   hint?: string
+  /** what a screen reader says when the label alone is not enough, as on a row of Review buttons */
+  accessibilityLabel?: string
 }) {
   const { c } = useTheme()
   const look = {
@@ -145,6 +148,7 @@ export function Button({
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
       accessibilityState={{ disabled }}
       accessibilityHint={disabled ? hint : undefined}
       disabled={disabled}

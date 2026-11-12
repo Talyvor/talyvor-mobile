@@ -6,6 +6,9 @@ const SESSION = JSON.stringify({ token: 'pocket-shots', expires_at: '2099-01-01T
 export async function getItemAsync(key) {
   // B57.135: a shot that sets this opens signed out (scripts/pocket-shots.mjs, `signedOut`).
   if (globalThis.__POCKET_SHOTS_SIGNED_OUT) return null
+  // B57.67: a check with `phoneKey` holds this phone's approval key, made in the sample's workspace.
+  if (globalThis.__POCKET_SHOTS_PHONE_KEY && key === 'talyvor.device-key') return 'dk_pocket_shots'
+  if (globalThis.__POCKET_SHOTS_PHONE_KEY && key === 'talyvor.device-workspace') return 'ws_northwind'
   return key === 'talyvor.session' ? SESSION : null
 }
 export async function setItemAsync() {}

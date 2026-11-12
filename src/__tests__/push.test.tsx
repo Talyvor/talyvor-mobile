@@ -135,28 +135,29 @@ test('a request notification opens its approval card; approving the ticked payme
   expect(JSON.parse(lens.approvedStatement).items.map((it: { position: number }) => it.position)).toEqual([1])
 })
 
-test('a held-payment notification opens its card, and Approve signs its challenge with the device key', async () => {
+test('a held-payment notification opens its approval sheet, and Approve with Face ID signs its challenge with the device key', async () => {
   const lens = mockLens()
   tap({ type: 'agent_approval', approval_id: 'apr_1', workspace_id: 'ws_1', agent_id: 'ag_1' })
   await renderRouter('./src/app', { initialUrl: '/approvals' })
 
   expect(await screen.findByText('Buyer is waiting for you')).toBeTruthy()
-  await fireEvent.press(screen.getAllByText('Approve').at(-1)!)
+  await fireEvent.press(await screen.findByRole('button', { name: 'Approve with Face ID' }))
+  expect(await screen.findByTestId('approval-result')).toBeTruthy()
   expect(await screen.findByText('Approved. Nothing is waiting for you here.')).toBeTruthy()
   expect(lens.approvalApproved).toBe(true)
 })
 
 // B50.10: a money approval on the phone is made only through the biometric step; without this phone's key, Approve asks
 // for it to be turned on and sends nothing.
-test('without this phone\'s key, Approve on a held payment sends nothing and asks for the key first', async () => {
+test('without this phone\'s key, a held payment\'s sheet offers no approve, sends nothing and asks for the key first', async () => {
   const lens = mockLens()
   mockStore.delete('talyvor.device-key')
   tap({ type: 'agent_approval', approval_id: 'apr_1', workspace_id: 'ws_1', agent_id: 'ag_1' })
   await renderRouter('./src/app', { initialUrl: '/approvals' })
 
   expect(await screen.findByText('Buyer is waiting for you')).toBeTruthy()
-  await fireEvent.press(screen.getAllByText('Approve').at(-1)!)
-  expect(await screen.findByText('Nothing changed: turn on approving with Face ID on this phone first.')).toBeTruthy()
+  expect(await screen.findByText('Turn on Approve with Face ID on this phone first.')).toBeTruthy()
+  expect(screen.queryByRole('button', { name: 'Approve with Face ID' })).toBeNull()
   const sent = (globalThis.fetch as jest.Mock).mock.calls.map(([url, init]) => `${init?.method ?? 'GET'} ${url}`)
   expect(sent.filter((r: string) => /\/approvals\/apr_1\/(approve|challenge)/.test(r))).toEqual([])
   expect(lens.approvalApproved).toBeFalsy()

@@ -216,8 +216,10 @@ test("signed in to another workspace, the card says the key approves for the fir
   expect(screen.queryByText(/^On\./)).toBeNull()
   expect(screen.queryByText('Turn on')).toBeNull()
 
-  await fireEvent.press(await screen.findByText('Approve'))
-  expect(await screen.findByText(`Nothing changed: approving with Face ID is off for this workspace.`)).toBeTruthy()
+  // B57.67: the approval sheet offers no approve with a key Lens refuses here, and asks for this workspace's first.
+  await fireEvent.press(await screen.findByRole('button', { name: 'Review: ag_1 wants to ask gpu-hour' }))
+  expect(await screen.findByText('Turn on Approve with Face ID on this phone first.')).toBeTruthy()
+  expect(screen.queryByRole('button', { name: 'Approve with Face ID' })).toBeNull()
   expect(routes()).not.toContain('POST /api/agents/approvals/ap_1/challenge')
   expect(routes()).not.toContain('POST /api/agents/approvals/ap_1/approve')
   await expect(signWithThisPhone(createBffClient('https://bff.test', () => 'session-1'), 'ch_approval_1', 'Approve')).rejects.toThrow('off for this workspace')

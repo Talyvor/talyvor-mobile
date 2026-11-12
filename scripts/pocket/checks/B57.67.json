@@ -1,0 +1,212 @@
+[
+  {
+    "route": "/",
+    "screen": "p-home+psheet-A",
+    "phoneKey": true,
+    "press": [
+      "Review: Research wants to pay Acme Hosting"
+    ],
+    "answers": {
+      "/api/agents/agt_research/rules": {
+        "max_per_request_ulxc": 0,
+        "daily_limit_ulxc": 0,
+        "monthly_limit_ulxc": 20000000000,
+        "approval_above_ulxc": 0,
+        "allowed_models": null,
+        "allowed_providers": null,
+        "active_from": "",
+        "active_until": "",
+        "timezone": "Europe/London"
+      },
+      "/api/agents/agt_sales/rules": {
+        "max_per_request_ulxc": 0,
+        "daily_limit_ulxc": 0,
+        "monthly_limit_ulxc": 15000000000,
+        "approval_above_ulxc": 0,
+        "allowed_models": null,
+        "allowed_providers": null,
+        "active_from": "",
+        "active_until": "",
+        "timezone": "Europe/London"
+      }
+    },
+    "words": "report",
+    "why": "the screen behind the sheet, and the tab bar, are Home’s and Approvals’ own items (B57.66, B57.68); the sheet’s and the result’s words are checked by src/__tests__/approval-sheet.test.tsx; on the web the phone’s check is named as on Android"
+  },
+  {
+    "route": "/",
+    "screen": "p-home+psheet-L",
+    "phoneKey": true,
+    "press": [
+      "Review: Sales wants to use Lead finder"
+    ],
+    "answers": {
+      "/api/agents/agt_research/rules": {
+        "max_per_request_ulxc": 0,
+        "daily_limit_ulxc": 0,
+        "monthly_limit_ulxc": 20000000000,
+        "approval_above_ulxc": 0,
+        "allowed_models": null,
+        "allowed_providers": null,
+        "active_from": "",
+        "active_until": "",
+        "timezone": "Europe/London"
+      },
+      "/api/agents/agt_sales/rules": {
+        "max_per_request_ulxc": 0,
+        "daily_limit_ulxc": 0,
+        "monthly_limit_ulxc": 15000000000,
+        "approval_above_ulxc": 0,
+        "allowed_models": null,
+        "allowed_providers": null,
+        "active_from": "",
+        "active_until": "",
+        "timezone": "Europe/London"
+      }
+    },
+    "words": "report",
+    "why": "the screen behind the sheet, and the tab bar, are Home’s and Approvals’ own items (B57.66, B57.68); the sheet’s and the result’s words are checked by src/__tests__/approval-sheet.test.tsx; on the web the phone’s check is named as on Android"
+  },
+  {
+    "route": "/",
+    "screen": "p-approved-acme",
+    "phoneKey": true,
+    "press": [
+      "Review: Research wants to pay Acme Hosting",
+      "Approve with your fingerprint"
+    ],
+    "answers": {
+      "/api/agents/agt_research/rules": {
+        "max_per_request_ulxc": 0,
+        "daily_limit_ulxc": 0,
+        "monthly_limit_ulxc": 20000000000,
+        "approval_above_ulxc": 0,
+        "allowed_models": null,
+        "allowed_providers": null,
+        "active_from": "",
+        "active_until": "",
+        "timezone": "Europe/London"
+      },
+      "/api/agents/agt_sales/rules": {
+        "max_per_request_ulxc": 0,
+        "daily_limit_ulxc": 0,
+        "monthly_limit_ulxc": 15000000000,
+        "approval_above_ulxc": 0,
+        "allowed_models": null,
+        "allowed_providers": null,
+        "active_from": "",
+        "active_until": "",
+        "timezone": "Europe/London"
+      }
+    },
+    "words": "report",
+    "why": "the screen behind the sheet, and the tab bar, are Home’s and Approvals’ own items (B57.66, B57.68); the sheet’s and the result’s words are checked by src/__tests__/approval-sheet.test.tsx; on the web the phone’s check is named as on Android"
+  },
+  {
+    "route": "/",
+    "screen": "p-declined-acme",
+    "phoneKey": true,
+    "press": [
+      "Review: Research wants to pay Acme Hosting",
+      "Decline",
+      "Decline"
+    ],
+    "answers": {
+      "/api/agents/agt_research/rules": {
+        "max_per_request_ulxc": 0,
+        "daily_limit_ulxc": 0,
+        "monthly_limit_ulxc": 20000000000,
+        "approval_above_ulxc": 0,
+        "allowed_models": null,
+        "allowed_providers": null,
+        "active_from": "",
+        "active_until": "",
+        "timezone": "Europe/London"
+      },
+      "/api/agents/agt_sales/rules": {
+        "max_per_request_ulxc": 0,
+        "daily_limit_ulxc": 0,
+        "monthly_limit_ulxc": 15000000000,
+        "approval_above_ulxc": 0,
+        "allowed_models": null,
+        "allowed_providers": null,
+        "active_from": "",
+        "active_until": "",
+        "timezone": "Europe/London"
+      }
+    },
+    "words": "report",
+    "why": "the screen behind the sheet, and the tab bar, are Home’s and Approvals’ own items (B57.66, B57.68); the sheet’s and the result’s words are checked by src/__tests__/approval-sheet.test.tsx; on the web the phone’s check is named as on Android"
+  },
+  {
+    "route": "/",
+    "screen": "p-approved-lead",
+    "phoneKey": true,
+    "press": [
+      "Review: Sales wants to use Lead finder",
+      "Approve with your fingerprint"
+    ],
+    "answers": {
+      "/api/agents/agt_research/rules": {
+        "max_per_request_ulxc": 0,
+        "daily_limit_ulxc": 0,
+        "monthly_limit_ulxc": 20000000000,
+        "approval_above_ulxc": 0,
+        "allowed_models": null,
+        "allowed_providers": null,
+        "active_from": "",
+        "active_until": "",
+        "timezone": "Europe/London"
+      },
+      "/api/agents/agt_sales/rules": {
+        "max_per_request_ulxc": 0,
+        "daily_limit_ulxc": 0,
+        "monthly_limit_ulxc": 15000000000,
+        "approval_above_ulxc": 0,
+        "allowed_models": null,
+        "allowed_providers": null,
+        "active_from": "",
+        "active_until": "",
+        "timezone": "Europe/London"
+      }
+    },
+    "words": "report",
+    "why": "the screen behind the sheet, and the tab bar, are Home’s and Approvals’ own items (B57.66, B57.68); the sheet’s and the result’s words are checked by src/__tests__/approval-sheet.test.tsx; on the web the phone’s check is named as on Android"
+  },
+  {
+    "route": "/",
+    "screen": "p-declined-lead",
+    "phoneKey": true,
+    "press": [
+      "Review: Sales wants to use Lead finder",
+      "Decline",
+      "Decline"
+    ],
+    "answers": {
+      "/api/agents/agt_research/rules": {
+        "max_per_request_ulxc": 0,
+        "daily_limit_ulxc": 0,
+        "monthly_limit_ulxc": 20000000000,
+        "approval_above_ulxc": 0,
+        "allowed_models": null,
+        "allowed_providers": null,
+        "active_from": "",
+        "active_until": "",
+        "timezone": "Europe/London"
+      },
+      "/api/agents/agt_sales/rules": {
+        "max_per_request_ulxc": 0,
+        "daily_limit_ulxc": 0,
+        "monthly_limit_ulxc": 15000000000,
+        "approval_above_ulxc": 0,
+        "allowed_models": null,
+        "allowed_providers": null,
+        "active_from": "",
+        "active_until": "",
+        "timezone": "Europe/London"
+      }
+    },
+    "words": "report",
+    "why": "the screen behind the sheet, and the tab bar, are Home’s and Approvals’ own items (B57.66, B57.68); the sheet’s and the result’s words are checked by src/__tests__/approval-sheet.test.tsx; on the web the phone’s check is named as on Android"
+  }
+]
