@@ -52,12 +52,12 @@ beforeEach(() => {
   mockStore.set('talyvor.session', JSON.stringify({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }))
 })
 
-const opens: Record<string, string> = {
+const opens: Record<string, string | RegExp> = {
   whats_due: '2 payments waiting for you',
   pay_bills: 'Bills due Friday',
   pause_agents: 'Pause every agent?',
   approve: 'What your agents asked for',
-  agent_spend: 'This month',
+  agent_spend: /^This month: /,
 }
 
 test.each(shortcuts.map((s) => [s.id, s.url]))('the %s shortcut opens %s at its screen', async (id, url) => {

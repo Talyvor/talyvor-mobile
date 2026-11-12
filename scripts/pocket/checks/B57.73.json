@@ -1,0 +1,4 @@
+[
+  { "route": "/statement", "screen": "p-statement", "words": "report", "why": "the Chat tab is gone in a workspace without Chat (B59.3), and the Approvals badge counts the sample's requests" },
+  { "route": "/statement", "screen": "p-statement", "dark": true, "words": "report", "why": "the same, with the phone set to dark" }
+]

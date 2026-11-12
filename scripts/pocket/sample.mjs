@@ -3,7 +3,12 @@
 export const SAMPLE_NOW = '2026-10-22T09:30:00Z'
 export const SAMPLE_TIME_ZONE = 'Europe/London'
 
-const lxc = (n) => n * 1_000_000
+const lxc = (n) => Math.round(n * 1_000_000)
+/** A model's questions on a day, as Lens reads a statement by day (B57.13), and its platform fee the line under it. */
+const spend = (posting_id, at, agent, model, day, requests, out) =>
+  ({ posting_id, entry_id: `ent_${posting_id}`, at, account: `agent:${agent}`, kind: 'spend', amount_ulxc: -lxc(out), counterparty: 'spend', balance_after_ulxc: 0, model, day, requests })
+const fee = (posting_id, at, agent, model, day, out) =>
+  ({ posting_id, entry_id: `ent_${posting_id}`, at, account: `agent:${agent}`, kind: 'platform_fee', amount_ulxc: -lxc(out), counterparty: 'platform', balance_after_ulxc: 0, model, day, label: 'Platform fee 5.5%', memo: 'On those requests' })
 
 const agents = [
   { id: 'agt_research', name: 'Research', colour: 'cobalt', face: 'circle', balance_ulxc: lxc(16_500), spent_ulxc: lxc(12_400), created_at: '2026-09-14T09:00:00Z' },
@@ -81,14 +86,31 @@ const ANSWERS = {
   // B59.11 — every workspace Lens had before B59.6 is Business and Hybrid.
   '/api/workspace/account': { workspace_id: 'ws_northwind', account_type: 'business', money_kind: 'hybrid' },
   '/api/money/notices': { settings: { timezone: 'Europe/London', quiet_from: '22:00', quiet_until: '07:00', off: ['digest'] }, notices: [] },
+  // B57.73 — the reference's statement read by model and day (London), each wallet's balance and the catalog's names.
+  '/api/models': [
+    { id: 'claude-sonnet-5', display_name: 'Claude Sonnet 5' },
+    { id: 'claude-haiku-4-5', display_name: 'Claude Haiku 4.5' },
+  ],
   '/api/agents/statement': {
     from: '2026-10-01',
     to: '2026-11-01',
-    accounts: [],
+    group: 'day',
+    time_zone: 'Europe/London',
+    accounts: [
+      { account: 'agent:agt_research', opening_ulxc: lxc(6_524.4), in_ulxc: lxc(10_000), out_ulxc: lxc(24.4), closing_ulxc: lxc(16_500) },
+      { account: 'agent:agt_sales', opening_ulxc: lxc(12_126.6), in_ulxc: 0, out_ulxc: lxc(126.6), closing_ulxc: lxc(12_000) },
+      { account: 'agent:agt_ops', opening_ulxc: lxc(5_442.2), in_ulxc: 0, out_ulxc: lxc(42.2), closing_ulxc: lxc(5_400) },
+    ],
     lines: [
-      { posting_id: 3, entry_id: 'ent_3', at: '2026-10-21T15:12:00Z', account: 'agent:agt_sales', kind: 'pay', amount_ulxc: -lxc(900), counterparty: 'outside', balance_after_ulxc: lxc(12_000), label: 'Lead finder' },
-      { posting_id: 2, entry_id: 'ent_2', at: '2026-10-14T10:05:00Z', account: 'agent:agt_research', kind: 'card', amount_ulxc: -lxc(1_250), counterparty: 'outside', balance_after_ulxc: lxc(16_500), label: 'Northwind Data' },
-      { posting_id: 1, entry_id: 'ent_1', at: '2026-10-02T09:00:00Z', account: 'agent:agt_research', kind: 'fund', amount_ulxc: lxc(5_000), counterparty: 'workspace', balance_after_ulxc: lxc(17_750), label: 'Funded by you' },
+      spend(8, '2026-10-22T09:24:00Z', 'agt_research', 'claude-sonnet-5', '2026-10-22', 312, 420),
+      fee(7, '2026-10-22T09:24:00Z', 'agt_research', 'claude-sonnet-5', '2026-10-22', 23.1),
+      spend(6, '2026-10-22T08:52:00Z', 'agt_sales', 'claude-haiku-4-5', '2026-10-22', 410, 120),
+      fee(5, '2026-10-22T08:52:00Z', 'agt_sales', 'claude-haiku-4-5', '2026-10-22', 6.6),
+      spend(4, '2026-10-21T10:12:00Z', 'agt_research', 'claude-haiku-4-5', '2026-10-21', 88, 20),
+      fee(3, '2026-10-21T10:12:00Z', 'agt_research', 'claude-haiku-4-5', '2026-10-21', 1.1),
+      { posting_id: 2, entry_id: 'ent_2', at: '2026-10-20T17:30:00Z', account: 'agent:agt_research', kind: 'fund', amount_ulxc: lxc(10_000), counterparty: 'workspace', balance_after_ulxc: lxc(16_524.4) },
+      spend(1, '2026-10-20T16:05:00Z', 'agt_ops', 'claude-haiku-4-5', '2026-10-20', 140, 40),
+      fee(0, '2026-10-20T16:05:00Z', 'agt_ops', 'claude-haiku-4-5', '2026-10-20', 2.2),
     ],
   },
 }
