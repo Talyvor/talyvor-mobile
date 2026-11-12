@@ -101,6 +101,27 @@ const ANSWERS = {
     payments: [{ id: 'pm_kite', payee_id: 'py_kite', payee_name: 'Kite Accounting', amount_minor: 45_000, currency: 'USD', reference: 'October bookkeeping', status: 'completed', created_at: '2026-10-01T10:00:00Z' }],
   },
   '/api/money/accounts': { accounts: [{ id: 'acc_usd', currency: 'USD', purpose: 'company', status: 'open', name: '', balance_minor: 320_000 }] },
+  // B59.26 — the dollar account's card payments: one to dispute, one with the card issuer, one won and one refunded.
+  '/api/money/accounts/acc_usd/statement': {
+    account_id: 'acc_usd',
+    currency: 'USD',
+    from: '2026-10-01',
+    to: '2026-11-01',
+    lines: [
+      { entry_id: 'ent_c4', line: 1, at: '2026-10-21T15:12:00Z', kind: 'card_charge', amount_minor: -2_400, counterparty: 'Compute shop', partner_ref: 'pay_compute', balance_after_minor: 320_000 },
+      { entry_id: 'ent_c3', line: 1, at: '2026-10-18T11:40:00Z', kind: 'card_charge', amount_minor: -8_900, counterparty: 'Northwind Data', partner_ref: 'pay_north', balance_after_minor: 322_400 },
+      { entry_id: 'ent_c2', line: 1, at: '2026-10-12T09:05:00Z', kind: 'card_charge', amount_minor: -3_000, counterparty: 'Cloud GPU', partner_ref: 'pay_gpu', balance_after_minor: 331_300 },
+    ],
+  },
+  '/api/money/card-disputes': {
+    card_disputes: [
+      { id: 'dsp_north', payment_id: 'pay_north', agent_id: 'agt_research', card_id: 'mc_research', merchant: 'Northwind Data', amount_minor: 8_900, currency: 'USD', reason: 'Charged twice for one month.', status: 'with_issuer', credited_minor: 0, created_at: '2026-10-19T10:00:00Z' },
+      { id: 'dsp_gpu', payment_id: 'pay_gpu', agent_id: 'agt_research', card_id: 'mc_research', merchant: 'Cloud GPU', amount_minor: 3_000, currency: 'USD', reason: 'The job never ran.', status: 'won', credited_minor: 3_000, decided_at: '2026-10-16T10:00:00Z', created_at: '2026-10-13T10:00:00Z' },
+    ],
+  },
+  '/api/money/card-refunds': {
+    card_refunds: [{ id: 'rf_tools', payment_id: 'pay_tools', agent_id: 'agt_research', card_id: 'mc_research', merchant: 'Tool rental', amount_minor: 1_200, currency: 'USD', credited_minor: 1_200, created_at: '2026-10-10T12:00:00Z' }],
+  },
   // B59.35 — Settings and Activity.
   '/auth/me': { workspace_id: 'ws_northwind' },
   '/api/workspace/name': { id: 'ws_northwind', name: 'Northwind Studio' },

@@ -174,6 +174,66 @@ export interface CurrencyAccount {
   balance_minor: number
 }
 
+/** B59.26 — Lens economy.MoneyStatementLine (B56.14): one posting to a currency account, money in positive, out negative. */
+export interface MoneyStatementLine {
+  entry_id: string
+  line: number
+  at: string
+  /** the entry's: payment_in, card_charge, card_refund, card_dispute_won, … */
+  kind: string
+  amount_minor: number
+  counterparty: string
+  memo?: string
+  /** on a card_charge: the issuer's id for the payment, which a dispute names */
+  partner_ref?: string
+  balance_after_minor: number
+}
+
+/** B59.26 — Lens economy.MoneyStatement: one currency account over [from, to). */
+export interface MoneyStatement {
+  account_id: string
+  agent_id?: string
+  currency: string
+  from: string
+  to: string
+  lines: MoneyStatementLine[] | null
+}
+
+/** B59.26 — where a card dispute stands (Lens economy.CardDispute*). */
+export type CardDisputeStatus = 'opened' | 'with_issuer' | 'won' | 'lost'
+
+/** B59.26 — Lens economy.CardDispute: one dispute of a card payment, named by the issuer's id for the payment. */
+export interface CardDispute {
+  id: string
+  payment_id: string
+  agent_id?: string
+  card_id: string
+  merchant: string
+  amount_minor: number
+  currency: string
+  reason: string
+  status: CardDisputeStatus
+  /** what came back of the payment: the payment once won, else 0 */
+  credited_minor: number
+  decided_at?: string
+  created_at: string
+}
+
+/** B59.26 — Lens economy.CardPaymentRefund: a merchant's refund of a card payment, and what it credited. */
+export interface CardRefund {
+  id: string
+  payment_id: string
+  agent_id?: string
+  card_id: string
+  merchant: string
+  /** what the merchant refunded */
+  amount_minor: number
+  currency: string
+  /** what came back: no more than was left of the payment */
+  credited_minor: number
+  created_at: string
+}
+
 /** Lens economy.OutsidePayee (B30.16): a saved payee outside Talyvor. */
 export interface OutsidePayee {
   id: string
@@ -562,6 +622,20 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     },
     moneyAccounts: () => call<{ accounts: CurrencyAccount[] | null }>('GET', '/api/money/accounts'),
     payees: () => call<{ payees: OutsidePayee[] | null }>('GET', '/api/money/payees'),
+    // B59.26 — card disputes, refunds and the card export (the web's B59.25, on Lens B59.24). Lens decides whose payment
+    // may be disputed and what a won dispute or a refund credits.
+    /** One currency account's postings over [from, to), YYYY-MM-DD: its card payments carry the id a dispute names. */
+    accountStatement: (id: string, from: string, to: string) =>
+      call<MoneyStatement>('GET', `/api/money/accounts/${e(id)}/statement?${new URLSearchParams({ from, to })}`),
+    /** The workspace's card disputes, newest first, and where each stands. */
+    cardDisputes: async () => (await call<{ card_disputes: CardDispute[] | null }>('GET', '/api/money/card-disputes')).card_disputes ?? [],
+    /** Disputes a card payment, named by the issuer's id for it, with the owner's reason. Lens answers the dispute. */
+    openCardDispute: (paymentId: string, reason: string) => call<CardDispute>('POST', '/api/money/card-disputes', { payment_id: paymentId, reason }),
+    /** The merchants' refunds on the workspace's card payments, newest first. */
+    cardRefunds: async () => (await call<{ card_refunds: CardRefund[] | null }>('GET', '/api/money/card-refunds')).card_refunds ?? [],
+    /** The card payments, disputes and refunds from one day to another, both included, as Lens's CSV. */
+    cardExportFile: async (from: string, through: string) =>
+      (await send('GET', `/api/money/card-exports?${new URLSearchParams({ from, to: through })}`, undefined, { Accept: 'text/csv' })).arrayBuffer(),
     /** The payments out, newest first. */
     payments: () => call<{ payments: OutsidePayment[] | null }>('GET', '/api/money/payments'),
     /** B54.36 — the challenge a person's payment is signed over, naming exactly this payment (Lens B54.33). */
