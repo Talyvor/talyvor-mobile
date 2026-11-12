@@ -73,6 +73,8 @@ function mockBff() {
         return json({ workspace_balance_ulxc: 7_000_000, allocated_ulxc: 7_000_000, unallocated_ulxc: 0, spent_ulxc: 0, agents })
       case 'GET /api/agents/approvals':
         return json({ approvals: [] })
+      case 'GET /api/money/accounts':
+        return json({ accounts: [] })
       case 'GET /api/money/payment-requests':
         return json({ requests: [] })
       case 'GET /api/agents/statement':
