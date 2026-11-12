@@ -85,6 +85,14 @@ const ANSWERS = {
   '/api/workspace/name': { id: 'ws_northwind', name: 'Northwind Studio' },
   // B59.11 — every workspace Lens had before B59.6 is Business and Hybrid.
   '/api/workspace/account': { workspace_id: 'ws_northwind', account_type: 'business', money_kind: 'hybrid' },
+  // B59.29 — what the workspace sent: a complaint being looked at, a question answered, and a copy of its data ready.
+  '/api/workspace/requests': {
+    requests: [
+      { id: 3, kind: 'data_export', state: 'done', reference: '', message: '', answer: '', filed_at: '2026-10-28T09:00:00Z', updated_at: '2026-10-29T11:00:00Z' },
+      { id: 2, kind: 'complaint', state: 'in_progress', reference: 'C-7KQ2-M4XD', message: 'A card payment to Kite Accounting was taken twice.', answer: '', filed_at: '2026-10-27T15:20:00Z', updated_at: '2026-10-28T08:00:00Z' },
+      { id: 1, kind: 'support', state: 'done', reference: '', message: 'How do I add a payee?', answer: 'Open Payees and press Add. The payee is ready to pay at once.', filed_at: '2026-10-20T10:00:00Z', updated_at: '2026-10-20T14:00:00Z' },
+    ],
+  },
   '/api/money/notices': { settings: { timezone: 'Europe/London', quiet_from: '22:00', quiet_until: '07:00', off: ['digest'] }, notices: [] },
   // B57.73 — the reference's statement read by model and day (London), each wallet's balance and the catalog's names.
   '/api/models': [
