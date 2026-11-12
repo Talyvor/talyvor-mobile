@@ -53,7 +53,7 @@ beforeEach(() => {
 })
 
 const opens: Record<string, string | RegExp> = {
-  whats_due: '2 payments waiting for you',
+  whats_due: 'Bills due Friday · £34.00',
   pay_bills: 'Bills due Friday',
   pause_agents: 'Pause every agent?',
   approve: 'What your agents asked for',

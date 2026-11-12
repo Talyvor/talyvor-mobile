@@ -275,12 +275,12 @@ describe('B55.8 expired approvals', () => {
     expect(screen.getByText('Approved and used · 14 Oct')).toBeTruthy()
 
     await renderRouter('./src/app', { initialUrl: '/approvals/apr_2' })
-    expect(await screen.findByText('Expired: nobody answered within 24 hours. Nothing is waiting for you here.')).toBeTruthy()
+    expect(await screen.findByText(/^Expired (\d{1,2} [A-Z][a-z]{2}|today at \d\d:\d\d): nobody answered within 24 hours\. Nothing is waiting for you here\.$/)).toBeTruthy()
     expect(screen.getByText('Buyer’s request')).toBeTruthy()
     expect(screen.queryByText('Buyer is waiting for you')).toBeNull()
 
     await renderRouter('./src/app', { initialUrl: '/approvals/apr_3' })
-    expect(await screen.findByText('Expired: approved, but not used within 24 hours. Nothing is waiting for you here.')).toBeTruthy()
+    expect(await screen.findByText(/^Expired (\d{1,2} [A-Z][a-z]{2}|today at \d\d:\d\d): approved, but not used within 24 hours\. Nothing is waiting for you here\.$/)).toBeTruthy()
   })
 })
 
@@ -328,7 +328,7 @@ describe('B55.20 decline on the phone', () => {
     expect(screen.queryByText(/Denied/)).toBeNull()
 
     await renderRouter('./src/app', { initialUrl: '/approvals/apr_5' })
-    expect(await screen.findByText('Declined. Nothing is waiting for you here.')).toBeTruthy()
+    expect(await screen.findByText(/^Declined (\d{1,2} [A-Z][a-z]{2}|today at \d\d:\d\d)\. Nothing is waiting for you here\.$/)).toBeTruthy()
     expect(screen.queryByText(/Denied/)).toBeNull()
   })
 })

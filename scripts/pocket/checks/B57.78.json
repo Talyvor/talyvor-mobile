@@ -1,0 +1,152 @@
+[
+  {
+    "route": "/",
+    "screen": "p-signin",
+    "signedOut": true
+  },
+  {
+    "route": "/",
+    "screen": "p-signin",
+    "signedOut": true,
+    "dark": true
+  },
+  {
+    "route": "/bills",
+    "screen": "p-bills",
+    "answers": {
+      "/api/money/payment-requests": {
+        "requests": [
+          {
+            "id": "preq_northwind",
+            "status": "pending_approval",
+            "summary": "",
+            "client": "chat",
+            "totals": {
+              "USD": 18000
+            },
+            "items": [
+              {
+                "position": 1,
+                "payee_id": "py_northwind",
+                "payee_name": "Northwind Data",
+                "currency": "USD",
+                "amount_minor": 18000,
+                "reference": "Invoice 1042",
+                "decision": "needs_approval",
+                "reason": ""
+              }
+            ],
+            "created_at": "2026-10-22T09:31:00Z"
+          }
+        ]
+      }
+    },
+    "words": "report",
+    "why": "the reference draws the tab bar under a pushed screen; the app's pushed screens (Approve, Payee) sit over the tabs without one"
+  },
+  {
+    "route": "/bills",
+    "screen": "p-bills",
+    "dark": true,
+    "answers": {
+      "/api/money/payment-requests": {
+        "requests": [
+          {
+            "id": "preq_northwind",
+            "status": "pending_approval",
+            "summary": "",
+            "client": "chat",
+            "totals": {
+              "USD": 18000
+            },
+            "items": [
+              {
+                "position": 1,
+                "payee_id": "py_northwind",
+                "payee_name": "Northwind Data",
+                "currency": "USD",
+                "amount_minor": 18000,
+                "reference": "Invoice 1042",
+                "decision": "needs_approval",
+                "reason": ""
+              }
+            ],
+            "created_at": "2026-10-22T09:31:00Z"
+          }
+        ]
+      }
+    },
+    "words": "report",
+    "why": "the reference draws the tab bar under a pushed screen; the app's pushed screens (Approve, Payee) sit over the tabs without one"
+  },
+  {
+    "route": "/bills",
+    "screen": "p-bills",
+    "name": "nothing-due",
+    "words": "report",
+    "why": "nothing due, which the reference draws as a hidden state of the same screen; the reference draws the tab bar under a pushed screen; the app's pushed screens (Approve, Payee) sit over the tabs without one"
+  },
+  {
+    "route": "/approvals/apr_lead_oct",
+    "screen": "p-approval-landing",
+    "answers": {
+      "/api/agents/approvals": {
+        "approvals": [
+          {
+            "id": "apr_lead_oct",
+            "agent_id": "agt_sales",
+            "amount_ulxc": 900000000,
+            "model": "",
+            "payee": {
+              "kind": "listing",
+              "id": "lst_lead_finder",
+              "name": "Lead finder"
+            },
+            "status": "denied",
+            "created_at": "2026-10-14T07:41:00Z",
+            "decided_at": "2026-10-14T08:02:00Z",
+            "asks_above_ulxc": 500000000
+          }
+        ]
+      }
+    },
+    "words": "report",
+    "why": "the reference draws the tab bar under a pushed screen; the app's pushed screens (Approve, Payee) sit over the tabs without one"
+  },
+  {
+    "route": "/approvals/apr_lead_oct",
+    "screen": "p-approval-landing",
+    "dark": true,
+    "answers": {
+      "/api/agents/approvals": {
+        "approvals": [
+          {
+            "id": "apr_lead_oct",
+            "agent_id": "agt_sales",
+            "amount_ulxc": 900000000,
+            "model": "",
+            "payee": {
+              "kind": "listing",
+              "id": "lst_lead_finder",
+              "name": "Lead finder"
+            },
+            "status": "denied",
+            "created_at": "2026-10-14T07:41:00Z",
+            "decided_at": "2026-10-14T08:02:00Z",
+            "asks_above_ulxc": 500000000
+          }
+        ]
+      }
+    },
+    "words": "report",
+    "why": "the reference draws the tab bar under a pushed screen; the app's pushed screens (Approve, Payee) sit over the tabs without one"
+  },
+  {
+    "route": "/pay",
+    "screen": "p-pay",
+    "scroll": "Bills due",
+    "name": "bills-due",
+    "words": "report",
+    "why": "Pay's own rows are B57's Pay item; this shot shows the Bills due row that opens p-bills"
+  }
+]
