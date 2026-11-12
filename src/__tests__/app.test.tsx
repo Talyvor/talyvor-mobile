@@ -71,6 +71,7 @@ function mockBff(
     { id: 'ag_2', name: 'Buyer', balance_ulxc: 3_000_000, spent_ulxc: 0, created_at: '2026-10-01T00:00:00Z' },
   ]
   let enrolments = start.enrolments ?? []
+  let approvalStatus = 'pending'
   const routes: Partial<Record<string, (body?: string) => unknown>> = {
     // B55.4 — keys waiting to join (Lens B55.1): letting one in takes a phone key's signature over its own challenge.
     'GET /api/agents/keys/enrolments': () => ({ enrolments }),
@@ -95,8 +96,14 @@ function mockBff(
       all_paused_at: start.allPaused ? '2026-10-17T08:30:00Z' : undefined,
     }),
     'GET /api/agents/approvals': () => ({
-      approvals: start.approvals ?? [{ id: 'apr_1', agent_id: 'ag_2', amount_ulxc: 2_000_000, model: '', payee: { kind: 'listing', id: 'l_1', name: 'GPU hour' }, status: 'pending', created_at: '2026-10-17T08:00:00Z' }],
+      approvals: start.approvals ?? [{ id: 'apr_1', agent_id: 'ag_2', amount_ulxc: 2_000_000, model: '', payee: { kind: 'listing', id: 'l_1', name: 'GPU hour' }, status: approvalStatus, created_at: '2026-10-17T08:00:00Z' }],
     }),
+    // B55.18: a decline may carry a reason the agent sees; Lens keeps it as deny_reason.
+    'POST /api/agents/approvals/apr_1/challenge': () => ({ challenge: 'ch_apr_1' }),
+    'POST /api/agents/approvals/apr_1/deny': (body) => {
+      approvalStatus = 'denied'
+      return { id: 'apr_1', agent_id: 'ag_2', amount_ulxc: 2_000_000, model: '', status: 'denied', deny_reason: JSON.parse(body ?? '{}').reason, created_at: '2026-10-17T08:00:00Z' }
+    },
     'GET /api/agents/ag_1/rules': () => ({ max_per_request_ulxc: 1_000_000, daily_limit_ulxc: 0, monthly_limit_ulxc: 0, approval_above_ulxc: 500_000, allowed_models: null, allowed_providers: null, active_from: '', active_until: '', timezone: 'UTC' }),
     'POST /api/agents/ag_1/fund': () => ({ balance_ulxc: 15_000_000 }),
     'GET /api/money/payees': () => ({
@@ -255,6 +262,53 @@ describe('B55.8 expired approvals', () => {
 
     await renderRouter('./src/app', { initialUrl: '/approvals/apr_3' })
     expect(await screen.findByText('Expired: approved, but not used within 24 hours. Nothing is waiting for you here.')).toBeTruthy()
+  })
+})
+
+describe('B55.20 decline on the phone', () => {
+  beforeEach(() => {
+    mockStore.clear()
+    mockStore.set('talyvor.session', JSON.stringify({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }))
+    mockStore.set('talyvor.device-key', 'dk_1')
+    mockStore.set('talyvor.device-workspace', 'ws_1')
+    mockPhone.reasons = []
+  })
+
+  test('Decline asks why, signs with Face ID and posts the assertion and the reason, then says what declining does', async () => {
+    const calls = mockBff()
+    await renderRouter('./src/app', { initialUrl: '/approvals' })
+    await fireEvent.press(await screen.findByRole('button', { name: 'Decline' }))
+    await fireEvent.changeText(screen.getByLabelText('Why (optional, the agent sees it)'), 'not this month')
+    await fireEvent.press(screen.getByRole('button', { name: 'Decline' }))
+
+    expect(await screen.findByText('Declined. Buyer’s payment is refused, and the same request is refused without asking you for 24 hours.')).toBeTruthy()
+    expect(mockPhone.reasons).toEqual(['Decline 2 LXC for Buyer'])
+    expect(JSON.parse(calls.find((c) => c.path === '/api/agents/approvals/apr_1/deny')!.body!)).toEqual({
+      assertion: { device_id: 'dk_1', challenge: 'ch_apr_1', signature: 'signed:talyvor-device-v1:ch_apr_1' },
+      reason: 'not this month',
+    })
+    expect(screen.queryByText('Deny')).toBeNull()
+  })
+
+  test('Cancel closes the reason and sends nothing', async () => {
+    const calls = mockBff()
+    await renderRouter('./src/app', { initialUrl: '/approvals' })
+    await fireEvent.press(await screen.findByRole('button', { name: 'Decline' }))
+    await fireEvent.press(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.queryByLabelText('Why (optional, the agent sees it)')).toBeNull()
+    expect(calls.some((c) => c.path.endsWith('/deny'))).toBe(false)
+    expect(mockPhone.reasons).toEqual([])
+  })
+
+  test('a declined approval reads Declined in the Decided list and on its own screen', async () => {
+    mockBff({ approvals: [{ id: 'apr_5', agent_id: 'ag_2', amount_ulxc: 2_000_000, model: '', status: 'denied', created_at: '2026-10-10T08:00:00Z', decided_at: '2026-10-11T09:00:00Z' }] })
+    await renderRouter('./src/app', { initialUrl: '/approvals' })
+    expect(await screen.findByText(`Declined · ${new Date('2026-10-11T09:00:00Z').toLocaleDateString()}`)).toBeTruthy()
+    expect(screen.queryByText(/Denied/)).toBeNull()
+
+    await renderRouter('./src/app', { initialUrl: '/approvals/apr_5' })
+    expect(await screen.findByText('Declined. Nothing is waiting for you here.')).toBeTruthy()
+    expect(screen.queryByText(/Denied/)).toBeNull()
   })
 })
 
