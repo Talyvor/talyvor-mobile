@@ -9,6 +9,8 @@ export async function getItemAsync(key) {
   // B57.67: a check with `phoneKey` holds this phone's approval key, made in the sample's workspace.
   if (globalThis.__POCKET_SHOTS_PHONE_KEY && key === 'talyvor.device-key') return 'dk_pocket_shots'
   if (globalThis.__POCKET_SHOTS_PHONE_KEY && key === 'talyvor.device-workspace') return 'ws_northwind'
+  // B57.102: and its name, for a check whose BFF signs in to another workspace (`answers` for /auth/me).
+  if (globalThis.__POCKET_SHOTS_PHONE_KEY && key === 'talyvor.device-workspace-name') return 'Northwind Studio'
   return key === 'talyvor.session' ? SESSION : null
 }
 export async function setItemAsync() {}
