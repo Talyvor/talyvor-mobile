@@ -1,19 +1,20 @@
 import { BffError, refusalText } from '@talyvor/bff-client'
 import * as Clipboard from 'expo-clipboard'
 import { useEffect, useRef, useState } from 'react'
+import { Text, View } from 'react-native'
 
 import { biometricName, keysAvailable, phoneKey, turnOffPhoneApprovals, turnOffRefusal, turnOnPhoneApprovals, waitForTheWeb, workspaceName } from '../keys'
 import { registerPush } from '../push'
 import { useSession } from '../session'
-import { useTheme } from '../theme'
-import { Body, Button, Card, Eyebrow, Figure } from './ui'
+import { fonts, useTheme } from '../theme'
+import { Body, Button, Card, Figure } from './ui'
 
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
 /** The code as Lens writes it, in five groups of four, however it arrives. */
 const grouped = (code: string) => code.replace(/\s+/g, '').replace(/(.{4})(?=.)/g, '$1 ')
 
-/** B40.13: approving on this phone with its hardware key — off, turning on, or on. B55.53: a key made in another
+/** B57.68: titled "This phone: Approve with Face ID", in Pocket's p-approvals words. B40.13: approving on this phone with its hardware key — off, turning on, or on. B55.53: a key made in another
  * workspace is off here, since Lens refuses it, and moving it here strands that workspace, so it asks first. B55.4: in a
  * workspace that already has a key, the new one waits, with its code, until the web lets it in. B55.17: Turn off asks
  * first too, and the key leaves the phone only once Lens has revoked it. B59.9: `onOn` hears when this phone's key is on
@@ -90,11 +91,40 @@ export function PhoneKeyCard({ onOn }: { onOn?: () => void } = {}) {
   }
 
   const failed = refusal ? <Body style={{ color: c.critical }}>{refusal}</Body> : null
+  const title = `This phone: Approve with ${biometricName}`
+  // On or Off as Pocket's p-approvals draws them: the title and its line, the one button beside them.
+  const setting = recoveryCode || code ? null : key?.here && !ending ? 'on' : !key && keysAvailable() ? 'off' : null
+  if (setting)
+    return (
+      <Card tight>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text style={{ fontFamily: fonts.uiBold, fontSize: 14, color: c.ink }}>{title}</Text>
+            <Text style={{ fontFamily: fonts.ui, fontSize: 12.5, lineHeight: 17, color: refusal ? c.critical : c.ink3 }}>
+              {setting === 'on'
+                ? `On. This phone signs your approvals with a key that never leaves its secure chip and works only with ${biometricName}.`
+                : refusal || 'Off. This phone has no key, so it cannot approve or decline.'}
+            </Text>
+          </View>
+          {setting === 'on' ? (
+            <Button
+              small
+              label="Turn off"
+              onPress={() => {
+                setRefusal('')
+                setEnding(true)
+              }}
+            />
+          ) : (
+            <Button small label="Turn on" disabled={busy} hint="Turning on…" onPress={() => void turnOn()} />
+          )}
+        </View>
+      </Card>
+    )
   return (
     <>
-      <Eyebrow>This phone</Eyebrow>
       <Card>
-        <Body>Approve with {biometricName}</Body>
+        <Body style={{ fontFamily: fonts.uiBold }}>{code ? 'Waiting for the web' : title}</Body>
         {recoveryCode ? (
           <>
             <Body>Save your recovery code</Body>
@@ -113,7 +143,7 @@ export function PhoneKeyCard({ onOn }: { onOn?: () => void } = {}) {
             />
           </>
         ) : code ? (
-          <Body muted>Waiting for the web. In Talyvor on the web, let this phone in from Approvals. The code there should be {code}.</Body>
+          <Body muted>In Talyvor on the web, let this phone in from Approvals and devices. The code there should be {code}.</Body>
         ) : key?.here && ending ? (
           <>
             <Body>Turn off approving on this phone?</Body>
@@ -121,17 +151,6 @@ export function PhoneKeyCard({ onOn }: { onOn?: () => void } = {}) {
             {failed}
             <Button label="Keep it" disabled={busy} onPress={() => setEnding(false)} />
             <Button primary label="Turn it off" disabled={busy} onPress={() => void turnOff()} />
-          </>
-        ) : key?.here ? (
-          <>
-            <Body muted>On. This phone signs your approvals with a key that never leaves its secure chip and works only with {biometricName}.</Body>
-            <Button
-              label="Turn off"
-              onPress={() => {
-                setRefusal('')
-                setEnding(true)
-              }}
-            />
           </>
         ) : key && moving ? (
           <>
@@ -148,12 +167,6 @@ export function PhoneKeyCard({ onOn }: { onOn?: () => void } = {}) {
             </Body>
             {failed}
             <Button primary label={`Use this phone for ${b}`} onPress={() => setMoving(true)} />
-          </>
-        ) : keysAvailable() ? (
-          <>
-            <Body muted>This phone makes a key in its secure chip that only {biometricName} can use, and signs your approvals with it.</Body>
-            {failed}
-            <Button primary label="Turn on" disabled={busy} onPress={() => void turnOn()} />
           </>
         ) : (
           <Body muted>To approve on this phone, set up Face ID or a fingerprint in the phone’s settings.</Body>

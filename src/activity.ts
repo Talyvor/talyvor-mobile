@@ -48,5 +48,12 @@ export function when(at: string, now = new Date()): string {
   return `${d.getDate()} ${MONTHS[d.getMonth()]}, ${clock}`
 }
 
+/** `today at 10:31`, or `14 Oct` on another day: when an approval was decided or a payment asked, as Pocket writes it. */
+export function onDay(at: string, now = new Date()): string {
+  const d = new Date(at)
+  if (d.toDateString() !== now.toDateString()) return `${d.getDate()} ${MONTHS[d.getMonth()]}`
+  return `today at ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
 /** The month a period reads, by name: "November". */
 export const monthName = (from: string) => new Date(`${from}T00:00:00Z`).toLocaleString('en-GB', { month: 'long', timeZone: 'UTC' })

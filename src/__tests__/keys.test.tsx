@@ -277,7 +277,7 @@ function mockWaitingLens() {
   return lens
 }
 
-const waitingText = 'Waiting for the web. In Talyvor on the web, let this phone in from Approvals. The code there should be 123456.'
+const waitingText = 'In Talyvor on the web, let this phone in from Approvals and devices. The code there should be 123456.'
 
 test('in a workspace that has a passkey, Turn on shows the code and keeps the device id only once the web lets the phone in', async () => {
   const lens = mockWaitingLens()

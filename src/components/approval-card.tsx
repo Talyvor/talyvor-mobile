@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
+import { onDay } from '../activity'
 import { biometricName, phoneKey, signWithThisPhone } from '../keys'
 import { syncLiveActivities } from '../live-activity'
 import { useSession } from '../session'
@@ -12,7 +13,7 @@ import { Face } from './face'
 import { Icon } from './icon'
 import { moneyParts } from './money'
 import { MoneyLabel, approvalCapability } from './money-label'
-import { Body, Button, Card, Field, Headline, Sheet } from './ui'
+import { Body, Button, Card, Eyebrow, Field, Headline, Row, Sheet } from './ui'
 
 // B57.67 — deciding on the phone as Pocket draws it (design/pocket p-home+psheet-A, psheet-L, p-approved-acme,
 // p-declined-acme, p-approved-lead, p-declined-lead): a row with Review, the approval sheet over the screen you are on,
@@ -59,7 +60,7 @@ export function decidedWords(a: AgentApproval) {
 }
 
 /** The amount, dollars first: an account's own currency when an account pays it, the LXC its rules judge beside. */
-function amountParts(a: AgentApproval, peg: number | null) {
+export function amountParts(a: AgentApproval, peg: number | null) {
   if (a.paid_from?.kind === 'account' && a.paid_from.currency) return { large: formatMinor(a.paid_from.amount_minor, a.paid_from.currency), small: formatULXC(a.amount_ulxc) }
   return moneyParts(formatLXC(a.amount_ulxc, peg))
 }
@@ -128,21 +129,21 @@ function Amount({ large, small, size }: { large: string; small: string | null; s
 }
 
 /** One approval waiting for the owner, in a list: who wants what, how much, Live or Sandbox, and Review. */
-export function ApprovalCard({ approval, agent, capability, onReview }: { approval: AgentApproval; agent: Who; capability: string; onReview: () => void }) {
+export function ApprovalCard({ approval, agent, capability, label = true, onReview }: { approval: AgentApproval; agent: Who; capability: string; label?: boolean; onReview: () => void }) {
   const { peg } = useSession()
   const { c } = useTheme()
   const title = approvalTitle(agent.name, approval)
   return (
-    <Card>
+    <Card white>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         <Face agent={agent} waiting size={40} />
         <View style={{ flex: 1, gap: 2 }}>
           <Body style={{ fontFamily: fonts.uiMedium }}>{title}</Body>
           <Text style={{ fontFamily: fonts.uiMedium, fontSize: 13, color: c.ink3, fontVariant: ['tabular-nums'] }}>{formatLXC(approval.amount_ulxc, peg)}</Text>
         </View>
-        <Button primary label="Review" accessibilityLabel={`Review: ${title}`} onPress={onReview} />
+        <Button primary small label="Review" accessibilityLabel={`Review: ${title}`} onPress={onReview} />
       </View>
-      <MoneyLabel capability={capability} />
+      {label ? <MoneyLabel capability={capability} /> : null}
     </Card>
   )
 }
@@ -319,6 +320,42 @@ export function ApprovalResult({ d, onDone, onNext }: { d: Decided; onDone: () =
   )
 }
 
+/** When a decided approval was decided: an expired one nobody answered, when it expired (B57.68). */
+const decidedOn = (a: AgentApproval) => onDay(a.decided_at ?? a.expires_at ?? a.created_at)
+
+/** B57.68 — what was decided: `Research · Acme Hosting`, how it ended and when, the amount dollars first; each row opens
+ * the approval's own screen. */
+export function DecidedApprovals({ decided, agents }: { decided: AgentApproval[]; agents: readonly Who[] }) {
+  const { peg } = useSession()
+  const { c } = useTheme()
+  if (!decided.length) return null
+  return (
+    <Card white>
+      <Eyebrow>Decided</Eyebrow>
+      <View>
+        {decided.map((a, i) => {
+          const { large, small } = amountParts(a, peg)
+          return (
+            <Row
+              key={a.id}
+              first={i === 0}
+              title={`${agentOf(agents, a.agent_id).name} · ${subject(a)}`}
+              sub={`${decidedWords(a)} · ${decidedOn(a)}`}
+              right={
+                <View accessible accessibilityLabel={small ? `${large} (${small})` : large} style={{ alignItems: 'flex-end' }}>
+                  <Text style={{ fontFamily: fonts.display, fontSize: 15, color: c.ink, fontVariant: ['tabular-nums'] }}>{large}</Text>
+                  {small ? <Text style={{ fontFamily: fonts.uiMedium, fontSize: 12.5, color: c.ink3, fontVariant: ['tabular-nums'] }}>{small}</Text> : null}
+                </View>
+              }
+              onPress={() => router.push({ pathname: '/approvals/[id]', params: { id: a.id } })}
+            />
+          )
+        })}
+      </View>
+    </Card>
+  )
+}
+
 /** The requests waiting for the owner, each a row with Review; Review opens the sheet over the screen, and deciding shows
  * the result screen in the same window, so one closing never races the other opening. `focus` shows only that request's
  * row and opens its sheet, for the screen a notification lands on. */
@@ -327,12 +364,15 @@ export function PendingApprovals({
   agents,
   allPaused,
   focus,
+  labels = true,
   onDecided,
 }: {
   pending: AgentApproval[]
   agents: readonly Who[]
   allPaused: boolean
   focus?: string
+  /** each row's own Live or Sandbox; Approvals draws one for the screen instead (B57.68) */
+  labels?: boolean
   onDecided: () => void
 }) {
   const { c } = useTheme()
@@ -350,7 +390,7 @@ export function PendingApprovals({
       {pending
         .filter((a) => !focus || a.id === focus)
         .map((a) => (
-          <ApprovalCard key={a.id} approval={a} agent={agentOf(agents, a.agent_id)} capability={capabilityOf(a)} onReview={() => setOpen(a.id)} />
+          <ApprovalCard key={a.id} approval={a} agent={agentOf(agents, a.agent_id)} capability={capabilityOf(a)} label={labels} onReview={() => setOpen(a.id)} />
         ))}
       <Modal visible={!!sheet || !!result} transparent animationType="slide" onRequestClose={close}>
         {result ? (

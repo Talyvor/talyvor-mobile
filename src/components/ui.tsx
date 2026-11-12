@@ -108,15 +108,16 @@ export function Figure({ children, size = 15, tone }: { children: ReactNode; siz
   return <Text style={{ fontFamily: fonts.display, fontSize: size, color: tone ?? c.ink, fontVariant: ['tabular-nums'] }}>{children}</Text>
 }
 
-/** Pocket's card: cloud, or white with a shadow where it sits on cloud. */
-export function Card({ children, white }: { children: ReactNode; white?: boolean }) {
+/** Pocket's card: cloud, or white with a shadow where it sits on cloud; `tight` is .card.tight, a setting's row. */
+export function Card({ children, white, tight }: { children: ReactNode; white?: boolean; tight?: boolean }) {
   const { c } = useTheme()
-  return <View style={[styles.card, white ? [{ backgroundColor: c.page }, styles.shadow] : { backgroundColor: c.cloud }]}>{children}</View>
+  return <View style={[styles.card, tight && styles.tight, white ? [{ backgroundColor: c.page }, styles.shadow] : { backgroundColor: c.cloud }]}>{children}</View>
 }
 
 type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'danger' | 'ghost'
 
-/** 52 tall and round; the primary one is ink and full width. `primary` is today's name for the primary variant. */
+/** 52 tall and round; the primary one is ink and full width. `primary` is today's name for the primary variant. `small`
+ * is .btn.sm, 34 tall beside a row's words, with its touch area grown to 50. */
 export function Button({
   label,
   onPress,
@@ -125,6 +126,7 @@ export function Button({
   disabled,
   hint,
   accessibilityLabel,
+  small,
 }: {
   label: string
   onPress: () => void
@@ -135,6 +137,7 @@ export function Button({
   hint?: string
   /** what a screen reader says when the label alone is not enough, as on a row of Review buttons */
   accessibilityLabel?: string
+  small?: boolean
 }) {
   const { c } = useTheme()
   const look = {
@@ -153,8 +156,9 @@ export function Button({
       accessibilityHint={disabled ? hint : undefined}
       disabled={disabled}
       onPress={onPress}
-      style={({ pressed }) => [styles.button, box, variant === 'primary' && { alignSelf: 'stretch' }, (pressed || disabled) && { opacity: 0.6 }]}>
-      <Text style={[styles.buttonText, { color }]}>{label}</Text>
+      hitSlop={small ? 8 : undefined}
+      style={({ pressed }) => [styles.button, box, small ? styles.small : variant === 'primary' && { alignSelf: 'stretch' }, (pressed || disabled) && { opacity: 0.6 }]}>
+      <Text style={[styles.buttonText, { color }, small && { fontSize: 14 }]}>{label}</Text>
     </Pressable>
   )
 }
@@ -281,8 +285,10 @@ const styles = StyleSheet.create({
   body: { fontFamily: fonts.ui, fontSize: 15, lineHeight: 22 },
   sub: { fontFamily: fonts.ui, fontSize: 13, lineHeight: 18 },
   card: { borderRadius: 24, padding: 20, gap: 10 },
+  tight: { borderRadius: 18, paddingVertical: 14, paddingHorizontal: 16 },
   shadow: { boxShadow: '0 1px 2px rgba(17,18,22,0.06), 0 10px 28px rgba(17,18,22,0.07)' },
   button: { height: 52, borderRadius: 999, paddingHorizontal: 22, alignItems: 'center', justifyContent: 'center' },
+  small: { height: 34, paddingHorizontal: 14, alignSelf: 'center' },
   buttonText: { fontFamily: fonts.uiBold, fontSize: 16 },
   chip: { flexDirection: 'row', alignSelf: 'flex-start', alignItems: 'center', gap: 6, height: 26, paddingHorizontal: 10, borderRadius: 999 },
   chipText: { fontFamily: fonts.uiMedium, fontSize: 12.5 },

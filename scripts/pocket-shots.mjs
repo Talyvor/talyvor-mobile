@@ -16,6 +16,7 @@
  * `launchPack` names a launch-pack screen (P1, P2) to stand beside the app in place of the Pocket one `screen` names.
  * B55.55: `answers` maps a BFF path to the body the shot's app gets for it in place of the sample's.
  * B57.67: `phoneKey` opens the app holding this phone's approval key, so Face ID's buttons show and sign.
+ * B57.68: `name` tells apart two shots of one screen in their file names, as "lower" for a scroll.
  *
  * It exports the app for the web once (npx expo export --platform web) with the sample session in the keychain
  * (metro.config.js, POCKET_SHOTS=1), serves it, answers every BFF request from scripts/pocket/sample.mjs, and shoots
@@ -212,7 +213,7 @@ async function sideBySide(appPng, refPng, file, caption) {
 }
 
 for (const c of checks) {
-  const label = `${c.launchPack ?? c.screen}${c.account ? `-${c.account.replace(':', '-')}` : ''}${c.dark ? '-dark' : ''}`
+  const label = `${c.launchPack ?? c.screen}${c.account ? `-${c.account.replace(':', '-')}` : ''}${c.name ? `-${c.name}` : ''}${c.dark ? '-dark' : ''}`
   console.log(`\n${label} — the app at ${c.route}`)
   const ref = await reference(c)
   const { ctx, page } = await app(c)
