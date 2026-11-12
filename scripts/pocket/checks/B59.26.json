@@ -1,0 +1,6 @@
+[
+  { "route": "/disputes", "screen": "p-statement", "words": "report", "why": "the reference draws no disputes screen; the nearest is Statement, a list of payments, and the words are the web's (suite B59.25)" },
+  { "route": "/disputes", "screen": "p-statement", "name": "form", "words": "report", "press": ["Dispute this payment"], "why": "the same, with the reason form open on the payment to dispute" },
+  { "route": "/disputes", "screen": "p-statement", "name": "lower", "words": "report", "scroll": "Card payments from", "why": "the same, scrolled to the disputes and refunds and Export" },
+  { "route": "/disputes", "screen": "p-statement", "dark": true, "words": "report", "why": "the same, with the phone set to dark" }
+]

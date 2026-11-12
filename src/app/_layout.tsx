@@ -37,6 +37,7 @@ function Navigator() {
           <Stack.Screen name="approvals/[id]" />
           <Stack.Screen name="notices/[id]" options={{ headerShown: true, title: 'Payment' }} />
           <Stack.Screen name="bills" />
+          <Stack.Screen name="disputes" />
           <Stack.Screen name="pause-all" />
           <Stack.Screen name="settings" />
           <Stack.Screen name="activity" />
