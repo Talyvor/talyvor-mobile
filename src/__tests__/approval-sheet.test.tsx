@@ -230,8 +230,8 @@ test('a decided request’s own screen reads Approved and paid or Approved and u
   ) as unknown as typeof fetch
 
   await renderRouter('./src/app', { initialUrl: '/approvals/apr_acme' })
-  expect(await screen.findByText('Approved and paid. Nothing is waiting for you here.')).toBeTruthy()
+  expect(await screen.findByText(/^Approved and paid (\d{1,2} [A-Z][a-z]{2}|today at \d\d:\d\d)\. Nothing is waiting for you here\.$/)).toBeTruthy()
   await renderRouter('./src/app', { initialUrl: '/approvals/apr_lead' })
-  expect(await screen.findByText('Approved and used. Nothing is waiting for you here.')).toBeTruthy()
+  expect(await screen.findByText(/^Approved and used (\d{1,2} [A-Z][a-z]{2}|today at \d\d:\d\d)\. Nothing is waiting for you here\.$/)).toBeTruthy()
   expect(screen.queryByText(/spent/)).toBeNull()
 })

@@ -143,7 +143,7 @@ test('a held-payment notification opens its approval sheet, and Approve with Fac
   expect(await screen.findByText('Buyer is waiting for you')).toBeTruthy()
   await fireEvent.press(await screen.findByRole('button', { name: 'Approve with Face ID' }))
   expect(await screen.findByTestId('approval-result')).toBeTruthy()
-  expect(await screen.findByText('Approved. Nothing is waiting for you here.')).toBeTruthy()
+  expect(await screen.findByText(/^Approved (\d{1,2} [A-Z][a-z]{2}|today at \d\d:\d\d)\. Nothing is waiting for you here\.$/)).toBeTruthy()
   expect(lens.approvalApproved).toBe(true)
 })
 
@@ -233,7 +233,7 @@ test("Approve with Face ID on an agent's approval signs exactly that approval's 
   tap(agentPush, 'approve')
   await renderRouter('./src/app', { initialUrl: '/approvals' })
 
-  expect(await screen.findByText('Approved. Nothing is waiting for you here.')).toBeTruthy()
+  expect(await screen.findByText(/^Approved (\d{1,2} [A-Z][a-z]{2}|today at \d\d:\d\d)\. Nothing is waiting for you here\.$/)).toBeTruthy()
   expect(lens.approvalApproved).toBe(true)
   expect(mockReasons.at(-1)).toBe('Approve $0.20 (2 LXC) for Buyer')
   expect(mockCategories.agent_approval).toEqual([expect.objectContaining({ identifier: 'approve', buttonTitle: 'Approve with Face ID' })])

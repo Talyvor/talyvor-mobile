@@ -3,12 +3,12 @@ import { Image } from 'expo-image'
 import { router } from 'expo-router'
 import * as WebBrowser from 'expo-web-browser'
 import { useState } from 'react'
-import { View } from 'react-native'
+import { Text, View } from 'react-native'
 
-import { Body, Button, Eyebrow, Headline, Screen } from '@/components/ui'
+import { Body, Button, Headline, Screen } from '@/components/ui'
 import { config } from '@/config'
 import { useSession } from '@/session'
-import { useTheme } from '@/theme'
+import { fonts, useTheme } from '@/theme'
 
 WebBrowser.maybeCompleteAuthSession()
 
@@ -46,20 +46,23 @@ export default function SignIn() {
     }
   }
 
+  // B57.78 — Pocket's p-signin: the logo, the headline and its line, Sign in at full width, and which account to use.
   return (
     <Screen>
       <Image
         source={dark ? require('../../assets/logo/talyvor-logo-small-on-dark-480.png') : require('../../assets/logo/talyvor-logo-small-on-light-480.png')}
-        style={{ width: 180, height: 57, marginTop: 40, marginBottom: 40 }}
+        style={{ width: 150, height: 48, marginTop: 74 }}
         contentFit="contain"
         accessibilityLabel="Talyvor"
       />
-      <Eyebrow>Agent wallets</Eyebrow>
-      <Headline>Every agent&apos;s money, in your pocket.</Headline>
+      <View style={{ marginTop: 8 }}>
+        <Headline>Every agent’s money, in your pocket.</Headline>
+      </View>
       <Body muted>Approve what your agents ask for, see what each one holds, and pause one in a tap.</Body>
-      <View style={{ marginTop: 24 }}>
+      <View style={{ marginTop: 8 }}>
         <Button primary label={busy ? 'Signing in…' : 'Sign in'} disabled={busy || !request || !config.oidcClientId} onPress={() => void start()} />
       </View>
+      <Text style={{ fontFamily: fonts.ui, fontSize: 13, lineHeight: 18, color: c.ink3 }}>Use the same account you signed up with on the web.</Text>
       {/* B59.9 — a new person opens an account here, with the web's link words. */}
       <Button variant="secondary" label="Create a workspace" disabled={busy} onPress={() => router.push('/sign-up')} />
       {!config.oidcClientId ? <Body muted>Sign-in is not set up in this build yet.</Body> : null}

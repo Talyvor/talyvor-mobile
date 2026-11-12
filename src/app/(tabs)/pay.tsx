@@ -10,7 +10,7 @@ import { useSession } from '@/session'
 import { useTheme } from '@/theme'
 import { lastPaid } from '@/widget-sync'
 
-/** Your saved payees, each with its last payment; a tap opens its payment screen. B59.11: a Stablecoin and crypto account
+/** Your saved payees, each with its last payment; a tap opens its payment screen. Below them, the bills due. B59.11: a Stablecoin and crypto account
  * has no bank transfers, so it has no payees here, only where its agents' addresses are. */
 export default function PayScreen() {
   const { client } = useSession()
@@ -59,6 +59,26 @@ export default function PayScreen() {
         </Card>
       ) : null}
       {shows?.bankTransfers && data ? <Body muted>Payees are added in Talyvor on the web.</Body> : null}
+      {/* B57.78 — Pocket's p-pay: Bills due opens the payments prepared for your approval (p-bills). */}
+      {shows?.bankTransfers ? (
+        <Card white>
+          <Link href="/bills" asChild>
+            <Pressable accessibilityRole="link">
+              <Row
+                first
+                left={
+                  <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: c.cloud }}>
+                    <Icon name="invoices" />
+                  </View>
+                }
+                title="Bills due"
+                sub="Payments prepared for you, waiting for your approval"
+                right={<Icon name="chev" size={16} color={c.ink3} />}
+              />
+            </Pressable>
+          </Link>
+        </Card>
+      ) : null}
     </Screen>
   )
 }

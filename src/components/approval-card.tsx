@@ -13,7 +13,7 @@ import { Face } from './face'
 import { Icon } from './icon'
 import { moneyParts } from './money'
 import { MoneyLabel, approvalCapability } from './money-label'
-import { Body, Button, Card, Eyebrow, Field, Headline, Row, Sheet } from './ui'
+import { Body, Button, Card, Chip, Eyebrow, Field, Headline, Row, Sheet } from './ui'
 
 // B57.67 — deciding on the phone as Pocket draws it (design/pocket p-home+psheet-A, psheet-L, p-approved-acme,
 // p-declined-acme, p-approved-lead, p-declined-lead): a row with Review, the approval sheet over the screen you are on,
@@ -353,6 +353,48 @@ export function DecidedApprovals({ decided, agents }: { decided: AgentApproval[]
         })}
       </View>
     </Card>
+  )
+}
+
+/** B57.78 — what a decided request was, in a sentence, when Lens kept the approval amount it was above. */
+function whatItWas(a: AgentApproval, agentName: string, peg: number | null) {
+  if (a.asks_above_ulxc == null) return null
+  const kind = !a.payee ? 'A request' : a.payee.kind === 'listing' ? 'A marketplace listing' : 'A payment'
+  return `${kind}, above ${agentName}’s ${moneyParts(formatLXC(a.asks_above_ulxc, peg)).large} approval amount.`
+}
+
+/** B57.78 — how it ended and when: an expired one says whether nobody answered or the approval went unused. */
+function endedWords(a: AgentApproval) {
+  if (a.status === 'expired')
+    return `Expired ${onDay(a.expires_at ?? a.decided_at ?? a.created_at)}: ${a.decided_at ? 'approved, but not used within 24 hours' : 'nobody answered within 24 hours'}.`
+  return `${decidedWords(a)} ${decidedOn(a)}.`
+}
+
+/** B57.78 — a decided request where its notification lands, as Pocket's p-approval-landing draws it: what it was and how
+ * it ended, then why nothing opens here, with the way to Approvals. */
+export function DecidedCard({ approval: a, agentName }: { approval: AgentApproval; agentName: string }) {
+  const { peg } = useSession()
+  const { c } = useTheme()
+  const what = whatItWas(a, agentName, peg)
+  return (
+    <>
+      <Card white>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <Text style={{ flex: 1, fontFamily: fonts.uiBold, fontSize: 15, color: c.ink, fontVariant: ['tabular-nums'] }}>{`${subject(a)} · ${amountParts(a, peg).large}`}</Text>
+          <Chip>{decidedWords(a)}</Chip>
+        </View>
+        {what ? <Text style={{ fontFamily: fonts.ui, fontSize: 13, lineHeight: 18, color: c.ink2 }}>{what}</Text> : null}
+        <Text style={{ fontFamily: fonts.ui, fontSize: 13, lineHeight: 18, color: c.ink3 }}>{`${endedWords(a)} Nothing is waiting for you here.`}</Text>
+      </Card>
+      <Card>
+        <Text style={{ fontFamily: fonts.ui, fontSize: 13, lineHeight: 18, color: c.ink2 }}>
+          A notification for a request still waiting opens its approval sheet. One that was decided, or expired after 24 hours, says so here.
+        </Text>
+        <View style={{ flexDirection: 'row' }}>
+          <Button small variant="secondary" label="Approvals" onPress={() => router.push('/approvals')} />
+        </View>
+      </Card>
+    </>
   )
 }
 
