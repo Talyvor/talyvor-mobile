@@ -59,7 +59,7 @@ function mockBff(
     refuseSigned?: boolean
     sessionEnded?: boolean
     enrolments?: { id: string }[]
-    labels?: 'live' | 'sandbox' | 'unread'
+    labels?: 'live' | 'sandbox' | 'unread' | 'fail'
     usdPerLXC?: number
     areas?: string[]
     /** B57.66: the workspace's type and kind, its name, and its accounts in each currency */
@@ -129,7 +129,9 @@ function mockBff(
     'GET /api/wallets/capabilities': () =>
       start.labels === 'unread'
         ? new Promise<never>(() => undefined)
-        : {
+        : start.labels === 'fail'
+          ? new Response(JSON.stringify({ error: 'down' }), { status: 502 })
+          : {
             capabilities: ['spend_on_talyvor', 'move_between_own_agents', 'buy_marketplace_listings', 'payments_out', 'pay_another_owner'].map((capability) => ({
               capability,
               name: capability,
@@ -1085,7 +1087,8 @@ describe('B56.12 labels on the phone', () => {
       await renderRouter('./src/app', { initialUrl: url })
       await waitFor(() => expect(screen.getAllByTestId(`money-label-${state}`)).toHaveLength(chips))
       expect(screen.queryByTestId(`money-label-${state === 'live' ? 'sandbox' : 'live'}`)).toBeNull()
-      expect(screen.getAllByLabelText(state === 'live' ? 'Live. Moves real money.' : 'Sandbox. Works. No real money moves.')).toHaveLength(chips)
+      // B57.119: a screen reader reads the word alone (the launch pack's DESIGN.md), the line as its hint.
+      expect(screen.getAllByLabelText(state === 'live' ? 'Live' : 'Sandbox')).toHaveLength(chips)
       // One read labels every chip on the screen.
       expect(calls.filter((c) => c.path === '/api/wallets/capabilities')).toHaveLength(1)
     }
@@ -1118,6 +1121,41 @@ describe('B56.12 labels on the phone', () => {
     )
     expect(await view.findByTestId('money-label-sandbox')).toBeTruthy()
     expect(paths).toEqual(['/api/pricing'])
+  })
+})
+
+describe('B57.119 the label in Pocket', () => {
+  beforeEach(() => {
+    mockStore.clear()
+    mockStore.set('talyvor.session', JSON.stringify({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }))
+  })
+
+  test('a read that failed says Status unknown where the label sits, never nothing (S-06)', async () => {
+    mockBff({ labels: 'fail' })
+    await renderRouter('./src/app', { initialUrl: '/statement' })
+    expect(await screen.findByText('Status unknown')).toBeTruthy()
+    expect(screen.getByLabelText('Status unknown').props.accessibilityHint).toBe('Talyvor could not read whether this workspace moves real money.')
+    expect(screen.queryByText('Sandbox')).toBeNull()
+    expect(screen.queryByText('Live')).toBeNull()
+  })
+
+  test.each([
+    ['sandbox', 'Sandbox', '#4A5061', '#7A8192', 'Works. No real money moves.'],
+    ['live', 'Live', '#0B7A45', '#0B7A45', 'Moves real money.'],
+  ] as const)('%s is drawn as pocket.css .status', async (state, word, ink, edge, line) => {
+    mockBff({ labels: state })
+    const view = await render(
+      <SessionProvider>
+        <MoneyLabel capability="payments_out" />
+      </SessionProvider>,
+    )
+    const chip = await view.findByTestId(`money-label-${state}`)
+    expect(chip.props.accessibilityLabel).toBe(word)
+    expect(chip.props.accessibilityHint).toBe(line)
+    expect(chip).toHaveStyle({ height: 24, borderRadius: 999, borderWidth: 1.5, borderColor: edge, backgroundColor: '#FFFFFF' })
+    expect(view.getByText(word)).toHaveStyle({ color: ink, fontSize: 12 })
+    // The mark is pocket.css's own 12-unit drawing: a ringed dot for Live, a dashed square for Sandbox.
+    expect(view.getByTestId(`money-label-mark-${state}`)).toBeTruthy()
   })
 })
 
