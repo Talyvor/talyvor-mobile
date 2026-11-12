@@ -31,6 +31,7 @@ export const PAY_OUT = ['payments_out'] as const
 
 /** The capability an agent's approval moves money on: a model call is spending on Talyvor; a payment is by its payee. */
 export function approvalCapability(a: AgentApproval, ownAgents: readonly { id: string }[]): string {
+  if (a.kind === 'card_challenge') return 'agent_card'
   switch (a.payee?.kind) {
     case undefined:
       return 'spend_on_talyvor'

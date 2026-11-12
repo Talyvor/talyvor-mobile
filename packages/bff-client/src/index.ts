@@ -99,6 +99,8 @@ export interface AgentApproval {
    * no monthly limit, and both null on one filed before Lens kept them */
   asks_above_ulxc?: number | null
   budget_left_after_ulxc?: number | null
+  /** B59.22 — 'card_challenge' for a 3-D Secure check on the agent's card, decided only signed; absent for the agent's own */
+  kind?: 'card_challenge'
 }
 
 /** Lens economy.PaidFrom (B57.11): what pays an approval, named in words, its amount in that currency and its balance now. */

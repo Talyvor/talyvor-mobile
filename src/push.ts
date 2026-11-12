@@ -19,7 +19,9 @@ Notifications.setNotificationHandler({
 /** The screen a notification's data opens, or null for one that is not an approval. */
 export function approvalHref(data: Record<string, unknown> | undefined): Href | null {
   if (data?.type === 'payment_request' && typeof data.request_id === 'string') return { pathname: '/approve/[id]', params: { id: data.request_id } }
-  if (data?.type === 'agent_approval' && typeof data.approval_id === 'string') return { pathname: '/approvals/[id]', params: { id: data.approval_id } }
+  // B59.23 — a 3-D Secure check on an agent's card (Lens B59.22) is an approval too: its sheet, never the lock screen's Approve.
+  if ((data?.type === 'agent_approval' || data?.type === 'card_challenge') && typeof data.approval_id === 'string')
+    return { pathname: '/approvals/[id]', params: { id: data.approval_id } }
   // B55.4 — a key waiting to join the workspace (Lens B55.1) is let in or turned away from Approvals.
   if (data?.type === 'key_enrolment') return '/approvals'
   // B55.55 — a recovery started without the code (Lens B55.48) is shown, and cancelled, on Home.
