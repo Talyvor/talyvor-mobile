@@ -69,6 +69,7 @@ function mockBff() {
   const routes: Partial<Record<string, (body?: string) => unknown>> = {
     'GET /auth/me': () => ({ workspace_id: 'ws_1' }),
     'GET /api/lxc/topup-options': () => ({ usd_per_lxc: 0.1, min_usd_cents: 1000 }),
+    'GET /api/money/accounts': () => ({ accounts: [] }),
     'GET /api/agents': () => ({
       workspace_balance_ulxc: 0,
       allocated_ulxc: 0,

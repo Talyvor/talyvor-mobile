@@ -62,6 +62,10 @@ function mockBff(
     labels?: 'live' | 'sandbox' | 'unread'
     usdPerLXC?: number
     areas?: string[]
+    /** B57.66: the workspace's type and kind, its name, and its accounts in each currency */
+    account?: { account_type: 'business' | 'personal'; money_kind: 'fiat' | 'stablecoin' | 'hybrid' }
+    name?: string
+    accounts?: unknown[] | 'fail'
   } = {},
 ) {
   const calls: { method: string; path: string; auth: string | undefined; body?: string; key?: string }[] = []
@@ -115,7 +119,10 @@ function mockBff(
     'GET /api/money/payments': () => ({
       payments: [{ id: 'pm_1', payee_id: 'py_1', payee_name: 'Acme Hosting', amount_minor: 2500, currency: 'GBP', reference: 'Sept', status: 'completed', created_at: '2026-10-03T10:00:00Z' }],
     }),
-    'GET /api/money/accounts': () => ({ accounts: [{ id: 'acc_gbp', currency: 'GBP', purpose: 'company', status: 'open', name: 'The company · GBP', balance_minor: 100_000 }] }),
+    'GET /api/money/accounts': () =>
+      start.accounts === 'fail' ? new Response(JSON.stringify({ error: 'down' }), { status: 502 }) : { accounts: start.accounts ?? [{ id: 'acc_gbp', currency: 'GBP', purpose: 'company', status: 'open', name: 'The company · GBP', balance_minor: 100_000 }] },
+    ...(start.account ? { 'GET /api/workspace/account': () => ({ workspace_id: 'ws_1', ...start.account }) } : {}),
+    ...(start.name ? { 'GET /api/workspace/name': () => ({ id: 'ws_1', name: start.name }) } : {}),
     'POST /api/money/payments/challenge': () => ({ challenge: 'ch_pay_1', allow_credentials: [] }),
     // B56.12: every money capability labelled as Lens answers it for this workspace; "unread" never answers.
     'GET /api/wallets/capabilities': () =>
@@ -180,19 +187,18 @@ test('signs in, shows the pending approval first on Home, and pauses an agent', 
   await renderRouter('./src/app', { initialUrl: '/' })
 
   await fireEvent.press(await screen.findByText('Sign in'))
-  expect(await screen.findByText('1 waiting for you')).toBeTruthy()
+  expect(await screen.findByText('1 payment waits for your yes')).toBeTruthy()
   expect(calls.find((c) => c.path === '/auth/mobile/session')?.body).toBe(JSON.stringify({ id_token: 'id-token-1' }))
   expect(calls.filter((c) => c.path.startsWith('/api/')).every((c) => c.auth === 'Bearer session-1')).toBe(true)
 
-  // Pending approval first: it comes before safe-to-spend and the agents.
-  const order = ['Buyer wants to use GPU hour', 'Safe to spend', 'Researcher']
+  // What waits first: the row that counts it, then the request, then the agents.
+  const order = ['1 payment waits for your yes', 'Buyer wants to use GPU hour', 'Researcher']
   const texts = screen.getAllByText(/./).map((t) => [t.props.children].flat().join(''))
   const at = order.map((o) => texts.findIndex((t) => t.startsWith(o)))
   expect(at.every((i) => i >= 0)).toBe(true)
   expect([...at].sort((a, b) => a - b)).toEqual(at)
-  expect(screen.getByText('18 LXC')).toBeTruthy() // 20 LXC less the 2 LXC waiting
 
-  await fireEvent.press(screen.getByLabelText('Researcher, active'))
+  await fireEvent.press(screen.getByLabelText('Researcher, running'))
   expect(await screen.findByText('Spends at most 1 LXC on one request.')).toBeTruthy()
   expect(screen.getByText('Asks you first above 0.5 LXC.')).toBeTruthy()
   await fireEvent.press(screen.getByText('Pause'))
@@ -314,6 +320,77 @@ describe('B55.20 decline on the phone', () => {
   })
 })
 
+describe('B57.66 Home', () => {
+  beforeEach(() => {
+    mockStore.clear()
+    mockStore.set('talyvor.session', JSON.stringify({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }))
+  })
+  const acc = (id: string, currency: string, balance_minor: number, agent_id = '') => ({ id, agent_id, currency, purpose: agent_id ? 'agent' : 'company', status: 'open', name: '', balance_minor })
+  const preq = { id: 'preq_1', status: 'pending_approval', summary: '', client: 'chat', totals: { USD: 18_000 }, items: [{ position: 1, payee_id: 'py_1', payee_name: 'Northwind Data', currency: 'USD', amount_minor: 18_000, reference: '', decision: 'needs_approval', reason: '' }], created_at: '2026-11-09T08:00:00Z' }
+
+  test('Business and Hybrid: the account, each currency it holds, what waits, and each agent Running or Paused', async () => {
+    mockBff({
+      account: { account_type: 'business', money_kind: 'hybrid' },
+      name: 'Northwind Studio',
+      paused: true,
+      requests: [preq],
+      accounts: [acc('a1', 'USD', 1_840_000), acc('a2', 'EUR', 750_000), acc('a3', 'USDC', 14_000_000_000), acc('a4', 'USD', 620_000, 'ag_1'), acc('a5', 'USDC', 1_500_000_000, 'ag_1')],
+    })
+    await renderRouter('./src/app', { initialUrl: '/' })
+    expect(await screen.findByText('2 payments wait for your yes')).toBeTruthy()
+    expect(within(screen.getByLabelText('Northwind Studio, Business · Hybrid')).getByText('Business · Hybrid')).toBeTruthy()
+    expect(screen.getByText('Your company’s total')).toBeTruthy()
+    // Every account in view, the company's and each agent's, by currency.
+    for (const [label, amount] of [['US dollar', '$24,600.00'], ['Euro', '€7,500.00'], ['USDC', '15,500.00']]) expect(within(screen.getByLabelText(`${label}, ${amount}`)).getByText(amount)).toBeTruthy()
+    // The prepared payment is listed with the agents' requests, under the row that counts them.
+    expect(screen.getByText('Chat prepared a payment to Northwind Data')).toBeTruthy()
+    expect(screen.getByText('Buyer wants to use GPU hour')).toBeTruthy()
+    // Running or Paused, never Active; an agent with accounts shows them, one without its balance dollars first.
+    expect(screen.getByText('Your team’s agents')).toBeTruthy()
+    expect(screen.getByText('Paused')).toBeTruthy()
+    expect(screen.getByText('Running')).toBeTruthy()
+    expect(screen.queryByText(/Active/)).toBeNull()
+    expect(within(screen.getByLabelText('Researcher, paused')).getByText('$6,200.00')).toBeTruthy()
+    expect(within(screen.getByLabelText('Researcher, paused')).getByText('1,500.00 USDC')).toBeTruthy()
+
+    await fireEvent.press(screen.getByRole('link', { name: '2 payments wait for your yes' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Approvals, 2 waiting', selected: true })).toBeTruthy())
+  })
+
+  test('Personal and Fiat: one currency is the total, a stablecoin is not drawn, and Pause every agent opens its screen', async () => {
+    mockBff({ account: { account_type: 'personal', money_kind: 'fiat' }, name: 'Maya Lind', accounts: [acc('a1', 'USD', 240_000), acc('a2', 'USDC', 400_000_000)] })
+    await renderRouter('./src/app', { initialUrl: '/' })
+    expect(await screen.findByText('1 payment waits for your yes')).toBeTruthy()
+    expect(screen.getByLabelText('Maya Lind, Personal · Fiat')).toBeTruthy()
+    expect(screen.getByText('Your total')).toBeTruthy()
+    expect(screen.getByLabelText('$2,400.00')).toBeTruthy()
+    expect(screen.queryByText(/USDC/)).toBeNull()
+    expect(screen.getByText('Your agents')).toBeTruthy()
+
+    await fireEvent.press(screen.getByRole('link', { name: 'Pause every agent' }))
+    expect(await screen.findByText('Pause every agent?')).toBeTruthy()
+  })
+
+  test('nothing waiting draws no waiting row; every agent paused says so, with no Pause every agent', async () => {
+    mockBff({ approvals: [], allPaused: true })
+    await renderRouter('./src/app', { initialUrl: '/' })
+    expect(await screen.findByText('Every agent is paused. Nothing they ask for is paid until you resume them.')).toBeTruthy()
+    expect(screen.queryByText(/for your yes/)).toBeNull()
+    expect(screen.queryByText('Pause every agent')).toBeNull()
+  })
+
+  test('a failed read says what failed and that nothing changed, and Try again reads again', async () => {
+    const start: { accounts: unknown[] | 'fail' } = { accounts: 'fail' }
+    const calls = mockBff(start)
+    await renderRouter('./src/app', { initialUrl: '/' })
+    expect(await screen.findByText('We couldn’t read your balances. Nothing changed.')).toBeTruthy()
+    start.accounts = [acc('a1', 'GBP', 156_000)]
+    await fireEvent.press(screen.getByRole('button', { name: 'Try again' }))
+    expect(await screen.findByLabelText('£1,560.00')).toBeTruthy()
+    expect(calls.filter((c) => c.path === '/api/money/accounts')).toHaveLength(2)
+  })
+})
+
 describe('B55.27 money dollars first', () => {
   beforeEach(() => {
     mockStore.clear()
@@ -323,15 +400,16 @@ describe('B55.27 money dollars first', () => {
   test('Home writes dollars first beside LXC by the peg', async () => {
     mockBff({ usdPerLXC: 0.1 })
     await renderRouter('./src/app', { initialUrl: '/' })
-    expect(await screen.findByLabelText('$1.80 (18 LXC)')).toBeTruthy() // 20 LXC less the 2 LXC waiting, at $0.10 an LXC
-    expect(screen.getByLabelText('$1.25 (12.5 LXC)')).toBeTruthy()
+    // Each agent's balance at $0.10 an LXC, and the request waiting.
+    expect(await screen.findByLabelText('$1.25 (12.5 LXC)')).toBeTruthy()
+    expect(screen.getByLabelText('$0.30 (3 LXC)')).toBeTruthy()
     expect(screen.getByText('$0.20 (2 LXC)')).toBeTruthy()
   })
 
   test('Home writes LXC alone when the peg cannot be read', async () => {
     const calls = mockBff()
     await renderRouter('./src/app', { initialUrl: '/' })
-    expect(await screen.findByText('18 LXC')).toBeTruthy()
+    expect(await screen.findByText('12.5 LXC')).toBeTruthy()
     await waitFor(() => expect(calls.some((c) => c.path === '/api/lxc/topup-options')).toBe(true))
     expect(screen.queryByText(/\$/)).toBeNull()
   })
@@ -833,7 +911,7 @@ describe('B55.11 prepared payments on Home and Approvals', () => {
     const calls = mockBff({ requests: [preq()] })
     await renderRouter('./src/app', { initialUrl: '/' })
     expect(await screen.findByText('Your assistant prepared a payment to Acme Hosting')).toBeTruthy()
-    expect(screen.getByText('2 waiting for you')).toBeTruthy()
+    expect(screen.getByText('2 payments wait for your yes')).toBeTruthy()
     const texts = screen.getAllByText(/./).map((t) => [t.props.children].flat().join(''))
     expect(texts.findIndex((t) => t.startsWith('Your assistant prepared'))).toBeLessThan(texts.findIndex((t) => t.startsWith('Buyer wants to use')))
     expect(screen.getByText('£42.00')).toBeTruthy()
@@ -928,10 +1006,10 @@ describe('B56.12 labels on the phone', () => {
   })
   const preq = { id: 'preq_1', status: 'pending_approval', summary: '', client: 'mcp:claude-desktop', totals: { GBP: 4200 }, items: [{ position: 1, payee_id: 'py_1', payee_name: 'Acme Hosting', currency: 'GBP', amount_minor: 4200, reference: 'November hosting', decision: 'needs_approval', reason: 'above the approval amount' }], created_at: '2026-11-09T08:00:00Z' }
 
-  // Each money screen, where it lands, the words that say it has loaded, and how many chips it draws: Home's safe-to-spend,
-  // its prepared payment and its approval; Approvals' prepared payment and approval; one on every other screen.
+  // Each money screen, where it lands, the words that say it has loaded, and how many chips it draws: Home's top, its
+  // prepared payment and its approval; Approvals' prepared payment and approval; one on every other screen.
   const screens: [string, string, string, number][] = [
-    ['Home', '/', 'Safe to spend', 3],
+    ['Home', '/', 'Your team’s agents', 3],
     ['Approvals', '/approvals', 'Buyer wants to use GPU hour', 2],
     ['the approval sheet', '/approve/preq_1', 'Acme Hosting', 1],
     // Where a notification lands, the approval's row and its sheet, open over it (B57.67).
@@ -994,7 +1072,7 @@ describe('B57.65 the tab bar', () => {
   test('each tab has its icon over its word, and pressing it opens it', async () => {
     mockBff()
     await renderRouter('./src/app', { initialUrl: '/' })
-    await screen.findByText('1 waiting for you')
+    await screen.findByText('1 payment waits for your yes')
     for (const icon of ['home', 'approvals', 'spending', 'statements', 'payments']) expect(screen.getAllByTestId(`icon-${icon}`, { includeHiddenElements: true }).length).toBeGreaterThan(0)
     for (const word of ['Home', 'Approvals', 'Spending', 'Statement', 'Pay']) expect(screen.getAllByText(word).length).toBeGreaterThan(0)
     // Every tab, pressed, is the one you are on: none leads nowhere. Chat's own test opens Chat, with its recorder
@@ -1010,7 +1088,7 @@ describe('B57.65 the tab bar', () => {
     const start = { approvals: undefined as unknown[] | undefined, requests: [preq] }
     mockBff(start)
     await renderRouter('./src/app', { initialUrl: '/' })
-    expect(await screen.findByText('2 waiting for you')).toBeTruthy()
+    expect(await screen.findByText('2 payments wait for your yes')).toBeTruthy()
     await waitFor(() => expect(badges()).toEqual([2, 2]))
     expect(screen.getByLabelText('Approvals, 2 waiting')).toBeTruthy()
 
@@ -1034,11 +1112,11 @@ describe('B59.3 a hidden area is not there', () => {
   test('a default workspace has no Chat tab, and a link to Chat opens Home', async () => {
     mockBff({ areas: [] })
     await renderRouter('./src/app', { initialUrl: '/' })
-    await screen.findByText('1 waiting for you')
+    await screen.findByText('1 payment waits for your yes')
     expect(chatTab()).toHaveLength(0)
 
     await renderRouter('./src/app', { initialUrl: '/chat' })
-    expect(await screen.findByText('1 waiting for you')).toBeTruthy()
+    expect(await screen.findByText('1 payment waits for your yes')).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Home', selected: true })).toBeTruthy()
     expect(chatTab()).toHaveLength(0)
   })
@@ -1046,7 +1124,7 @@ describe('B59.3 a hidden area is not there', () => {
   test('a workspace whose areas cannot be read has no Chat tab either', async () => {
     mockBff()
     await renderRouter('./src/app', { initialUrl: '/' })
-    await screen.findByText('1 waiting for you')
+    await screen.findByText('1 payment waits for your yes')
     expect(chatTab()).toHaveLength(0)
   })
 

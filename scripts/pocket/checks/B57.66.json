@@ -1,0 +1,295 @@
+[
+  {
+    "route": "/",
+    "screen": "p-home",
+    "launchPack": "P5",
+    "account": "business:hybrid",
+    "answers": {
+      "/api/money/accounts": {
+        "accounts": [
+          {
+            "id": "a1",
+            "agent_id": "",
+            "currency": "USD",
+            "purpose": "company",
+            "status": "open",
+            "name": "",
+            "balance_minor": 1220000
+          },
+          {
+            "id": "a2",
+            "agent_id": "",
+            "currency": "EUR",
+            "purpose": "company",
+            "status": "open",
+            "name": "",
+            "balance_minor": 510000
+          },
+          {
+            "id": "a3",
+            "agent_id": "",
+            "currency": "GBP",
+            "purpose": "company",
+            "status": "open",
+            "name": "",
+            "balance_minor": 400000
+          },
+          {
+            "id": "a4",
+            "agent_id": "",
+            "currency": "USDC",
+            "purpose": "company",
+            "status": "open",
+            "name": "",
+            "balance_minor": 12500000000
+          },
+          {
+            "id": "a5",
+            "agent_id": "agt_research",
+            "currency": "USD",
+            "purpose": "agent",
+            "status": "open",
+            "name": "",
+            "balance_minor": 620000
+          },
+          {
+            "id": "a6",
+            "agent_id": "agt_research",
+            "currency": "USDC",
+            "purpose": "agent",
+            "status": "open",
+            "name": "",
+            "balance_minor": 1500000000
+          },
+          {
+            "id": "a7",
+            "agent_id": "agt_sales",
+            "currency": "EUR",
+            "purpose": "agent",
+            "status": "open",
+            "name": "",
+            "balance_minor": 240000
+          },
+          {
+            "id": "a8",
+            "agent_id": "agt_sales",
+            "currency": "USDC",
+            "purpose": "agent",
+            "status": "open",
+            "name": "",
+            "balance_minor": 800000000
+          }
+        ]
+      }
+    },
+    "words": "report",
+    "why": "Home's own words are checked by src/__tests__/app.test.tsx (B57.66); Top up, Withdraw, Convert, Receive, Send, Instant transfer and the wallet address are not drawn until their screens exist (B59.33, B59.20), the total is each currency's balance until a rate is read, and the tab bar is B57.68's"
+  },
+  {
+    "route": "/",
+    "screen": "p-home",
+    "launchPack": "P3",
+    "account": "personal:fiat",
+    "answers": {
+      "/api/money/accounts": {
+        "accounts": [
+          {
+            "id": "a1",
+            "agent_id": "",
+            "currency": "USD",
+            "purpose": "company",
+            "status": "open",
+            "name": "",
+            "balance_minor": 200000
+          },
+          {
+            "id": "a2",
+            "agent_id": "",
+            "currency": "EUR",
+            "purpose": "company",
+            "status": "open",
+            "name": "",
+            "balance_minor": 185000
+          },
+          {
+            "id": "a3",
+            "agent_id": "",
+            "currency": "GBP",
+            "purpose": "company",
+            "status": "open",
+            "name": "",
+            "balance_minor": 156000
+          },
+          {
+            "id": "a4",
+            "agent_id": "agt_research",
+            "currency": "USD",
+            "purpose": "agent",
+            "status": "open",
+            "name": "",
+            "balance_minor": 40000
+          }
+        ]
+      },
+      "/api/workspace/name": {
+        "id": "ws_maya",
+        "name": "Maya Lind"
+      }
+    },
+    "words": "report",
+    "why": "Home's own words are checked by src/__tests__/app.test.tsx (B57.66); Top up, Withdraw, Convert, Receive, Send, Instant transfer and the wallet address are not drawn until their screens exist (B59.33, B59.20), the total is each currency's balance until a rate is read, and the tab bar is B57.68's"
+  },
+  {
+    "route": "/",
+    "screen": "p-home",
+    "launchPack": "P4",
+    "account": "personal:stablecoin",
+    "answers": {
+      "/api/money/accounts": {
+        "accounts": [
+          {
+            "id": "a1",
+            "agent_id": "",
+            "currency": "USDC",
+            "purpose": "company",
+            "status": "open",
+            "name": "",
+            "balance_minor": 2350000000
+          },
+          {
+            "id": "a2",
+            "agent_id": "agt_research",
+            "currency": "USDC",
+            "purpose": "agent",
+            "status": "open",
+            "name": "",
+            "balance_minor": 400000000
+          }
+        ]
+      },
+      "/api/workspace/name": {
+        "id": "ws_maya",
+        "name": "Maya Lind"
+      }
+    },
+    "words": "report",
+    "why": "Home's own words are checked by src/__tests__/app.test.tsx (B57.66); Top up, Withdraw, Convert, Receive, Send, Instant transfer and the wallet address are not drawn until their screens exist (B59.33, B59.20), the total is each currency's balance until a rate is read, and the tab bar is B57.68's"
+  },
+  {
+    "route": "/",
+    "screen": "p-home",
+    "account": "business:hybrid",
+    "answers": {
+      "/api/money/accounts": {
+        "accounts": [
+          {
+            "id": "a1",
+            "agent_id": "",
+            "currency": "USD",
+            "purpose": "company",
+            "status": "open",
+            "name": "",
+            "balance_minor": 1220000
+          },
+          {
+            "id": "a2",
+            "agent_id": "",
+            "currency": "EUR",
+            "purpose": "company",
+            "status": "open",
+            "name": "",
+            "balance_minor": 510000
+          },
+          {
+            "id": "a3",
+            "agent_id": "",
+            "currency": "GBP",
+            "purpose": "company",
+            "status": "open",
+            "name": "",
+            "balance_minor": 400000
+          },
+          {
+            "id": "a4",
+            "agent_id": "",
+            "currency": "USDC",
+            "purpose": "company",
+            "status": "open",
+            "name": "",
+            "balance_minor": 12500000000
+          },
+          {
+            "id": "a5",
+            "agent_id": "agt_research",
+            "currency": "USD",
+            "purpose": "agent",
+            "status": "open",
+            "name": "",
+            "balance_minor": 620000
+          },
+          {
+            "id": "a6",
+            "agent_id": "agt_research",
+            "currency": "USDC",
+            "purpose": "agent",
+            "status": "open",
+            "name": "",
+            "balance_minor": 1500000000
+          },
+          {
+            "id": "a7",
+            "agent_id": "agt_sales",
+            "currency": "EUR",
+            "purpose": "agent",
+            "status": "open",
+            "name": "",
+            "balance_minor": 240000
+          },
+          {
+            "id": "a8",
+            "agent_id": "agt_sales",
+            "currency": "USDC",
+            "purpose": "agent",
+            "status": "open",
+            "name": "",
+            "balance_minor": 800000000
+          }
+        ]
+      },
+      "/api/agents/approvals": {
+        "approvals": []
+      },
+      "/api/agents": {
+        "workspace_balance_ulxc": 0,
+        "allocated_ulxc": 0,
+        "unallocated_ulxc": 0,
+        "spent_ulxc": 0,
+        "all_paused_at": "2026-10-21T17:00:00Z",
+        "agents": [
+          {
+            "id": "agt_research",
+            "name": "Research",
+            "colour": "cobalt",
+            "face": "circle",
+            "balance_ulxc": 16500000000,
+            "spent_ulxc": 0,
+            "created_at": "2026-09-14T09:00:00Z",
+            "paused_at": "2026-10-21T17:00:00Z"
+          },
+          {
+            "id": "agt_sales",
+            "name": "Sales",
+            "colour": "orchid",
+            "face": "squircle",
+            "balance_ulxc": 12000000000,
+            "spent_ulxc": 0,
+            "created_at": "2026-10-05T09:00:00Z",
+            "paused_at": "2026-10-21T17:00:00Z"
+          }
+        ]
+      }
+    },
+    "words": "report",
+    "why": "every agent paused and nothing waiting: the reference's p-home after both decisions, with every agent paused"
+  }
+]
