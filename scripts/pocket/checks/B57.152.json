@@ -1,0 +1,5 @@
+[
+  { "route": "/settings/company", "screen": "p-pause-all", "words": "report", "why": "the reference draws no Company details; the nearest is Pause agents, a form with its decision at the foot, and the words are the web's (suite B59.31, B57.145)" },
+  { "route": "/settings/company", "screen": "p-pause-all", "name": "lower", "words": "report", "scroll": "Add a person", "why": "the same, scrolled to Add a person and Save" },
+  { "route": "/settings/company", "screen": "p-pause-all", "dark": true, "words": "report", "why": "the same, with the phone set to dark" }
+]

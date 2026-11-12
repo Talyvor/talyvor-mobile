@@ -99,6 +99,28 @@ test("a Business's Settings lists Company details with the web's words, and it o
   expect(person.getByLabelText('Share').props.value).toBe('25')
 })
 
+// B57.152 — drawn as the web's B57.145 draws it (Pocket's settings form and list of people): the company in its own
+// titled card, and the people with control in theirs, each row headed by the person, their role and their share.
+test('the company has its own card and each person is a row headed by their name, role and share', async () => {
+  mockBff({ saved: { company_name: 'Northwind Studio Ltd', registration_number: '12345678', country: 'GB', people: [{ name: 'Ana Pop', role: 'director', share_bps: 6000 }] } })
+  await renderRouter('./src/app', { initialUrl: '/settings/company' })
+  const company = within(await screen.findByTestId('company'))
+  expect(company.getByRole('header', { name: 'The company' })).toBeTruthy()
+  expect(company.getByLabelText('Company name').props.value).toBe('Northwind Studio Ltd')
+  const people = within(screen.getByTestId('people'))
+  expect(people.getByRole('header', { name: 'People with control' })).toBeTruthy()
+  const ana = within(people.getByTestId('person-0'))
+  expect(ana.getByRole('header', { name: 'Ana Pop' })).toBeTruthy()
+  expect(ana.getByText('Director · 60%')).toBeTruthy()
+
+  await fireEvent.press(people.getByText('Add a person'))
+  const added = within(people.getByTestId('person-1'))
+  expect(added.getByRole('header', { name: 'Person 2' })).toBeTruthy()
+  await fireEvent.press(added.getByRole('radio', { name: 'Shareholder' }))
+  await fireEvent.changeText(added.getByLabelText('Share'), '25.5')
+  expect(added.getByText('Shareholder · 25.5%')).toBeTruthy()
+})
+
 test('the form checks each person and the shares before anything is sent, then sends the four fields only', async () => {
   const calls = mockBff({ saved: { company_name: 'Northwind Studio Ltd', registration_number: '12345678', country: 'GB', people: [] } })
   await renderRouter('./src/app', { initialUrl: '/settings/company' })
