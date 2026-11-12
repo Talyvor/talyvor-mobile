@@ -30,6 +30,7 @@ export function PhoneKeyCard({ onOn }: { onOn?: () => void } = {}) {
   const [refusal, setRefusal] = useState('')
   const [code, setCode] = useState('')
   const [recoveryCode, setRecoveryCode] = useState('')
+  const [copied, setCopied] = useState(false)
   const mounted = useRef(true)
   useEffect(() => () => void (mounted.current = false), [])
   useEffect(() => {
@@ -99,8 +100,17 @@ export function PhoneKeyCard({ onOn }: { onOn?: () => void } = {}) {
             <Body>Save your recovery code</Body>
             <Body muted>If you ever lose every passkey and phone, this code lets you add a new key at once. We show it only now.</Body>
             <Figure size={20}>{grouped(recoveryCode)}</Figure>
-            <Button label="Copy" onPress={() => void Clipboard.setStringAsync(recoveryCode)} />
-            <Button primary label="I saved it" onPress={() => setRecoveryCode('')} />
+            <Button label="Copy" onPress={() => void Clipboard.setStringAsync(recoveryCode).then(() => setCopied(true))} />
+            <Button
+              primary
+              label="I saved it"
+              onPress={() => {
+                // A code Copy put on the clipboard leaves it with the sheet, so another app cannot read it later.
+                if (copied) void Clipboard.setStringAsync('')
+                setCopied(false)
+                setRecoveryCode('')
+              }}
+            />
           </>
         ) : code ? (
           <Body muted>Waiting for the web. In Talyvor on the web, let this phone in from Approvals. The code there should be {code}.</Body>

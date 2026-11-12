@@ -99,6 +99,8 @@ test('the first Turn on shows the recovery code once, with Copy and I saved it, 
   await fireEvent.press(screen.getByText('I saved it'))
   expect(await screen.findByText(/^On\. This phone signs your approvals/)).toBeTruthy()
   expect(screen.queryByText('ABCD 1234 EFGH 5678 JKMN')).toBeNull()
+  // The copy leaves the clipboard with the sheet.
+  expect(mockCopied).toEqual([CODE, ''])
   expect([...mockStore.values()].some((v) => v.replace(/\s/g, '').includes(CODE))).toBe(false)
 
   // Opened again, the card never shows it.
