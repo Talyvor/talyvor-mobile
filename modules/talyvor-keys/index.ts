@@ -1,4 +1,7 @@
 import { requireOptionalNativeModule } from 'expo'
+import { Platform } from 'react-native'
+
+import { testKey } from './test-key'
 
 /**
  * B40.13 — TalyvorKeys: the approval key, a P-256 key in the Secure Enclave (iPhone) or StrongBox/TEE (Android) that
@@ -17,7 +20,15 @@ export interface TalyvorKeysNative {
   /** ECDSA P-256 over SHA-256 of message's UTF-8 bytes, DER, after the biometric check; reason is shown in the prompt. */
   sign(alias: string, message: string, reason: string): Promise<string>
   deleteKey(alias: string): Promise<void>
+  /** The platform the key registers as; the phone's own (Platform.OS) when unset. */
+  platform?: string
 }
 
-/** null where the app runs without it: the web and Expo Go. */
-export default requireOptionalNativeModule<TalyvorKeysNative>('TalyvorKeys')
+// B57.130 — EXPO_PUBLIC_TALYVOR_TEST_KEYS=1 gives the web export a software key (test-key.ts). A release build with it
+// set does not start, as config.ts refuses an http:// BFF.
+const testKeys = process.env.EXPO_PUBLIC_TALYVOR_TEST_KEYS === '1'
+if (testKeys && !__DEV__) throw new Error('EXPO_PUBLIC_TALYVOR_TEST_KEYS is refused in a release build')
+
+/** null where the app runs without it: the web and Expo Go. The web export of a development build with the test flag
+ * holds the software key. */
+export default requireOptionalNativeModule<TalyvorKeysNative>('TalyvorKeys') ?? (testKeys && Platform.OS === 'web' ? testKey : null)
