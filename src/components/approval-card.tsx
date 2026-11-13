@@ -104,22 +104,24 @@ export function expiresWords(at: string, now = new Date()) {
 /** `Face ID on this iPhone`: what signed it. */
 const signedWith = `${biometricName === 'Face ID' ? 'Face ID' : 'Your fingerprint'} on this ${Platform.OS === 'ios' ? 'iPhone' : 'phone'}`
 
-/** The sheet's and the result's facts: a label on the left, its value on the right, a rule between. */
-function Facts({ rows }: { rows: (readonly [string, string] | null)[] }) {
+type Fact = readonly [label: string, value: string, note?: string]
+
+/** The sheet's and the result's facts: a label on the left, its value on the right, a rule between; a row's note under its
+ * value in 13 ink-3, as launch-pack P8 draws "this month" under Budget left after. */
+function Facts({ rows, testID }: { rows: (Fact | null)[]; testID?: string }) {
   const { c } = useTheme()
-  const shown = rows.filter((r): r is readonly [string, string] => r !== null)
+  const shown = rows.filter((r): r is Fact => r !== null)
   return (
-    <View style={{ backgroundColor: c.cloud, borderRadius: 16, paddingHorizontal: 14 }}>
-      {shown.map(([label, value], i) => (
-        <View
-          key={label}
-          accessible
-          accessibilityLabel={`${label}: ${value}`}
-          style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12, paddingVertical: 12, borderTopWidth: i ? 1 : 0, borderTopColor: c.line }}>
-          <Body muted style={{ flexShrink: 1, maxWidth: '55%' }}>
-            {label}
-          </Body>
-          <Body style={{ flex: 1, textAlign: 'right', fontFamily: fonts.uiMedium }}>{value}</Body>
+    <View testID={testID} style={{ backgroundColor: c.cloud, borderRadius: 16, paddingHorizontal: 14 }}>
+      {shown.map(([label, value, note], i) => (
+        <View key={label} style={{ paddingVertical: 12, gap: 2, borderTopWidth: i ? 1 : 0, borderTopColor: c.line }}>
+          <View accessible accessibilityLabel={`${label}: ${value}`} style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12 }}>
+            <Body muted style={{ flexShrink: 1, maxWidth: '55%' }}>
+              {label}
+            </Body>
+            <Body style={{ flex: 1, textAlign: 'right', fontFamily: fonts.uiMedium }}>{value}</Body>
+          </View>
+          {note ? <Text style={{ fontFamily: fonts.ui, fontSize: 13, lineHeight: 18, color: c.ink3, textAlign: 'right' }}>{note}</Text> : null}
         </View>
       ))}
     </View>
@@ -245,22 +247,22 @@ export function ApprovalSheet({
         </View>
         <MoneyLabel capability={capability} />
       </View>
-      <Amount large={large} small={small} size={52} />
+      <Amount large={large} small={small} size={54} />
       <Body>
         {card ? 'at ' : a.payee ? 'to ' : ''}
         <Text style={{ fontFamily: fonts.uiBold }}>{subject(a)}</Text>
       </Body>
       {a.memo && a.reason ? <Body muted>“{a.reason}”</Body> : null}
       <Facts
+        testID="approval-facts"
         rows={[
           card ? ['Why it’s asking', `${subject(a)} asked the card to check with you`] : null,
           a.asks_above_ulxc != null ? ['Why it’s asking', `It asks you above ${formatLXC(a.asks_above_ulxc, peg)}`] : null,
           a.paid_from ? ['Paid from', paidFromWords(a, peg)] : null,
           hasBudget ? ['Budget left after', budgetWords(a.budget_left_after_ulxc!, monthly, peg)] : null,
-          a.expires_at ? ['Expires', expiresWords(a.expires_at)] : null,
+          a.expires_at ? ['Expires', expiresWords(a.expires_at), card ? 'No answer by then declines it.' : undefined] : null,
         ]}
       />
-      {card ? <Body muted>No answer by then declines it.</Body> : null}
       {paused && !card ? <Body muted>{`${agent.name} is paused: nothing goes through until it runs again. An approval lasts 24 hours.`}</Body> : null}
       <View style={{ flexDirection: 'row', gap: 8 }}>
         <Icon name="check" size={16} color={c.ink2} />
@@ -283,7 +285,7 @@ export function ApprovalSheet({
         </>
       ) : (
         <>
-          {signs ? <Button primary label={`Approve with ${biometricName}`} disabled={busy} hint="Approving…" onPress={() => void decide('approve')} /> : null}
+          {signs ? <Button primary icon={biometricName === 'Face ID' ? 'faceid' : 'key'} label={`Approve with ${biometricName}`} disabled={busy} hint="Approving…" onPress={() => void decide('approve')} /> : null}
           {!card ? <Button variant="secondary" label="Decline" disabled={busy} onPress={() => setDeclining(true)} /> : null}
           {card && signs ? <Button variant="secondary" label="Decline" disabled={busy} hint="Declining…" onPress={() => void decide('deny')} /> : null}
         </>
@@ -314,7 +316,7 @@ export function ApprovalResult({ d, onDone, onNext }: { d: Decided; onDone: () =
         </View>
         <Card white>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <Face agent={d.agent} size={30} />
+            {isCardCheck(a) ? <AgentCard agent={d.agent} width={48} /> : <Face agent={d.agent} size={30} />}
             <Body style={{ flex: 1, fontFamily: fonts.uiBold }}>{subject(a)}</Body>
             <MoneyLabel capability={d.capability} />
           </View>

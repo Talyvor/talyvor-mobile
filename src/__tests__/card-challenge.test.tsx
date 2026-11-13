@@ -145,3 +145,28 @@ test('Decline is signed at once, with no reason to give, and a phone with no key
   expect(sheet().queryByRole('button', { name: 'Approve with Face ID' })).toBeNull()
   expect(sheet().queryByRole('button', { name: 'Decline' })).toBeNull()
 })
+
+// B57.147 — the card check drawn as Pocket draws the approval sheet (p-home+psheet-A, launch-pack P8): the amount at 54,
+// Approve with the Face ID mark, the deadline's note inside the facts under Expires, and the card on the result.
+
+test('the sheet draws the amount at 54, the Face ID mark on Approve, and the deadline’s note under Expires in the facts', async () => {
+  mockBff()
+  await renderRouter('./src/app', { initialUrl: '/approvals/apr_3ds' })
+  await waitFor(() => expect(sheet().getByText('Confirm a card payment')).toBeTruthy())
+
+  expect(sheet().getByText('$120.00')).toHaveStyle({ fontSize: 54 })
+  expect(within(sheet().getByRole('button', { name: 'Approve with Face ID' })).getByTestId('icon-faceid', { includeHiddenElements: true })).toBeTruthy()
+  const facts = within(sheet().getByTestId('approval-facts'))
+  expect(facts.getByLabelText('Expires: Today at 23:58')).toBeTruthy()
+  expect(facts.getByText('No answer by then declines it.')).toBeTruthy()
+})
+
+test('the result shows the card that paid, not the agent’s face', async () => {
+  mockBff()
+  await renderRouter('./src/app', { initialUrl: '/approvals/apr_3ds' })
+  await fireEvent.press(await screen.findByRole('button', { name: 'Approve with Face ID' }))
+
+  const result = within(await screen.findByTestId('approval-result'))
+  expect(result.getByRole('image', { name: "Research's agent card" })).toBeTruthy()
+  expect(result.getByText('Northwind Books')).toBeTruthy()
+})
