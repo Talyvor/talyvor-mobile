@@ -8,7 +8,8 @@ import { registerPush } from '../push'
 import { useSession } from '../session'
 import { fonts, useTheme } from '../theme'
 import { BottomSheet } from './pay-sheet'
-import { Body, Button, Card, Figure, Headline } from './ui'
+import { Icon } from './icon'
+import { Body, Button, Card, Headline } from './ui'
 
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
@@ -21,7 +22,8 @@ const grouped = (code: string) => code.replace(/\s+/g, '').replace(/(.{4})(?=.)/
  * first too, and the key leaves the phone only once Lens has revoked it. B59.9: `onOn` hears when this phone's key is on
  * here, so sign-up's step 3 can open the app. B55.55: a first key comes with the workspace's recovery code (Lens B55.48),
  * shown once in the web's words (B55.54) until "I saved it", and held only in this card's state; `onOn` waits for it.
- * B57.102: another workspace's key is drawn as p-approvals draws a setting, and moving it asks in Pocket's bottom sheet. */
+ * B57.102: another workspace's key is drawn as p-approvals draws a setting, and moving it asks in Pocket's bottom sheet.
+ * B57.146: the recovery code waits in Pocket's bottom sheet (sheet-A's frame) over the card, with no Close. */
 export function PhoneKeyCard({ onOn }: { onOn?: () => void } = {}) {
   const { client } = useSession()
   const { c } = useTheme()
@@ -95,10 +97,45 @@ export function PhoneKeyCard({ onOn }: { onOn?: () => void } = {}) {
   const failed = refusal ? <Body style={{ color: c.critical }}>{refusal}</Body> : null
   const title = `This phone: Approve with ${biometricName}`
   // On or Off as Pocket's p-approvals draws them: the title and its line, the one button beside them.
-  const setting = recoveryCode || code ? null : key?.here && !ending ? 'on' : !key && keysAvailable() ? 'off' : key && !key.here ? 'elsewhere' : null
+  const setting = code ? null : key?.here && !ending ? 'on' : !key && keysAvailable() ? 'off' : key && !key.here ? 'elsewhere' : null
   const words = (line: string, refused = false) => <Text style={{ fontFamily: fonts.ui, fontSize: 12.5, lineHeight: 17, color: refused ? c.critical : c.ink3 }}>{line}</Text>
   // Another workspace's key: its name is too long to sit beside the words, so the button goes under them, as p-approvals
   // draws the browser's card. The confirm is a sheet over it until the move is made or kept.
+  // The code in sheet-A's frame, its five groups in a cloud panel with Copy, over the card's title. It has no Close: it
+  // is shown once, so only I saved it puts it away.
+  if (recoveryCode)
+    return (
+      <Card tight>
+        <Text style={{ fontFamily: fonts.uiBold, fontSize: 14, color: c.ink }}>{title}</Text>
+        <BottomSheet visible testID="recovery-code-sheet">
+          <View style={{ gap: 14 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: c.cloud, alignItems: 'center', justifyContent: 'center' }}>
+                <Icon name="key" color={c.ink} />
+              </View>
+              <Body style={{ flex: 1, fontFamily: fonts.uiBold }}>Save your recovery code</Body>
+            </View>
+            <Body muted>If you ever lose every passkey and phone, this code lets you add a new key at once. We show it only now.</Body>
+            <View style={{ backgroundColor: c.cloud, borderRadius: 16, padding: 16, gap: 12, alignItems: 'center' }}>
+              <Text selectable accessibilityLabel={grouped(recoveryCode)} style={{ fontFamily: fonts.display, fontSize: 20, color: c.ink, fontVariant: ['tabular-nums'], textAlign: 'center' }}>
+                {grouped(recoveryCode)}
+              </Text>
+              <Button small variant="secondary" label="Copy" onPress={() => void Clipboard.setStringAsync(recoveryCode).then(() => setCopied(true))} />
+            </View>
+            <Button
+              primary
+              label="I saved it"
+              onPress={() => {
+                // A code Copy put on the clipboard leaves it with the sheet, so another app cannot read it later.
+                if (copied) void Clipboard.setStringAsync('')
+                setCopied(false)
+                setRecoveryCode('')
+              }}
+            />
+          </View>
+        </BottomSheet>
+      </Card>
+    )
   if (setting === 'elsewhere')
     return (
       <Card tight>
@@ -150,24 +187,7 @@ export function PhoneKeyCard({ onOn }: { onOn?: () => void } = {}) {
     <>
       <Card>
         <Body style={{ fontFamily: fonts.uiBold }}>{code ? 'Waiting for the web' : title}</Body>
-        {recoveryCode ? (
-          <>
-            <Body>Save your recovery code</Body>
-            <Body muted>If you ever lose every passkey and phone, this code lets you add a new key at once. We show it only now.</Body>
-            <Figure size={20}>{grouped(recoveryCode)}</Figure>
-            <Button label="Copy" onPress={() => void Clipboard.setStringAsync(recoveryCode).then(() => setCopied(true))} />
-            <Button
-              primary
-              label="I saved it"
-              onPress={() => {
-                // A code Copy put on the clipboard leaves it with the sheet, so another app cannot read it later.
-                if (copied) void Clipboard.setStringAsync('')
-                setCopied(false)
-                setRecoveryCode('')
-              }}
-            />
-          </>
-        ) : code ? (
+        {code ? (
           <Body muted>In Talyvor on the web, let this phone in from Approvals and devices. The code there should be {code}.</Body>
         ) : key?.here && ending ? (
           <>

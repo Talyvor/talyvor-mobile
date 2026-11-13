@@ -17,6 +17,7 @@
  * B55.55: `answers` maps a BFF path to the body the shot's app gets for it in place of the sample's.
  * B57.67: `phoneKey` opens the app holding this phone's approval key, so Face ID's buttons show and sign.
  * B57.68: `name` tells apart two shots of one screen in their file names, as "lower" for a scroll.
+ * B57.146: `newKey` opens the app with no key but one it can make, so Turn on registers it (with `answers` for its calls).
  * B57.71: `refState` sets the reference's own state before its shot, as {"K": "1"} for every agent paused.
  *
  * It exports the app for the web once (npx expo export --platform web) with the sample session in the keychain
@@ -176,6 +177,7 @@ async function app(c) {
   // The keychain shim reads this before the app starts: an empty keychain, so the app opens signed out.
   if (c.signedOut) await ctx.addInitScript(() => (globalThis.__POCKET_SHOTS_SIGNED_OUT = true))
   if (c.phoneKey) await ctx.addInitScript(() => (globalThis.__POCKET_SHOTS_PHONE_KEY = true))
+  if (c.newKey) await ctx.addInitScript(() => (globalThis.__POCKET_SHOTS_NEW_KEY = true))
   const page = await ctx.newPage()
   await page.clock.setFixedTime(new Date(SAMPLE_NOW))
   await page.route(`${BFF}/**`, (route) => {
