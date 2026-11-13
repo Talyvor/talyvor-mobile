@@ -6,17 +6,18 @@ import { KIND_LABEL, KIND_LINE, TYPE_FIXED, TYPE_LABEL, accountChip, useAccount 
 import { COMPANY_ROW } from '@/company-words'
 import { Icon, type IconName } from '@/components/icon'
 import { NoticeSettingsCard } from '@/components/notice-settings'
+import { Limits, SecurityKeys, TeamAndRoles } from '@/components/settings-access'
 import { Back, Button, Card, Eyebrow, Headline, LoadState, Row, Screen, useLoad } from '@/components/ui'
 import { useSession } from '@/session'
 import { fonts, useTheme } from '@/theme'
 
 // B59.35 — Settings, from the button at the top right of Home (launch pack design, DECISIONS 3): whose account this is,
-// when notices arrive, Activity and its exports, and signing out of this phone. Security keys, team and roles, and
-// limits are authorisation and come in B59.39.
+// when notices arrive, Activity and its exports, and signing out of this phone.
 // B57.132 — drawn in Pocket: its own Back and headline, the account's avatar as the switcher draws it, rows in cloud cards.
 // B59.11 — the account's chip under its name ("Business · Hybrid"), and its kind of money and type in the web's words.
 // B59.29 — Help and complaints, Your data and Close this account, as the web's Settings lists them (suite B59.28).
 // B59.32 — a Business's Company details, under its profile (suite B59.31).
+// B59.39 — Security keys, Team and roles (a Business's alone: not drawn at all for Personal), and each agent's Limits.
 
 const HELP_ROWS: readonly { to: '/settings/help' | '/settings/data' | '/settings/close'; icon: IconName; title: string; line: string }[] = [
   { to: '/settings/help', icon: 'send', title: 'Help and complaints', line: 'Ask us something, or make a complaint' },
@@ -82,6 +83,10 @@ export default function SettingsScreen() {
               </Card>
             </>
           ) : null}
+
+          <SecurityKeys />
+          {account?.account_type === 'business' ? <TeamAndRoles /> : null}
+          <Limits />
 
           <Eyebrow>Notifications</Eyebrow>
           <NoticeSettingsCard initial={data.settings} />

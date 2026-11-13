@@ -276,6 +276,17 @@ export interface DeviceKey {
   recovery_code?: string
 }
 
+/** B59.39 — a key that approves for the workspace, as Lens lists them (B55.15): a passkey by its credential id, a phone
+ * key by its device id. */
+export interface ApprovalKey {
+  kind: 'passkey' | 'phone'
+  id: string
+  name: string
+  platform: string
+  created_at: string
+  last_used_at?: string
+}
+
 /** B55.55 — a recovery started without the code (Lens economy.KeyRecovery): a key can be added from ready_at. */
 export interface KeyRecovery {
   id: string
@@ -475,6 +486,8 @@ export class BffError extends Error {
     readonly status: number,
     readonly path: string,
     readonly sentence: string,
+    /** the code an upstream gave with its refusal, as Track's MEMBER_EXISTS */
+    readonly code = '',
   ) {
     super(`${status} ${path}${sentence ? `: ${sentence}` : ''}`)
   }
@@ -526,6 +539,17 @@ export interface CompanyDetails {
   people: ControlPerson[]
 }
 
+/** B59.39 — Track's memberView: a person in the workspace and their role. */
+export type MemberRole = 'owner' | 'member'
+
+export interface Member {
+  id: string
+  name: string
+  email: string
+  role: MemberRole
+  avatar_url: string
+}
+
 const e = encodeURIComponent
 
 export function createBffClient(baseUrl: string, token: () => string | null, fetchImpl: typeof fetch = fetch) {
@@ -541,7 +565,7 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
         // a body that is not JSON carries no sentence
       }
       if (res.status === 409 && body.code === 'balances_not_empty' && body.balances) throw new BalancesHeldError(path, body.error ?? '', body.balances)
-      throw new BffError(res.status, path, body.error ?? '')
+      throw new BffError(res.status, path, body.error ?? '', body.code ?? '')
     }
     return res
   }
@@ -668,6 +692,11 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     /** Revokes one device key: Lens refuses its signatures from then on, and never revokes the workspace's last key or
      * one that owns an agent's account (409, B55.15). */
     revokeDevice: (id: string) => call<DeviceKey>('POST', `/api/money/devices/${e(id)}/revoke`),
+    /** B59.39 — every passkey and phone key that approves for the workspace, by name (Lens B55.15); the owner or an
+     * admin alone may read them. */
+    approvalKeys: async () => (await call<{ keys: ApprovalKey[] | null }>('GET', '/api/agents/keys')).keys ?? [],
+    /** Removes one passkey (B55.16): Lens refuses the workspace's last key with its sentence. */
+    removePasskey: (credentialID: string) => call<{ removed: boolean }>('DELETE', '/api/agents/passkeys', { credential_id: credentialID }),
     /** The APNs or FCM token Lens pushes this device's approvals to (B40.15). */
     setPushToken: (deviceId: string, push_token: string) => call<DeviceKey>('POST', `/api/money/devices/${e(deviceId)}/push-token`, { push_token }),
     /** Payments Chat prepared for the person to approve: Lens judges each and moves no money, and one said aloud always
@@ -738,6 +767,10 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
       const got = await call<CompanyDetails>('PUT', '/api/workspace/business', details)
       return { ...got, people: got.people ?? [] }
     },
+    /** B59.39 — the workspace's members and their roles (Track, through the BFF's track_members.go). */
+    members: async () => (await call<Member[] | null>('GET', '/api/members')) ?? [],
+    /** Adds a person by the email they sign in with; Track refuses with a code (MEMBER_EXISTS, OWNER_REQUIRED, …). */
+    addMember: (email: string, role: MemberRole) => call<Member>('POST', '/api/members', { email, role }),
     requestExport: async (id: number) => (await send('GET', `/api/workspace/requests/${id}/export`, undefined, { Accept: 'application/json' })).arrayBuffer(),
   }
 }

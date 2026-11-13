@@ -1,0 +1,8 @@
+[
+  { "route": "/settings", "screen": "p-approvals", "scroll": "Security keys", "words": "report", "why": "the reference draws no phone Settings; the nearest is Approvals, which draws this phone's key card, and the keys' words are the web's (AgentBank.tsx FaceID, RemoveKey.tsx)" },
+  { "route": "/settings", "screen": "p-approvals", "scroll": "Team and roles", "name": "team", "words": "report", "why": "the same; the team's words are the web's Members.tsx" },
+  { "route": "/settings", "screen": "p-approvals", "scroll": "Limits", "name": "limits", "words": "report", "why": "the same; the limits are each agent's rules in its own screen's words" },
+  { "route": "/settings", "screen": "p-approvals", "scroll": "Security keys", "name": "remove", "press": ["Remove Nick’s Mac"], "words": "report", "why": "the remove sheet, in the web's RemoveKey.tsx words" },
+  { "route": "/settings", "screen": "p-approvals", "scroll": "Limits", "name": "personal", "account": "personal:fiat", "words": "report", "why": "a Personal account: no Team and roles at all" },
+  { "route": "/settings", "screen": "p-approvals", "scroll": "Team and roles", "name": "team-dark", "dark": true, "words": "report", "why": "the team with the phone set to dark" }
+]
