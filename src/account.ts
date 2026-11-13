@@ -1,4 +1,4 @@
-import type { BffClient, WorkspaceAccount } from '@talyvor/bff-client'
+import type { BffClient, CurrencyAccount, WorkspaceAccount } from '@talyvor/bff-client'
 import { useEffect, useState } from 'react'
 
 // B59.11 — a workspace is Business or Personal, and Fiat only, Stablecoin and crypto only, or Hybrid (Lens B59.6), and
@@ -65,6 +65,11 @@ export const TYPE_FIXED = 'The type can’t be changed. You can hold several acc
 
 /** Pay, for a Stablecoin and crypto account: it has no bank transfers. */
 export const PAY_ON_CHAIN = 'Your agents work on chain: each agent’s wallet address is on Agent Wallets.'
+
+/** B59.11 — the owner's own account by the workspace's type, as the web's Pay names it: "Your account · GBP" for a
+ * Personal account, "The company · GBP" for a Business. An account given its own name, such as "Payroll · GBP", keeps it. */
+export const accountName = (a: CurrencyAccount, owner: string) =>
+  a.purpose === 'company' && (!a.name || a.name.startsWith('The company')) ? `${owner} · ${a.currency}` : a.name || `Agent · ${a.currency}`
 
 /** Every workspace Lens had before B59.6 became Business and Hybrid, so nothing it used disappeared. */
 const AS_MIGRATED: Account = { account_type: 'business', money_kind: 'hybrid' }

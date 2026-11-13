@@ -16,7 +16,7 @@ import * as SecureStore from 'expo-secure-store'
 import { useCallback, useRef, useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
 
-import { useAccount } from '@/account'
+import { accountName, useAccount } from '@/account'
 import { Icon } from '@/components/icon'
 import { MoneyLabel, PAY_OUT } from '@/components/money-label'
 import { AccountChoice, BottomSheet, ConfirmPayment } from '@/components/pay-sheet'
@@ -36,11 +36,6 @@ function outcome(p: Pick<OutsidePayment, 'payee_name' | 'amount_minor' | 'curren
 }
 
 const notPaid = (status: string) => status === 'failed' || status === 'returned'
-
-// B59.11 — the owner's own account by the workspace's type, as the web's Pay names it: "Your account · GBP" for a Personal
-// account, "The company · GBP" for a Business. An account given its own name, such as "Payroll · GBP", keeps it.
-const accountName = (a: CurrencyAccount, owner: string) =>
-  a.purpose === 'company' && (!a.name || a.name.startsWith('The company')) ? `${owner} · ${a.currency}` : a.name || `Agent · ${a.currency}`
 
 // B57.72 — a prepared payment the payee screen saw waiting, by payee: Lens lists only the waiting ones, so once one is
 // approved the screen reads it back by its id to say it is paid, on the day it last saw it waiting.

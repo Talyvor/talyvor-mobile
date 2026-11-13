@@ -43,8 +43,8 @@ test('Home: the waiting row, a prepared payment, Pay, Activity, the cards, each 
     return <HomeView data={{ book, approvals: [], prepared: [preq], accounts }} account={business} shows={shows(business)} name="Northwind Studio" peg={0.1} onDecided={() => said('decided')} />
   })
   expect(report.dead).toEqual([])
-  // waiting row, prepared payment, Pay, Activity, See all cards, the owner's card, two agents' cards, two rows, Pause every agent
-  expect(report.pressed).toBe(11)
+  // waiting row, prepared payment, Wallets, Pay, Activity, See all cards, the owner's card, two agents' cards, two rows, Pause every agent
+  expect(report.pressed).toBe(12)
 })
 
 test("Home's top and its failed read: Settings and Try again each do something", async () => {

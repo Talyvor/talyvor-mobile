@@ -31,9 +31,9 @@ export interface HomeData {
 const HOME_MONEY = [...AGENT_CREDIT, ...PAY_OUT]
 
 /** A currency's name on its tile, as P3 and P4 draw them; a stablecoin is named by its code. */
-const CURRENCY_NAME: Record<string, string> = { USD: 'US dollar', EUR: 'Euro', GBP: 'British pound' }
+export const CURRENCY_NAME: Record<string, string> = { USD: 'US dollar', EUR: 'Euro', GBP: 'British pound' }
 const FIAT_ORDER = ['USD', 'EUR', 'GBP']
-const isStablecoin = (currency: string) => !(currency in CURRENCY_NAME)
+export const isStablecoin = (currency: string) => !(currency in CURRENCY_NAME)
 
 /** What each currency holds across the accounts in view, the company's and each agent's, fiat first; a currency the
  * account's kind does not show is left out. */
@@ -252,6 +252,12 @@ export function HomeView({
   return (
     <>
       <Total business={shows.team} shows={shows} accounts={data.accounts} />
+      {/* B59.33 — what each account holds, side by side by the kind of money. */}
+      <Link href="/wallets" asChild>
+        <Pressable accessibilityRole="link" style={{ minHeight: 48, justifyContent: 'center' }}>
+          <Body style={{ color: c.tangerineInk }}>See all in Wallets</Body>
+        </Pressable>
+      </Link>
       <Actions />
       {/* B57.71 — Pocket's .killp: every agent is paused, and the way to start them again, signed. */}
       {allPaused ? (
