@@ -1,0 +1,8 @@
+[
+  { "route": "/", "screen": "p-home", "launchPack": "P3", "scroll": "Your team’s agents", "words": "report", "why": "Home's Cards strip and its See all, which opens the Cards tab, as P3 draws them (B57.66 and B57.126)" },
+  { "route": "/cards", "screen": "p-agent-research", "words": "report", "why": "the reference draws no phone Cards screen; the nearest is the agent's page, whose card B57.136 draws in Pocket's panel with Frozen and the Freeze card switch, as the reference's agent page does; the words are the web's Cards page (suite B59.45)" },
+  { "route": "/cards", "screen": "p-agent-research", "name": "frozen", "words": "report", "answers": { "/api/agents/agt_research/card": { "card": { "id": "ic_research", "agent_id": "agt_research", "last4": "0005", "exp_month": 9, "exp_year": 2029, "currency": "gbp", "livemode": false, "created_at": "2026-09-14T09:00:00Z", "frozen": true }, "authorizations": [] } }, "why": "the same, with Research's card frozen" },
+  { "route": "/cards", "screen": "p-agent-research", "name": "lower", "words": "report", "scroll": "Purchases", "why": "the same, scrolled to the limits panel and the purchases" },
+  { "route": "/cards", "screen": "p-agent-research", "name": "nocard", "words": "report", "scroll": "No card for Sales yet.", "why": "the same, scrolled to an agent with no card yet" },
+  { "route": "/cards", "screen": "p-agent-research", "dark": true, "words": "report", "why": "the same, with the phone set to dark" }
+]

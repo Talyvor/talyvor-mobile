@@ -1,4 +1,4 @@
-import { fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library'
+import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library'
 
 // B59.34 — Cards on the phone: each agent's card in its art, its details hidden until Face ID, freeze and unfreeze, the
 // limits its purchases are judged by, and every purchase, in the web's words.
@@ -130,18 +130,37 @@ test('a phone with no key shows no details and says where to turn approving on',
   expect(mockPhone.signed).toEqual([])
 })
 
-test('freezes and unfreezes the card, in the web’s words', async () => {
+// B57.136 — in Pocket: the card sits in its panel with the agent's name and Frozen, as the reference's agent page draws
+// it, and Freeze card is the reference's switch.
+test('B57.136: the card sits in Pocket’s panel with its name, and Freeze card is a switch that says Frozen', async () => {
   const calls = mockBff()
   await renderRouter('./src/app', { initialUrl: '/cards' })
-  await fireEvent.press(await screen.findByText('Freeze card'))
+  const head = await screen.findByTestId('card-head-ag_1')
+  expect(within(head).getByLabelText("Research, Research's agent card")).toBeTruthy()
+  expect(within(head).getByRole('header', { name: 'Research' })).toBeTruthy()
+  const freeze = within(head).getByRole('switch', { name: 'Freeze card' })
+  expect(freeze.props.accessibilityState.checked).toBe(false)
+  expect(within(head).queryByText('Frozen')).toBeNull()
+
+  await fireEvent.press(freeze)
   expect(await screen.findByText(unmasked(WEB.frozen('Research', '4242')))).toBeTruthy()
-  expect(await screen.findByText('Frozen')).toBeTruthy()
+  await waitFor(() => expect(within(screen.getByTestId('card-head-ag_1')).getByText('Frozen')).toBeTruthy())
+  expect(within(screen.getByTestId('card-head-ag_1')).getByRole('switch', { name: 'Freeze card' }).props.accessibilityState.checked).toBe(true)
   expect(calls).toContain('POST /api/agents/ag_1/card/freeze')
 
-  await fireEvent.press(await screen.findByText('Unfreeze card'))
+  await fireEvent.press(within(screen.getByTestId('card-head-ag_1')).getByRole('switch', { name: 'Freeze card' }))
   expect(await screen.findByText(unmasked(WEB.unfrozen('Research', '4242')))).toBeTruthy()
   await waitFor(() => expect(screen.queryByText('Frozen')).toBeNull())
   expect(calls).toContain('POST /api/agents/ag_1/card/unfreeze')
+})
+
+test('B57.136: the limits sit in their own panel, and an agent with no card says so in its panel', async () => {
+  mockBff()
+  await renderRouter('./src/app', { initialUrl: '/cards' })
+  const limits = await screen.findByTestId('card-limits-ag_1')
+  expect(within(limits).getByText('Limits')).toBeTruthy()
+  expect(within(limits).getByText(`${WEB.issueLine}.`)).toBeTruthy()
+  expect(within(screen.getByTestId('card-head-ag_2')).getByText('No card for Sales yet.')).toBeTruthy()
 })
 
 test('shows the limits each purchase is judged by, and each purchase with what the rules decided', async () => {
