@@ -6,7 +6,7 @@ import { TextInput, useWindowDimensions, View } from 'react-native'
 
 import { AgentCard } from '@/components/card'
 import { AGENT_CREDIT, MoneyHeader } from '@/components/money-label'
-import { Body, Button, Card, Eyebrow, Figure, Headline, LoadState, Screen, useLoad } from '@/components/ui'
+import { Body, Button, Card, Chip, Eyebrow, Figure, Headline, LoadState, Screen, useLoad } from '@/components/ui'
 import { biometricName, phoneKey, resumeWithThisPhone } from '@/keys'
 import { useSession } from '@/session'
 import { fonts, useTheme } from '@/theme'
@@ -79,17 +79,26 @@ export default function AgentScreen() {
       {data && !agent ? <Body muted>This agent is not in your workspace.</Body> : null}
       {agent ? (
         <>
-          <Eyebrow>Agent</Eyebrow>
-          {/* B57.126: its card first, as the agent's page draws it: its helper, its own name and job line. */}
-          <AgentCard agent={agent} width={Math.min(428, width - 36)} />
-          <Headline>{agent.name}</Headline>
-          {agent.description ? <Body muted>{agent.description}</Body> : null}
+          {/* B57.126 and B57.134: its card first, in Pocket's panel as W4 draws it: the helper with its own name and job
+              line, then its name, Running or Paused, and its job line. */}
+          <View testID="agent-head">
+            <Card>
+              <AgentCard agent={agent} width={Math.min(428, width - 76)} />
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 6 }}>
+                <View style={{ flexShrink: 1 }}>
+                  <Headline>{agent.name}</Headline>
+                </View>
+                {agent.paused_at || data.allPaused ? <Chip tone="paused">Paused</Chip> : <Chip tone="good" dot>Running</Chip>}
+              </View>
+              {agent.description ? <Body muted>{agent.description}</Body> : null}
+            </Card>
+          </View>
           <MoneyHeader capability={AGENT_CREDIT}>Balance</MoneyHeader>
           <Figure size={32}>{formatBalance(agent.balance_ulxc, peg)}</Figure>
           <Body muted>Spent so far: {formatLXC(agent.spent_ulxc, peg)}</Body>
-          <Body style={{ color: agent.paused_at ? c.caution : c.positive }}>
-            {agent.paused_at ? `Paused${agent.paused_reason ? `: ${agent.paused_reason}` : ''}. It can spend nothing until you resume it.` : 'Active.'}
-          </Body>
+          {agent.paused_at ? (
+            <Body style={{ color: c.caution }}>{`Paused${agent.paused_reason ? `: ${agent.paused_reason}` : ''}. It can spend nothing until you resume it.`}</Body>
+          ) : null}
           <View style={{ marginTop: 8 }}>
             <Button primary={!!agent.paused_at} label={agent.paused_at ? 'Resume' : 'Pause'} disabled={busy || asking} onPress={() => void toggle()} />
           </View>
