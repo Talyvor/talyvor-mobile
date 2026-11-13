@@ -164,11 +164,14 @@ describe('Team and roles', () => {
     const team = within(await screen.findByTestId('team-and-roles'))
     expect(team.getByText('Team and roles')).toBeTruthy()
     expect(await team.findByText('Nick')).toBeTruthy()
-    expect(team.getByText('nick@northwind.studio · Owner')).toBeTruthy()
-    expect(team.getByText('dana@northwind.studio · Member')).toBeTruthy()
-    expect(team.getByText(WEB.addLine)).toBeTruthy()
-    await fireEvent.changeText(team.getByLabelText('Email'), ' ana@northwind.studio ')
+    expect(team.getByText('nick@northwind.studio')).toBeTruthy()
+    expect(team.getByText('Owner')).toBeTruthy()
+    expect(team.getByText('dana@northwind.studio')).toBeTruthy()
+    expect(team.getByText('Member')).toBeTruthy()
     await fireEvent.press(team.getByText('Add member'))
+    expect(await screen.findByText(WEB.addLine)).toBeTruthy()
+    await fireEvent.changeText(screen.getByLabelText('Email'), ' ana@northwind.studio ')
+    await fireEvent.press(screen.getByTestId('add-member-send'))
     expect(await team.findByText(WEB.added)).toBeTruthy()
     expect(calls.filter((c) => c.method === 'POST' && c.path === '/api/members').map((c) => c.body)).toEqual([{ email: 'ana@northwind.studio', role: 'member' }])
   })
@@ -177,10 +180,11 @@ describe('Team and roles', () => {
     const calls = mockBff({ addRefusal: { status: 403, code: 'OWNER_REQUIRED' } })
     await renderRouter('./src/app', { initialUrl: '/settings' })
     const team = within(await screen.findByTestId('team-and-roles'))
-    await fireEvent.changeText(team.getByLabelText('Email'), 'ana@northwind.studio')
-    await fireEvent.press(team.getByRole('radio', { name: 'Owner' }))
-    await fireEvent.press(team.getByText('Add member'))
-    expect(await team.findByText(WEB.ownerRequired)).toBeTruthy()
+    await fireEvent.press(await team.findByText('Add member'))
+    await fireEvent.changeText(await screen.findByLabelText('Email'), 'ana@northwind.studio')
+    await fireEvent.press(screen.getByRole('radio', { name: 'Owner' }))
+    await fireEvent.press(screen.getByTestId('add-member-send'))
+    expect(await screen.findByText(WEB.ownerRequired)).toBeTruthy()
     expect(calls.filter((c) => c.method === 'POST' && c.path === '/api/members').map((c) => c.body)).toEqual([{ email: 'ana@northwind.studio', role: 'owner' }])
   })
 
@@ -192,6 +196,45 @@ describe('Team and roles', () => {
     expect(screen.queryByTestId('team-and-roles')).toBeNull()
     expect(screen.queryByText('Team and roles')).toBeNull()
     expect(calls.some((c) => c.path === '/api/members')).toBe(false)
+  })
+})
+
+// B57.154 — drawn in Pocket as w-security, w-members and p-approvals draw the same things: the keys under the shield's
+// "Approvals are signed", each key on its kind's tile with a cloud Remove; each member on their initial with their role
+// as a chip, and Add member opening Pocket's bottom sheet; each agent's limits beside its face.
+describe('Settings’ access in Pocket', () => {
+  test('the keys sit under the shield’s heading, each on its kind’s tile', async () => {
+    mockBff()
+    await renderRouter('./src/app', { initialUrl: '/settings' })
+    const keys = within(await screen.findByTestId('security-keys'))
+    expect(await keys.findByText('Approvals are signed')).toBeTruthy()
+    expect(keys.getByTestId('key-tile-passkey-cred_mac')).toBeTruthy()
+    expect(keys.getByTestId('key-tile-phone-dev_1')).toBeTruthy()
+  })
+
+  test('each member is drawn on their initial with their role as a chip, and Add member opens the sheet', async () => {
+    const calls = mockBff()
+    await renderRouter('./src/app', { initialUrl: '/settings' })
+    const team = within(await screen.findByTestId('team-and-roles'))
+    expect(await team.findByText('nick@northwind.studio')).toBeTruthy()
+    expect(team.getByTestId('member-m_1-initial')).toBeTruthy()
+    expect(within(team.getByTestId('member-m_1-role')).getByText('Owner')).toBeTruthy()
+    expect(within(team.getByTestId('member-m_2-role')).getByText('Member')).toBeTruthy()
+    // The form waits behind Add member, as w-members keeps it behind its button.
+    expect(team.queryByLabelText('Email')).toBeNull()
+    await fireEvent.press(team.getByText('Add member'))
+    await fireEvent.changeText(await screen.findByLabelText('Email'), 'ana@northwind.studio')
+    await fireEvent.press(screen.getByTestId('add-member-send'))
+    expect(await team.findByText(WEB.added)).toBeTruthy()
+    expect(calls.filter((c) => c.method === 'POST' && c.path === '/api/members').map((c) => c.body)).toEqual([{ email: 'ana@northwind.studio', role: 'member' }])
+  })
+
+  test('each agent’s limits sit beside its face', async () => {
+    mockBff()
+    await renderRouter('./src/app', { initialUrl: '/settings' })
+    const limits = within(await screen.findByTestId('limits'))
+    expect(await limits.findByLabelText('Research agent')).toBeTruthy()
+    expect(limits.getByLabelText('Sales agent')).toBeTruthy()
   })
 })
 

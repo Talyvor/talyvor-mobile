@@ -1,14 +1,15 @@
 import { BffError, refusalText, rulesInWords, type ApprovalKey, type MemberRole } from '@talyvor/bff-client'
 import { router } from 'expo-router'
-import { useCallback, useState } from 'react'
+import { useCallback, useState, type ReactNode } from 'react'
 import { Text, View } from 'react-native'
 
 import { thisPhoneDevice, turnOffPhoneApprovals } from '@/keys'
 import { Choices } from './account-requests'
+import { Face } from './face'
 import { Icon } from './icon'
 import { BottomSheet } from './pay-sheet'
 import { PhoneKeyCard } from './phone-key-card'
-import { Body, Button, Card, Eyebrow, Field, Headline, Row, useLoad } from './ui'
+import { Body, Button, Card, Chip, Eyebrow, Field, Headline, Row, useLoad } from './ui'
 import { useSession } from '../session'
 import { fonts, useTheme } from '../theme'
 
@@ -16,6 +17,19 @@ import { fonts, useTheme } from '../theme'
 // Approvals and devices card lists and removes them (AgentBank.tsx FaceID, RemoveKey.tsx), the team as Members.tsx adds
 // to it, and each agent's limits as its own screen says them. The second approver waits for its rule in Lens (B28.315,
 // then B59.50).
+// B57.154 — drawn in Pocket as w-security, w-members and p-approvals draw the same things: the keys under the shield's
+// "Approvals are signed", each key on its kind's tile with a cloud Remove; each member on their initial with their role
+// as a chip, and Add member opening the bottom sheet; each agent's limits beside its face.
+
+/** A row's 36 tile, as w-security draws a key's kind and w-members a person's initial. */
+function Tile({ children, round, testID }: { children: ReactNode; round?: boolean; testID?: string }) {
+  const { c } = useTheme()
+  return (
+    <View testID={testID} style={{ width: 36, height: 36, borderRadius: round ? 18 : 12, alignItems: 'center', justifyContent: 'center', backgroundColor: c.cloud2 }}>
+      {children}
+    </View>
+  )
+}
 
 /** B55.16 — what the owner is told on the workspace's last key, and when Lens refuses one as the last (409). */
 export const LAST_KEY = 'It is your last key. With none, nobody could approve, so add another first.'
@@ -89,13 +103,26 @@ export function SecurityKeys() {
       <Eyebrow>Security keys</Eyebrow>
       {list.length > 0 ? (
         <Card>
-          <Body muted>{keysLine(list)}</Body>
+          <View style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start' }}>
+            <View style={{ width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: c.success50 }}>
+              <Icon name="shield" size={22} color={c.success} />
+            </View>
+            <View style={{ flex: 1, gap: 4 }}>
+              <Text style={{ fontFamily: fonts.uiBold, fontSize: 16.5, color: c.ink }}>Approvals are signed</Text>
+              <Body muted>{keysLine(list)}</Body>
+            </View>
+          </View>
           {list.map((k) => (
             <Row
               key={`${k.kind}-${k.id}`}
+              left={
+                <Tile testID={`key-tile-${k.kind}-${k.id}`}>
+                  <Icon name={k.kind === 'phone' ? 'phone' : 'key'} size={18} color={c.ink} />
+                </Tile>
+              }
               title={k.name || (k.kind === 'phone' ? 'Phone key' : 'Passkey')}
               sub={keyFacts(k)}
-              right={list.length === 1 ? undefined : <Button small label="Remove" accessibilityLabel={`Remove ${k.name}`} onPress={() => ask(k)} />}
+              right={list.length === 1 ? undefined : <Button small variant="secondary" label="Remove" accessibilityLabel={`Remove ${k.name}`} onPress={() => ask(k)} />}
             />
           ))}
           {list.length === 1 ? <Text style={{ fontFamily: fonts.ui, fontSize: 12.5, lineHeight: 17, color: c.ink3 }}>{LAST_KEY}</Text> : null}
@@ -138,6 +165,7 @@ export function TeamAndRoles() {
   const [email, setEmail] = useState('')
   const [role, setRole] = useState<MemberRole>('member')
   const [busy, setBusy] = useState(false)
+  const [adding, setAdding] = useState(false)
   const [said, setSaid] = useState<{ ok: boolean; text: string } | null>(null)
   const roster = [...(data ?? [])].sort((a, b) => (a.role === 'owner' ? 0 : 1) - (b.role === 'owner' ? 0 : 1) || a.name.localeCompare(b.name))
   const add = async () => {
@@ -147,6 +175,7 @@ export function TeamAndRoles() {
     try {
       const m = await client.addMember(sent, role)
       setEmail('')
+      setAdding(false)
       setSaid({ ok: true, text: `${m.email} was added as ${m.role === 'owner' ? 'an owner' : 'a member'}.` })
       reload()
     } catch (err) {
@@ -161,16 +190,43 @@ export function TeamAndRoles() {
       <Card>
         {error ? <Body muted>The roster could not be read.</Body> : null}
         {roster.map((m, i) => (
-          <Row key={m.id} first={i === 0} title={m.name || m.email} sub={`${m.email} · ${ROLE_LABEL[m.role] ?? m.role}`} />
+          <Row
+            key={m.id}
+            first={i === 0}
+            left={
+              <Tile round testID={`member-${m.id}-initial`}>
+                <Text style={{ fontFamily: fonts.uiBold, fontSize: 15, color: c.ink }}>{(m.name || m.email).slice(0, 1).toUpperCase()}</Text>
+              </Tile>
+            }
+            title={m.name || m.email}
+            sub={m.email}
+            right={
+              <View testID={`member-${m.id}-role`}>
+                <Chip>{ROLE_LABEL[m.role] ?? m.role}</Chip>
+              </View>
+            }
+          />
         ))}
       </Card>
-      <Card>
+      {said?.ok ? <Body muted>{said.text}</Body> : null}
+      <Button
+        primary
+        label="Add member"
+        onPress={() => {
+          setSaid(null)
+          setAdding(true)
+        }}
+      />
+      <BottomSheet visible={adding} onClose={() => !busy && setAdding(false)}>
+        <Headline>Add a member</Headline>
         <Body muted>Add someone by the email they sign in with. Each person takes one of your plan’s seats.</Body>
-        <Field label="Email" value={email} onChangeText={setEmail} placeholder="name@company.com" autoCapitalize="none" autoCorrect={false} keyboardType="email-address" editable={!busy} />
-        <Choices label="Role" options={[['member', 'Member'], ['owner', 'Owner']] as const} value={role} onChange={setRole} />
-        <Button primary label={busy ? 'Adding…' : 'Add member'} disabled={!email.trim() || busy} onPress={() => void add()} />
-        {said ? <Body style={said.ok ? undefined : { color: c.critical }}>{said.text}</Body> : null}
-      </Card>
+        <Card>
+          <Field label="Email" value={email} onChangeText={setEmail} placeholder="name@company.com" autoCapitalize="none" autoCorrect={false} keyboardType="email-address" editable={!busy} />
+          <Choices label="Role" options={[['member', 'Member'], ['owner', 'Owner']] as const} value={role} onChange={setRole} />
+        </Card>
+        {said && !said.ok ? <Body style={{ color: c.critical }}>{said.text}</Body> : null}
+        <Button testID="add-member-send" primary label={busy ? 'Adding…' : 'Add member'} disabled={!email.trim() || busy} onPress={() => void add()} />
+      </BottomSheet>
     </View>
   )
 }
@@ -183,7 +239,7 @@ export function Limits() {
     const [book, peg] = await Promise.all([client.book(), client.peg()])
     const agents = (book.agents ?? []).filter((a) => !a.archived_at)
     const rules = await Promise.all(agents.map((a) => client.rules(a.id)))
-    return agents.map((a, i) => ({ id: a.id, name: a.name, words: rulesInWords(rules[i], peg).join(' ') }))
+    return agents.map((a, i) => ({ agent: a, words: rulesInWords(rules[i], peg).join(' ') }))
   }, [client])
   const { data, error } = useLoad(load)
   return (
@@ -193,12 +249,13 @@ export function Limits() {
       {data && !data.length ? <Body muted>No agents yet.</Body> : null}
       {data && data.length > 0 ? (
         <Card>
-          {data.map((a, i) => (
+          {data.map(({ agent: a, words }, i) => (
             <Row
               key={a.id}
               first={i === 0}
+              left={<Face agent={a} size={36} />}
               title={a.name}
-              sub={a.words}
+              sub={words}
               right={<Icon name="chev" size={16} color={c.ink3} />}
               onPress={() => router.push({ pathname: '/agents/[id]', params: { id: a.id } })}
             />

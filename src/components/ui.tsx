@@ -128,6 +128,7 @@ export function Button({
   accessibilityLabel,
   small,
   icon,
+  testID,
 }: {
   label: string
   onPress: () => void
@@ -141,6 +142,7 @@ export function Button({
   small?: boolean
   /** a mark before the label in its colour, as Approve with Face ID draws one (B57.147) */
   icon?: IconName
+  testID?: string
 }) {
   const { c } = useTheme()
   const look = {
@@ -155,6 +157,7 @@ export function Button({
   return (
     <Pressable
       accessibilityRole="button"
+      testID={testID}
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ disabled }}
       accessibilityHint={disabled ? hint : undefined}

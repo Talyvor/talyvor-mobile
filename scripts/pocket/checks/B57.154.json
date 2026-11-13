@@ -1,0 +1,8 @@
+[
+  { "route": "/settings", "screen": "p-approvals", "scroll": "Security keys", "words": "report", "why": "the reference draws no phone Settings; w-security draws the keys (the shield's heading, each key on its kind's tile, a cloud Remove) and p-approvals this phone's key card" },
+  { "route": "/settings", "screen": "p-approvals", "scroll": "Team and roles", "name": "team", "words": "report", "why": "w-members draws each person on their initial with their role as a chip, and the form behind its button" },
+  { "route": "/settings", "screen": "p-approvals", "scroll": "Team and roles", "name": "add-member", "press": ["Add member"], "words": "report", "why": "Add member opens Pocket's bottom sheet, with B59.39's words" },
+  { "route": "/settings", "screen": "p-approvals", "scroll": "Limits", "name": "limits", "words": "report", "why": "each agent's limits beside its face, as p-approvals draws an agent" },
+  { "route": "/settings", "screen": "p-approvals", "scroll": "Security keys", "name": "remove", "press": ["Remove Nick’s Mac"], "words": "report", "why": "the remove sheet, in the web's RemoveKey.tsx words" },
+  { "route": "/settings", "screen": "p-approvals", "scroll": "Team and roles", "name": "team-dark", "dark": true, "words": "report", "why": "the team with the phone set to dark" }
+]
