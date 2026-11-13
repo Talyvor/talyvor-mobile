@@ -941,9 +941,9 @@ describe('B55.11 prepared payments on Home and Approvals', () => {
     const cancels = () => calls.filter((c) => c.method === 'POST' && c.path === '/api/money/payment-requests/preq_1/cancel')
     await renderRouter('./src/app', { initialUrl: '/approve/preq_1' })
     await fireEvent.press(await screen.findByRole('button', { name: 'Decline' }))
-    expect(await screen.findByText('Decline these payments? Nothing waiting here is paid.')).toBeTruthy()
+    expect(await screen.findByText('Decline these payments?')).toBeTruthy()
     await fireEvent.press(screen.getByRole('button', { name: 'Keep it' }))
-    expect(screen.queryByText('Decline these payments? Nothing waiting here is paid.')).toBeNull()
+    await waitFor(() => expect(screen.queryByText('Decline these payments?')).toBeNull())
     expect(cancels()).toHaveLength(0)
 
     await fireEvent.press(screen.getByRole('button', { name: 'Decline' }))
@@ -967,13 +967,57 @@ describe('B55.11 prepared payments on Home and Approvals', () => {
       ],
     })
     await renderRouter('./src/app', { initialUrl: '/approve/preq_1' })
-    expect(await screen.findByText('Not paid: a marketplace purchase is not paid from here yet')).toBeTruthy()
-    expect(screen.getByText('Paid')).toBeTruthy()
+    expect(await screen.findByText('l_9, £42.00: Not paid: a marketplace purchase is not paid from here yet.')).toBeTruthy()
+    expect(screen.getByText('Acme Hosting, £42.00: Paid.')).toBeTruthy()
     expect(screen.getByText('Inside a permission you signed: paid without asking you.')).toBeTruthy()
-    expect(screen.getByText('Held for 24 hours, as Kite Accounting is a new payee')).toBeTruthy()
+    expect(screen.getByText('Kite Accounting, £42.00: Held for 24 hours, as Kite Accounting is a new payee.')).toBeTruthy()
     const text = allText()
     expect(text).not.toMatch(/\(|\)|R-APPROVE|mandate/i)
     expect(text).not.toContain('not_paid')
+  })
+})
+
+// B57.74 — the approve screen as Pocket's p-approve-req draws it: Back, what it pays, from where and by whom, each payment
+// as its own card, and Decline asking first in a sheet.
+describe('B57.74 Approve payments', () => {
+  beforeEach(() => {
+    mockStore.clear()
+    mockStore.set('talyvor.session', JSON.stringify({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }))
+  })
+  const now = new Date()
+  const clock = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+  const preq = { id: 'preq_1', status: 'pending_approval', summary: '', client: 'chat', totals: { GBP: 18_000 }, items: [{ position: 1, payee_id: 'py_2', payee_name: 'Kite Accounting', currency: 'GBP', amount_minor: 18_000, reference: 'Invoice 1042', decision: 'needs_approval', reason: 'no permission you signed covers it' }], created_at: now.toISOString() }
+
+  test('Back, the payment it asks for, from where and by whom, and the payment as its own card with why it asks', async () => {
+    mockBff({ requests: [preq] })
+    await renderRouter('./src/app', { initialUrl: '/approve/preq_1' })
+    expect(await screen.findByText('Pay Kite Accounting £180.00')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Back' })).toBeTruthy()
+    expect(screen.getByText(`From the company’s account · prepared by Chat · today at ${clock}`)).toBeTruthy()
+    // Saved as a payee, verified, and never paid before.
+    expect(await screen.findByText('Known payee · Verified · First payment · Reference: Invoice 1042')).toBeTruthy()
+    expect(screen.getByText('Asks for approval: no permission you signed covers it.')).toBeTruthy()
+    expect(screen.getByRole('button', { name: /^Approve 1 payment with / })).toBeTruthy()
+  })
+
+  test('Decline asks in a sheet; Keep it sends nothing; Decline there cancels once, approves and pays nothing, and says so', async () => {
+    const calls = mockBff({ requests: [preq] })
+    const posts = (path: RegExp) => calls.filter((c) => c.method === 'POST' && path.test(c.path))
+    await renderRouter('./src/app', { initialUrl: '/approve/preq_1' })
+    await fireEvent.press(await screen.findByRole('button', { name: 'Decline' }))
+    const sheet = await screen.findByTestId('decline-sheet')
+    expect(within(sheet).getByText('Decline these payments?')).toBeTruthy()
+    expect(within(sheet).getByText('Nothing waiting here is paid.')).toBeTruthy()
+    await fireEvent.press(within(sheet).getByRole('button', { name: 'Keep it' }))
+    await waitFor(() => expect(screen.queryByTestId('decline-sheet')).toBeNull())
+    expect(posts(/\/cancel$/)).toHaveLength(0)
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Decline' }))
+    await fireEvent.press(within(await screen.findByTestId('decline-sheet')).getByRole('button', { name: 'Decline' }))
+    expect(await screen.findByText('Declined. Nothing waiting here will be paid.')).toBeTruthy()
+    expect(posts(/^\/api\/money\/payment-requests\/preq_1\/cancel$/)).toHaveLength(1)
+    expect(posts(/\/approval$|\/approve$|^\/api\/money\/payments/)).toEqual([])
+    expect(screen.queryByRole('button', { name: /^Approve / })).toBeNull()
   })
 })
 
