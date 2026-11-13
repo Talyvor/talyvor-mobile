@@ -15,6 +15,9 @@ const DEVICE_WORKSPACE_NAME = 'talyvor.device-workspace-name'
 
 export const biometricName = Platform.OS === 'ios' ? 'Face ID' : 'your fingerprint'
 
+/** The platform this phone's key registers as: B57.130's web test key says `test`. */
+const keyPlatform = TalyvorKeys?.platform ?? Platform.OS
+
 /** The name this phone's key is registered with. */
 const phoneName = Platform.OS === 'ios' ? 'iPhone' : 'Android phone'
 
@@ -76,7 +79,7 @@ export async function turnOnPhoneApprovals(client: BffClient): Promise<DeviceKey
     bound.set(spki, message.length)
     const attestation = await TalyvorKeys.attest(ALIAS, toBase64url(await sha256(bound)))
     const signature = await TalyvorKeys.sign(ALIAS, deviceMessage(challenge), `Approve on this phone with ${biometricName}`)
-    const device = await client.registerDevice({ platform: Platform.OS, name: phoneName, public_key: publicKey, challenge, signature, attestation })
+    const device = await client.registerDevice({ platform: keyPlatform, name: phoneName, public_key: publicKey, challenge, signature, attestation })
     if ('enrolment' in device) return device
     await keepThisPhone(device.id, workspace_id, workspace)
     return device
@@ -111,7 +114,7 @@ export async function waitForTheWeb(client: BffClient, enrolment: Pick<KeyEnrolm
     try {
       // Lens names the key it let in only in the workspace's list: the one this phone's kind made since it began waiting.
       const [{ workspace_id }, workspace, { devices }] = await Promise.all([client.me(), workspaceName(client), client.devices()])
-      const ours = (devices ?? []).filter((d) => !d.revoked_at && d.platform === Platform.OS && d.name === phoneName && at(d.created_at) >= at(e.created_at))
+      const ours = (devices ?? []).filter((d) => !d.revoked_at && d.platform === keyPlatform && d.name === phoneName && at(d.created_at) >= at(e.created_at))
       if (ours.length !== 1) throw new Error('the web let a key in, but this phone could not tell it was its own. Turn on again.')
       await keepThisPhone(ours[0].id, workspace_id, workspace)
       return ours[0]
