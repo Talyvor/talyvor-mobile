@@ -9,6 +9,7 @@ import { biometricName, phoneKey, signWithThisPhone } from '../keys'
 import { syncLiveActivities } from '../live-activity'
 import { useSession } from '../session'
 import { fonts, useTheme } from '../theme'
+import { AgentCard } from './card'
 import { Face } from './face'
 import { Icon } from './icon'
 import { moneyParts } from './money'
@@ -28,16 +29,24 @@ const agentOf = (agents: readonly Who[], id: string): Who => agents.find((a) => 
 const verb = (a: AgentApproval) => (!a.payee ? 'ask' : a.payee.kind === 'listing' ? 'use' : 'pay')
 const subject = (a: AgentApproval) => (a.payee ? a.payee.name || a.payee.id : a.model)
 
+/** B59.23 — a 3-D Secure check on the agent's card (Lens B59.22): the merchant asked, not the agent, and Lens takes its
+ * answer only signed, a decline too. */
+const isCardCheck = (a: AgentApproval) => a.kind === 'card_challenge'
+
 /** `Research wants to pay Acme Hosting`: a row's title, and Next's. */
-export const approvalTitle = (name: string, a: AgentApproval) => `${name} wants to ${verb(a)} ${subject(a)}`
+export const approvalTitle = (name: string, a: AgentApproval) =>
+  isCardCheck(a) ? `${name}’s card: confirm a payment at ${subject(a)}` : `${name} wants to ${verb(a)} ${subject(a)}`
 
 /** What a decline did, said where the person declined it (B55.20, the web's words from B55.19); a listing's use is a
  * request, as the reference's p-declined-lead says. */
 export const declinedText = (agentName: string, a: AgentApproval) =>
-  `Declined. ${agentName}’s ${a.payee && a.payee.kind !== 'listing' ? 'payment' : 'request'} is refused, and the same request is refused without asking you for 24 hours.`
+  isCardCheck(a)
+    ? `Declined. The card payment at ${subject(a)} does not go through.`
+    : `Declined. ${agentName}’s ${a.payee && a.payee.kind !== 'listing' ? 'payment' : 'request'} is refused, and the same request is refused without asking you for 24 hours.`
 
 /** What an approval does next, or that its agent is paused (the reference's p-approved-acme and p-approved-lead). */
 export function approvedText(name: string, a: AgentApproval, paused: boolean) {
+  if (isCardCheck(a)) return `The card payment at ${subject(a)} goes ahead.`
   const what = !a.payee ? `${name}’s request` : a.payee.kind === 'listing' ? `${name}’s use of ${subject(a)}` : `${name}’s payment to ${subject(a)}`
   return paused
     ? `${name} is paused: ${what} goes through once ${name} runs again and sends it, within 24 hours.`
@@ -59,9 +68,9 @@ export function decidedWords(a: AgentApproval) {
   return 'Closed'
 }
 
-/** The amount, dollars first: an account's own currency when an account pays it, the LXC its rules judge beside. */
+/** The amount, dollars first: an account's or a card's own currency when it pays it, the LXC its rules judge beside. */
 export function amountParts(a: AgentApproval, peg: number | null) {
-  if (a.paid_from?.kind === 'account' && a.paid_from.currency) return { large: formatMinor(a.paid_from.amount_minor, a.paid_from.currency), small: formatULXC(a.amount_ulxc) }
+  if ((a.paid_from?.kind === 'account' || a.paid_from?.kind === 'card') && a.paid_from.currency) return { large: formatMinor(a.paid_from.amount_minor, a.paid_from.currency), small: formatULXC(a.amount_ulxc) }
   return moneyParts(formatLXC(a.amount_ulxc, peg))
 }
 
@@ -194,6 +203,7 @@ export function ApprovalSheet({
   }, [client, a.agent_id, hasBudget])
   const { large, small } = amountParts(a, peg)
   const what = a.payee ? 'payment' : 'request'
+  const card = isCardCheck(a)
 
   const decide = async (decision: 'approve' | 'deny') => {
     setBusy(true)
@@ -202,12 +212,15 @@ export function ApprovalSheet({
       // With this phone's key on, Lens takes the decision only signed: Face ID or a fingerprint, over this approval's challenge.
       // Approving moves money, so on a phone it is never made unsigned (B50.10); declining moves none and may be.
       // A key made in another workspace is no key here: Lens refuses it.
+      // A card check is answered only signed, so its decline needs the key as much as its approval does.
       const key = await phoneKey(client)
-      if (decision === 'approve' && !key) throw new Error(`turn on approving with ${biometricName} on this phone first.`)
-      if (decision === 'approve' && !key?.here) throw new Error(`approving with ${biometricName} is off for this workspace.`)
+      const mustSign = decision === 'approve' || card
+      if (mustSign && !key) throw new Error(`turn on approving with ${biometricName} on this phone first.`)
+      if (mustSign && !key?.here) throw new Error(`approving with ${biometricName} is off for this workspace.`)
       // Face ID shows the amount as the sheet does.
+      const what = `${decision === 'approve' ? 'Approve' : 'Decline'} ${small ? `${large} (${small})` : large}`
       const assertion = key?.here
-        ? await signWithThisPhone(client, (await client.approvalChallenge(a.id)).challenge, `${decision === 'approve' ? 'Approve' : 'Decline'} ${small ? `${large} (${small})` : large} for ${agent.name}`)
+        ? await signWithThisPhone(client, (await client.approvalChallenge(a.id)).challenge, card ? `${what} at ${subject(a)} on ${a.paid_from?.name ?? `${agent.name}’s card`}` : `${what} for ${agent.name}`)
         : undefined
       if (decision === 'approve') await client.approve(a.id, assertion)
       else await client.deny(a.id, assertion, why.trim())
@@ -223,28 +236,32 @@ export function ApprovalSheet({
   return (
     <View testID="approval-sheet" style={{ gap: 14 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-        <Face agent={agent} waiting size={40} />
+        {card ? <AgentCard agent={agent} width={72} /> : <Face agent={agent} waiting size={40} />}
         <View style={{ flex: 1 }}>
-          <Body style={{ fontFamily: fonts.uiBold }}>{`${agent.name} wants to ${verb(a)}`}</Body>
-          {a.memo || a.reason ? <Text style={{ fontFamily: fonts.ui, fontSize: 13, color: c.ink3 }}>{a.memo || a.reason}</Text> : null}
+          <Body style={{ fontFamily: fonts.uiBold }}>{card ? 'Confirm a card payment' : `${agent.name} wants to ${verb(a)}`}</Body>
+          {card || a.memo || a.reason ? (
+            <Text style={{ fontFamily: fonts.ui, fontSize: 13, color: c.ink3 }}>{card ? (a.paid_from?.name ?? `${agent.name}’s card`) : a.memo || a.reason}</Text>
+          ) : null}
         </View>
         <MoneyLabel capability={capability} />
       </View>
       <Amount large={large} small={small} size={52} />
       <Body>
-        {a.payee ? 'to ' : ''}
+        {card ? 'at ' : a.payee ? 'to ' : ''}
         <Text style={{ fontFamily: fonts.uiBold }}>{subject(a)}</Text>
       </Body>
       {a.memo && a.reason ? <Body muted>“{a.reason}”</Body> : null}
       <Facts
         rows={[
+          card ? ['Why it’s asking', `${subject(a)} asked the card to check with you`] : null,
           a.asks_above_ulxc != null ? ['Why it’s asking', `It asks you above ${formatLXC(a.asks_above_ulxc, peg)}`] : null,
           a.paid_from ? ['Paid from', paidFromWords(a, peg)] : null,
           hasBudget ? ['Budget left after', budgetWords(a.budget_left_after_ulxc!, monthly, peg)] : null,
           a.expires_at ? ['Expires', expiresWords(a.expires_at)] : null,
         ]}
       />
-      {paused ? <Body muted>{`${agent.name} is paused: nothing goes through until it runs again. An approval lasts 24 hours.`}</Body> : null}
+      {card ? <Body muted>No answer by then declines it.</Body> : null}
+      {paused && !card ? <Body muted>{`${agent.name} is paused: nothing goes through until it runs again. An approval lasts 24 hours.`}</Body> : null}
       <View style={{ flexDirection: 'row', gap: 8 }}>
         <Icon name="check" size={16} color={c.ink2} />
         <Body muted style={{ flex: 1, fontSize: 13, lineHeight: 18 }}>
@@ -267,7 +284,8 @@ export function ApprovalSheet({
       ) : (
         <>
           {signs ? <Button primary label={`Approve with ${biometricName}`} disabled={busy} hint="Approving…" onPress={() => void decide('approve')} /> : null}
-          <Button variant="secondary" label="Decline" disabled={busy} onPress={() => setDeclining(true)} />
+          {!card ? <Button variant="secondary" label="Decline" disabled={busy} onPress={() => setDeclining(true)} /> : null}
+          {card && signs ? <Button variant="secondary" label="Decline" disabled={busy} hint="Declining…" onPress={() => void decide('deny')} /> : null}
         </>
       )}
     </View>
