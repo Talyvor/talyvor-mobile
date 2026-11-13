@@ -1,0 +1,7 @@
+[
+  { "route": "/cards", "screen": "p-agent-research", "words": "report", "why": "the reference draws no phone Cards screen; the nearest is the agent's page. B59.44 draws the company's own card above the agents' cards, in its account's tier art (B57.128)" },
+  { "route": "/cards", "screen": "p-agent-research", "account": "personal:fiat", "words": "report", "why": "the same for a Personal account: Your card, in the Daily art" },
+  { "route": "/cards", "screen": "p-agent-research", "name": "limits", "words": "report", "press": ["Change Research’s limits"], "scroll": "Limit per request", "why": "Change limits opens the web's six limits in LXC, saved as the web's Save rules is" },
+  { "route": "/cards", "screen": "p-agent-research", "name": "issue", "words": "report", "press": ["Issue Sales a card"], "scroll": "First name", "why": "Issue a card opens the web's cardholder form for an agent with no card" },
+  { "route": "/cards", "screen": "p-agent-research", "dark": true, "words": "report", "why": "the same, with the phone set to dark" }
+]

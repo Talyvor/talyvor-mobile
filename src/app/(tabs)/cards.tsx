@@ -1,11 +1,14 @@
-import { formatMinor, refusalText, rulesInWords, type Agent, type AgentCard as Held, type AgentRules, type CardAuthorization } from '@talyvor/bff-client'
+import { formatMinor, refusalText, type Agent, type AgentCard as Held, type AgentRules, type CardAuthorization } from '@talyvor/bff-client'
 import { router, useFocusEffect } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { useWindowDimensions, View } from 'react-native'
 
+import { useAccount } from '@/account'
 import { AgentCard } from '@/components/card'
 import { DisputesAndRefunds } from '@/components/card-disputes'
+import { CardLimits, IssueCard } from '@/components/card-forms'
 import { Icon } from '@/components/icon'
+import { OwnerCard } from '@/components/owner-card'
 import { Body, Button, Card, Chip, Eyebrow, Figure, Headline, LoadState, Row, Screen, Toggle, useLoad } from '@/components/ui'
 import { DISPUTE_WORDS } from '@/dispute-words'
 import { biometricName, checkItsYou, keyGoneText } from '@/keys'
@@ -19,6 +22,8 @@ import { useSession } from '@/session'
 // and Export (the web's B59.25).
 // B57.136 — in Pocket: each card sits in Pocket's panel with the agent's name and Frozen, and Freeze card is a switch, as
 // the reference's agent page draws its card; the limits are a list in their own panel, like the agent screen's Rules.
+// B59.44 — the owner's or company's own card above the agents', in its account's tier art (B57.128); Change limits, saved
+// as the web's Save rules is and signed with the phone's key when it loosens them; and Issue a card for an agent with none.
 
 type Entry = { agent: Agent; card: Held | null; purchases: CardAuthorization[]; rules: AgentRules }
 
@@ -77,7 +82,13 @@ export default function Cards() {
   const { width } = useWindowDimensions()
   const load = useCallback(async () => {
     // The disputes and refunds only add to each card: a read that fails says so under each card, and raises nothing.
-    const [book, disputes, refunds] = await Promise.all([client.book(), client.cardDisputes().catch(() => null), client.cardRefunds().catch(() => null)])
+    // The account's name only words the owner's card: a read that fails draws the agents' cards without it.
+    const [book, disputes, refunds, name] = await Promise.all([
+      client.book(),
+      client.cardDisputes().catch(() => null),
+      client.cardRefunds().catch(() => null),
+      client.workspaceName().then((w) => w.name || null, () => null),
+    ])
     const agents = (book.agents ?? []).filter((a) => !a.archived_at)
     const entries = await Promise.all(
       agents.map(async (agent): Promise<Entry> => {
@@ -85,9 +96,12 @@ export default function Cards() {
         return { agent, card: held?.card ?? null, purchases: held?.authorizations ?? [], rules }
       }),
     )
-    return { entries, disputes, refunds }
+    return { entries, disputes, refunds, name }
   }, [client])
   const { data, error, loading, reload } = useLoad(load)
+  const { account } = useAccount(client)
+  // Whose cardholder form is open.
+  const [issuing, setIssuing] = useState<string | null>(null)
   // Whose details show, and only until you leave the tab.
   const [shown, setShown] = useState<string | null>(null)
   useFocusEffect(useCallback(() => () => setShown(null), []))
@@ -120,6 +134,16 @@ export default function Cards() {
       <Headline>Your agents’ cards</Headline>
       <Button label={DISPUTE_WORDS.title} onPress={() => router.push('/disputes')} />
       <LoadState loading={loading && !data} error={error} />
+      {account && data?.name ? (
+        <View testID="owner-card">
+          <Card>
+            <Eyebrow>{account.account_type === 'business' ? 'The company’s card' : 'Your card'}</Eyebrow>
+            <View accessible accessibilityLabel={`${data.name}'s card`}>
+              <OwnerCard account={account} holder={data.name} width={width - 76} />
+            </View>
+          </Card>
+        </View>
+      ) : null}
       {data && !data.entries.length ? <Body muted>No agents yet.</Body> : null}
       {(data?.entries ?? []).map((h) => (
         <View key={h.agent.id} style={{ gap: 12 }} testID={`card-${h.agent.id}`}>
@@ -134,11 +158,23 @@ export default function Cards() {
               </View>
               {h.card ? (
                 <Toggle label="Freeze card" value={!!h.card.frozen} disabled={busy === h.agent.id} onValueChange={() => void freeze(h)} />
+              ) : issuing === h.agent.id ? (
+                <IssueCard
+                  client={client}
+                  agent={h.agent}
+                  onIssued={() => {
+                    setIssuing(null)
+                    reload()
+                  }}
+                />
               ) : (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                  <Icon name="card" />
-                  <Body muted>No card for {h.agent.name} yet.</Body>
-                </View>
+                <>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <Icon name="card" />
+                    <Body muted>No card for {h.agent.name} yet.</Body>
+                  </View>
+                  <Button label="Issue a card" accessibilityLabel={`Issue ${h.agent.name} a card`} onPress={() => setIssuing(h.agent.id)} />
+                </>
               )}
               {said?.id === h.agent.id ? (
                 <View accessibilityRole="alert">
@@ -151,16 +187,7 @@ export default function Cards() {
             <>
               <Details card={h.card} shown={shown === h.agent.id} onShow={() => void show(h.agent.id)} onHide={() => setShown(null)} />
               <View testID={`card-limits-${h.agent.id}`}>
-                <Card white>
-                  <Eyebrow>Limits</Eyebrow>
-                  <Body muted>Each purchase is paid from its wallet only if its rules allow it.</Body>
-                  {rulesInWords(h.rules, peg).map((r) => (
-                    <View key={r} style={{ flexDirection: 'row', gap: 8 }}>
-                      <Body>•</Body>
-                      <Body style={{ flex: 1 }}>{r}</Body>
-                    </View>
-                  ))}
-                </Card>
+                <CardLimits client={client} agent={h.agent} rules={h.rules} peg={peg} onSaved={reload} />
               </View>
               <Eyebrow>Purchases</Eyebrow>
               <Purchases purchases={h.purchases} />

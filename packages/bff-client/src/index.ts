@@ -65,6 +65,30 @@ export interface AgentCard {
   frozen_at?: string
 }
 
+/** B59.44 — Lens economy.RulesJudgement (B55.13): whether a change loosens the rules, each rule it changes in words, and
+ * the challenge a looser one is signed over. */
+export interface RulesJudgement {
+  looser: boolean
+  changes: string[] | null
+  challenge?: string
+  allow_credentials: string[] | null
+}
+
+/** B59.44 — the person a card is issued to, as the web's cardholder form asks for them (Lens B19.12). */
+export interface Cardholder {
+  first_name: string
+  last_name: string
+  email: string
+  /** E.164, e.g. +447700900123; Lens falls back to an unallocated number in test mode when empty (B27.21) */
+  phone_number: string
+  line1: string
+  line2: string
+  city: string
+  postal_code: string
+  /** ISO 3166-1 alpha-2; Lens takes GB when empty */
+  country: string
+}
+
 /** Lens economy.CardAuthorizationRecord: one purchase on the card, approved or declined by the agent's rules. */
 export interface CardAuthorization {
   id: string
@@ -614,6 +638,13 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     resumeChallenge: (id: string) => call<{ challenge: string }>('POST', `/api/agents/${e(id)}/resume-challenge`),
     resumeAll: (assertion?: DeviceAssertion) => call<{ all_paused: boolean }>('POST', '/api/agents/resume-all', assertion ? { assertion } : undefined),
     rules: (id: string) => call<AgentRules>('GET', `/api/agents/${e(id)}/rules`),
+    /** B59.44 — what saving these rules would do, and the challenge a looser save is signed over; saves nothing. */
+    rulesChallenge: (id: string, rules: AgentRules) => call<RulesJudgement>('POST', `/api/agents/${e(id)}/rules-challenge`, { rules }),
+    /** B59.44 — saves the agent's rules whole; a looser save carries the phone's signature over rulesChallenge's challenge. */
+    setRules: (id: string, rules: AgentRules, assertion?: DeviceAssertion) =>
+      call<AgentRules>('PUT', `/api/agents/${e(id)}/rules`, assertion ? { rules, assertion } : rules),
+    /** B59.44 — issues the agent a virtual card to `holder`; Lens answers the card. */
+    issueCard: (id: string, holder: Cardholder) => call<AgentCard>('POST', `/api/agents/${e(id)}/card`, holder),
     /** B59.34 — the agent's card and every purchase on it; null when it has none (Lens answers 404). */
     card: async (id: string) => {
       try {
