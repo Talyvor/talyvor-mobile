@@ -2,8 +2,9 @@ import { router } from 'expo-router'
 import { useCallback } from 'react'
 import { Text, View } from 'react-native'
 
-import { KIND_LABEL, KIND_LINE, TYPE_FIXED, TYPE_LABEL, accountChip, useAccount } from '@/account'
+import { accountChip, useAccount } from '@/account'
 import { COMPANY_ROW } from '@/company-words'
+import { AccountSettings } from '@/components/account-settings'
 import { Icon, type IconName } from '@/components/icon'
 import { NoticeSettingsCard } from '@/components/notice-settings'
 import { Limits, SecurityKeys, TeamAndRoles } from '@/components/settings-access'
@@ -17,6 +18,7 @@ import { fonts, useTheme } from '@/theme'
 // B59.11 — the account's chip under its name ("Business · Hybrid"), and its kind of money and type in the web's words.
 // B59.29 — Help and complaints, Your data and Close this account, as the web's Settings lists them (suite B59.28).
 // B59.32 — a Business's Company details, under its profile (suite B59.31).
+// B57.138 — the kind of money as launch-pack P11's choices and the Account type card (components/account-settings.tsx).
 // B59.39 — Security keys, Team and roles (a Business's alone: not drawn at all for Personal), and each agent's Limits.
 
 const HELP_ROWS: readonly { to: '/settings/help' | '/settings/data' | '/settings/close'; icon: IconName; title: string; line: string }[] = [
@@ -71,18 +73,7 @@ export default function SettingsScreen() {
             ) : null}
           </Card>
 
-          {account ? (
-            <>
-              <Eyebrow>Kind of money</Eyebrow>
-              <Card>
-                <Row first title={KIND_LABEL[account.money_kind]} sub={KIND_LINE[account.money_kind]} />
-              </Card>
-              <Eyebrow>Account type</Eyebrow>
-              <Card>
-                <Row first title={TYPE_LABEL[account.account_type]} sub={TYPE_FIXED} />
-              </Card>
-            </>
-          ) : null}
+          {account ? <AccountSettings client={client} account={account} /> : null}
 
           <SecurityKeys />
           {account?.account_type === 'business' ? <TeamAndRoles /> : null}

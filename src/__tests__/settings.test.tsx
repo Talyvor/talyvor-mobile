@@ -51,8 +51,9 @@ const thisMonth = [
 ]
 const lastMonth = [line(9, 'agent:ag_2', 'topup', 9_000_000, 'October top-up', '2026-10-15T08:00:00Z')]
 
-/** Lens behind the BFF; `calls` is every request the app made. */
-function mockBff() {
+/** Lens behind the BFF; `calls` is every request the app made. `account` is the workspace's type and kind (none: Lens
+ * does not answer), `accounts` what /api/money/accounts answers (null: the read fails). */
+function mockBff({ account, accounts = [] }: { account?: { account_type: string; money_kind: string }; accounts?: unknown[] | null } = {}) {
   const calls: { method: string; path: string; query: URLSearchParams; body?: unknown; accept?: string }[] = []
   const settings = { timezone: 'Europe/London', quiet_from: '', quiet_until: '', off: [] as string[] }
   globalThis.fetch = jest.fn(async (url: string, init: RequestInit = {}) => {
@@ -73,8 +74,12 @@ function mockBff() {
         return json({ workspace_balance_ulxc: 7_000_000, allocated_ulxc: 7_000_000, unallocated_ulxc: 0, spent_ulxc: 0, agents })
       case 'GET /api/agents/approvals':
         return json({ approvals: [] })
+      case 'GET /api/workspace/account':
+        if (account) return json({ workspace_id: 'ws_northwind', ...account })
+        break
       case 'GET /api/money/accounts':
-        return json({ accounts: [] })
+        if (accounts) return json({ accounts })
+        return new Response(JSON.stringify({ error: 'down' }), { status: 503 })
       case 'GET /api/money/payment-requests':
         return json({ requests: [] })
       case 'GET /api/agents/statement':
@@ -129,6 +134,39 @@ describe('Settings', () => {
     await renderRouter('./src/app', { initialUrl: '/settings' })
     await fireEvent.press(await screen.findByRole('button', { name: 'Back' }))
     expect(await screen.findByText('See all in Activity')).toBeTruthy()
+  })
+
+  test('B57.138: the kind of money is P11’s choices, a single kind blocked by what the other side holds', async () => {
+    const held = (id: string, currency: string, purpose: string, balance_minor: number) => ({ id, currency, purpose, status: 'open', name: id, balance_minor })
+    mockBff({
+      account: { account_type: 'business', money_kind: 'hybrid' },
+      accounts: [held('acc_usd', 'USD', 'company', 3_000_000), held('acc_usd_ag', 'USD', 'agent', 158_000), held('acc_usdc', 'USDC', 'company', 16_700_000_000)],
+    })
+    await renderRouter('./src/app', { initialUrl: '/settings' })
+    const kinds = await screen.findByLabelText('Kind of money')
+    expect(kinds.props.accessibilityRole).toBe('radiogroup')
+    const choice = (name: string) => within(kinds).getByRole('radio', { name: new RegExp(`^${name}`) })
+    expect(choice('Hybrid').props.accessibilityState).toMatchObject({ checked: true })
+    expect(within(choice('Hybrid')).getByText('Current')).toBeTruthy()
+    expect(choice('Fiat only').props.accessibilityState).toMatchObject({ checked: false })
+    expect(within(choice('Fiat only')).getByText('Needs zero stablecoin and crypto balances. They hold 16,700.00 USDC.')).toBeTruthy()
+    expect(within(choice('Stablecoin and crypto only')).getByText('Needs zero fiat balances. They hold $31,580.00.')).toBeTruthy()
+    expect(screen.getByText('Hybrid can become a single kind only when the other side’s balances are zero.')).toBeTruthy()
+    expect(within(screen.getByTestId('settings-account-type')).getByText('Business')).toBeTruthy()
+    expect(screen.getByText('The type can’t be changed. You can hold several accounts and switch between them.')).toBeTruthy()
+  })
+
+  test('B57.138: a single kind can become Hybrid at any time, and an unread balance keeps the rule without a figure', async () => {
+    mockBff({ account: { account_type: 'personal', money_kind: 'fiat' }, accounts: null })
+    await renderRouter('./src/app', { initialUrl: '/settings' })
+    const kinds = await screen.findByLabelText('Kind of money')
+    expect(kinds.props.accessibilityRole).toBe('radiogroup')
+    const choice = (name: string) => within(kinds).getByRole('radio', { name: new RegExp(`^${name}`) })
+    expect(choice('Fiat only').props.accessibilityState).toMatchObject({ checked: true })
+    expect(within(choice('Hybrid')).queryByText(/^Needs zero/)).toBeNull()
+    expect(within(choice('Stablecoin and crypto only')).getByText('Needs zero fiat balances.')).toBeTruthy()
+    expect(screen.getByText('Fiat only or Stablecoin and crypto only can become Hybrid at any time.')).toBeTruthy()
+    expect(within(screen.getByTestId('settings-account-type')).getByText('Personal')).toBeTruthy()
   })
 
   test('signs out of this phone', async () => {

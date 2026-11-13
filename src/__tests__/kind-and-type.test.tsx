@@ -78,13 +78,15 @@ function mockBff(account_type: Type, money_kind: Kind) {
   }) as unknown as typeof fetch
 }
 
-/** Every word the screen draws, and every accessibility label. */
+/** Every word the screen draws, and every accessibility label. Settings' kind of money choices (B57.138, P11) are left
+ * out: they name every kind on purpose, as the choices an account has, and draw none of the things a kind hides. */
 function drawn(): string {
   const out: string[] = []
   const walk = (n: unknown) => {
     if (typeof n === 'string') out.push(n)
     else if (Array.isArray(n)) n.forEach(walk)
     else if (n && typeof n === 'object') {
+      if ((n as { props?: { testID?: unknown } }).props?.testID === 'settings-money-kind') return
       const label = (n as { props?: { accessibilityLabel?: unknown } }).props?.accessibilityLabel
       if (typeof label === 'string') out.push(label)
       walk((n as { children?: unknown }).children)
