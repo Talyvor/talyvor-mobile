@@ -234,6 +234,19 @@ test("B57.126: Home's cards and an agent's own screen draw the agent's card, nam
   expect(screen.getByLabelText("Researcher's agent card")).toBeTruthy()
 })
 
+test("B57.134: the agent's screen opens on its card in Pocket's panel, with its name and Running or Paused, as W4 draws it", async () => {
+  mockStore.set('talyvor.session', JSON.stringify({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }))
+  mockBff()
+  await renderRouter('./src/app', { initialUrl: '/agents/ag_1' })
+  const head = await screen.findByTestId('agent-head')
+  expect(within(head).getByLabelText("Researcher's agent card")).toBeTruthy()
+  expect(within(head).getByRole('header', { name: 'Researcher' })).toBeTruthy()
+  expect(within(head).getByText('Running')).toBeTruthy()
+  expect(screen.queryByText('Active.')).toBeNull()
+  await fireEvent.press(screen.getByText('Pause'))
+  await waitFor(() => expect(within(screen.getByTestId('agent-head')).getByText('Paused')).toBeTruthy())
+})
+
 const lastSnapshot = () => mockSnapshots[mockSnapshots.length - 1]
 
 // The 'widget' directive compiles a layout to its source; Android's widget runtime evaluates it with these as globals.
@@ -546,7 +559,7 @@ describe('B55.5 Resume signed with Face ID', () => {
     expect(resumes(calls)).toEqual([])
     await fireEvent.press(screen.getByText('Resume with Face ID'))
 
-    expect(await screen.findByText('Active.')).toBeTruthy()
+    expect(await within(await screen.findByTestId('agent-head')).findByText('Running')).toBeTruthy()
     expect(resumes(calls).map((c) => c.path)).toEqual(['/api/agents/ag_1/resume-challenge', '/api/agents/ag_1/resume'])
     expect(JSON.parse(resumes(calls)[1].body!)).toEqual({ assertion: { device_id: 'dev_1', challenge: 'ch_resume_1', signature: 'signed:talyvor-device-v1:ch_resume_1' } })
     expect(mockPhone.reasons).toEqual(['Resume Researcher'])

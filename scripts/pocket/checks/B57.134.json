@@ -1,0 +1,5 @@
+[
+  { "route": "/", "screen": "p-home", "launchPack": "P3", "scroll": "Your team’s agents", "words": "report", "why": "Home's Cards strip, as P3 draws it (B57.66 and B57.126); Home's other words are B57.66's" },
+  { "route": "/agents/agt_research", "screen": "p-agent-research", "words": "report", "why": "B57.134 draws the agent's card in Pocket's panel with its name and Running, as W4 does; the rest of the agent screen is B57.70's" },
+  { "route": "/agents/agt_research", "screen": "p-agent-research", "dark": true, "words": "report", "why": "the same, with the phone set to dark" }
+]
