@@ -127,6 +127,17 @@ const ANSWERS = {
   '/api/workspace/name': { id: 'ws_northwind', name: 'Northwind Studio' },
   // B59.11 — every workspace Lens had before B59.6 is Business and Hybrid.
   '/api/workspace/account': { workspace_id: 'ws_northwind', account_type: 'business', money_kind: 'hybrid' },
+  // B59.39 — Settings' security keys and team: a passkey on the owner's Mac and this phone's key, and two people.
+  '/api/agents/keys': {
+    keys: [
+      { kind: 'passkey', id: 'cred_mac', name: 'Nick’s Mac', platform: '', created_at: '2026-10-14T09:00:00Z', last_used_at: '2026-11-10T09:00:00Z' },
+      { kind: 'phone', id: 'dev_iphone', name: 'iPhone', platform: 'ios', created_at: '2026-11-01T09:00:00Z' },
+    ],
+  },
+  '/api/members': [
+    { id: 'm_1', name: 'Nick', email: 'nick@northwind.studio', role: 'owner', avatar_url: '' },
+    { id: 'm_2', name: 'Dana', email: 'dana@northwind.studio', role: 'member', avatar_url: '' },
+  ],
   // B59.29 — what the workspace sent: a complaint being looked at, a question answered, and a copy of its data ready.
   '/api/workspace/requests': {
     requests: [
