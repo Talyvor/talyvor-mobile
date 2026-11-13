@@ -5,7 +5,8 @@ import { useWindowDimensions, View } from 'react-native'
 
 import { AgentCard } from '@/components/card'
 import { DisputesAndRefunds } from '@/components/card-disputes'
-import { Body, Button, Card, Chip, Eyebrow, Figure, Headline, LoadState, Row, Screen, useLoad } from '@/components/ui'
+import { Icon } from '@/components/icon'
+import { Body, Button, Card, Chip, Eyebrow, Figure, Headline, LoadState, Row, Screen, Toggle, useLoad } from '@/components/ui'
 import { DISPUTE_WORDS } from '@/dispute-words'
 import { biometricName, checkItsYou, keyGoneText } from '@/keys'
 import { useSession } from '@/session'
@@ -16,6 +17,8 @@ import { useSession } from '@/session'
 // Lens's own: a frozen card is refused every purchase and nothing leaves the agent's wallet.
 // B59.26 — each agent's disputes and refunds under its card, and Disputes and refunds opens the card payments to dispute
 // and Export (the web's B59.25).
+// B57.136 — in Pocket: each card sits in Pocket's panel with the agent's name and Frozen, and Freeze card is a switch, as
+// the reference's agent page draws its card; the limits are a list in their own panel, like the agent screen's Rules.
 
 type Entry = { agent: Agent; card: Held | null; purchases: CardAuthorization[]; rules: AgentRules }
 
@@ -120,31 +123,45 @@ export default function Cards() {
       {data && !data.entries.length ? <Body muted>No agents yet.</Body> : null}
       {(data?.entries ?? []).map((h) => (
         <View key={h.agent.id} style={{ gap: 12 }} testID={`card-${h.agent.id}`}>
-          <AgentCard agent={h.agent} width={width - 36} />
-          {h.card ? (
-            <>
-              {h.card.frozen ? (
-                <View style={{ flexDirection: 'row' }}>
-                  <Chip tone="bad">Frozen</Chip>
+          <View testID={`card-head-${h.agent.id}`}>
+            <Card>
+              <AgentCard agent={h.agent} width={width - 76} />
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 6 }}>
+                <View style={{ flexShrink: 1 }}>
+                  <Headline>{h.agent.name}</Headline>
                 </View>
-              ) : null}
-              <Details card={h.card} shown={shown === h.agent.id} onShow={() => void show(h.agent.id)} onHide={() => setShown(null)} />
-              <Eyebrow>Limits</Eyebrow>
-              <Body muted>Each purchase is paid from its wallet only if its rules allow it.</Body>
-              {rulesInWords(h.rules, peg).map((r) => (
-                <Body key={r}>{r}</Body>
-              ))}
-              <Button
-                label={h.card.frozen ? 'Unfreeze card' : 'Freeze card'}
-                variant={h.card.frozen ? 'outline' : 'danger'}
-                disabled={busy === h.agent.id}
-                onPress={() => void freeze(h)}
-              />
+                {h.card?.frozen ? <Chip tone="paused">Frozen</Chip> : null}
+              </View>
+              {h.card ? (
+                <Toggle label="Freeze card" value={!!h.card.frozen} disabled={busy === h.agent.id} onValueChange={() => void freeze(h)} />
+              ) : (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <Icon name="card" />
+                  <Body muted>No card for {h.agent.name} yet.</Body>
+                </View>
+              )}
               {said?.id === h.agent.id ? (
                 <View accessibilityRole="alert">
                   <Body>{said.text}</Body>
                 </View>
               ) : null}
+            </Card>
+          </View>
+          {h.card ? (
+            <>
+              <Details card={h.card} shown={shown === h.agent.id} onShow={() => void show(h.agent.id)} onHide={() => setShown(null)} />
+              <View testID={`card-limits-${h.agent.id}`}>
+                <Card white>
+                  <Eyebrow>Limits</Eyebrow>
+                  <Body muted>Each purchase is paid from its wallet only if its rules allow it.</Body>
+                  {rulesInWords(h.rules, peg).map((r) => (
+                    <View key={r} style={{ flexDirection: 'row', gap: 8 }}>
+                      <Body>•</Body>
+                      <Body style={{ flex: 1 }}>{r}</Body>
+                    </View>
+                  ))}
+                </Card>
+              </View>
               <Eyebrow>Purchases</Eyebrow>
               <Purchases purchases={h.purchases} />
               {data!.disputes && data!.refunds ? (
@@ -156,9 +173,7 @@ export default function Cards() {
                 <Body muted>{DISPUTE_WORDS.readFailed}</Body>
               )}
             </>
-          ) : (
-            <Body muted>No card for {h.agent.name} yet.</Body>
-          )}
+          ) : null}
         </View>
       ))}
     </Screen>
