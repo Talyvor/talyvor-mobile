@@ -15,17 +15,20 @@ const SCAM_QUESTIONS = [
 ] as const
 type ScamAnswers = Partial<Record<(typeof SCAM_QUESTIONS)[number]['key'], boolean>>
 
-/** A bottom sheet over the screen: Close and a tap on the dimmed screen above it both close it. */
-export function BottomSheet({ visible, onClose, children }: { visible: boolean; onClose: () => void; children: ReactNode }) {
+/** A bottom sheet over the screen: Close and a tap on the dimmed screen above it both close it. Without `onClose` it has
+ * neither, and only its own buttons put it away (B57.146: a recovery code shown once). */
+export function BottomSheet({ visible, onClose, children, testID }: { visible: boolean; onClose?: () => void; children: ReactNode; testID?: string }) {
   const { c } = useTheme()
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(17,18,22,0.4)' }}>
-        <Pressable accessible={false} style={{ flex: 1 }} onPress={onClose} />
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose ?? (() => undefined)}>
+      <View testID={testID} style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(17,18,22,0.4)' }}>
+        <Pressable accessible={false} disabled={!onClose} style={{ flex: 1 }} onPress={onClose} />
         <Sheet>
-          <Pressable accessibilityRole="button" accessibilityLabel="Close" hitSlop={10} onPress={onClose} style={{ alignSelf: 'flex-end' }}>
-            <Icon name="x" color={c.ink2} />
-          </Pressable>
+          {onClose ? (
+            <Pressable accessibilityRole="button" accessibilityLabel="Close" hitSlop={10} onPress={onClose} style={{ alignSelf: 'flex-end' }}>
+              <Icon name="x" color={c.ink2} />
+            </Pressable>
+          ) : null}
           {children}
         </Sheet>
       </View>

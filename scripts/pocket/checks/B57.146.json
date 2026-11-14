@@ -1,0 +1,44 @@
+[
+  {
+    "route": "/",
+    "screen": "p-home",
+    "words": "report",
+    "why": "the reference draws no waiting recovery; its words are the web's (B55.54)",
+    "answers": { "/api/agents/keys/recover": { "recovery": { "id": "rec_1", "status": "waiting", "created_at": "2026-11-12T12:00:00Z", "ready_at": "2026-11-15T12:00:00Z", "expires_at": "2026-11-16T12:00:00Z", "mine": false } } }
+  },
+  {
+    "route": "/",
+    "screen": "p-home",
+    "dark": true,
+    "words": "report",
+    "why": "the reference draws no waiting recovery; its words are the web's (B55.54)",
+    "answers": { "/api/agents/keys/recover": { "recovery": { "id": "rec_1", "status": "waiting", "created_at": "2026-11-12T12:00:00Z", "ready_at": "2026-11-15T12:00:00Z", "expires_at": "2026-11-16T12:00:00Z", "mine": false } } }
+  },
+  {
+    "route": "/approvals",
+    "screen": "p-home+psheet-A",
+    "name": "recovery-code",
+    "words": "report",
+    "why": "the reference draws no recovery code sheet; its frame is sheet-A's and its words are the web's (B55.54)",
+    "newKey": true,
+    "press": ["Turn on"],
+    "answers": {
+      "/api/money/devices/challenge": { "challenge": "ch_register" },
+      "/api/money/devices": { "devices": [], "id": "dev_1", "platform": "ios", "name": "iPhone", "person": "owner@acme.test", "created_at": "2026-11-12T16:00:00Z", "recovery_code": "ABCD1234EFGH5678JKMN" }
+    }
+  },
+  {
+    "route": "/approvals",
+    "screen": "p-home+psheet-A",
+    "name": "recovery-code",
+    "dark": true,
+    "words": "report",
+    "why": "the reference draws no recovery code sheet; its frame is sheet-A's and its words are the web's (B55.54)",
+    "newKey": true,
+    "press": ["Turn on"],
+    "answers": {
+      "/api/money/devices/challenge": { "challenge": "ch_register" },
+      "/api/money/devices": { "devices": [], "id": "dev_1", "platform": "ios", "name": "iPhone", "person": "owner@acme.test", "created_at": "2026-11-12T16:00:00Z", "recovery_code": "ABCD1234EFGH5678JKMN" }
+    }
+  }
+]

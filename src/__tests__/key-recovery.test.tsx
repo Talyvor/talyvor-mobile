@@ -1,5 +1,5 @@
 import { createHash, createPublicKey, verify } from 'node:crypto'
-import { fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library'
+import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library'
 
 import { approvalHref } from '../push'
 
@@ -107,6 +107,25 @@ test('the first Turn on shows the recovery code once, with Copy and I saved it, 
   await renderRouter('./src/app', { initialUrl: '/approvals' })
   expect(await screen.findByText(/^On\. This phone signs your approvals/)).toBeTruthy()
   expect(screen.queryByText('Save your recovery code')).toBeNull()
+})
+
+test('B57.146: the code waits in Pocket’s sheet with no Close, so only I saved it puts it away', async () => {
+  mockLens()
+  await renderRouter('./src/app', { initialUrl: '/approvals' })
+  await fireEvent.press(await screen.findByText('Turn on'))
+  const sheet = await screen.findByTestId('recovery-code-sheet')
+  expect(within(sheet).getByText('ABCD 1234 EFGH 5678 JKMN')).toBeTruthy()
+  expect(screen.queryByLabelText('Close')).toBeNull()
+  await fireEvent.press(within(sheet).getByText('I saved it'))
+  await waitFor(() => expect(screen.queryByTestId('recovery-code-sheet')).toBeNull())
+})
+
+test('B57.146: a waiting recovery is a Pocket card on Home, its words beside the key and Cancel recovery under them', async () => {
+  mockLens({ id: 'rec_1', status: 'waiting', created_at: '2026-11-12T12:00:00Z', ready_at: '2026-11-15T12:00:00Z', expires_at: '2026-11-16T12:00:00Z', mine: true })
+  await renderRouter('./src/app', { initialUrl: '/' })
+  const card = await screen.findByTestId('key-recovery')
+  expect(within(card).getByText(/^You started a recovery\./)).toBeTruthy()
+  expect(within(card).getByText('Cancel recovery')).toBeTruthy()
 })
 
 test('a waiting recovery shows on Home in the web’s words, and Cancel recovery ends it', async () => {
