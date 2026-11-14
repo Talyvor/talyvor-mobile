@@ -862,6 +862,16 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
       const res = await send('POST', '/api/chat/voice/speech', JSON.stringify({ input }), { 'Content-Type': 'application/json' })
       return { audio: await res.arrayBuffer(), type: res.headers.get('Content-Type') ?? '' }
     },
+    /** B58.10 — "Hey Taly"'s Picovoice access key for this signed-in person; null when the server has none ("Hey Taly
+     * is off."). Keep it in memory only. */
+    voiceKey: async () => {
+      try {
+        return (await call<{ access_key?: string }>('GET', '/api/voice/key')).access_key || null
+      } catch (err) {
+        if (err instanceof BffError && err.status === 503) return null
+        throw err
+      }
+    },
     /** The requests waiting for the person's approval: the bills an assistant, Chat or an agent prepared for them. */
     pendingPaymentRequests: () => call<{ requests: PaymentRequest[] | null }>('GET', '/api/money/payment-requests?status=pending_approval'),
     /** B57.149 — the workspace's requests approved, declined or expired, newest decision first. */

@@ -11,7 +11,7 @@ import { Body, Button, Card, Eyebrow, Headline, Screen } from '@/components/ui'
 import { biometricName, phoneKey, resumeWithThisPhone } from '@/keys'
 import { useSession } from '@/session'
 import { fonts, useTheme } from '@/theme'
-import { AI_NOTICE, heyTalyAvailable, listenForHeyTaly, notToldYet, sayAloud } from '@/voice'
+import { AI_NOTICE, heyTalyKey, listenForHeyTaly, notToldYet, sayAloud } from '@/voice'
 
 // B40.16 — Chat on the phone: typed, held-to-talk, or after "Hey Taly" while the app is open. "Pause all agents" asks
 // first; "pay the ACME invoice" is prepared with Lens, read back, and paid only once the person approves it with Face ID
@@ -79,6 +79,7 @@ export default function ChatScreen() {
   const [busy, setBusy] = useState(false)
   const [listening, setListening] = useState(false)
   const [heyTaly, setHeyTaly] = useState(false)
+  const [voiceKey, setVoiceKey] = useState<string | null>(null)
   const [active, setActive] = useState(AppState.currentState !== 'background')
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY)
   const seq = useRef(0)
@@ -89,6 +90,7 @@ export default function ChatScreen() {
   const noticed = useRef(false)
   const [signs, setSigns] = useState(false)
   useEffect(() => void phoneKey(client).then((k) => setSigns(!!k?.here)), [client])
+  useEffect(() => void heyTalyKey(client).then(setVoiceKey), [client])
 
   const add = (t: Omit<Turn, 'id'>) => {
     const turn = { ...t, id: ++seq.current }
@@ -229,14 +231,14 @@ export default function ChatScreen() {
   }, [])
   // "Hey Taly" listens only while the switch is on, the app is open and nothing else is using the microphone.
   useEffect(() => {
-    if (!heyTaly || !active || listening) return
+    if (!heyTaly || !voiceKey || !active || listening) return
     let stopped = false
     const off = async () => {
       if (stopped) return
       stopped = true
       await (await engine)?.()
     }
-    const engine = listenForHeyTaly(() => {
+    const engine = listenForHeyTaly(voiceKey, () => {
       void off().then(heard)
     }).catch(() => {
       setHeyTaly(false)
@@ -244,7 +246,7 @@ export default function ChatScreen() {
       return null
     })
     return () => void off()
-  }, [heyTaly, active, listening])
+  }, [heyTaly, voiceKey, active, listening])
 
   const input = { flex: 1, borderWidth: 1, borderColor: c.lineStrong, borderRadius: 6, paddingHorizontal: 12, paddingVertical: 10, color: c.ink, fontSize: 15, fontFamily: fonts.ui }
 
@@ -253,7 +255,7 @@ export default function ChatScreen() {
       <Eyebrow>Chat</Eyebrow>
       <Headline>Ask Talyvor</Headline>
       <Body muted>Ask anything, or say “what’s due this week?”, “what did Research spend?”, “pause all agents” or “pay the ACME invoice”. Nothing is paid until you approve it with {biometricName}.</Body>
-      {heyTalyAvailable() ? (
+      {voiceKey ? (
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <Body style={{ flex: 1 }}>Listen for “Hey Taly” while the app is open</Body>
           <Switch accessibilityLabel="Listen for Hey Taly" value={heyTaly} onValueChange={setHeyTaly} trackColor={{ true: c.accent, false: c.lineStrong }} />

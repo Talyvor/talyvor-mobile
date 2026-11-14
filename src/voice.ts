@@ -37,13 +37,17 @@ export async function sayAloud(client: BffClient, text: string): Promise<void> {
   playing.play()
 }
 
-/** "Hey Taly" needs Talyvor's Picovoice access key and its trained keyword file; without both the switch is not offered.
+/** "Hey Taly"'s Picovoice access key, asked of the BFF once signed in (B58.10) and kept in memory only; null while the
+ * server has none or the app has no trained keyword file, and then the switch is not offered.
  * shortcut: the keyword is a path Porcupine reads on the phone; ship the trained .ppn in the app once it exists. */
-export const heyTalyAvailable = () => !!config.picovoiceKey && !!config.heyTalyKeyword
+export async function heyTalyKey(client: BffClient): Promise<string | null> {
+  if (!config.heyTalyKeyword) return null
+  return client.voiceKey().catch(() => null)
+}
 
 /** Listens on the phone for "Hey Taly" until the answer is called; nothing it hears leaves the phone. */
-export async function listenForHeyTaly(onWake: () => void): Promise<() => Promise<void>> {
-  const manager = await PorcupineManager.fromKeywordPaths(config.picovoiceKey, [config.heyTalyKeyword], () => onWake())
+export async function listenForHeyTaly(accessKey: string, onWake: () => void): Promise<() => Promise<void>> {
+  const manager = await PorcupineManager.fromKeywordPaths(accessKey, [config.heyTalyKeyword], () => onWake())
   await manager.start()
   return async () => {
     await manager.stop()
