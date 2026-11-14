@@ -1,3 +1,4 @@
+import { useLocalSearchParams } from 'expo-router'
 import { useCallback, useEffect, useState } from 'react'
 import { View } from 'react-native'
 
@@ -11,7 +12,8 @@ import { useSession } from '@/session'
 import { setWaiting } from '@/waiting'
 
 // B57.68 — the Approvals tab as Pocket draws it (p-approvals): the label, payments prepared for you and agents' requests
-// waiting with Review, then what was decided by agent and payee, and this phone's Approve with Face ID.
+// waiting with Review, then what was decided by agent and payee, and this phone's Approve with Face ID. B57.69: a browser
+// or phone asking to approve too waits with Review, and is let in or turned away in Pocket's bottom sheet.
 
 /** What Approvals moves money on: agents' spending and payments out, and whatever else a request in view moves it on. */
 const APPROVALS_MONEY = [...AGENT_CREDIT, ...PAY_OUT]
@@ -19,6 +21,8 @@ const APPROVALS_MONEY = [...AGENT_CREDIT, ...PAY_OUT]
 /** Every approval: payments prepared for you and agents' requests waiting first, then what was decided. */
 export default function Approvals() {
   const { client } = useSession()
+  // B57.69 — a key_enrolment push names the waiting key whose sheet opens.
+  const { enrolment } = useLocalSearchParams<{ enrolment?: string }>()
   const load = useCallback(async () => {
     const [book, approvals, prepared] = await Promise.all([client.book(), client.approvals(), pendingPrepared(client)])
     return { agents: book.agents ?? [], allPaused: !!book.all_paused_at, approvals: approvals.approvals ?? [], prepared }
@@ -53,7 +57,7 @@ export default function Approvals() {
         </Card>
       ) : null}
       {data ? <DecidedApprovals decided={decided} agents={data.agents} /> : null}
-      <KeyEnrolmentCards onWaiting={setKeysWaiting} />
+      <KeyEnrolmentCards onWaiting={setKeysWaiting} open={enrolment} />
       <PhoneKeyCard />
     </Screen>
   )

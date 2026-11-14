@@ -1,7 +1,9 @@
 /// <reference types="node" />
 import { createHash, generateKeyPairSync, verify } from 'node:crypto'
-import { fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library'
+import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library'
 import { Alert } from 'react-native'
+
+import { approvalHref } from '../push'
 
 // B40.14 DONE: a test notification opens the approval card for its request, and approving signs it with the device key
 // and marks it approved in a mocked Lens.
@@ -166,15 +168,18 @@ test('without this phone\'s key, a held payment\'s sheet offers no approve, send
   expect(lens.approvalApproved).toBeFalsy()
 })
 
-// B55.4: Lens (B55.1) pushes the workspace's phones when a key asks to join it; tapping it opens Approvals, where the
-// browser waits with its code.
-test('a key_enrolment notification opens Approvals, where the waiting browser shows with its code', async () => {
+// B55.4: Lens (B55.1) pushes the workspace's phones when a key asks to join it. B57.69: tapping it opens Approvals with
+// that browser's sheet already open, its code and Let it approve in it.
+test('a key_enrolment notification opens the waiting browser\'s sheet on Approvals, with its code', async () => {
   mockLens()
+  expect(approvalHref({ type: 'key_enrolment', enrolment_id: 'enr_1' })).toEqual({ pathname: '/approvals', params: { enrolment: 'enr_1' } })
   tap({ type: 'key_enrolment', enrolment_id: 'enr_1', workspace_id: 'ws_1' })
   await renderRouter('./src/app', { initialUrl: '/statement' })
 
-  expect(await screen.findByText('A browser asks to approve payments too. Let it in only if you are adding it now and its code is 042917.')).toBeTruthy()
-  expect(screen.getByText('Let it approve')).toBeTruthy()
+  const sheet = await screen.findByTestId('key-enrolment-sheet')
+  expect(within(sheet).getByText('Let it in only if you are adding it now and its code is 042917.')).toBeTruthy()
+  expect(within(sheet).getByRole('button', { name: 'Let it approve' })).toBeTruthy()
+  expect(within(sheet).getByRole('button', { name: 'Not this one' })).toBeTruthy()
 })
 
 // B57.74: after Face ID, a line for each payment says what happened to it.

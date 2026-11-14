@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import { createHash, createPublicKey, generateKeyPairSync, verify, type KeyObject } from 'node:crypto'
 import { createBffClient } from '@talyvor/bff-client'
-import { fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library'
+import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library'
 import { StyleSheet } from 'react-native'
 
 import { signWithThisPhone } from '../keys'
@@ -333,6 +333,25 @@ test('when the web turns the phone away, its key is deleted from the chip and no
   expect(mockPhone.keys.size).toBe(0)
   expect(mockStore.get('talyvor.device-key')).toBeUndefined()
   expect(screen.getByText('Turn on')).toBeTruthy()
+})
+
+// B57.69 — This phone waiting for the web is Pocket's bottom sheet: the code to check there, and what happens if it is
+// turned away or runs out of time. Closing it leaves the waiting card on Approvals, still waiting.
+test('waiting for the web opens in a sheet with the code and what a decline or expiry does; closing it keeps waiting', async () => {
+  const lens = mockWaitingLens()
+  await renderRouter('./src/app', { initialUrl: '/approvals' })
+  await fireEvent.press(await screen.findByText('Turn on'))
+
+  const sheet = await screen.findByTestId('waiting-for-web-sheet')
+  expect(within(sheet).getByText('Waiting for the web')).toBeTruthy()
+  expect(within(sheet).getByText(waitingText)).toBeTruthy()
+  expect(within(sheet).getByText('If the web turns it away, or no one lets it in within 10 minutes, this phone is not added and nothing changes.')).toBeTruthy()
+
+  await fireEvent.press(within(sheet).getByRole('button', { name: 'Close' }))
+  expect(screen.queryByTestId('waiting-for-web-sheet')).toBeNull()
+  expect(screen.getByText(waitingText)).toBeTruthy()
+  lens.status = 'approved'
+  expect(await screen.findByText(/^On\. This phone signs your approvals/, {}, { timeout: 5000 })).toBeTruthy()
 })
 
 // B55.17 — Turn off revokes the phone's key in Lens first, and deletes it from the phone only once Lens has.

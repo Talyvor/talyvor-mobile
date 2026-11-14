@@ -1155,10 +1155,12 @@ describe('B57.68 Approvals', () => {
   })
 })
 
-describe('B55.4 a browser waiting to approve payments too', () => {
+describe('B55.4 a browser waiting to approve payments too, in Pocket\'s sheet (B57.69)', () => {
   const enrolment = { id: 'enr_1', kind: 'passkey', name: 'Chrome on Mac', code: '042917', status: 'waiting', created_at: '2026-11-10T10:00:00Z', expires_at: '2026-11-10T10:10:00Z' }
-  const asks = 'A browser asks to approve payments too. Let it in only if you are adding it now and its code is 042917.'
+  const asks = 'A browser asks to approve payments too.'
+  const line = 'Let it in only if you are adding it now and its code is 042917.'
   const decisions = (calls: ReturnType<typeof mockBff>) => calls.filter((c) => c.method === 'POST' && c.path.startsWith('/api/agents/keys/enrolments/'))
+  const sheet = () => screen.queryByTestId('key-enrolment-sheet')
   beforeEach(() => {
     mockStore.clear()
     mockStore.set('talyvor.session', JSON.stringify({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }))
@@ -1167,27 +1169,52 @@ describe('B55.4 a browser waiting to approve payments too', () => {
     mockPhone.face = true
     mockPhone.reasons = []
   })
-
-  test('Let it approve signs the enrolment challenge with Face ID and posts the assertion', async () => {
-    const calls = mockBff({ enrolments: [enrolment] })
+  const review = async () => {
     await renderRouter('./src/app', { initialUrl: '/approvals' })
     expect(await screen.findByText(asks)).toBeTruthy()
-    await fireEvent.press(screen.getByText('Let it approve'))
+    expect(screen.getByText(line)).toBeTruthy()
+    // On Approvals the browser waits as a row with Review; the decision is made only in the sheet.
+    expect(screen.queryByText('Let it approve')).toBeNull()
+    await fireEvent.press(screen.getByRole('button', { name: `Review: ${asks}` }))
+    expect(sheet()).toBeTruthy()
+  }
 
-    await waitFor(() => expect(screen.queryByText(asks)).toBeNull())
+  test('Let it approve signs the enrolment challenge once with Face ID and posts the assertion', async () => {
+    const calls = mockBff({ enrolments: [enrolment] })
+    await review()
+    const button = within(sheet()!).getByRole('button', { name: 'Let it approve' })
+    await fireEvent.press(button)
+    await fireEvent.press(button)
+
+    expect(await screen.findByText('The browser can approve now')).toBeTruthy()
+    expect(screen.getByText('Face ID signed for its new passkey.')).toBeTruthy()
+    expect(sheet()).toBeNull()
     expect(decisions(calls).map((c) => c.path)).toEqual(['/api/agents/keys/enrolments/enr_1/challenge', '/api/agents/keys/enrolments/enr_1/approve'])
     expect(JSON.parse(decisions(calls)[1].body!)).toEqual({ assertion: { device_id: 'dev_1', challenge: 'ch_enr_1', signature: 'signed:talyvor-device-v1:ch_enr_1' } })
     expect(mockPhone.reasons).toEqual(['Let a browser approve payments'])
   })
 
-  test('Not this one turns it away, signing nothing', async () => {
+  test('Not this one sends the decline, signing nothing', async () => {
     const calls = mockBff({ enrolments: [enrolment] })
-    await renderRouter('./src/app', { initialUrl: '/approvals' })
-    await fireEvent.press(await screen.findByText('Not this one'))
+    await review()
+    await fireEvent.press(within(sheet()!).getByRole('button', { name: 'Not this one' }))
 
-    await waitFor(() => expect(screen.queryByText(asks)).toBeNull())
+    expect(await screen.findByText('Not let in')).toBeTruthy()
+    expect(screen.getByText('The browser was not added. Nothing changed.')).toBeTruthy()
+    expect(sheet()).toBeNull()
     expect(decisions(calls).map((c) => c.path)).toEqual(['/api/agents/keys/enrolments/enr_1/decline'])
     expect(mockPhone.reasons).toEqual([])
+  })
+
+  test('a cancelled Face ID sends no decision and keeps the sheet open', async () => {
+    const calls = mockBff({ enrolments: [enrolment] })
+    mockPhone.face = false
+    await review()
+    await fireEvent.press(within(sheet()!).getByRole('button', { name: 'Let it approve' }))
+
+    expect(await within(sheet()!).findByText(/^Nothing changed/)).toBeTruthy()
+    expect(decisions(calls).filter((c) => !c.path.endsWith('/challenge'))).toEqual([])
+    expect(screen.queryByText('The browser can approve now')).toBeNull()
   })
 })
 

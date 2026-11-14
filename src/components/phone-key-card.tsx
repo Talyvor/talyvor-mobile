@@ -3,7 +3,7 @@ import * as Clipboard from 'expo-clipboard'
 import { useEffect, useRef, useState } from 'react'
 import { Text, View } from 'react-native'
 
-import { biometricName, keysAvailable, phoneKey, turnOffPhoneApprovals, turnOffRefusal, turnOnPhoneApprovals, waitForTheWeb, workspaceName } from '../keys'
+import { biometricName, keysAvailable, phoneKey, turnOffPhoneApprovals, turnOffRefusal, turnOnPhoneApprovals, waitForTheWeb, waitMinutes, workspaceName } from '../keys'
 import { registerPush } from '../push'
 import { useSession } from '../session'
 import { fonts, useTheme } from '../theme'
@@ -23,7 +23,8 @@ const grouped = (code: string) => code.replace(/\s+/g, '').replace(/(.{4})(?=.)/
  * here, so sign-up's step 3 can open the app. B55.55: a first key comes with the workspace's recovery code (Lens B55.48),
  * shown once in the web's words (B55.54) until "I saved it", and held only in this card's state; `onOn` waits for it.
  * B57.102: another workspace's key is drawn as p-approvals draws a setting, and moving it asks in Pocket's bottom sheet.
- * B57.146: the recovery code waits in Pocket's bottom sheet (sheet-A's frame) over the card, with no Close. */
+ * B57.146: the recovery code waits in Pocket's bottom sheet (sheet-A's frame) over the card, with no Close. B57.69: so
+ * does waiting for the web, with the code to check there and what a decline or expiry does; closed, the card waits on. */
 export function PhoneKeyCard({ onOn }: { onOn?: () => void } = {}) {
   const { client } = useSession()
   const { c } = useTheme()
@@ -34,6 +35,7 @@ export function PhoneKeyCard({ onOn }: { onOn?: () => void } = {}) {
   const [busy, setBusy] = useState(false)
   const [refusal, setRefusal] = useState('')
   const [code, setCode] = useState('')
+  const [waitShut, setWaitShut] = useState(false)
   const [recoveryCode, setRecoveryCode] = useState('')
   const [copied, setCopied] = useState(false)
   const mounted = useRef(true)
@@ -54,6 +56,7 @@ export function PhoneKeyCard({ onOn }: { onOn?: () => void } = {}) {
   const turnOn = async () => {
     setBusy(true)
     setRefusal('')
+    setWaitShut(false)
     try {
       const made = await turnOnPhoneApprovals(client)
       if ('enrolment' in made) setCode(made.enrolment.code)
@@ -183,13 +186,32 @@ export function PhoneKeyCard({ onOn }: { onOn?: () => void } = {}) {
         </View>
       </Card>
     )
+  const letIn = `In Talyvor on the web, let this phone in from Approvals and devices. The code there should be ${code}.`
+  // Waiting, as p-approvals draws it, with the sheet over it until it is closed; the phone waits on either way.
+  if (code)
+    return (
+      <Card tight>
+        <Text style={{ fontFamily: fonts.uiBold, fontSize: 14, color: c.ink }}>{waitShut ? 'Waiting for the web' : title}</Text>
+        {waitShut ? words(letIn) : null}
+        <BottomSheet visible={!waitShut} testID="waiting-for-web-sheet" onClose={() => setWaitShut(true)}>
+          <View style={{ gap: 14 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: c.cloud, alignItems: 'center', justifyContent: 'center' }}>
+                <Icon name="key" color={c.ink} />
+              </View>
+              <Body style={{ flex: 1, fontFamily: fonts.uiBold }}>Waiting for the web</Body>
+            </View>
+            <Body>{letIn}</Body>
+            <Body muted>If the web turns it away, or no one lets it in within {waitMinutes} minutes, this phone is not added and nothing changes.</Body>
+          </View>
+        </BottomSheet>
+      </Card>
+    )
   return (
     <>
       <Card>
-        <Body style={{ fontFamily: fonts.uiBold }}>{code ? 'Waiting for the web' : title}</Body>
-        {code ? (
-          <Body muted>In Talyvor on the web, let this phone in from Approvals and devices. The code there should be {code}.</Body>
-        ) : key?.here && ending ? (
+        <Body style={{ fontFamily: fonts.uiBold }}>{title}</Body>
+        {key?.here && ending ? (
           <>
             <Body>Turn off approving on this phone?</Body>
             <Body muted>This phone’s key is removed and can no longer approve anything.</Body>
