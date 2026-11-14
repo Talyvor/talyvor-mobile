@@ -1,4 +1,4 @@
-import { BffError, formatLXC, formatMinor, formatULXC, refusalText, type Agent, type AgentApproval } from '@talyvor/bff-client'
+import { BffError, formatLXC, formatMinor, formatULXC, refusalText, type Agent, type AgentApproval, type PaymentRequest } from '@talyvor/bff-client'
 import { router } from 'expo-router'
 import { useEffect, useState } from 'react'
 import { Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native'
@@ -14,6 +14,7 @@ import { Face } from './face'
 import { Icon } from './icon'
 import { moneyParts } from './money'
 import { MoneyLabel, approvalCapability } from './money-label'
+import { preparedBy, preparedPayee, preparedTotal } from './prepared-payment-card'
 import { Body, Button, Card, Chip, Eyebrow, Field, Headline, Row, Sheet } from './ui'
 
 // B57.67 — deciding on the phone as Pocket draws it (design/pocket p-home+psheet-A, psheet-L, p-approved-acme,
@@ -341,36 +342,57 @@ export function ApprovalResult({ d, onDone, onNext }: { d: Decided; onDone: () =
 }
 
 /** When a decided approval was decided: an expired one nobody answered, when it expired (B57.68). */
-const decidedOn = (a: AgentApproval) => onDay(a.decided_at ?? a.expires_at ?? a.created_at)
+const decidedAt = (a: AgentApproval) => a.decided_at ?? a.expires_at ?? a.created_at
+const decidedOn = (a: AgentApproval) => onDay(decidedAt(a))
+
+/** B57.150 — how a prepared payment ended: approved ones are paid as they are approved, a cancelled one was declined. */
+const preparedWords = (r: PaymentRequest) => (r.status === 'approved' ? 'Approved and paid' : r.status === 'cancelled' ? 'Declined' : 'Expired')
 
 /** B57.68 — what was decided: `Research · Acme Hosting`, how it ended and when, the amount dollars first; each row opens
- * the approval's own screen. */
-export function DecidedApprovals({ decided, agents }: { decided: AgentApproval[]; agents: readonly Who[] }) {
+ * the approval's own screen. B57.150: payments prepared for you sit among them, `Chat · Northwind Data`, newest first,
+ * each opening its approval card. */
+export function DecidedApprovals({ decided, agents, prepared = [] }: { decided: AgentApproval[]; agents: readonly Who[]; prepared?: PaymentRequest[] }) {
   const { peg } = useSession()
   const { c } = useTheme()
-  if (!decided.length) return null
+  const rows = [
+    ...decided.map((a) => ({
+      key: a.id,
+      at: decidedAt(a),
+      title: `${agentOf(agents, a.agent_id).name} · ${subject(a)}`,
+      sub: `${decidedWords(a)} · ${decidedOn(a)}`,
+      ...amountParts(a, peg),
+      open: () => router.push({ pathname: '/approvals/[id]', params: { id: a.id } }),
+    })),
+    ...prepared.map((r) => ({
+      key: r.id,
+      at: r.decided_at ?? r.created_at,
+      title: `${preparedBy(r.client)} · ${preparedPayee(r)}`,
+      sub: `${preparedWords(r)} · ${onDay(r.decided_at ?? r.created_at)}`,
+      large: preparedTotal(r),
+      small: null as string | null,
+      open: () => router.push({ pathname: '/approve/[id]', params: { id: r.id } }),
+    })),
+  ].sort((x, y) => Date.parse(y.at) - Date.parse(x.at))
+  if (!rows.length) return null
   return (
     <Card white>
       <Eyebrow>Decided</Eyebrow>
       <View>
-        {decided.map((a, i) => {
-          const { large, small } = amountParts(a, peg)
-          return (
-            <Row
-              key={a.id}
-              first={i === 0}
-              title={`${agentOf(agents, a.agent_id).name} · ${subject(a)}`}
-              sub={`${decidedWords(a)} · ${decidedOn(a)}`}
-              right={
-                <View accessible accessibilityLabel={small ? `${large} (${small})` : large} style={{ alignItems: 'flex-end' }}>
-                  <Text style={{ fontFamily: fonts.display, fontSize: 15, color: c.ink, fontVariant: ['tabular-nums'] }}>{large}</Text>
-                  {small ? <Text style={{ fontFamily: fonts.uiMedium, fontSize: 12.5, color: c.ink3, fontVariant: ['tabular-nums'] }}>{small}</Text> : null}
-                </View>
-              }
-              onPress={() => router.push({ pathname: '/approvals/[id]', params: { id: a.id } })}
-            />
-          )
-        })}
+        {rows.map(({ key, title, sub, large, small, open }, i) => (
+          <Row
+            key={key}
+            first={i === 0}
+            title={title}
+            sub={sub}
+            right={
+              <View accessible accessibilityLabel={small ? `${large} (${small})` : large} style={{ alignItems: 'flex-end' }}>
+                <Text style={{ fontFamily: fonts.display, fontSize: 15, color: c.ink, fontVariant: ['tabular-nums'] }}>{large}</Text>
+                {small ? <Text style={{ fontFamily: fonts.uiMedium, fontSize: 12.5, color: c.ink3, fontVariant: ['tabular-nums'] }}>{small}</Text> : null}
+              </View>
+            }
+            onPress={open}
+          />
+        ))}
       </View>
     </Card>
   )

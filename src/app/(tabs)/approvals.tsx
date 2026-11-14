@@ -6,14 +6,15 @@ import { DecidedApprovals, PendingApprovals } from '@/components/approval-card'
 import { KeyEnrolmentCards } from '@/components/key-enrolment-cards'
 import { AGENT_CREDIT, MoneyLabel, PAY_OUT, approvalCapability, paymentRequestCapabilities } from '@/components/money-label'
 import { PhoneKeyCard } from '@/components/phone-key-card'
-import { PreparedPaymentCard, pendingPrepared } from '@/components/prepared-payment-card'
+import { PreparedPaymentCard, decidedPrepared, pendingPrepared } from '@/components/prepared-payment-card'
 import { Body, Card, Headline, LoadState, Screen, useLoad } from '@/components/ui'
 import { useSession } from '@/session'
 import { setWaiting } from '@/waiting'
 
 // B57.68 — the Approvals tab as Pocket draws it (p-approvals): the label, payments prepared for you and agents' requests
 // waiting with Review, then what was decided by agent and payee, and this phone's Approve with Face ID. B57.69: a browser
-// or phone asking to approve too waits with Review, and is let in or turned away in Pocket's bottom sheet.
+// or phone asking to approve too waits with Review, and is let in or turned away in Pocket's bottom sheet. B57.150:
+// payments prepared for you that were decided sit in Decided with the agents' decisions.
 
 /** What Approvals moves money on: agents' spending and payments out, and whatever else a request in view moves it on. */
 const APPROVALS_MONEY = [...AGENT_CREDIT, ...PAY_OUT]
@@ -24,8 +25,8 @@ export default function Approvals() {
   // B57.69 — a key_enrolment push names the waiting key whose sheet opens.
   const { enrolment } = useLocalSearchParams<{ enrolment?: string }>()
   const load = useCallback(async () => {
-    const [book, approvals, prepared] = await Promise.all([client.book(), client.approvals(), pendingPrepared(client)])
-    return { agents: book.agents ?? [], allPaused: !!book.all_paused_at, approvals: approvals.approvals ?? [], prepared }
+    const [book, approvals, prepared, preparedDecided] = await Promise.all([client.book(), client.approvals(), pendingPrepared(client), decidedPrepared(client)])
+    return { agents: book.agents ?? [], allPaused: !!book.all_paused_at, approvals: approvals.approvals ?? [], prepared, preparedDecided }
   }, [client])
   const { data, error, loading, reload } = useLoad(load)
   const [keysWaiting, setKeysWaiting] = useState(0)
@@ -56,7 +57,7 @@ export default function Approvals() {
           <Body muted>Nothing is waiting for you.</Body>
         </Card>
       ) : null}
-      {data ? <DecidedApprovals decided={decided} agents={data.agents} /> : null}
+      {data ? <DecidedApprovals decided={decided} agents={data.agents} prepared={data.preparedDecided} /> : null}
       <KeyEnrolmentCards onWaiting={setKeysWaiting} open={enrolment} />
       <PhoneKeyCard />
     </Screen>
