@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { useSession } from '../session'
 import { fonts, useTheme } from '../theme'
-import { Icon } from './icon'
+import { Icon, type IconName } from './icon'
 
 /** Loads once and on reload (pull-to-refresh, or after a change); a 401 means the session ended, so it signs out. */
 export function useLoad<T>(load: () => Promise<T>) {
@@ -127,6 +127,7 @@ export function Button({
   hint,
   accessibilityLabel,
   small,
+  icon,
 }: {
   label: string
   onPress: () => void
@@ -138,6 +139,8 @@ export function Button({
   /** what a screen reader says when the label alone is not enough, as on a row of Review buttons */
   accessibilityLabel?: string
   small?: boolean
+  /** a mark before the label in its colour, as Approve with Face ID draws one (B57.147) */
+  icon?: IconName
 }) {
   const { c } = useTheme()
   const look = {
@@ -148,6 +151,7 @@ export function Button({
     ghost: { color: c.ink },
   }[variant]
   const { color, ...box } = look
+  const text = <Text style={[styles.buttonText, { color }, small && { fontSize: 14 }]}>{label}</Text>
   return (
     <Pressable
       accessibilityRole="button"
@@ -158,7 +162,14 @@ export function Button({
       onPress={onPress}
       hitSlop={small ? 8 : undefined}
       style={({ pressed }) => [styles.button, box, small ? styles.small : variant === 'primary' && { alignSelf: 'stretch' }, (pressed || disabled) && { opacity: 0.6 }]}>
-      <Text style={[styles.buttonText, { color }, small && { fontSize: 14 }]}>{label}</Text>
+      {icon ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <Icon name={icon} color={color} />
+          {text}
+        </View>
+      ) : (
+        text
+      )}
     </Pressable>
   )
 }
