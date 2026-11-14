@@ -4,6 +4,7 @@ import * as Sharing from 'expo-sharing'
 import { useCallback, useState, type ReactNode } from 'react'
 import { Pressable, Text, TextInput, View } from 'react-native'
 
+import { Icon, type IconName } from '@/components/icon'
 import { Body, Button, Card, Chip, useLoad } from '@/components/ui'
 import { useSession } from '@/session'
 import { fonts, useTheme } from '@/theme'
@@ -13,6 +14,8 @@ import { fonts, useTheme } from '@/theme'
 // and lists what was sent with its state and, for a complaint, its reference. Closing the account is refused while any
 // balance is not empty, and the refusal names each one. A finished data export goes to the share sheet. No screen
 // promises when an answer comes.
+// B57.140 — drawn in Pocket as the web's B57.139 draws them: the screen's heading line under its headline, what was sent
+// before the form, and each sent row on its kind's tile, the same tiles the Settings rows draw.
 
 const KIND_TITLE: Record<RequestKind, string> = {
   support: 'Question or problem',
@@ -20,6 +23,14 @@ const KIND_TITLE: Record<RequestKind, string> = {
   account_closure: 'Close this account',
   data_export: 'A copy of your data',
   data_deletion: 'Delete your data',
+}
+
+const KIND_ICON: Record<RequestKind, IconName> = {
+  support: 'send',
+  complaint: 'send',
+  account_closure: 'lock',
+  data_export: 'download',
+  data_deletion: 'x',
 }
 
 const STATE_CHIP: Record<AccountRequest['state'], ReactNode> = {
@@ -49,6 +60,12 @@ export function refusalLine(err: unknown): string {
     return `${s.charAt(0).toUpperCase()}${s.slice(1)}${s.endsWith('.') ? '' : '.'}`
   }
   return 'Nothing was sent. You can try again.'
+}
+
+/** The screen's heading line under its headline: its Settings row's line, in the display face. */
+export function Lead({ children }: { children: ReactNode }) {
+  const { c } = useTheme()
+  return <Text style={{ fontFamily: fonts.display, fontSize: 19, lineHeight: 25, color: c.ink }}>{children}</Text>
 }
 
 /** A card's title, in the display face. */
@@ -203,6 +220,9 @@ export function SentList({ requests, kinds, title, empty }: { requests: ReturnTy
         mine.map((r, i) => (
           <View key={r.id} testID={`request-${r.id}`} style={[{ gap: 8, paddingVertical: 10 }, i > 0 && { borderTopWidth: 1, borderTopColor: c.line }]}>
             <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
+              <View testID={`request-${r.id}-tile`} style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: c.cloud2 }}>
+                <Icon name={KIND_ICON[r.kind]} size={18} color={c.ink} />
+              </View>
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={{ fontFamily: fonts.uiMedium, fontSize: 15, lineHeight: 22, color: c.ink }}>{KIND_TITLE[r.kind]}</Text>
                 <Text style={{ fontFamily: fonts.ui, fontSize: 13, lineHeight: 18, color: c.ink3 }}>

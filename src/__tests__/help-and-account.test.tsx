@@ -36,8 +36,8 @@ jest.mock('expo-sharing', () => ({
   shareAsync: async (uri: string, o: { mimeType?: string }) => void mockFiles.shared.push({ uri, mimeType: o.mimeType }),
 }))
 
-/** The web's strings, typed from suite 4fb65ba (apps/web/src/areas/lens/HelpAndAccount.tsx and PageLinks.tsx): the
- * phone's screens are checked against these, not against their own copy. */
+/** The web's strings, typed from suite 4fb65ba (apps/web/src/areas/lens/HelpAndAccount.tsx and PageLinks.tsx), and the
+ * deletion card's from suite c7a0a86 (B57.139): the phone's screens are checked against these, not against their own copy. */
 const WEB = {
   settings: [
     'Help and complaints',
@@ -74,7 +74,7 @@ const WEB = {
     'A person at Talyvor prepares it. When it is ready, Download appears beside your request.',
     'Ask for a copy',
     'Delete your data',
-    'Billing and ledger records, statements included, are kept, because the law requires them.',
+    'Ask, and we delete it. Billing and ledger records, statements included, are kept as the law requires.',
     'Ask to delete your data',
     'What you asked',
   ],
@@ -220,4 +220,34 @@ test('Your data asks for a copy and, once done, hands it to the share sheet; del
     { kind: 'data_export', message: '' },
     { kind: 'data_deletion', message: 'Delete everything you can.' },
   ])
+})
+
+// B57.140 — drawn in Pocket as the web's B57.139 draws them: each screen's heading line is its Settings row's line, what
+// was sent comes before the form (p-chat's thread above where a message is written), and each sent row stands on its
+// kind's tile.
+test.each([
+  ['/settings/help', 'support', 'Help and complaints', 'Ask us something, or make a complaint', 'Send'],
+  ['/settings/close', 'account_closure', 'Close this account', 'What must be empty first, and asking to close', 'Ask to close this account'],
+  ['/settings/data', 'data_deletion', 'Your data', 'A copy of your data, or ask for it to be deleted', 'Ask for a copy'],
+])('%s draws its heading line, then what was sent, then the form', async (path, kind, heading, line, button) => {
+  mockBff({ requests: [{ id: 5, kind, state: 'received', reference: '', message: '', answer: '', filed_at: '2026-11-12T09:00:00Z', updated_at: '2026-11-12T09:00:00Z' }] })
+  await renderRouter('./src/app', { initialUrl: path })
+  const row = await screen.findByTestId('request-5')
+  expect(within(row).getByTestId('request-5-tile')).toBeTruthy()
+  expect(screen.getByRole('header', { name: heading })).toBeTruthy()
+  // the screen in reading order: every testID and every string, as the tree draws them
+  const order: string[] = []
+  const walk = (n: unknown): void => {
+    if (typeof n === 'string') return void order.push(n)
+    if (Array.isArray(n)) return n.forEach(walk)
+    if (n && typeof n === 'object') {
+      const node = n as { props?: { testID?: string }; children?: unknown }
+      if (node.props?.testID) order.push(`#${node.props.testID}`)
+      walk(node.children)
+    }
+  }
+  walk(screen.toJSON())
+  expect(order.indexOf(heading)).toBeLessThan(order.indexOf(line))
+  expect(order.indexOf(line)).toBeLessThan(order.indexOf('#request-5'))
+  expect(order.indexOf('#request-5')).toBeLessThan(order.lastIndexOf(button))
 })
