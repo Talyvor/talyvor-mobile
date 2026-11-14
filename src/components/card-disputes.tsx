@@ -2,10 +2,11 @@ import { formatMinor, refusalText, type CardDispute, type CardRefund } from '@ta
 import { File, Paths } from 'expo-file-system'
 import * as Sharing from 'expo-sharing'
 import { useState } from 'react'
-import { Pressable, Text, View } from 'react-native'
+import { KeyboardAvoidingView, Modal, Platform, Pressable, Text, View } from 'react-native'
 
 import { MessageBox } from '@/components/account-requests'
-import { Body, Button, Card, Chip, Eyebrow, Field, Figure, Row } from '@/components/ui'
+import { Icon } from '@/components/icon'
+import { Body, Button, Card, Chip, Eyebrow, Field, Figure, Row, Sheet } from '@/components/ui'
 import { day, when } from '@/activity'
 import { DISPUTE_WORDS as W, disputeState, exportName, exportedText, isDay, MAX_REASON } from '@/dispute-words'
 import { useSession } from '@/session'
@@ -15,7 +16,8 @@ import { fonts, useTheme } from '@/theme'
 // B59.25) draws them on Lens B59.24. A card payment is named by the issuer's id for it, which its statement line carries
 // (partner_ref). The owner disputes it with a reason; the issuer takes it and decides; a won dispute or a refund comes
 // back to the account as its own statement line. Export hands the card payments, disputes and refunds of a date range,
-// Lens's CSV, to the share sheet.
+// Lens's CSV, to the share sheet. B57.153 draws them in Pocket: the reason in Pocket's bottom sheet over the payment's row,
+// and the disputes and refunds as rows under their eyebrow.
 
 export const money = (minor: number, currency: string) => formatMinor(minor, currency.toUpperCase())
 
@@ -29,9 +31,17 @@ export function DisputeChip({ dispute }: { dispute: CardDispute }) {
   )
 }
 
-/** On a card payment: where its dispute stands, or "Dispute this payment" and the reason it is disputed for. `onSent`
- * hands back the dispute Lens answered. */
-export function DisputePayment({ paymentId, dispute, onSent }: { paymentId: string; dispute?: CardDispute; onSent: (d: CardDispute) => void }) {
+/** The card payment a dispute is about, as its line reads: what, the line under it, and the amount. */
+export interface DisputedPayment {
+  title: string
+  sub: string
+  amount: string
+}
+
+/** On a card payment: where its dispute stands, or "Dispute this payment", which opens Pocket's bottom sheet with the
+ * payment as a row and the reason it is disputed for (B57.153, as the web's B57.151 opens its dialog). `onSent` hands
+ * back the dispute Lens answered. */
+export function DisputePayment({ paymentId, payment, dispute, onSent }: { paymentId: string; payment: DisputedPayment; dispute?: CardDispute; onSent: (d: CardDispute) => void }) {
   const { client } = useSession()
   const { c } = useTheme()
   const [open, setOpen] = useState(false)
@@ -39,14 +49,12 @@ export function DisputePayment({ paymentId, dispute, onSent }: { paymentId: stri
   const [sending, setSending] = useState(false)
   const [refusal, setRefusal] = useState('')
   if (dispute) return <DisputeChip dispute={dispute} />
-  if (!open) {
-    return (
-      <Pressable accessibilityRole="button" hitSlop={8} onPress={() => setOpen(true)} style={{ alignSelf: 'flex-start' }}>
-        <Text style={{ fontFamily: fonts.uiBold, fontSize: 13, color: c.ink, textDecorationLine: 'underline' }}>{W.dispute}</Text>
-      </Pressable>
-    )
-  }
   const said = reason.trim()
+  const close = () => {
+    if (sending) return
+    setOpen(false)
+    setRefusal('')
+  }
   const send = async () => {
     setSending(true)
     setRefusal('')
@@ -60,20 +68,43 @@ export function DisputePayment({ paymentId, dispute, onSent }: { paymentId: stri
     }
   }
   return (
-    <View style={{ gap: 8 }} testID="dispute-form">
-      <MessageBox label={W.why} value={reason} onChange={(v) => setReason(v.slice(0, MAX_REASON))} />
-      <Body muted>{W.issuerDecides}</Body>
-      {said === '' ? <Body muted>{W.whyFirst}</Body> : null}
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-        <Button small variant="primary" label={sending ? W.sending : W.send} disabled={sending || said === ''} hint={W.whyFirst} onPress={() => void send()} />
-        <Button small label={W.cancel} onPress={() => setOpen(false)} />
+    <>
+      <View style={{ flexDirection: 'row' }}>
+        <Button small variant="outline" label={W.dispute} onPress={() => setOpen(true)} />
       </View>
-      {refusal ? (
-        <View accessibilityRole="alert">
-          <Body>{refusal}</Body>
-        </View>
-      ) : null}
-    </View>
+      <Modal visible={open} transparent animationType="slide" onRequestClose={close}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: c.scrim }}>
+          <Pressable accessible={false} style={{ flex: 1 }} onPress={close} />
+          <Sheet>
+            <View testID="dispute-sheet" style={{ gap: 14 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <Text accessibilityRole="header" style={{ flex: 1, fontFamily: fonts.display, fontSize: 22, lineHeight: 28, color: c.ink }}>
+                  {W.dispute}
+                </Text>
+                <Pressable accessibilityRole="button" accessibilityLabel="Close" hitSlop={10} onPress={close}>
+                  <Icon name="x" color={c.ink2} />
+                </Pressable>
+              </View>
+              <View testID="dispute-payment">
+                <Card tight>
+                  <Row first title={payment.title} sub={payment.sub} right={<Figure>{payment.amount}</Figure>} />
+                </Card>
+              </View>
+              <MessageBox label={W.why} value={reason} onChange={(v) => setReason(v.slice(0, MAX_REASON))} />
+              <Body muted>{W.issuerDecides}</Body>
+              {said === '' ? <Body muted>{W.whyFirst}</Body> : null}
+              {refusal ? (
+                <View accessibilityRole="alert">
+                  <Body style={{ color: c.danger }}>{refusal}</Body>
+                </View>
+              ) : null}
+              <Button variant="primary" label={sending ? W.sending : W.send} disabled={sending || said === ''} hint={W.whyFirst} onPress={() => void send()} />
+              <Button variant="secondary" label={W.cancel} disabled={sending} onPress={close} />
+            </View>
+          </Sheet>
+        </KeyboardAvoidingView>
+      </Modal>
+    </>
   )
 }
 
@@ -82,29 +113,31 @@ export function DisputesAndRefunds({ disputes, refunds }: { disputes: CardDisput
   const { c } = useTheme()
   if (!disputes.length && !refunds.length) return null
   return (
-    <Card white>
+    <>
       <Eyebrow>{W.title}</Eyebrow>
-      {disputes.map((d, i) => (
-        <View key={d.id} testID="card-dispute">
-          <Row
-            first={i === 0}
-            title={d.merchant || W.aMerchant}
-            sub={[money(d.amount_minor, d.currency), when(d.created_at), d.reason].join(' · ')}
-            right={<DisputeChip dispute={d} />}
-          />
-        </View>
-      ))}
-      {refunds.map((r, i) => (
-        <View key={r.id} testID="card-refund">
-          <Row
-            first={!disputes.length && i === 0}
-            title={r.merchant || W.aMerchant}
-            sub={`${W.refund} · ${when(r.created_at)}`}
-            right={<Figure tone={c.positive}>{`+${money(r.credited_minor, r.currency)}`}</Figure>}
-          />
-        </View>
-      ))}
-    </Card>
+      <Card white>
+        {disputes.map((d, i) => (
+          <View key={d.id} testID="card-dispute">
+            <Row
+              first={i === 0}
+              title={d.merchant || W.aMerchant}
+              sub={[money(d.amount_minor, d.currency), when(d.created_at), d.reason].join(' · ')}
+              right={<DisputeChip dispute={d} />}
+            />
+          </View>
+        ))}
+        {refunds.map((r, i) => (
+          <View key={r.id} testID="card-refund">
+            <Row
+              first={!disputes.length && i === 0}
+              title={r.merchant || W.aMerchant}
+              sub={`${W.refund} · ${when(r.created_at)}`}
+              right={<Figure tone={c.positive}>{`+${money(r.credited_minor, r.currency)}`}</Figure>}
+            />
+          </View>
+        ))}
+      </Card>
+    </>
   )
 }
 
