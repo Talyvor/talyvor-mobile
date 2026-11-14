@@ -1,4 +1,4 @@
-import { BffError, formatMinor, refusalText, type InstantLeg, type InstantQuote, type InstantTo, type InstantTransfer, type OutsidePayee } from '@talyvor/bff-client'
+import { BffError, formatMinor, refusalText, type AgentApproval, type CurrencyAccount, type InstantLeg, type InstantQuote, type InstantTo, type InstantTransfer, type OutsidePayee } from '@talyvor/bff-client'
 
 // B59.20 — Instant transfer on the phone, for a Hybrid account (launch pack 4.1 and 4.5, design P7 to P10): the words and
 // the sums the screens draw. They are the web's (talyvor-suite B59.19, apps/web/src/areas/lens/InstantTransfer.tsx and
@@ -85,6 +85,17 @@ export const secondsLeft = (q: Pick<InstantQuote, 'created_at' | 'expires_at'>, 
 
 /** The approval a refusal names: Lens files it and says "Approval apr_… must be approved by the workspace's owner". */
 export const approvalNamedIn = (err: unknown) => (err instanceof BffError ? (/approval (apr_[\w-]+)/i.exec(err.sentence)?.[1] ?? null) : null)
+
+/** Whether a pending approval is the one this transfer waits on: the sentence only names it, so before Face ID signs it
+ * the phone checks it is pending, and paid from this agent's account at this amount in this currency. */
+export const approvalIsFor = (a: AgentApproval | undefined, account: CurrencyAccount, q: Pick<InstantQuote, 'send_minor' | 'send_currency'>) =>
+  !!a &&
+  a.status === 'pending' &&
+  a.agent_id === account.agent_id &&
+  a.paid_from?.kind === 'account' &&
+  a.paid_from.account_id === account.id &&
+  a.paid_from.amount_minor === q.send_minor &&
+  a.paid_from.currency === q.send_currency
 
 /** The words a refused send is shown in, picked from its field and code (design 6), never its field's name. */
 export function sendRefusal(err: unknown, agent: string, holds: { minor: number; currency: string } | null): string {

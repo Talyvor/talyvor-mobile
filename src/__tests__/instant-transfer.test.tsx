@@ -72,6 +72,12 @@ let sendAnswers: (() => Promise<unknown>)[] = []
 let decided: { id: string; signed: boolean }[] = []
 let mockChecks: string[] = []
 let status: Parameters<typeof transfer>[0] = 'received'
+/** The approval Lens filed for the transfer: Remy's dollar account, $5,000.00. */
+const FILED = {
+  id: 'apr_1', agent_id: 'agt_remy', amount_ulxc: 0, model: '', status: 'pending' as const, created_at: '2026-11-14T10:42:00Z',
+  paid_from: { kind: 'account' as const, account_id: 'macc_remy', name: 'Remy’s US dollar account', currency: 'USD', amount_minor: 500_000, balance_minor: 620_000 },
+}
+let mockFiled: Record<string, unknown> = FILED
 const mockClient = {
   account: async () => ({ workspace_id: 'ws_1', account_type: 'business', money_kind: 'hybrid' }),
   capabilities: async () => ({ capabilities: [] }),
@@ -83,6 +89,7 @@ const mockClient = {
     sends.push({ agent, body, key })
     return (sendAnswers.shift() ?? (async () => transfer('received')))()
   },
+  approvals: async () => ({ approvals: [mockFiled] }),
   approvalChallenge: async () => ({ challenge: 'Y2g' }),
   approve: async (id: string, assertion?: unknown) => void decided.push({ id, signed: !!assertion }),
   deny: async (id: string) => void decided.push({ id, signed: false }),
@@ -119,6 +126,7 @@ beforeEach(() => {
   decided = []
   mockChecks = []
   status = 'received'
+  mockFiled = FILED
   mockPushed.length = 0
 })
 
@@ -196,6 +204,20 @@ describe('sending it', () => {
     expect(sends[1].key).toBe(sends[0].key)
     expect(mockPushed).toEqual([{ pathname: '/instant-transfer/[id]', params: { id: 'itr_7Q2M' } }])
   })
+})
+
+test('an approval that is not this transfer’s is never signed', async () => {
+  mockFiled = { ...FILED, paid_from: { ...FILED.paid_from, amount_minor: 900_000 } }
+  sendAnswers.push(async () => {
+    throw new BffError(403, '/api/agents/agt_remy/instant-transfers', 'Approval apr_1 must be approved by the workspace’s owner before it is retried')
+  })
+  await fillIn()
+  await press('Continue')
+  const sheet = await screen.findByTestId('instant-approval')
+  await fireEvent.press(within(sheet).getByRole('button', { name: 'Approve with Face ID' }))
+  expect(within(sheet).getByText('Nothing changed. You can try again.')).toBeTruthy()
+  expect(decided).toEqual([])
+  expect(sends).toHaveLength(1)
 })
 
 describe('its progress', () => {

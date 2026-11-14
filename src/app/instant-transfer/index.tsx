@@ -15,6 +15,7 @@ import {
   INSTANT_TRANSFER,
   MONEY_WORDS,
   WORDS,
+  approvalIsFor,
   approvalNamedIn,
   arrivesText,
   bankCurrency,
@@ -202,10 +203,13 @@ function InstantTransferForm() {
   }
   // The approval sheet's Approve: signed with this phone's key over Lens's challenge, then sent again at a fresh quote.
   const approve = async () => {
-    if (!approvalID) return
+    if (!approvalID || !q || !account) return
     setBusy(true)
     setSheetSaid('')
     try {
+      // Only the approval this transfer waits on is signed: read it, and check it before Face ID is asked.
+      const filed = (await client.approvals()).approvals?.find((a) => a.id === approvalID)
+      if (!approvalIsFor(filed, account, q)) return setSheetSaid('Nothing changed. You can try again.')
       const { challenge } = await client.approvalChallenge(approvalID)
       await client.approve(approvalID, await signWithThisPhone(client, challenge, `Approve ${amountWords}`))
       const at = await fresh()
