@@ -1,10 +1,12 @@
-import { type AgentRules, type AgentSummary, formatLXC, parseLXC, refusalText, rulesInWords } from '@talyvor/bff-client'
+import { BffError, type AgentRules, type AgentSummary, formatLXC, parseLXC, refusalText, rulesInWords } from '@talyvor/bff-client'
 import * as Crypto from 'expo-crypto'
 import { router } from 'expo-router'
 import { useState } from 'react'
 import { TextInput, useWindowDimensions, View } from 'react-native'
 
-import { biometricName, resumeWithThisPhone } from '../keys'
+import { useAccount } from '../account'
+import { WORDS as INSTANT_WORDS } from '../instant-transfer'
+import { biometricName, keyGone, keyGoneText, phoneKey, resumeWithThisPhone, signWithThisPhone } from '../keys'
 import { useSession } from '../session'
 import { fonts, useTheme } from '../theme'
 import { setPinned, syncWidget } from '../widget-sync'
@@ -53,6 +55,9 @@ export function AgentView({ data, onChanged }: { data: AgentData; onChanged: () 
   // One key per amount typed, so a retry after a dropped answer funds once.
   const [fundKey, setFundKey] = useState(() => Crypto.randomUUID())
   const micros = parseLXC(amount)
+  // B59.20 — "Can use Instant transfer", off by default; only a Hybrid account has the switch.
+  const instant = useAccount(client).shows?.instantTransfer === true
+  const [instantSaid, setInstantSaid] = useState('')
 
   const changed = () => {
     onChanged()
@@ -97,6 +102,27 @@ export function AgentView({ data, onChanged }: { data: AgentData; onChanged: () 
       setFunded(`Funded ${formatLXC(micros!, peg)} today.`)
       setAmount('')
       setFundKey(Crypto.randomUUID())
+    })
+
+  // Turning it on loosens the rules, so Lens takes it only signed with this phone's key over the change's challenge.
+  const setInstant = (on: boolean) =>
+    act(async () => {
+      setInstantSaid('')
+      const proposed = { ...data.rules, may_instant_transfer: on }
+      try {
+        const [j, key] = await Promise.all([client.rulesChallenge(agent.id, proposed), phoneKey(client)])
+        let assertion
+        if (j.looser && j.challenge) {
+          if (!key?.here) return setInstantSaid(`Loosen ${agent.name}’s rules with ${biometricName} on this phone: turn approving on in Approvals first.`)
+          assertion = await signWithThisPhone(client, j.challenge, `Let ${agent.name} use Instant transfer`)
+        }
+        await client.setRules(agent.id, proposed, assertion)
+        setInstantSaid('Saved. Lens applies these rules to the next request or payment.')
+      } catch (err) {
+        if (keyGone(err)) setInstantSaid(keyGoneText)
+        else if (err instanceof BffError) setInstantSaid(refusalText(err))
+        else setInstantSaid('Cancelled. Nothing changed.')
+      }
     })
 
   const state = paused ? 'Paused. It can spend nothing until you resume it.' : allPaused ? 'Paused with every agent.' : 'Running.'
@@ -205,6 +231,15 @@ export function AgentView({ data, onChanged }: { data: AgentData; onChanged: () 
         {rulesInWords(data.rules, peg).map((r) => (
           <Body key={r}>{r}</Body>
         ))}
+        {instant ? (
+          <View testID="instant-rule" style={{ gap: 4 }}>
+            <Toggle label={INSTANT_WORDS.canUse} value={data.rules.may_instant_transfer ?? false} disabled={busy} onValueChange={(on) => void setInstant(on)} />
+            <Body muted style={{ fontSize: 13 }}>
+              {INSTANT_WORDS.canUseLine(agent.name)}
+            </Body>
+            {instantSaid ? <Body>{instantSaid}</Body> : null}
+          </View>
+        ) : null}
       </Card>
       <Button label="Statement" onPress={() => router.push({ pathname: '/activity', params: { agent: agent.id } })} />
 

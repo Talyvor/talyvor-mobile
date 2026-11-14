@@ -148,7 +148,7 @@ function Total({ business, shows, accounts }: { business: boolean; shows: Shows;
 }
 
 /** Quick actions: only the ones the phone has a screen for. */
-function Actions() {
+function Actions({ instant }: { instant: boolean }) {
   const { c } = useTheme()
   return (
     <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
@@ -160,6 +160,17 @@ function Actions() {
           <Text style={{ fontFamily: fonts.uiBold, fontSize: 12.5, color: c.ink }}>Pay</Text>
         </Pressable>
       </Link>
+      {/* B59.20 — Instant transfer, for a Hybrid account. */}
+      {instant ? (
+        <Link href="/instant-transfer" asChild>
+          <Pressable accessibilityRole="link" accessibilityLabel="Instant transfer" style={{ alignItems: 'center', gap: 6, minWidth: 72 }}>
+            <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: c.cloud, alignItems: 'center', justifyContent: 'center' }}>
+              <Icon name="send" color={c.ink} />
+            </View>
+            <Text style={{ fontFamily: fonts.uiBold, fontSize: 12.5, color: c.ink }}>Instant transfer</Text>
+          </Pressable>
+        </Link>
+      ) : null}
     </View>
   )
 }
@@ -258,7 +269,7 @@ export function HomeView({
           <Body style={{ color: c.tangerineInk }}>See all in Wallets</Body>
         </Pressable>
       </Link>
-      <Actions />
+      <Actions instant={shows.instantTransfer} />
       {/* B57.71 — Pocket's .killp: every agent is paused, and the way to start them again, signed. */}
       {allPaused ? (
         <View style={{ gap: 4, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 20, backgroundColor: c.danger50 }}>

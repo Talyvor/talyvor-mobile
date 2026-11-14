@@ -59,6 +59,26 @@ export default function PayScreen() {
         </Card>
       ) : null}
       {shows?.bankTransfers && data ? <Body muted>Payees are added in Talyvor on the web.</Body> : null}
+      {/* B59.20 — a Hybrid account's Instant transfer: converted, moved on chain and landed in seconds. */}
+      {shows?.instantTransfer ? (
+        <Card white>
+          <Link href="/instant-transfer" asChild>
+            <Pressable accessibilityRole="link">
+              <Row
+                first
+                left={
+                  <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: c.cloud }}>
+                    <Icon name="send" />
+                  </View>
+                }
+                title="Instant transfer"
+                sub="Arrives in seconds, any day, any hour"
+                right={<Icon name="chev" size={16} color={c.ink3} />}
+              />
+            </Pressable>
+          </Link>
+        </Card>
+      ) : null}
       {/* B57.78 — Pocket's p-pay: Bills due opens the payments prepared for your approval (p-bills). */}
       {shows?.bankTransfers ? (
         <Card white>

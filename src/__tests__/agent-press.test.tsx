@@ -8,7 +8,13 @@ import { pressEverything } from '../testing/press-everything'
 jest.setTimeout(30_000)
 
 const mockGo = { said: (_: string) => undefined as void }
-const mockClient = { capabilities: async () => ({ capabilities: [] }) }
+const mockClient = {
+  capabilities: async () => ({ capabilities: [] }),
+  // B59.20: a Hybrid account, so the rules carry "Can use Instant transfer".
+  account: async () => ({ workspace_id: 'ws_1', account_type: 'business', money_kind: 'hybrid' }),
+  rulesChallenge: async () => ({ looser: false, changes: [], allow_credentials: null }),
+  setRules: async () => mockGo.said('rules saved'),
+}
 jest.mock('../session', () => ({
   useSession: () => ({ client: mockClient, peg: 0.1, signedIn: true }),
 }))
@@ -22,6 +28,7 @@ jest.mock('../widget-sync', () => ({
 }))
 jest.mock('../keys', () => ({
   ...jest.requireActual('../keys'),
+  phoneKey: async () => null,
   resumeWithThisPhone: async () => {
     mockGo.said('signed resume')
     return null
@@ -72,9 +79,9 @@ const rules = {
 }
 
 test.each([
-  ['running', false, true, 4],
-  ['paused, this phone signing', true, true, 4],
-  ['paused, this phone not signing', true, false, 4],
+  ['running', false, true, 5],
+  ['paused, this phone signing', true, true, 5],
+  ['paused, this phone not signing', true, false, 5],
 ])('an agent %s: every button and the switch does something', async (_, paused, signs, pressed) => {
   const data: AgentData = {
     summary: summary(paused),
@@ -88,6 +95,6 @@ test.each([
     return <AgentView data={data} onChanged={() => said('changed')} />
   })
   expect(report.dead).toEqual([])
-  // Review, Pause or Resume, the pin switch and Statement; Fund waits for an amount and says so
+  // Review, Pause or Resume, the pin switch, Can use Instant transfer and Statement; Fund waits for an amount and says so
   expect(report.pressed).toBe(pressed)
 })

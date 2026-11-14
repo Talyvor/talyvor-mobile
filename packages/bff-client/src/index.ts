@@ -47,6 +47,8 @@ export interface AgentRules {
   active_from: string
   active_until: string
   timezone: string
+  /** B59.20 — "Can use Instant transfer" (Lens B59.15), off by default. A save without it keeps what Lens holds. */
+  may_instant_transfer?: boolean
 }
 
 /** Lens economy.AgentCard (B19.12): an agent's virtual card. The number stays with the issuer. */
@@ -284,9 +286,89 @@ export interface OutsidePayee {
   /** read only for the payee's own currency; never shown or read aloud */
   iban?: string
   routing_number?: string
+  account_number?: string
   /** set while screening holds the payee for an operator */
   screening?: string
+  /** B59.20 — a payee paid at a wallet: its network and address (Lens B46); none for a bank account */
+  network?: string
+  address?: string
   created_at: string
+}
+
+/** B59.20 — who an Instant transfer pays (Lens economy.InstantTo…): a Talyvor account, an outside wallet or a bank account. */
+export type InstantTo = 'talyvor_account' | 'wallet' | 'bank_account'
+
+/** Lens economy.InstantQuoteRequest (B59.14): every amount in minor units. A bank account names its country. */
+export interface InstantQuoteRequest {
+  send_minor: number
+  send_currency: string
+  receive_currency: string
+  to: InstantTo
+  country: string
+}
+
+/** Lens economy.InstantQuote (B59.14), locked until expires_at. send_minor includes the fee; receive_minor is what arrives. */
+export interface InstantQuote {
+  id: string
+  to: InstantTo
+  country?: string
+  send_minor: number
+  send_currency: string
+  fee_minor: number
+  /** receive_currency per send_currency after the fee, in whole units */
+  rate: string
+  receive_minor: number
+  receive_currency: string
+  arrives_in_seconds: boolean
+  /** the bank rail's real time when it does not land in seconds */
+  arrives_within_seconds?: number
+  expires_at: string
+  created_at: string
+}
+
+/** A send against a quote: to a Talyvor account by its id, or to a saved payee (a wallet or a bank account). */
+export interface InstantSend {
+  quote_id: string
+  to_account_id?: string
+  to_payee_id?: string
+}
+
+/** Lens economy.InstantLeg: convert, move, then credit or payout; a direct bank payment has the payout alone. */
+export interface InstantLeg {
+  id: string
+  leg: 'convert' | 'move' | 'credit' | 'payout'
+  done: boolean
+  entry_id?: string
+  /** the provider's reference: the move leg's is the on-chain reference */
+  partner_ref?: string
+  conversion_ref?: string
+  sell: { minor: number; currency: string }
+  buy: { minor: number; currency: string }
+}
+
+/** Lens economy.InstantTransfer (B59.15): where it stands, and the receipt. */
+export interface InstantTransfer {
+  id: string
+  agent_id: string
+  from_account_id: string
+  to_account_id?: string
+  to_payee_id?: string
+  to_address?: string
+  beneficiary_name: string
+  send_minor: number
+  send_currency: string
+  fee_minor: number
+  receive_minor: number
+  receive_currency: string
+  rate: string
+  arrives_in_seconds: boolean
+  arrives_within_seconds?: number
+  status: 'sent' | 'converted' | 'on_its_way' | 'received' | 'reversed'
+  legs: InstantLeg[] | null
+  failed_leg?: string
+  failure?: string
+  created_at: string
+  updated_at: string
 }
 
 /** Lens economy.OutsidePayment (B30.17): money sent to a saved payee. */
@@ -528,6 +610,8 @@ export class BffError extends Error {
     readonly sentence: string,
     /** the code an upstream gave with its refusal, as Track's MEMBER_EXISTS */
     readonly code = '',
+    /** B59.20 — the field a refusal names, as Lens's may_instant_transfer: the screen picks its words from it */
+    readonly field = '',
   ) {
     super(`${status} ${path}${sentence ? `: ${sentence}` : ''}`)
   }
@@ -598,14 +682,14 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     if (t) headers.Authorization = `Bearer ${t}`
     const res = await fetchImpl(baseUrl + path, { method, headers, body })
     if (!res.ok) {
-      let body: { error?: string; code?: string; balances?: Record<string, number> } = {}
+      let body: { error?: string; code?: string; field?: string; balances?: Record<string, number> } = {}
       try {
         body = (await res.json()) as typeof body
       } catch {
         // a body that is not JSON carries no sentence
       }
       if (res.status === 409 && body.code === 'balances_not_empty' && body.balances) throw new BalancesHeldError(path, body.error ?? '', body.balances)
-      throw new BffError(res.status, path, body.error ?? '', body.code ?? '')
+      throw new BffError(res.status, path, body.error ?? '', body.code ?? '', body.field ?? '')
     }
     return res
   }
@@ -659,6 +743,12 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     /** B59.44 — saves the agent's rules whole; a looser save carries the phone's signature over rulesChallenge's challenge. */
     setRules: (id: string, rules: AgentRules, assertion?: DeviceAssertion) =>
       call<AgentRules>('PUT', `/api/agents/${e(id)}/rules`, assertion ? { rules, assertion } : rules),
+    /** B59.20 — Instant transfer, for a Hybrid account (Lens B59.14 to B59.17, the BFF's instant_transfer.go): a quote
+     * locked for 30 seconds, the send from an agent's account under a key a retry sends again, and the receipt. */
+    instantQuote: (body: InstantQuoteRequest) => call<InstantQuote>('POST', '/api/money/instant-transfers/quote', body),
+    instantSend: (agentId: string, body: InstantSend, key: string) =>
+      call<InstantTransfer>('POST', `/api/agents/${e(agentId)}/instant-transfers`, body, { 'Idempotency-Key': key }),
+    instantTransfer: (id: string) => call<InstantTransfer>('GET', `/api/money/instant-transfers/${e(id)}`),
     /** B59.44 — issues the agent a virtual card to `holder`; Lens answers the card. */
     issueCard: (id: string, holder: Cardholder) => call<AgentCard>('POST', `/api/agents/${e(id)}/card`, holder),
     /** B59.34 — the agent's card and every purchase on it; null when it has none (Lens answers 404). */
