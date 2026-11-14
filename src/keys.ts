@@ -24,6 +24,8 @@ const phoneName = Platform.OS === 'ios' ? 'iPhone' : 'Android phone'
 // B55.4 — a key waiting for the web to let it in is asked about every 3 seconds, for 10 minutes.
 const POLL_MS = 3000
 const WAIT_MS = 10 * 60_000
+/** How long This phone waits for the web to let it in, as the waiting sheet says it. */
+export const waitMinutes = WAIT_MS / 60_000
 
 /** What the key signs for a Lens challenge: Lens's devicekey.Message. */
 export const deviceMessage = (challenge: string) => `talyvor-device-v1:${challenge}`
