@@ -65,6 +65,20 @@ export interface AgentCard {
   frozen_at?: string
 }
 
+/** B57.70 — Lens economy.AgentSummary (B57.12, relayed by the BFF's B57.20): one agent's page, every figure read in one
+ * transaction at `as_of`. */
+export interface AgentSummary {
+  as_of: string
+  agent: Agent
+  /** set while every agent of the workspace is paused, this one with them */
+  all_paused_at?: string
+  month: { start: string; end: string; spent_ulxc: number; forecast_ulxc: number; monthly_limit_ulxc: number }
+  /** its requests waiting for a person, newest first */
+  approvals: AgentApproval[] | null
+  card: { status: 'none' | 'active' | 'frozen'; currency?: string; last4?: string }
+  currency_accounts: CurrencyAccount[] | null
+}
+
 /** B59.44 — Lens economy.RulesJudgement (B55.13): whether a change loosens the rules, each rule it changes in words, and
  * the challenge a looser one is signed over. */
 export interface RulesJudgement {
@@ -637,6 +651,8 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     resumeAllChallenge: () => call<{ challenge: string }>('POST', '/api/agents/resume-all/challenge'),
     resumeChallenge: (id: string) => call<{ challenge: string }>('POST', `/api/agents/${e(id)}/resume-challenge`),
     resumeAll: (assertion?: DeviceAssertion) => call<{ all_paused: boolean }>('POST', '/api/agents/resume-all', assertion ? { assertion } : undefined),
+    /** B57.70 — everything an agent's page shows, in one read: this month's spend, what waits, its card. */
+    summary: (id: string) => call<AgentSummary>('GET', `/api/agents/${e(id)}/summary`),
     rules: (id: string) => call<AgentRules>('GET', `/api/agents/${e(id)}/rules`),
     /** B59.44 — what saving these rules would do, and the challenge a looser save is signed over; saves nothing. */
     rulesChallenge: (id: string, rules: AgentRules) => call<RulesJudgement>('POST', `/api/agents/${e(id)}/rules-challenge`, { rules }),

@@ -1,146 +1,49 @@
-import { formatBalance, formatLXC, parseLXC, refusalText, rulesInWords } from '@talyvor/bff-client'
-import * as Crypto from 'expo-crypto'
-import { router, useLocalSearchParams } from 'expo-router'
-import { useCallback, useState } from 'react'
-import { TextInput, useWindowDimensions, View } from 'react-native'
+import { BffError } from '@talyvor/bff-client'
+import { useLocalSearchParams } from 'expo-router'
+import { useCallback } from 'react'
 
-import { AgentCard } from '@/components/card'
-import { AGENT_CREDIT, MoneyHeader } from '@/components/money-label'
-import { Body, Button, Card, Chip, Eyebrow, Figure, Headline, LoadState, Screen, useLoad } from '@/components/ui'
-import { biometricName, phoneKey, resumeWithThisPhone } from '@/keys'
+import { AgentView } from '@/components/agent'
+import { Back, Body, LoadState, Screen, useLoad } from '@/components/ui'
+import { phoneKey } from '@/keys'
 import { useSession } from '@/session'
-import { fonts, useTheme } from '@/theme'
-import { pinnedAgents, setPinned, syncWidget } from '@/widget-sync'
+import { pinnedAgents } from '@/widget-sync'
 
-/** One agent: what it holds, its rules in plain words, pause or resume, fund, and its place on the home-screen widget. */
+/** One agent (B57.70): its page in one read, with what it holds, what waits, pause or resume, fund, its widget pin and
+ * its rules. */
 export default function AgentScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
-  const { client, peg } = useSession()
-  const { c } = useTheme()
-  const { width } = useWindowDimensions()
+  const { client } = useSession()
   const load = useCallback(async () => {
-    const [book, rules, pins, device] = await Promise.all([client.book(), client.rules(id), pinnedAgents(), phoneKey(client)])
-    const agent = (book.agents ?? []).find((a) => a.id === id) ?? null
-    return { agent, rules, unallocated: book.unallocated_ulxc, pinned: pins.includes(id), allPaused: !!book.all_paused_at, signs: !!device?.here }
+    // Lens answers 404 for an agent that is not in this workspace.
+    const gone = (err: unknown) => {
+      if (err instanceof BffError && err.status === 404) return null
+      throw err
+    }
+    const [summary, book, rules, pins, device] = await Promise.all([
+      client.summary(id).catch(gone),
+      client.book(),
+      client.rules(id).catch(gone),
+      pinnedAgents(),
+      phoneKey(client),
+    ])
+    return summary && rules
+      ? {
+          summary,
+          rules,
+          unallocated: book.unallocated_ulxc,
+          pinned: pins.includes(id),
+          signs: !!device?.here,
+        }
+      : 'gone'
   }, [client, id])
   const { data, error, loading, reload } = useLoad(load)
-  const [busy, setBusy] = useState(false)
-  const [refusal, setRefusal] = useState('')
-  const [asking, setAsking] = useState(false)
-  const [note, setNote] = useState('')
-  const [amount, setAmount] = useState('')
-  // One key per amount typed, so a retry after a dropped answer funds once.
-  const [fundKey, setFundKey] = useState(() => Crypto.randomUUID())
-  const agent = data?.agent
-
-  const act = async (write: () => Promise<unknown>) => {
-    setBusy(true)
-    setRefusal('')
-    try {
-      await write()
-      reload()
-      void syncWidget(client)
-    } catch (err) {
-      setRefusal(refusalText(err))
-    } finally {
-      setBusy(false)
-    }
-  }
-  const toggle = () =>
-    !agent!.paused_at ? act(() => client.pause(agent!.id, 'Paused from the phone app')) : data!.signs ? setAsking(true) : void resume()
-  const resume = async () => {
-    setAsking(false)
-    setBusy(true)
-    setRefusal('')
-    const why = await resumeWithThisPhone(
-      client,
-      agent!.id,
-      `Resume ${agent!.name}`,
-      `Resume ${agent!.name} on the web with your passkey, or turn on Approve with ${biometricName} on this phone.`,
-    )
-    setBusy(false)
-    if (why) return setRefusal(why)
-    if (data!.allPaused) setNote(`${agent!.name} runs when you start every agent again. Until then it stays paused with every agent.`)
-    reload()
-    void syncWidget(client)
-  }
-  const micros = parseLXC(amount)
-  const fund = () =>
-    act(async () => {
-      await client.fund(agent!.id, micros!, fundKey)
-      setAmount('')
-      setFundKey(Crypto.randomUUID())
-    })
-  const pin = () => act(() => setPinned(agent!.id, !data!.pinned))
 
   return (
     <Screen onRefresh={reload} refreshing={loading && !!data}>
+      <Back home="/" />
       <LoadState loading={loading && !data} error={error} />
-      {data && !agent ? <Body muted>This agent is not in your workspace.</Body> : null}
-      {agent ? (
-        <>
-          {/* B57.126 and B57.134: its card first, in Pocket's panel as W4 draws it: the helper with its own name and job
-              line, then its name, Running or Paused, and its job line. */}
-          <View testID="agent-head">
-            <Card>
-              <AgentCard agent={agent} width={Math.min(428, width - 76)} />
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 6 }}>
-                <View style={{ flexShrink: 1 }}>
-                  <Headline>{agent.name}</Headline>
-                </View>
-                {agent.paused_at || data.allPaused ? <Chip tone="paused">Paused</Chip> : <Chip tone="good" dot>Running</Chip>}
-              </View>
-              {agent.description ? <Body muted>{agent.description}</Body> : null}
-            </Card>
-          </View>
-          <MoneyHeader capability={AGENT_CREDIT}>Balance</MoneyHeader>
-          <Figure size={32}>{formatBalance(agent.balance_ulxc, peg)}</Figure>
-          <Body muted>Spent so far: {formatLXC(agent.spent_ulxc, peg)}</Body>
-          {agent.paused_at ? (
-            <Body style={{ color: c.caution }}>{`Paused${agent.paused_reason ? `: ${agent.paused_reason}` : ''}. It can spend nothing until you resume it.`}</Body>
-          ) : null}
-          <View style={{ marginTop: 8 }}>
-            <Button primary={!!agent.paused_at} label={agent.paused_at ? 'Resume' : 'Pause'} disabled={busy || asking} onPress={() => void toggle()} />
-          </View>
-          {asking ? (
-            <Card>
-              <Body>{`Resume ${agent.name}?`}</Body>
-              <Body muted>Its requests and payments are served again, within its rules.</Body>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 4 }}>
-                <Button primary label={`Resume with ${biometricName}`} onPress={() => void resume()} />
-                <Button label="Not now" onPress={() => setAsking(false)} />
-              </View>
-            </Card>
-          ) : null}
-          {note ? <Body>{note}</Body> : null}
-          {refusal ? <Body style={{ color: c.critical }}>{refusal}</Body> : null}
-          <Eyebrow>Fund</Eyebrow>
-          <Body muted>Unallocated in your workspace: {formatBalance(data.unallocated, peg)}</Body>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            <TextInput
-              accessibilityLabel="Amount in LXC"
-              placeholder="Amount in LXC"
-              placeholderTextColor={c.inkMuted}
-              keyboardType="decimal-pad"
-              value={amount}
-              onChangeText={(v) => {
-                setAmount(v)
-                setFundKey(Crypto.randomUUID())
-              }}
-              style={{ flex: 1, borderWidth: 1, borderColor: c.lineStrong, borderRadius: 6, paddingHorizontal: 12, color: c.ink, fontFamily: fonts.ui, fontSize: 15 }}
-            />
-            <Button label="Fund" disabled={busy || micros === null} onPress={() => void fund()} />
-          </View>
-          <Eyebrow>Home-screen widget</Eyebrow>
-          <Body muted>{data.pinned ? 'Pinned: it shows on your home-screen widget with Pause and Fund.' : 'Pin it to show it on your home-screen widget.'}</Body>
-          <Button label={data.pinned ? 'Unpin from widget' : 'Pin to widget'} disabled={busy} onPress={() => void pin()} />
-          <Eyebrow>Rules</Eyebrow>
-          {rulesInWords(data.rules, peg).map((r) => (
-            <Body key={r}>{r}</Body>
-          ))}
-          <Button label="See all in Activity" onPress={() => router.push({ pathname: '/activity', params: { agent: agent.id } })} />
-        </>
-      ) : null}
+      {data === 'gone' ? <Body muted>This agent is not in your workspace.</Body> : null}
+      {data && data !== 'gone' ? <AgentView data={data} onChanged={reload} /> : null}
     </Screen>
   )
 }
