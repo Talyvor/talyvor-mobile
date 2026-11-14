@@ -463,6 +463,8 @@ export interface PaymentRequest {
   totals: Record<string, number>
   items: PaymentRequestItem[]
   created_at: string
+  /** When it was approved, declined or expired (B57.148); a request still waiting has none. */
+  decided_at?: string
 }
 
 export interface PaymentRequestItem {
@@ -862,6 +864,8 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     },
     /** The requests waiting for the person's approval: the bills an assistant, Chat or an agent prepared for them. */
     pendingPaymentRequests: () => call<{ requests: PaymentRequest[] | null }>('GET', '/api/money/payment-requests?status=pending_approval'),
+    /** B57.149 — the workspace's requests approved, declined or expired, newest decision first. */
+    decidedPaymentRequests: () => call<{ requests: PaymentRequest[] | null }>('GET', '/api/money/payment-requests?status=decided'),
     paymentRequest: (id: string) => call<PaymentRequest>('GET', `/api/money/payment-requests/${e(id)}`),
     /** The statement approving exactly these items, which the approval signs. */
     requestApproval: (id: string, positions: number[]) =>

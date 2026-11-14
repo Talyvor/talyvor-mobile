@@ -25,14 +25,31 @@ export async function pendingPrepared(client: BffClient): Promise<PaymentRequest
   }
 }
 
+/** B57.150 — the requests already approved, declined or expired; a BFF that cannot list them yet lists none. */
+export async function decidedPrepared(client: BffClient): Promise<PaymentRequest[]> {
+  try {
+    return ((await client.decidedPaymentRequests()).requests ?? []).filter((r) => ['approved', 'cancelled', 'expired'].includes(r.status))
+  } catch (err) {
+    if (err instanceof BffError && (err.status === 404 || err.status === 405)) return []
+    throw err
+  }
+}
+
+/** Who it pays: its one payee, or how many it pays. */
+export const preparedPayee = (r: PaymentRequest) => (r.items.length === 1 ? r.items[0].payee_name || r.items[0].listing_id || '' : `${r.items.length} payments`)
+
+/** The total, in each currency it pays in, as the waiting row draws it. */
+export const preparedTotal = (r: PaymentRequest) =>
+  Object.entries(r.totals)
+    .map(([cur, minor]) => formatMinor(minor, cur))
+    .join(' + ')
+
 export function PreparedPaymentCard({ request: r, label = true }: { request: PaymentRequest; label?: boolean }) {
   const { c } = useTheme()
   const who = preparedBy(r.client)
   const what = r.items.length === 1 ? `${who} prepared a payment to ${r.items[0].payee_name || r.items[0].listing_id}` : `${who} prepared ${r.items.length} payments`
   const reference = r.items.map((it) => it.reference).filter(Boolean).join(', ')
-  const total = Object.entries(r.totals)
-    .map(([cur, minor]) => formatMinor(minor, cur))
-    .join(' + ')
+  const total = preparedTotal(r)
   return (
     <Card white>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>

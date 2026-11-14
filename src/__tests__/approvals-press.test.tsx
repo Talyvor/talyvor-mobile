@@ -4,7 +4,8 @@ import { DecidedApprovals } from '../components/approval-card'
 import { PreparedPaymentCard } from '../components/prepared-payment-card'
 import { pressEverything } from '../testing/press-everything'
 
-// B57.68 — pressEverything on Approvals' own rows: a prepared payment's Review and each decided row go somewhere.
+// B57.68 — pressEverything on Approvals' own rows: a prepared payment's Review and each decided row go somewhere, a
+// decided prepared payment's too (B57.150).
 
 const mockClient = {
   capabilities: async () => ({ capabilities: [{ capability: 'payments_out', name: 'payments_out', class: 'GREEN', real_money: false, label: 'sandbox' }] }),
@@ -26,6 +27,7 @@ const decided: AgentApproval[] = [
   { id: 'apr_1', agent_id: 'ag_research', amount_ulxc: 3_400_000_000, model: '', payee: { kind: 'outside', id: 'py_1', name: 'Acme Hosting' }, status: 'approved', created_at: '2026-11-01T00:00:00Z', decided_at: '2026-11-01T01:00:00Z' },
   { id: 'apr_2', agent_id: 'ag_sales', amount_ulxc: 900_000_000, model: '', payee: { kind: 'listing', id: 'l_1', name: 'Lead finder' }, status: 'denied', created_at: '2026-10-14T00:00:00Z', decided_at: '2026-10-14T01:00:00Z' },
 ]
+const paid: PaymentRequest = { ...preq, id: 'preq_2', status: 'approved', decided_at: '2026-11-02T00:00:00Z' }
 const agents = [
   { id: 'ag_research', name: 'Research' },
   { id: 'ag_sales', name: 'Sales' },
@@ -37,9 +39,9 @@ test('Approvals: a prepared payment’s Review and each decided row each do some
     return (
       <>
         <PreparedPaymentCard request={preq} />
-        <DecidedApprovals decided={decided} agents={agents} />
+        <DecidedApprovals decided={decided} agents={agents} prepared={[paid]} />
       </>
     )
   })
-  expect(report).toEqual({ pressed: 3, dead: [] })
+  expect(report).toEqual({ pressed: 4, dead: [] })
 })

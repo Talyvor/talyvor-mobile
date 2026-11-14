@@ -56,6 +56,8 @@ function mockBff(
     allPaused?: boolean
     approvals?: unknown[]
     requests?: { id: string }[]
+    /** B57.150: the prepared payments already decided (Lens B57.148) */
+    decided?: { id: string }[]
     refuseSigned?: boolean
     sessionEnded?: boolean
     enrolments?: { id: string }[]
@@ -165,7 +167,8 @@ function mockBff(
         ? { id: 'pm_2', payee_id: 'py_1', payee_name: 'Acme Hosting', amount_minor: 1250, currency: 'GBP', reference: 'October', status: 'pending', created_at: '2026-10-17T10:00:00Z' }
         : new Response(JSON.stringify({ error: 'economy: this workspace signs its payments with a passkey or the phone app' }), { status: 403 }),
     'GET /api/money/payment-requests?status=pending_approval': () => ({ requests: start.requests ?? [] }),
-    ...Object.fromEntries((start.requests ?? []).map((r) => [`GET /api/money/payment-requests/${r.id}`, () => r])),
+    'GET /api/money/payment-requests?status=decided': () => ({ requests: start.decided ?? [] }),
+    ...Object.fromEntries([...(start.requests ?? []), ...(start.decided ?? [])].map((r) => [`GET /api/money/payment-requests/${r.id}`, () => r])),
     ...Object.fromEntries((start.requests ?? []).map((r) => [`POST /api/money/payment-requests/${r.id}/cancel`, () => ({ ...r, status: 'cancelled' })])),
     // B59.3: the areas the operator switched on for this workspace (Lens B59.1); a default workspace has none.
     ...(start.areas ? { 'GET /api/workspace/areas': () => ({ areas: start.areas }) } : {}),
@@ -1143,6 +1146,31 @@ describe('B57.68 Approvals', () => {
     expect(screen.getByText('Invoice 1042 · asked 9 Nov · $180.00')).toBeTruthy()
     await fireEvent.press(screen.getByRole('button', { name: 'Review: Chat prepared a payment to Northwind Data' }))
     await waitFor(() => expect(calls.some((c) => c.path === '/api/money/payment-requests/preq_1')).toBe(true))
+  })
+
+  test('B57.150: prepared payments decided sit with the agents’ decisions, newest first, and open their card', async () => {
+    const paid = { ...preq, id: 'preq_paid', status: 'approved', decided_at: now.toISOString() }
+    const declined = { ...preq, id: 'preq_no', status: 'cancelled', client: 'mcp:claude', totals: { USD: 4_200 }, items: [{ ...preq.items[0], payee_name: 'Acme Hosting', amount_minor: 4_200 }], decided_at: '2026-10-20T09:00:00Z' }
+    const calls = mockBff({
+      usdPerLXC: 0.1,
+      decided: [declined, paid],
+      approvals: [{ id: 'apr_5', agent_id: 'ag_2', amount_ulxc: 3_400_000_000, model: '', payee: acme, status: 'denied', created_at: '2026-10-10T08:00:00Z', decided_at: '2026-10-14T09:00:00Z' }],
+    })
+    await renderRouter('./src/app', { initialUrl: '/approvals' })
+    expect(await screen.findByText('Chat · Northwind Data')).toBeTruthy()
+    expect(screen.getByText(`Approved and paid · today at ${clock}`)).toBeTruthy()
+    expect(screen.getByText('$180.00')).toBeTruthy()
+    expect(screen.getByText('Your assistant · Acme Hosting')).toBeTruthy()
+    expect(screen.getByText('Declined · 20 Oct')).toBeTruthy()
+    expect(screen.getByText('$42.00')).toBeTruthy()
+    // Newest decision first, whoever made the request.
+    const titles = screen.getAllByText(/^(Chat|Your assistant|Buyer) · /).map((t) => t.props.children)
+    expect(titles).toEqual(['Chat · Northwind Data', 'Your assistant · Acme Hosting', 'Buyer · Acme Hosting'])
+    // Nothing is waiting: a decided request is never counted as one.
+    expect(screen.getByText('Nothing is waiting for you.')).toBeTruthy()
+
+    await fireEvent.press(screen.getByText('Chat · Northwind Data'))
+    await waitFor(() => expect(calls.some((c) => c.path === '/api/money/payment-requests/preq_paid')).toBe(true))
   })
 
   test('nothing waiting says so, and this phone reads Off with Turn on', async () => {
