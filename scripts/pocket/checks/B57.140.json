@@ -1,0 +1,8 @@
+[
+  { "route": "/settings/help", "screen": "p-chat", "words": "report", "why": "the reference draws no Help and complaints; as p-chat draws a thread above where a message is written, what was sent comes first, each row on its kind's tile, then Write to us (suite B57.139's order)" },
+  { "route": "/settings/help", "screen": "p-chat", "name": "form", "scroll": "Write to us", "words": "report", "why": "the form: A question or a problem or A complaint as pills, the message box in Field's face" },
+  { "route": "/settings/help", "screen": "p-chat", "dark": true, "words": "report", "why": "the same, with the phone set to dark" },
+  { "route": "/settings/close", "screen": "p-pause-all", "words": "report", "why": "the reference draws no Close this account; the nearest is Pause agents, a request with its reason; what was asked first, then Ask to close" },
+  { "route": "/settings/data", "screen": "p-statement", "words": "report", "why": "the reference draws no Your data; the nearest is the Statement, which downloads a file; what was asked first, with Download your data on a finished copy" },
+  { "route": "/settings/data", "screen": "p-statement", "name": "delete", "scroll": "Delete your data", "words": "report", "why": "Delete your data in the privacy notice's words (suite B57.139)" }
+]

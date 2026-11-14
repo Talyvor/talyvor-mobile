@@ -1,10 +1,11 @@
 import { useState } from 'react'
 
-import { CardTitle, Choices, MessageBox, SaidLine, SentList, useRequests, useSend } from '@/components/account-requests'
+import { CardTitle, Choices, Lead, MessageBox, SaidLine, SentList, useRequests, useSend } from '@/components/account-requests'
 import { Back, Body, Button, Card, Headline, Screen } from '@/components/ui'
 
 // B59.29 — /settings/help, the web's Help and complaints (suite B59.28): ask for help or make a complaint, and what was
-// sent. A complaint shows its reference as soon as it is sent.
+// sent. A complaint shows its reference as soon as it is sent. B57.140: what was sent comes before the form, as p-chat
+// draws the thread above where a message is written.
 
 export default function HelpScreen() {
   const requests = useRequests()
@@ -23,8 +24,10 @@ export default function HelpScreen() {
     <Screen onRefresh={requests.reload} refreshing={requests.loading && !!requests.data}>
       <Back home="/settings" />
       <Headline>Help and complaints</Headline>
+      <Lead>Ask us something, or make a complaint</Lead>
       <Body muted>Ask us about your account, or tell us what went wrong. A person at Talyvor reads every message and answers on this page.</Body>
       <Body muted>A complaint gets a reference as soon as you send it. Quote it whenever you write to us about it.</Body>
+      <SentList requests={requests} kinds={['support', 'complaint']} title="What you sent" empty="Nothing sent yet." />
       <Card>
         <CardTitle>Write to us</CardTitle>
         <Choices
@@ -50,7 +53,6 @@ export default function HelpScreen() {
           onPress={() => void send.send(kind, message)}
         />
       </Card>
-      <SentList requests={requests} kinds={['support', 'complaint']} title="What you sent" empty="Nothing sent yet." />
     </Screen>
   )
 }
