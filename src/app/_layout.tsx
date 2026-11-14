@@ -33,6 +33,8 @@ function Navigator() {
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="agents/[id]" />
           <Stack.Screen name="payees/[id]" />
+          <Stack.Screen name="instant-transfer/index" />
+          <Stack.Screen name="instant-transfer/[id]" />
           <Stack.Screen name="approve/[id]" options={{ headerShown: true, title: 'Approve' }} />
           <Stack.Screen name="approvals/[id]" />
           <Stack.Screen name="notices/[id]" options={{ headerShown: true, title: 'Payment' }} />

@@ -1,0 +1,416 @@
+[
+ {
+  "route": "/instant-transfer",
+  "screen": "p-pay",
+  "launchPack": "P7",
+  "name": "quote",
+  "phoneKey": true,
+  "answers": {
+   "/api/agents": {
+    "workspace_balance_ulxc": 0,
+    "allocated_ulxc": 0,
+    "unallocated_ulxc": 0,
+    "spent_ulxc": 0,
+    "agents": [
+     {
+      "id": "agt_remy",
+      "name": "Remy",
+      "description": "Research",
+      "colour": "cobalt",
+      "face": "circle",
+      "balance_ulxc": 0,
+      "spent_ulxc": 0,
+      "created_at": "2026-09-14T09:00:00Z"
+     }
+    ]
+   },
+   "/api/money/accounts": {
+    "accounts": [
+     {
+      "id": "macc_remy",
+      "agent_id": "agt_remy",
+      "currency": "USD",
+      "purpose": "agent",
+      "status": "open",
+      "name": "",
+      "balance_minor": 620000
+     }
+    ]
+   },
+   "/api/money/payees": {
+    "payees": [
+     {
+      "id": "payee_lf",
+      "name": "Lumen Freight GmbH",
+      "country": "DE",
+      "needs_confirmation": false,
+      "created_at": "2026-11-01T09:00:00Z"
+     }
+    ]
+   },
+   "/api/money/instant-transfers/quote": {
+    "id": "itq_1",
+    "to": "bank_account",
+    "country": "DE",
+    "send_minor": 500000,
+    "send_currency": "USD",
+    "fee_minor": 1250,
+    "rate": "0.92100000",
+    "receive_minor": 459348,
+    "receive_currency": "EUR",
+    "arrives_in_seconds": true,
+    "created_at": "2026-11-14T10:41:36Z",
+    "expires_at": "2026-11-14T10:42:06Z"
+   },
+   "/api/wallets/capabilities": {
+    "capabilities": [
+     {
+      "capability": "fx",
+      "name": "Converting between currencies",
+      "class": "AMBER",
+      "real_money": false,
+      "label": "sandbox"
+     },
+     {
+      "capability": "stablecoins",
+      "name": "Holding and sending stablecoins",
+      "class": "AMBER",
+      "real_money": false,
+      "label": "sandbox"
+     },
+     {
+      "capability": "payments_out",
+      "name": "Paying people and companies outside Talyvor",
+      "class": "AMBER",
+      "real_money": false,
+      "label": "sandbox"
+     }
+    ]
+   }
+  },
+  "steps": [
+   [
+    "fill",
+    "Amount",
+    "5000"
+   ],
+   [
+    "press",
+    "An outside bank account"
+   ],
+   [
+    "press",
+    "Lumen Freight GmbH, Bank account · Germany · gets euros"
+   ]
+  ],
+  "scroll": "Continue",
+  "words": "report",
+  "why": "P7: the recipient is picked from the three kinds of recipient the web's Instant transfer offers, so the screen carries those choices above the quote"
+ },
+ {
+  "route": "/instant-transfer/itx_7Q2M9K4D",
+  "screen": "p-pay",
+  "launchPack": "P9",
+  "name": "progress",
+  "answers": {
+   "/api/agents": {
+    "workspace_balance_ulxc": 0,
+    "allocated_ulxc": 0,
+    "unallocated_ulxc": 0,
+    "spent_ulxc": 0,
+    "agents": [
+     {
+      "id": "agt_remy",
+      "name": "Remy",
+      "description": "Research",
+      "colour": "cobalt",
+      "face": "circle",
+      "balance_ulxc": 0,
+      "spent_ulxc": 0,
+      "created_at": "2026-09-14T09:00:00Z"
+     }
+    ]
+   },
+   "/api/money/accounts": {
+    "accounts": [
+     {
+      "id": "macc_remy",
+      "agent_id": "agt_remy",
+      "currency": "USD",
+      "purpose": "agent",
+      "status": "open",
+      "name": "",
+      "balance_minor": 620000
+     }
+    ]
+   },
+   "/api/money/payees": {
+    "payees": [
+     {
+      "id": "payee_lf",
+      "name": "Lumen Freight GmbH",
+      "country": "DE",
+      "needs_confirmation": false,
+      "created_at": "2026-11-01T09:00:00Z"
+     }
+    ]
+   },
+   "/api/money/instant-transfers/quote": {
+    "id": "itq_1",
+    "to": "bank_account",
+    "country": "DE",
+    "send_minor": 500000,
+    "send_currency": "USD",
+    "fee_minor": 1250,
+    "rate": "0.92100000",
+    "receive_minor": 459348,
+    "receive_currency": "EUR",
+    "arrives_in_seconds": true,
+    "created_at": "2026-11-14T10:41:36Z",
+    "expires_at": "2026-11-14T10:42:06Z"
+   },
+   "/api/money/instant-transfers/itx_7Q2M9K4D": {
+    "id": "itx_7Q2M9K4D",
+    "agent_id": "agt_remy",
+    "from_account_id": "macc_remy",
+    "to_payee_id": "payee_lf",
+    "beneficiary_name": "Lumen Freight GmbH",
+    "send_minor": 500000,
+    "send_currency": "USD",
+    "fee_minor": 1250,
+    "receive_minor": 459348,
+    "receive_currency": "EUR",
+    "rate": "0.92100000",
+    "arrives_in_seconds": true,
+    "status": "on_its_way",
+    "legs": [
+     {
+      "id": "itr_7Q2M:convert",
+      "leg": "convert",
+      "done": true,
+      "sell": {
+       "minor": 500000,
+       "currency": "USD"
+      },
+      "buy": {
+       "minor": 4987500000,
+       "currency": "USDC"
+      }
+     },
+     {
+      "id": "itr_7Q2M:move",
+      "leg": "move",
+      "done": true,
+      "partner_ref": "0x9f3a…c41e",
+      "sell": {
+       "minor": 4987500000,
+       "currency": "USDC"
+      },
+      "buy": {
+       "minor": 4987500000,
+       "currency": "USDC"
+      }
+     },
+     {
+      "id": "itr_7Q2M:payout",
+      "leg": "payout",
+      "done": true,
+      "sell": {
+       "minor": 4987500000,
+       "currency": "USDC"
+      },
+      "buy": {
+       "minor": 459348,
+       "currency": "EUR"
+      }
+     }
+    ],
+    "created_at": "2026-11-14T10:42:07Z",
+    "updated_at": "2026-11-14T10:42:19Z"
+   },
+   "/api/wallets/capabilities": {
+    "capabilities": [
+     {
+      "capability": "fx",
+      "name": "Converting between currencies",
+      "class": "AMBER",
+      "real_money": false,
+      "label": "sandbox"
+     },
+     {
+      "capability": "stablecoins",
+      "name": "Holding and sending stablecoins",
+      "class": "AMBER",
+      "real_money": false,
+      "label": "sandbox"
+     },
+     {
+      "capability": "payments_out",
+      "name": "Paying people and companies outside Talyvor",
+      "class": "AMBER",
+      "real_money": false,
+      "label": "sandbox"
+     }
+    ]
+   }
+  },
+  "words": "report",
+  "why": "P9: Lens's legs carry no time of their own, so the steps show Now on the current one and no clock times"
+ },
+ {
+  "route": "/instant-transfer/itx_7Q2M9K4D",
+  "screen": "p-pay",
+  "launchPack": "P10",
+  "name": "receipt",
+  "answers": {
+   "/api/agents": {
+    "workspace_balance_ulxc": 0,
+    "allocated_ulxc": 0,
+    "unallocated_ulxc": 0,
+    "spent_ulxc": 0,
+    "agents": [
+     {
+      "id": "agt_remy",
+      "name": "Remy",
+      "description": "Research",
+      "colour": "cobalt",
+      "face": "circle",
+      "balance_ulxc": 0,
+      "spent_ulxc": 0,
+      "created_at": "2026-09-14T09:00:00Z"
+     }
+    ]
+   },
+   "/api/money/accounts": {
+    "accounts": [
+     {
+      "id": "macc_remy",
+      "agent_id": "agt_remy",
+      "currency": "USD",
+      "purpose": "agent",
+      "status": "open",
+      "name": "",
+      "balance_minor": 620000
+     }
+    ]
+   },
+   "/api/money/payees": {
+    "payees": [
+     {
+      "id": "payee_lf",
+      "name": "Lumen Freight GmbH",
+      "country": "DE",
+      "needs_confirmation": false,
+      "created_at": "2026-11-01T09:00:00Z"
+     }
+    ]
+   },
+   "/api/money/instant-transfers/quote": {
+    "id": "itq_1",
+    "to": "bank_account",
+    "country": "DE",
+    "send_minor": 500000,
+    "send_currency": "USD",
+    "fee_minor": 1250,
+    "rate": "0.92100000",
+    "receive_minor": 459348,
+    "receive_currency": "EUR",
+    "arrives_in_seconds": true,
+    "created_at": "2026-11-14T10:41:36Z",
+    "expires_at": "2026-11-14T10:42:06Z"
+   },
+   "/api/money/instant-transfers/itx_7Q2M9K4D": {
+    "id": "itx_7Q2M9K4D",
+    "agent_id": "agt_remy",
+    "from_account_id": "macc_remy",
+    "to_payee_id": "payee_lf",
+    "beneficiary_name": "Lumen Freight GmbH",
+    "send_minor": 500000,
+    "send_currency": "USD",
+    "fee_minor": 1250,
+    "receive_minor": 459348,
+    "receive_currency": "EUR",
+    "rate": "0.92100000",
+    "arrives_in_seconds": true,
+    "status": "received",
+    "legs": [
+     {
+      "id": "itr_7Q2M:convert",
+      "leg": "convert",
+      "done": true,
+      "sell": {
+       "minor": 500000,
+       "currency": "USD"
+      },
+      "buy": {
+       "minor": 4987500000,
+       "currency": "USDC"
+      }
+     },
+     {
+      "id": "itr_7Q2M:move",
+      "leg": "move",
+      "done": true,
+      "partner_ref": "0x9f3a…c41e",
+      "sell": {
+       "minor": 4987500000,
+       "currency": "USDC"
+      },
+      "buy": {
+       "minor": 4987500000,
+       "currency": "USDC"
+      }
+     },
+     {
+      "id": "itr_7Q2M:payout",
+      "leg": "payout",
+      "done": true,
+      "sell": {
+       "minor": 4987500000,
+       "currency": "USDC"
+      },
+      "buy": {
+       "minor": 459348,
+       "currency": "EUR"
+      }
+     }
+    ],
+    "created_at": "2026-11-14T10:42:07Z",
+    "updated_at": "2026-11-14T10:42:19Z"
+   },
+   "/api/wallets/capabilities": {
+    "capabilities": [
+     {
+      "capability": "fx",
+      "name": "Converting between currencies",
+      "class": "AMBER",
+      "real_money": false,
+      "label": "sandbox"
+     },
+     {
+      "capability": "stablecoins",
+      "name": "Holding and sending stablecoins",
+      "class": "AMBER",
+      "real_money": false,
+      "label": "sandbox"
+     },
+     {
+      "capability": "payments_out",
+      "name": "Paying people and companies outside Talyvor",
+      "class": "AMBER",
+      "real_money": false,
+      "label": "sandbox"
+     }
+    ]
+   }
+  },
+  "steps": [
+   [
+    "press",
+    "See the receipt"
+   ]
+  ],
+  "words": "report",
+  "why": "P10: Download receipt waits for a receipt file from Lens, so it is not drawn"
+ }
+]
