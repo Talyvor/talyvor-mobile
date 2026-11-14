@@ -1,4 +1,4 @@
-import { fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library'
+import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library'
 
 // B59.26 — disputes and refunds on the phone (the web's B59.25): a card payment is disputed from its line with a reason
 // and then says where its dispute stands; each state in the web's words; refunds shown on the screen and under the
@@ -190,6 +190,26 @@ test('a card payment is disputed with a reason, and then says where its dispute 
   expect(calls.filter((c) => c.method === 'POST').map((c) => [c.path, c.body])).toEqual([['/api/money/card-disputes', { payment_id: 'pay_1', reason: 'Charged twice' }]])
   expect(screen.queryByText(WEB.dispute)).toBeNull()
   expect(screen.getAllByText(WEB.opened).length).toBeGreaterThan(0)
+})
+
+test('B57.153: Dispute this payment opens Pocket’s sheet on the payment, and Cancel closes it sending nothing', async () => {
+  const calls = mockBff()
+  await renderRouter('./src/app', { initialUrl: '/disputes' })
+  await screen.findAllByTestId('card-payment')
+  expect(screen.queryByTestId('dispute-sheet')).toBeNull()
+  await fireEvent.press(screen.getByRole('button', { name: WEB.dispute }))
+  // The sheet names the payment it disputes, as a row: what, and how much.
+  const sheet = await screen.findByTestId('dispute-sheet')
+  expect(within(sheet).getByRole('header', { name: WEB.dispute })).toBeTruthy()
+  expect(within(sheet).getByTestId('dispute-payment')).toBeTruthy()
+  expect(within(within(sheet).getByTestId('dispute-payment')).getByText('Bookshop')).toBeTruthy()
+  expect(within(within(sheet).getByTestId('dispute-payment')).getByText('£24.50')).toBeTruthy()
+  expect(within(sheet).getByLabelText(WEB.why)).toBeTruthy()
+  await fireEvent.changeText(within(sheet).getByLabelText(WEB.why), 'Charged twice')
+  await fireEvent.press(within(sheet).getByRole('button', { name: 'Cancel' }))
+  await waitFor(() => expect(screen.queryByTestId('dispute-sheet')).toBeNull())
+  expect(calls.filter((c) => c.method === 'POST')).toHaveLength(0)
+  expect(screen.getByRole('button', { name: WEB.dispute })).toBeTruthy()
 })
 
 test('each state reads in the web’s words, and a refund comes back as money in', async () => {

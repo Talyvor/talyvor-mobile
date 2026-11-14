@@ -10,7 +10,7 @@ import { useSession } from '@/session'
 
 // B59.26 — /disputes, from Cards: this month's card payments from each account's statement, each disputed from its line
 // and then saying where its dispute stands; the workspace's disputes and refunds; and Export, as the web's B59.25 has them
-// on Statements and the agent's card.
+// on Statements and the agent's card. B57.153: each payment's dispute asks for its reason in Pocket's bottom sheet.
 
 export default function DisputesScreen() {
   const { client } = useSession()
@@ -46,19 +46,21 @@ export default function DisputesScreen() {
       ) : null}
       {data?.payments.length ? (
         <Card white>
-          {data.payments.map(({ l, account, currency }, i) => (
-            <View key={`${l.entry_id}-${l.line}`} testID="card-payment">
-              <Row
-                first={i === 0}
-                title={l.counterparty || W.cardPayment}
-                sub={[account, when(l.at), W.cardPayment].filter(Boolean).join(' · ')}
-                right={<Figure>{money(-l.amount_minor, currency)}</Figure>}
-              />
-              <View style={{ paddingBottom: 12 }}>
-                <DisputePayment paymentId={l.partner_ref!} dispute={disputes.find((d) => d.payment_id === l.partner_ref)} onSent={sent} />
+          {data.payments.map(({ l, account, currency }, i) => {
+            const payment = {
+              title: l.counterparty || W.cardPayment,
+              sub: [account, when(l.at), W.cardPayment].filter(Boolean).join(' · '),
+              amount: money(-l.amount_minor, currency),
+            }
+            return (
+              <View key={`${l.entry_id}-${l.line}`} testID="card-payment">
+                <Row first={i === 0} title={payment.title} sub={payment.sub} right={<Figure>{payment.amount}</Figure>} />
+                <View style={{ paddingBottom: 12 }}>
+                  <DisputePayment paymentId={l.partner_ref!} payment={payment} dispute={disputes.find((d) => d.payment_id === l.partner_ref)} onSent={sent} />
+                </View>
               </View>
-            </View>
-          ))}
+            )
+          })}
         </Card>
       ) : null}
       {data ? <DisputesAndRefunds disputes={disputes} refunds={data.refunds} /> : null}

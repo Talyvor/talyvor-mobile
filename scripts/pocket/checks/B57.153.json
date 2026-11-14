@@ -1,0 +1,6 @@
+[
+  { "route": "/disputes", "screen": "p-statement", "words": "report", "why": "the reference draws no disputes screen; the nearest is Statement, a list of payments with amounts at the right, and the words are the web's (suite B59.25, B57.151)" },
+  { "route": "/disputes", "screen": "p-approve-req+pdecline-req", "name": "sheet", "words": "report", "press": ["Dispute this payment"], "why": "Dispute this payment opens Pocket's bottom sheet, the nearest being Decline's: the payment as a row, the reason, then Send dispute and Cancel" },
+  { "route": "/disputes", "screen": "p-approve-req+pdecline-req", "name": "sheet-dark", "dark": true, "words": "report", "steps": [["press", "Dispute this payment"], ["fill", "Why are you disputing it?", "Charged twice"]], "why": "the same sheet with a reason typed, the phone set to dark" },
+  { "route": "/disputes", "screen": "p-statement", "name": "lower", "words": "report", "scroll": "Card payments from", "why": "the disputes and refunds as rows under their eyebrow, then Export" }
+]
