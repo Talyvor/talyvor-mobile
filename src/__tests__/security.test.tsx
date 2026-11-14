@@ -147,15 +147,23 @@ describe('the bundle', () => {
 
   test('the exported app carries no secret and no internal address', () => {
     const out = mkdtempSync(join(tmpdir(), 'export-'))
-    execFileSync('npx', ['expo', 'export', '--platform', 'android', '--output-dir', out], { cwd: root, stdio: 'ignore' })
+    // B58.11: a voice key left in the build's environment must not reach the app; the phone asks the BFF for it.
+    const planted = 'planted-voice-key-' + 'Q'.repeat(24)
+    execFileSync('npx', ['expo', 'export', '--platform', 'android', '--output-dir', out], {
+      cwd: root,
+      stdio: 'ignore',
+      env: { ...process.env, EXPO_PUBLIC_PICOVOICE_ACCESS_KEY: planted },
+    })
     expect(scan(out)).toEqual([])
+    const all = (dir: string): string[] => readdirSync(dir).flatMap((f) => (statSync(join(dir, f)).isDirectory() ? all(join(dir, f)) : [join(dir, f)]))
+    expect(all(out).filter((f) => readFileSync(f, 'latin1').includes(planted))).toEqual([])
   })
 
   test('only public settings are built in', () => {
     const names = new Set(appSources.flatMap((f) => [...readFileSync(f, 'utf8').matchAll(/EXPO_PUBLIC_\w+/g)].map((m) => m[0])))
-    // Each is safe to ship in the app: addresses, a public OIDC client, Picovoice's on-device access key, and the test
-    // key's flag, which a release build refuses.
-    expect([...names].sort()).toEqual(['EXPO_PUBLIC_BFF_URL', 'EXPO_PUBLIC_HEY_TALY_KEYWORD', 'EXPO_PUBLIC_OIDC_CLIENT_ID', 'EXPO_PUBLIC_OIDC_ISSUER', 'EXPO_PUBLIC_PICOVOICE_ACCESS_KEY', 'EXPO_PUBLIC_TALYVOR_TEST_KEYS'])
+    // Each is safe to ship in the app: addresses, a public OIDC client, the wake word's file, and the test key's flag,
+    // which a release build refuses. No vendor key: "Hey Taly"'s Picovoice key comes from the BFF after sign-in (B58.11).
+    expect([...names].sort()).toEqual(['EXPO_PUBLIC_BFF_URL', 'EXPO_PUBLIC_HEY_TALY_KEYWORD', 'EXPO_PUBLIC_OIDC_CLIENT_ID', 'EXPO_PUBLIC_OIDC_ISSUER', 'EXPO_PUBLIC_TALYVOR_TEST_KEYS'])
   })
 })
 

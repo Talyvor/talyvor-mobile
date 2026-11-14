@@ -18,14 +18,15 @@ jest.mock('expo-crypto', () => ({
   randomUUID: () => 'uuid-1',
 }))
 jest.mock('../config', () => ({
-  config: { bffUrl: 'https://bff.test', oidcIssuer: 'https://idp', oidcClientId: 'mobile', picovoiceKey: 'pv-key', heyTalyKeyword: 'hey-taly_ios.ppn' },
+  config: { bffUrl: 'https://bff.test', oidcIssuer: 'https://idp', oidcClientId: 'mobile', heyTalyKeyword: 'hey-taly_ios.ppn' },
 }))
 
 /** Porcupine on the phone: `hear()` is the engine recognising the wake phrase in what the microphone picks up. */
-const mockWake = { keyword: '', running: false, hear: () => undefined as void }
+const mockWake = { key: '', keyword: '', running: false, hear: () => undefined as void }
 jest.mock('@picovoice/porcupine-react-native', () => ({
   PorcupineManager: {
-    fromKeywordPaths: async (_: string, paths: string[], onWake: () => void) => {
+    fromKeywordPaths: async (key: string, paths: string[], onWake: () => void) => {
+      mockWake.key = key
       mockWake.keyword = paths[0]
       mockWake.hear = () => mockWake.running && onWake()
       return { start: async () => void (mockWake.running = true), stop: async () => void (mockWake.running = false), delete: () => undefined }
@@ -82,6 +83,9 @@ jest.mock('../../modules/talyvor-keys', () => ({
 
 /** Lens behind the BFF. `heard` is what transcription answers for the next recording; `labels` is what Lens says each
  * money capability is for the workspace (B56.12), and "unread" never answers. */
+/** "Hey Taly"'s Picovoice key, as the BFF answers it to a signed-in phone (B58.10); null when the server has none. */
+let mockVoiceKey: string | null = 'pv-from-the-bff'
+
 function mockLens(heard: string, labels?: 'live' | 'sandbox' | 'unread') {
   const lens = { allPaused: false, resumed: [] as unknown[], spoken: [] as string[], prepared: [] as unknown[], approved: false, asked: [] as unknown[], uploads: 0 }
   const item = { position: 1, payee_id: 'py_acme', payee_name: 'ACME Ltd', currency: 'GBP', amount_minor: 12000, reference: 'ACME invoice', decision: 'needs_approval', reason: 'a payment said aloud' }
@@ -96,6 +100,9 @@ function mockLens(heard: string, labels?: 'live' | 'sandbox' | 'unread') {
       // B59.3: Chat is there only for a workspace the operator switched it on for (Lens B59.1).
       case 'GET /api/workspace/areas':
         return json({ areas: ['chat'] })
+      case 'GET /api/voice/key':
+        if (mockVoiceKey === null) return new Response(JSON.stringify({ error: 'Hey Taly is off.' }), { status: 503 })
+        return json({ access_key: mockVoiceKey })
       case 'POST /api/chat/voice/transcriptions':
         lens.uploads++
         return json({ text: (body as FormData).get('file') ? heard : '' })
@@ -156,6 +163,8 @@ beforeEach(() => {
   mockMic.played = []
   mockRecorder.uri = null
   mockFaceId.asked = 0
+  mockVoiceKey = 'pv-from-the-bff'
+  mockWake.key = ''
 })
 
 test('"Hey Taly" with the app open starts listening, and "pause all agents" pauses them only after confirmation', async () => {
@@ -165,6 +174,7 @@ test('"Hey Taly" with the app open starts listening, and "pause all agents" paus
   await fireEvent(await screen.findByLabelText('Listen for Hey Taly'), 'valueChange', true)
   await waitFor(() => expect(mockWake.running).toBe(true))
   expect(mockWake.keyword).toBe('hey-taly_ios.ppn')
+  expect(mockWake.key).toBe('pv-from-the-bff') // the key the BFF answered after sign-in, never one built into the app
 
   jest.useFakeTimers({ doNotFake: ['nextTick', 'queueMicrotask', 'setImmediate'] })
   await act(async () => mockWake.hear())
@@ -182,6 +192,17 @@ test('"Hey Taly" with the app open starts listening, and "pause all agents" paus
   await fireEvent.press(screen.getByText('Yes, pause all'))
   expect(await screen.findByText('Every agent is paused.')).toBeTruthy()
   expect(lens.allPaused).toBe(true)
+})
+
+test('"Hey Taly" stays off when the BFF has no voice key', async () => {
+  mockVoiceKey = null
+  mockLens('Pause all agents.')
+  await renderRouter('./src/app', { initialUrl: '/chat' })
+
+  expect(await screen.findByLabelText('Hold to talk')).toBeTruthy()
+  await waitFor(() => expect(globalThis.fetch).toHaveBeenCalledWith('https://bff.test/api/voice/key', expect.anything()))
+  expect(screen.queryByLabelText('Listen for Hey Taly')).toBeNull()
+  expect(mockWake.key).toBe('')
 })
 
 const CONFIRM_PAUSE = 'Pause every agent? Lens refuses each one’s next request or payment until you start them again.'
