@@ -1,15 +1,66 @@
-import { BffError, parseLXC, refusalText, rulesInWords, type Agent, type AgentRules, type BffClient, type Cardholder } from '@talyvor/bff-client'
-import { useState } from 'react'
-import { View } from 'react-native'
+import { BffError, formatULXC, parseLXC, refusalText, rulesInWords, type Agent, type AgentRules, type BffClient, type Cardholder } from '@talyvor/bff-client'
+import { useState, type ReactNode } from 'react'
+import { Text, TextInput, View, type TextInputProps } from 'react-native'
 
 import { biometricName, keyGone, keyGoneText, phoneKey, signWithThisPhone } from '@/keys'
 
-import { Body, Button, Card, Eyebrow, Field } from './ui'
+import { Icon } from './icon'
+import { Body, Button, Card, Eyebrow } from './ui'
+import { fonts, useTheme } from '../theme'
 
 // B59.44 — changing a card's limits, and issuing an agent a card, on the phone's Cards, in the web's words (AgentBank.tsx
 // RulesForm and useRulesChange, AgentCardPanel.tsx IssueCard). Tightening is saved at once; a change that loosens the
 // rules says what it loosens, then is saved signed with the phone's key over the challenge Lens gives for exactly that
 // change, as the web's Save rules is with a passkey. Lens refuses a looser save it was not given a signature for.
+// B57.160 — in Pocket, as the reference's rules draw a list of settings (.li.rulerow): each limit is a row with its name
+// over what it is now and its amount on the right; what a looser change loosens is said in the warning note with the
+// key; and the cardholder form is a list of the same rows in one panel.
+
+/** A setting's row: its name, and what it is now under it, beside its input. A rule above every row but the first. */
+function SettingRow({ title, sub, unit, first, testID, inputWidth, ...input }: { title: string; sub?: string; unit?: string; first?: boolean; testID?: string; inputWidth: number } & Omit<TextInputProps, 'style'>) {
+  const { c } = useTheme()
+  return (
+    <View testID={testID} style={[{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 }, !first && { borderTopWidth: 1, borderTopColor: c.line }]}>
+      <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+        <Text style={{ fontFamily: fonts.uiMedium, fontSize: 14, lineHeight: 19, color: c.ink }}>{title}</Text>
+        {sub ? <Text style={{ fontFamily: fonts.ui, fontSize: 12.5, lineHeight: 17, color: c.ink3 }}>{sub}</Text> : null}
+      </View>
+      <TextInput
+        accessibilityLabel={title}
+        placeholderTextColor={c.ink3}
+        style={{
+          width: inputWidth,
+          height: 46,
+          borderRadius: 14,
+          borderWidth: 1.5,
+          borderColor: c.control,
+          backgroundColor: c.page,
+          paddingHorizontal: 12,
+          color: c.ink,
+          fontFamily: fonts.ui,
+          fontSize: 14,
+          textAlign: unit ? 'right' : 'left',
+          fontVariant: unit ? ['tabular-nums'] : undefined,
+        }}
+        {...input}
+      />
+      {unit ? <Text style={{ fontFamily: fonts.uiMedium, fontSize: 13, color: c.ink2 }}>{unit}</Text> : null}
+    </View>
+  )
+}
+
+/** Pocket's warning note (.note2.warnnote), with the key a looser change is signed with. */
+function LoosensNote({ children }: { children: ReactNode }) {
+  const { c } = useTheme()
+  return (
+    <View testID="loosens-note" style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start', paddingVertical: 12, paddingHorizontal: 14, borderRadius: 14, backgroundColor: c.tangerine50 }}>
+      <View style={{ marginTop: 1 }}>
+        <Icon name="key" size={16} color={c.tangerineInk} />
+      </View>
+      <View style={{ flex: 1, gap: 4 }}>{children}</View>
+    </View>
+  )
+}
 
 /** The limits the web's Rules form edits, by its labels. */
 const LIMITS = [
@@ -98,30 +149,26 @@ export function CardLimits({ client, agent, rules, peg, onSaved }: { client: Bff
       ) : (
         <>
           <Body muted>LXC; empty for no limit</Body>
-          {LIMITS.map(([f, label]) => (
-            <Field
-              key={f}
-              label={label}
-              accessibilityLabel={`${label} for ${agent.name}, in LXC`}
-              inputMode="decimal"
-              placeholder="No limit"
-              value={typed[f]}
-              onChangeText={(t) => setTyped({ ...typed, [f]: t })}
-            />
-          ))}
+          <View>
+            {LIMITS.map(([f, label], i) => (
+              <SettingRow
+                key={f}
+                testID={`limit-row-${f}`}
+                first={i === 0}
+                title={label}
+                sub={rules[f] && rules[f] > 0 ? formatULXC(rules[f]) : 'No limit'}
+                unit="LXC"
+                inputWidth={112}
+                accessibilityLabel={`${label} for ${agent.name}, in LXC`}
+                inputMode="decimal"
+                placeholder="No limit"
+                value={typed[f]}
+                onChangeText={(t) => setTyped({ ...typed, [f]: t })}
+              />
+            ))}
+          </View>
           {bad ? <Body>A limit is an amount of LXC with at most six decimals, or empty.</Body> : null}
-          {shown ? (
-            <View style={{ gap: 4 }}>
-              <Body>This loosens {agent.name}’s rules:</Body>
-              {shown.changes.map((c) => (
-                <View key={c} style={{ flexDirection: 'row', gap: 8 }}>
-                  <Body>•</Body>
-                  <Body style={{ flex: 1 }}>{c}</Body>
-                </View>
-              ))}
-              <Body muted>It needs {biometricName}. Tightening is saved at once.</Body>
-            </View>
-          ) : null}
+          {shown ? <Loosens name={agent.name} changes={shown.changes} /> : null}
           <Button primary label={busy ? 'Saving…' : shown ? `Save with ${biometricName}` : 'Save rules'} disabled={bad || busy} onPress={() => void save()} />
           <Button variant="ghost" label="Cancel" disabled={busy} onPress={() => setTyped(null)} />
         </>
@@ -132,6 +179,24 @@ export function CardLimits({ client, agent, rules, peg, onSaved }: { client: Bff
         </View>
       ) : null}
     </Card>
+  )
+}
+
+/** What a looser change loosens, in the warning note. */
+function Loosens({ name, changes }: { name: string; changes: string[] }) {
+  const { c } = useTheme()
+  const tone = { color: c.tangerineInk, fontSize: 13.5, lineHeight: 19 }
+  return (
+    <LoosensNote>
+      <Body style={tone}>This loosens {name}’s rules:</Body>
+      {changes.map((line) => (
+        <View key={line} style={{ flexDirection: 'row', gap: 8 }}>
+          <Body style={tone}>•</Body>
+          <Body style={{ ...tone, flex: 1 }}>{line}</Body>
+        </View>
+      ))}
+      <Body style={tone}>It needs {biometricName}. Tightening is saved at once.</Body>
+    </LoosensNote>
   )
 }
 
@@ -184,16 +249,25 @@ export function IssueCard({ client, agent, onIssued }: { client: BffClient; agen
         Give {agent.name} a virtual card. Each purchase is paid from its wallet only if its rules allow it, converted from pounds at the day’s European Central Bank
         rate. Stripe issues the card to a person (the cardholder), and a merchant may ask for their billing address. Their phone number is optional.
       </Body>
-      {FIELDS.map((f) => (
-        <Field
-          key={f.key}
-          label={f.required ? f.label : `${f.label} (optional)`}
-          autoComplete={f.auto}
-          inputMode={f.key === 'phone_number' ? 'tel' : f.key === 'email' ? 'email' : undefined}
-          value={holder[f.key]}
-          onChangeText={(t) => setHolder((h) => ({ ...h, [f.key]: t }))}
-        />
-      ))}
+      <View testID={`cardholder-${agent.id}`}>
+        <Card white>
+          <View>
+            {FIELDS.map((f, i) => (
+              <SettingRow
+                key={f.key}
+                testID={`holder-row-${f.key}`}
+                first={i === 0}
+                title={f.required ? f.label : `${f.label} (optional)`}
+                inputWidth={164}
+                autoComplete={f.auto}
+                inputMode={f.key === 'phone_number' ? 'tel' : f.key === 'email' ? 'email' : undefined}
+                value={holder[f.key]}
+                onChangeText={(t) => setHolder((h) => ({ ...h, [f.key]: t }))}
+              />
+            ))}
+          </View>
+        </Card>
+      </View>
       {phone === null ? <Body>The phone number needs its country code, like +44 7700 900123.</Body> : null}
       <Button primary label={busy ? 'Issuing…' : 'Issue a card'} accessibilityLabel="Issue a card" disabled={!ready || busy} onPress={() => void issue()} />
       {refused ? (

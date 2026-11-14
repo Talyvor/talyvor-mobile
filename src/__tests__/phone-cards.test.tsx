@@ -281,3 +281,51 @@ test('B59.44: an agent with no card is issued one with the web’s cardholder fo
     first_name: 'Ada', last_name: 'Lovelace', email: '', phone_number: '+447700900123', line1: '1 Bank St', line2: '', city: 'London', postal_code: 'E14 5AB', country: 'GB',
   })
 })
+
+// B57.160 — in Pocket: the owner's card at the top in its tier art, bare as P3's Cards strip draws it; Change limits as
+// the reference's rules draw a list of settings, each limit a row with what it is now and its amount in LXC; and the
+// cardholder form as a list of settings in one panel.
+describe('Cards’ forms in Pocket', () => {
+  test('the owner’s card sits at the top, above Disputes and refunds, bare as the Cards strip draws it', async () => {
+    mockBff()
+    await renderRouter('./src/app', { initialUrl: '/cards' })
+    await screen.findByTestId('owner-card')
+    const order = screen.getAllByTestId(/^(owner-card|cards-disputes)$/).map((v) => v.props.testID)
+    expect(order).toEqual(['owner-card', 'cards-disputes'])
+  })
+
+  test('Change limits draws each limit as a rule row: its name, what it is now, and its amount in LXC', async () => {
+    mockBff()
+    await renderRouter('./src/app', { initialUrl: '/cards' })
+    await fireEvent.press(within(await screen.findByTestId('card-limits-ag_1')).getByText('Change limits'))
+    const daily = within(screen.getByTestId('limit-row-daily_limit_ulxc'))
+    expect(daily.getByText('Daily limit')).toBeTruthy()
+    expect(daily.getByText('25 LXC')).toBeTruthy()
+    expect(daily.getByLabelText('Daily limit for Research, in LXC').props.value).toBe('25')
+    expect(within(screen.getByTestId('limit-row-hourly_limit_ulxc')).getByText('No limit')).toBeTruthy()
+  })
+
+  test('a looser change is said in Pocket’s warning note before Save with Face ID', async () => {
+    mockBff()
+    mockStore.set('talyvor.device-workspace', 'ws_1')
+    await renderRouter('./src/app', { initialUrl: '/cards' })
+    await fireEvent.press(within(await screen.findByTestId('card-limits-ag_1')).getByText('Change limits'))
+    await fireEvent.changeText(screen.getByLabelText('Daily limit for Research, in LXC'), '40')
+    await fireEvent.press(screen.getByText('Save rules'))
+    const note = within(await screen.findByTestId('loosens-note'))
+    expect(note.getByText('This loosens Research’s rules:')).toBeTruthy()
+    expect(note.getByText('Daily limit: 25 LXC → 40 LXC')).toBeTruthy()
+  })
+
+  test('the cardholder form is a list of settings rows in one panel', async () => {
+    mockBff()
+    await renderRouter('./src/app', { initialUrl: '/cards' })
+    await fireEvent.press(within(await screen.findByTestId('card-head-ag_2')).getByText('Issue a card'))
+    const panel = within(screen.getByTestId('cardholder-ag_2'))
+    for (const [key, label] of [['first_name', 'First name'], ['phone_number', 'Phone (optional)'], ['postal_code', 'Postcode']]) {
+      const row = within(panel.getByTestId(`holder-row-${key}`))
+      expect(row.getByText(label)).toBeTruthy()
+      expect(row.getByLabelText(label)).toBeTruthy()
+    }
+  })
+})

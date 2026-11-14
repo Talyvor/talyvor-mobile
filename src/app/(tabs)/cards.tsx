@@ -24,6 +24,8 @@ import { useSession } from '@/session'
 // the reference's agent page draws its card; the limits are a list in their own panel, like the agent screen's Rules.
 // B59.44 — the owner's or company's own card above the agents', in its account's tier art (B57.128); Change limits, saved
 // as the web's Save rules is and signed with the phone's key when it loosens them; and Issue a card for an agent with none.
+// B57.160 — in Pocket: the owner's card at the top, in its tier art, bare and full width as P3's Cards strip draws it,
+// above Disputes and refunds; Change limits and Issue a card as the reference's rules draw a list of settings.
 
 type Entry = { agent: Agent; card: Held | null; purchases: CardAuthorization[]; rules: AgentRules }
 
@@ -132,18 +134,16 @@ export default function Cards() {
     <Screen onRefresh={reload} refreshing={loading && !!data}>
       <Eyebrow>Cards</Eyebrow>
       <Headline>Your agents’ cards</Headline>
-      <Button label={DISPUTE_WORDS.title} onPress={() => router.push('/disputes')} />
       <LoadState loading={loading && !data} error={error} />
       {account && data?.name ? (
-        <View testID="owner-card">
-          <Card>
-            <Eyebrow>{account.account_type === 'business' ? 'The company’s card' : 'Your card'}</Eyebrow>
-            <View accessible accessibilityLabel={`${data.name}'s card`}>
-              <OwnerCard account={account} holder={data.name} width={width - 76} />
-            </View>
-          </Card>
+        <View testID="owner-card" style={{ gap: 8 }}>
+          <Eyebrow>{account.account_type === 'business' ? 'The company’s card' : 'Your card'}</Eyebrow>
+          <View accessible accessibilityLabel={`${data.name}'s card`}>
+            <OwnerCard account={account} holder={data.name} width={width - 36} />
+          </View>
         </View>
       ) : null}
+      <Button testID="cards-disputes" label={DISPUTE_WORDS.title} onPress={() => router.push('/disputes')} />
       {data && !data.entries.length ? <Body muted>No agents yet.</Body> : null}
       {(data?.entries ?? []).map((h) => (
         <View key={h.agent.id} style={{ gap: 12 }} testID={`card-${h.agent.id}`}>
