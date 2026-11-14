@@ -66,6 +66,9 @@ function mockBff(
     account?: { account_type: 'business' | 'personal'; money_kind: 'fiat' | 'stablecoin' | 'hybrid' }
     name?: string
     accounts?: unknown[] | 'fail'
+    /** B57.70: what the agent's one read (summary) answers besides the agent: its requests waiting, its card frozen */
+    agentApprovals?: unknown[]
+    cardFrozen?: boolean
   } = {},
 ) {
   const calls: { method: string; path: string; auth: string | undefined; body?: string; key?: string }[] = []
@@ -109,6 +112,16 @@ function mockBff(
       approvalStatus = 'denied'
       return { id: 'apr_1', agent_id: 'ag_2', amount_ulxc: 2_000_000, model: '', status: 'denied', deny_reason: JSON.parse(body ?? '{}').reason, created_at: '2026-10-17T08:00:00Z' }
     },
+    // B57.70: the agent's page in one read (Lens B57.12, BFF B57.20): this month's spend, what waits for it, its card.
+    'GET /api/agents/ag_1/summary': () => ({
+      as_of: '2026-10-17T10:00:00Z',
+      agent: agents()[0],
+      all_paused_at: allPausedAt,
+      month: { start: '2026-10-01T00:00:00Z', end: '2026-11-01T00:00:00Z', spent_ulxc: 4_000_000, forecast_ulxc: 6_000_000, monthly_limit_ulxc: 0 },
+      approvals: start.agentApprovals ?? [],
+      card: start.cardFrozen ? { status: 'frozen', currency: 'gbp', last4: '0005' } : { status: 'none' },
+      currency_accounts: [],
+    }),
     'GET /api/agents/ag_1/rules': () => ({ max_per_request_ulxc: 1_000_000, daily_limit_ulxc: 0, monthly_limit_ulxc: 0, approval_above_ulxc: 500_000, allowed_models: null, allowed_providers: null, active_from: '', active_until: '', timezone: 'UTC' }),
     'POST /api/agents/ag_1/fund': () => ({ balance_ulxc: 15_000_000 }),
     'GET /api/money/payees': () => ({
@@ -460,7 +473,7 @@ describe('B41.35 home-screen widget', () => {
 
     // What iOS opens when the widget's Pause is tapped.
     await renderRouter('./src/app', { initialUrl: pauseUrl.replace('talyvor://', '/') })
-    expect(await screen.findByText('Resume')).toBeTruthy()
+    expect(await screen.findByText('Resume with Face ID')).toBeTruthy()
     expect(calls.find((c) => c.method === 'POST' && c.path === '/api/agents/ag_1/pause')?.body).toBe(
       JSON.stringify({ reason: 'Paused from the home-screen widget' }),
     )
@@ -476,7 +489,7 @@ describe('B41.35 home-screen widget', () => {
 
     // TalyvorAgentsProvider opens a talyvor:// target as a link into the app.
     await renderRouter('./src/app', { initialUrl: pause.target.replace('talyvor://', '/') })
-    expect(await screen.findByText('Resume')).toBeTruthy()
+    expect(await screen.findByText('Resume with Face ID')).toBeTruthy()
     expect(calls.filter((c) => c.method === 'POST' && c.path === '/api/agents/ag_1/pause')).toHaveLength(1)
     const after = draw()
     expect(after.texts).toContain('Paused')
@@ -493,11 +506,11 @@ describe('B41.35 home-screen widget', () => {
   test('pinning puts only that agent on the widget, and Fund sends whole µLXC with an idempotency key', async () => {
     const calls = mockBff()
     await renderRouter('./src/app', { initialUrl: '/agents/ag_1' })
-    await fireEvent.press(await screen.findByText('Pin to widget'))
+    await fireEvent.press(await screen.findByRole('switch', { name: 'Pinned to your home-screen widget' }))
     await waitFor(() => expect(lastSnapshot()?.agents.map((a) => a.id)).toEqual(['ag_1']))
 
     await fireEvent.changeText(screen.getByLabelText('Amount in LXC'), '2.5')
-    await fireEvent.press(screen.getByRole('button', { name: 'Fund' }))
+    await fireEvent.press(screen.getByRole('button', { name: 'Fund 2.5 LXC' }))
     await waitFor(() => expect(calls.some((c) => c.path === '/api/agents/ag_1/fund')).toBe(true))
     const fund = calls.find((c) => c.path === '/api/agents/ag_1/fund')!
     expect(fund.body).toBe(JSON.stringify({ amount_ulxc: 2_500_000 }))
@@ -545,6 +558,8 @@ describe('B55.5 Resume signed with Face ID', () => {
     mockPhone.face = true
     mockPhone.reasons = []
   })
+  // The screen's Resume with Face ID opens the sheet; the sheet's, the last one so named, signs.
+  const inSheet = () => screen.getAllByText('Resume with Face ID').at(-1)!
   const resumes = (calls: ReturnType<typeof mockBff>) => calls.filter((c) => c.method === 'POST' && c.path.startsWith('/api/agents/ag_1/resume'))
 
   test("with the phone's key on, Resume asks first, then signs the resume challenge and sends the assertion", async () => {
@@ -553,11 +568,11 @@ describe('B55.5 Resume signed with Face ID', () => {
     const calls = mockBff({ paused: true })
     await renderRouter('./src/app', { initialUrl: '/agents/ag_1' })
 
-    await fireEvent.press(await screen.findByText('Resume'))
+    await fireEvent.press(await screen.findByText('Resume with Face ID'))
     expect(screen.getByText('Resume Researcher?')).toBeTruthy()
     expect(screen.getByText('Its requests and payments are served again, within its rules.')).toBeTruthy()
     expect(resumes(calls)).toEqual([])
-    await fireEvent.press(screen.getByText('Resume with Face ID'))
+    await fireEvent.press(inSheet())
 
     expect(await within(await screen.findByTestId('agent-head')).findByText('Running')).toBeTruthy()
     expect(resumes(calls).map((c) => c.path)).toEqual(['/api/agents/ag_1/resume-challenge', '/api/agents/ag_1/resume'])
@@ -572,11 +587,11 @@ describe('B55.5 Resume signed with Face ID', () => {
     const calls = mockBff({ paused: true })
     await renderRouter('./src/app', { initialUrl: '/agents/ag_1' })
 
-    await fireEvent.press(await screen.findByText('Resume'))
+    await fireEvent.press(await screen.findByText('Resume with Face ID'))
     await fireEvent.press(screen.getByText('Not now'))
     expect(screen.queryByText('Resume Researcher?')).toBeNull()
-    await fireEvent.press(screen.getByText('Resume'))
     await fireEvent.press(screen.getByText('Resume with Face ID'))
+    await fireEvent.press(inSheet())
 
     expect(await screen.findByText('Nothing changed. You can try again.')).toBeTruthy()
     expect(resumes(calls).map((c) => c.path)).toEqual(['/api/agents/ag_1/resume-challenge'])
@@ -588,8 +603,8 @@ describe('B55.5 Resume signed with Face ID', () => {
     mockBff({ paused: true, refuseSigned: true })
     await renderRouter('./src/app', { initialUrl: '/agents/ag_1' })
 
-    await fireEvent.press(await screen.findByText('Resume'))
-    await fireEvent.press(screen.getByText('Resume with Face ID'))
+    await fireEvent.press(await screen.findByText('Resume with Face ID'))
+    await fireEvent.press(inSheet())
     expect(await screen.findByText('Nothing changed. You can try again.')).toBeTruthy()
     expect(screen.queryByText('Device key revoked.')).toBeNull()
   })
@@ -600,8 +615,8 @@ describe('B55.5 Resume signed with Face ID', () => {
     mockBff({ paused: true, sessionEnded: true })
     await renderRouter('./src/app', { initialUrl: '/agents/ag_1' })
 
-    await fireEvent.press(await screen.findByText('Resume'))
-    await fireEvent.press(screen.getByText('Resume with Face ID'))
+    await fireEvent.press(await screen.findByText('Resume with Face ID'))
+    await fireEvent.press(inSheet())
     expect(await screen.findByText('Nothing changed. Sign in again, then try again.')).toBeTruthy()
   })
 
@@ -610,8 +625,6 @@ describe('B55.5 Resume signed with Face ID', () => {
     await renderRouter('./src/app', { initialUrl: '/agents/ag_1' })
 
     await fireEvent.press(await screen.findByText('Resume'))
-    expect(screen.queryByText('Resume Researcher?')).toBeNull()
-
     expect(await screen.findByText('Resume Researcher on the web with your passkey, or turn on Approve with Face ID on this phone.')).toBeTruthy()
     expect(resumes(calls).map((c) => [c.path, c.body])).toEqual([['/api/agents/ag_1/resume', undefined]])
   })
@@ -634,9 +647,68 @@ describe('B55.5 Resume signed with Face ID', () => {
     mockBff({ paused: true, allPaused: true })
     await renderRouter('./src/app', { initialUrl: '/agents/ag_1' })
 
-    await fireEvent.press(await screen.findByText('Resume'))
-    await fireEvent.press(screen.getByText('Resume with Face ID'))
+    await fireEvent.press(await screen.findByText('Resume with Face ID'))
+    await fireEvent.press(inSheet())
     expect(await screen.findByText('Researcher runs when you start every agent again. Until then it stays paused with every agent.')).toBeTruthy()
+  })
+})
+
+describe('B57.70 an agent’s screen', () => {
+  beforeEach(() => {
+    mockStore.clear()
+    mockStore.set('talyvor.session', JSON.stringify({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }))
+    mockPhone.face = true
+    mockPhone.reasons = []
+    mockSnapshots.length = 0
+  })
+  const onKey = () => {
+    mockStore.set('talyvor.device-key', 'dev_1')
+    mockStore.set('talyvor.device-workspace', 'ws_1')
+  }
+
+  test('this month’s spend from its one read, what waits for it with Review, its balance and Running', async () => {
+    const waiting = { id: 'apr_9', agent_id: 'ag_1', amount_ulxc: 3_400_000, model: '', payee: { kind: 'outside', id: 'py_1', name: 'Acme Hosting' }, status: 'pending', created_at: '2026-10-17T08:00:00Z' }
+    const calls = mockBff({ agentApprovals: [waiting] })
+    await renderRouter('./src/app', { initialUrl: '/agents/ag_1' })
+    expect(await screen.findByText('Spent this month: 4 LXC')).toBeTruthy()
+    expect(calls.some((c) => c.path === '/api/agents/ag_1/summary')).toBe(true)
+    expect(screen.queryByText(/Spent so far/)).toBeNull()
+    expect(screen.getByRole('button', { name: 'Review: Researcher wants to pay Acme Hosting' })).toBeTruthy()
+    expect(screen.getByLabelText('12.5 LXC')).toBeTruthy()
+    expect(screen.getByText('Running.')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Statement' })).toBeTruthy()
+  })
+
+  test('a frozen card says so; paused with every agent says so, and Start them with Face ID starts them signed', async () => {
+    onKey()
+    const calls = mockBff({ allPaused: true, cardFrozen: true })
+    await renderRouter('./src/app', { initialUrl: '/agents/ag_1' })
+    expect(await screen.findByText('Paused with every agent.')).toBeTruthy()
+    expect(screen.getByText('Its card is frozen: every purchase on it is refused.')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Pause' })).toBeNull()
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Start them with Face ID' }))
+    expect(await screen.findByText('Start every agent again?')).toBeTruthy()
+    await fireEvent.press(screen.getAllByRole('button', { name: 'Start them with Face ID' }).at(-1)!)
+    expect(await screen.findByText('Running.')).toBeTruthy()
+    const started = calls.filter((c) => c.method === 'POST' && c.path.startsWith('/api/agents/resume-all'))
+    expect(started.map((c) => c.path)).toEqual(['/api/agents/resume-all/challenge', '/api/agents/resume-all'])
+    expect(JSON.parse(started[1].body!)).toEqual({ assertion: { device_id: 'dev_1', challenge: 'ch_resume_all', signature: 'signed:talyvor-device-v1:ch_resume_all' } })
+  })
+
+  test('the pin switch puts it on the home-screen widget, and Fund names the amount and says what it funded', async () => {
+    const calls = mockBff()
+    await renderRouter('./src/app', { initialUrl: '/agents/ag_1' })
+    const pin = await screen.findByRole('switch', { name: 'Pinned to your home-screen widget' })
+    expect(pin.props.accessibilityState.checked).toBe(false)
+    await fireEvent.press(pin)
+    await waitFor(() => expect(lastSnapshot()?.agents.map((a) => a.id)).toEqual(['ag_1']))
+    expect(screen.getByRole('switch', { name: 'Pinned to your home-screen widget' }).props.accessibilityState.checked).toBe(true)
+
+    await fireEvent.changeText(screen.getByLabelText('Amount in LXC'), '2.5')
+    await fireEvent.press(screen.getByRole('button', { name: 'Fund 2.5 LXC' }))
+    expect(await screen.findByText('Funded 2.5 LXC today.')).toBeTruthy()
+    expect(calls.filter((c) => c.path === '/api/agents/ag_1/fund').map((c) => c.body)).toEqual([JSON.stringify({ amount_ulxc: 2_500_000 })])
   })
 })
 
@@ -1135,7 +1207,7 @@ describe('B56.12 labels on the phone', () => {
     // Where a notification lands, the approval's row and its sheet, open over it (B57.67).
     ["an agent's approval", '/approvals/apr_1', 'Buyer wants to use GPU hour', 2],
     ['the statement', '/statement', 'Researcher', 1],
-    ["an agent's money", '/agents/ag_1', 'Spent so far: 0 LXC', 1],
+    ["an agent's money", '/agents/ag_1', 'Spent this month: 4 LXC', 1],
   ]
 
   test.each(screens)('%s says Sandbox or Live as Lens answers, and nothing while it has not', async (_, url, loaded, chips) => {

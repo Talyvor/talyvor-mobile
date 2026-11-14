@@ -1,0 +1,106 @@
+[
+  {
+    "route": "/agents/agt_research",
+    "screen": "p-agent-research",
+    "phoneKey": true,
+    "words": "report",
+    "why": "the tab bar is the tabs' own: an agent's screen opens over them; the room's wallet (p-agent-room) is not drawn, Rooms being held until the partner is live (Nick, 11 Nov); on the web the phone's check is named as on Android, so it reads “your fingerprint”; the Face ID words are checked by src/__tests__/app.test.tsx"
+  },
+  {
+    "route": "/agents/agt_research",
+    "screen": "p-agent-research",
+    "phoneKey": true,
+    "name": "lower",
+    "scroll": "Rules",
+    "words": "report",
+    "why": "the tab bar is the tabs' own: an agent's screen opens over them; the room's wallet (p-agent-room) is not drawn, Rooms being held until the partner is live (Nick, 11 Nov); on the web the phone's check is named as on Android, so it reads “your fingerprint”; the Face ID words are checked by src/__tests__/app.test.tsx"
+  },
+  {
+    "route": "/agents/agt_research",
+    "screen": "p-agent-research",
+    "phoneKey": true,
+    "dark": true,
+    "words": "report",
+    "why": "the tab bar is the tabs' own: an agent's screen opens over them; the room's wallet (p-agent-room) is not drawn, Rooms being held until the partner is live (Nick, 11 Nov); on the web the phone's check is named as on Android, so it reads “your fingerprint”; the Face ID words are checked by src/__tests__/app.test.tsx"
+  },
+  {
+    "route": "/agents/agt_research",
+    "screen": "p-agent-research+presume-research",
+    "phoneKey": true,
+    "press": [
+      "Resume with your fingerprint"
+    ],
+    "answers": {
+      "/api/agents/agt_research/summary": {
+        "as_of": "2026-10-22T09:30:00Z",
+        "agent": {
+          "id": "agt_research",
+          "name": "Research",
+          "colour": "cobalt",
+          "face": "circle",
+          "balance_ulxc": 16500000000,
+          "spent_ulxc": 12400000000,
+          "created_at": "2026-09-14T09:00:00Z",
+          "paused_at": "2026-10-22T09:00:00Z"
+        },
+        "month": {
+          "start": "2026-10-01T00:00:00Z",
+          "end": "2026-11-01T00:00:00Z",
+          "spent_ulxc": 12400000000,
+          "forecast_ulxc": 0,
+          "monthly_limit_ulxc": 0
+        },
+        "approvals": [
+          {
+            "id": "apr_acme",
+            "agent_id": "agt_research",
+            "amount_ulxc": 3400000000,
+            "model": "",
+            "reason": "October hosting invoice",
+            "payee": {
+              "kind": "outside",
+              "id": "py_acme",
+              "name": "Acme Hosting"
+            },
+            "status": "pending",
+            "created_at": "2026-10-22T08:17:00Z",
+            "expires_at": "2026-10-23T08:17:00Z",
+            "paid_from": {
+              "kind": "account",
+              "account_id": "acc_research_usd",
+              "name": "Research’s US dollar account",
+              "currency": "USD",
+              "amount_minor": 34000,
+              "balance_minor": 40000
+            },
+            "asks_above_ulxc": 2500000000,
+            "budget_left_after_ulxc": 4200000000
+          }
+        ],
+        "card": {
+          "status": "active"
+        },
+        "currency_accounts": []
+      }
+    },
+    "refState": {
+      "pR": "1"
+    },
+    "words": "report",
+    "why": "the tab bar is the tabs' own: an agent's screen opens over them; the room's wallet (p-agent-room) is not drawn, Rooms being held until the partner is live (Nick, 11 Nov); on the web the phone's check is named as on Android, so it reads “your fingerprint”; the Face ID words are checked by src/__tests__/app.test.tsx"
+  },
+  {
+    "route": "/agents/agt_sales",
+    "screen": "p-agent-sales",
+    "phoneKey": true,
+    "words": "report",
+    "why": "the tab bar is the tabs' own: an agent's screen opens over them; the room's wallet (p-agent-room) is not drawn, Rooms being held until the partner is live (Nick, 11 Nov); on the web the phone's check is named as on Android, so it reads “your fingerprint”; the Face ID words are checked by src/__tests__/app.test.tsx"
+  },
+  {
+    "route": "/agents/agt_ops",
+    "screen": "p-agent-ops",
+    "phoneKey": true,
+    "words": "report",
+    "why": "the tab bar is the tabs' own: an agent's screen opens over them; the room's wallet (p-agent-room) is not drawn, Rooms being held until the partner is live (Nick, 11 Nov); on the web the phone's check is named as on Android, so it reads “your fingerprint”; the Face ID words are checked by src/__tests__/app.test.tsx"
+  }
+]

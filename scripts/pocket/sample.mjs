@@ -71,6 +71,20 @@ const ANSWERS = {
   '/api/agents/agt_research/rules': { max_per_request_ulxc: lxc(10_000), daily_limit_ulxc: 0, monthly_limit_ulxc: 0, approval_above_ulxc: lxc(2_500), allowed_models: null, allowed_providers: null, active_from: '', active_until: '', timezone: 'Europe/London' },
   '/api/agents/agt_sales/rules': { max_per_request_ulxc: 0, daily_limit_ulxc: lxc(2_000), monthly_limit_ulxc: lxc(20_000), approval_above_ulxc: lxc(1_000), allowed_models: null, allowed_providers: null, active_from: '', active_until: '', timezone: 'Europe/London' },
   '/api/agents/agt_ops/rules': { max_per_request_ulxc: 0, daily_limit_ulxc: 0, monthly_limit_ulxc: lxc(10_000), approval_above_ulxc: 0, allowed_models: null, allowed_providers: null, active_from: '', active_until: '', timezone: 'Europe/London' },
+  // B57.70: each agent's page in one read (Lens B57.12, BFF B57.20): this month's spend, what waits for it, its card.
+  ...Object.fromEntries(
+    agents.map((agent) => [
+      `/api/agents/${agent.id}/summary`,
+      {
+        as_of: SAMPLE_NOW,
+        agent,
+        month: { start: '2026-10-01T00:00:00Z', end: '2026-11-01T00:00:00Z', spent_ulxc: agent.spent_ulxc, forecast_ulxc: 0, monthly_limit_ulxc: 0 },
+        approvals: approvals.filter((a) => a.agent_id === agent.id),
+        card: { status: agent.id === 'agt_research' ? 'active' : 'none' },
+        currency_accounts: [],
+      },
+    ]),
+  ),
   // B59.34 — Research's card (pounds) declined Compute shop, £24.00, yesterday: not one of its payees.
   '/api/agents/agt_research/card': {
     card: { id: 'ic_research', agent_id: 'agt_research', last4: '0005', exp_month: 9, exp_year: 2029, currency: 'gbp', livemode: false, created_at: '2026-09-14T09:00:00Z' },

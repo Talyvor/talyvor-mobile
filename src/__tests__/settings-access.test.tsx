@@ -73,6 +73,9 @@ function mockBff({ type = 'business', keys = [mac, phone], addRefusal }: { type?
         return json({ areas: [] })
       case 'GET /api/agents':
         return json({ workspace_balance_ulxc: 7_000_000, allocated_ulxc: 7_000_000, unallocated_ulxc: 0, spent_ulxc: 0, agents })
+      // B57.70: an agent's page in one read (Lens B57.12, BFF B57.20).
+      case 'GET /api/agents/ag_1/summary':
+        return json({ as_of: '2026-10-17T10:00:00Z', agent: agents[0], month: { start: '2026-10-01T00:00:00Z', end: '2026-11-01T00:00:00Z', spent_ulxc: 0, forecast_ulxc: 0, monthly_limit_ulxc: 0 }, approvals: [], card: { status: 'none' }, currency_accounts: [] })
       case 'GET /api/agents/ag_1/rules':
         return json(rules({ max_per_request_ulxc: 2_000_000, daily_limit_ulxc: 10_000_000 }))
       case 'GET /api/agents/ag_2/rules':

@@ -31,7 +31,7 @@ function Navigator() {
         }}>
         <Stack.Protected guard={signedIn}>
           <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="agents/[id]" options={{ headerShown: true, title: 'Agent' }} />
+          <Stack.Screen name="agents/[id]" />
           <Stack.Screen name="payees/[id]" />
           <Stack.Screen name="approve/[id]" options={{ headerShown: true, title: 'Approve' }} />
           <Stack.Screen name="approvals/[id]" />
