@@ -106,6 +106,10 @@ beforeEach(() => {
 })
 afterEach(() => jest.useRealTimers())
 
+/** An element and every element inside it. */
+type Tree = { children: readonly (Tree | string)[] }
+const everyElement = <T extends Tree>(n: T): T[] => [n, ...n.children.flatMap((c) => (typeof c === 'string' ? [] : everyElement(c as T)))]
+
 describe('Settings', () => {
   test('opens from the top right of Home and shows whose account this is', async () => {
     mockBff()
@@ -136,37 +140,31 @@ describe('Settings', () => {
     expect(await screen.findByText('See all in Activity')).toBeTruthy()
   })
 
-  test('B57.138: the kind of money is P11’s choices, a single kind blocked by what the other side holds', async () => {
-    const held = (id: string, currency: string, purpose: string, balance_minor: number) => ({ id, currency, purpose, status: 'open', name: id, balance_minor })
-    mockBff({
-      account: { account_type: 'business', money_kind: 'hybrid' },
-      accounts: [held('acc_usd', 'USD', 'company', 3_000_000), held('acc_usd_ag', 'USD', 'agent', 158_000), held('acc_usdc', 'USDC', 'company', 16_700_000_000)],
-    })
+  // B61.5 — Nick, 15 Nov: the type and the kind of money are fixed once the account is open; another of either is
+  // another account, with its own sign-up. Settings draws both as facts, with no control and no call that changes either.
+  test.each([
+    ['business', 'hybrid', 'Business', 'Hybrid'],
+    ['personal', 'fiat', 'Personal', 'Fiat only'],
+    ['business', 'stablecoin', 'Business', 'Stablecoin and crypto only'],
+  ] as const)('B61.5: %s and %s are two facts with their sentences, no control and no money-kind call', async (account_type, money_kind, typeChip, kindChip) => {
+    const calls = mockBff({ account: { account_type, money_kind } })
     await renderRouter('./src/app', { initialUrl: '/settings' })
-    const kinds = await screen.findByLabelText('Kind of money')
-    expect(kinds.props.accessibilityRole).toBe('radiogroup')
-    const choice = (name: string) => within(kinds).getByRole('radio', { name: new RegExp(`^${name}`) })
-    expect(choice('Hybrid').props.accessibilityState).toMatchObject({ checked: true })
-    expect(within(choice('Hybrid')).getByText('Current')).toBeTruthy()
-    expect(choice('Fiat only').props.accessibilityState).toMatchObject({ checked: false })
-    expect(within(choice('Fiat only')).getByText('Needs zero stablecoin and crypto balances. They hold 16,700.00 USDC.')).toBeTruthy()
-    expect(within(choice('Stablecoin and crypto only')).getByText('Needs zero fiat balances. They hold $31,580.00.')).toBeTruthy()
-    expect(screen.getByText('Hybrid can become a single kind only when the other side’s balances are zero.')).toBeTruthy()
-    expect(within(screen.getByTestId('settings-account-type')).getByText('Business')).toBeTruthy()
-    expect(screen.getByText('The type can’t be changed. You can hold several accounts and switch between them.')).toBeTruthy()
-  })
-
-  test('B57.138: a single kind can become Hybrid at any time, and an unread balance keeps the rule without a figure', async () => {
-    mockBff({ account: { account_type: 'personal', money_kind: 'fiat' }, accounts: null })
-    await renderRouter('./src/app', { initialUrl: '/settings' })
-    const kinds = await screen.findByLabelText('Kind of money')
-    expect(kinds.props.accessibilityRole).toBe('radiogroup')
-    const choice = (name: string) => within(kinds).getByRole('radio', { name: new RegExp(`^${name}`) })
-    expect(choice('Fiat only').props.accessibilityState).toMatchObject({ checked: true })
-    expect(within(choice('Hybrid')).queryByText(/^Needs zero/)).toBeNull()
-    expect(within(choice('Stablecoin and crypto only')).getByText('Needs zero fiat balances.')).toBeTruthy()
-    expect(screen.getByText('Fiat only or Stablecoin and crypto only can become Hybrid at any time.')).toBeTruthy()
-    expect(within(screen.getByTestId('settings-account-type')).getByText('Personal')).toBeTruthy()
+    const kind = await screen.findByTestId('settings-money-kind')
+    const type = screen.getByTestId('settings-account-type')
+    expect(within(kind).getByText('Kind of money')).toBeTruthy()
+    expect(within(kind).getByText(kindChip)).toBeTruthy()
+    expect(within(kind).getByText('The kind of money can’t be changed later. To use another kind, open another account.')).toBeTruthy()
+    expect(within(type).getByText(typeChip)).toBeTruthy()
+    expect(within(type).getByText('The type can’t be changed later. To use another type, open another account.')).toBeTruthy()
+    expect(screen.queryByLabelText('Kind of money')).toBeNull()
+    for (const card of [kind, type]) {
+      expect(within(card).queryAllByRole('radio')).toEqual([])
+      expect(within(card).queryAllByRole('button')).toEqual([])
+      for (const el of everyElement(card)) await fireEvent.press(el)
+    }
+    expect(screen.queryByText(/can become Hybrid|can become a single kind|Change to|Needs zero/)).toBeNull()
+    expect(calls.filter((c) => c.path.includes('money-kind'))).toEqual([])
+    expect(calls.filter((c) => c.method !== 'GET')).toEqual([])
   })
 
   test('signs out of this phone', async () => {

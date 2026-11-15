@@ -50,18 +50,10 @@ export function shows({ account_type, money_kind }: Account): Shows {
 
 export const TYPE_LABEL: Record<AccountType, string> = { business: 'Business', personal: 'Personal' }
 export const KIND_LABEL: Record<MoneyKind, string> = { fiat: 'Fiat only', stablecoin: 'Stablecoin and crypto only', hybrid: 'Hybrid' }
-export const KIND_LINE: Record<MoneyKind, string> = {
-  fiat: 'Your agents pay ordinary bills with cards and bank transfers.',
-  stablecoin: 'Your agents work on chain.',
-  hybrid: 'Both side by side, under one set of rules.',
-}
 const KIND_CHIP: Record<MoneyKind, string> = { fiat: 'Fiat', stablecoin: 'Stablecoin', hybrid: 'Hybrid' }
 
 /** The account's chip, as the switcher shows it: "Business · Hybrid". */
 export const accountChip = (a: Account) => `${TYPE_LABEL[a.account_type]} · ${KIND_CHIP[a.money_kind]}`
-
-/** Settings' line under the account's type. */
-export const TYPE_FIXED = 'The type can’t be changed. You can hold several accounts and switch between them.'
 
 /** Pay, for a Stablecoin and crypto account: it has no bank transfers. */
 export const PAY_ON_CHAIN = 'Your agents work on chain: each agent’s wallet address is on Agent Wallets.'

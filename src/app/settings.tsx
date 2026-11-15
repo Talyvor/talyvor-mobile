@@ -73,7 +73,7 @@ export default function SettingsScreen() {
             ) : null}
           </Card>
 
-          {account ? <AccountSettings client={client} account={account} /> : null}
+          {account ? <AccountSettings account={account} /> : null}
 
           <SecurityKeys />
           {account?.account_type === 'business' ? <TeamAndRoles /> : null}

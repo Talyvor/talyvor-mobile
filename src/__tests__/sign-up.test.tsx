@@ -29,8 +29,9 @@ const WEB = {
   },
   labels: { name: 'Your name', companyName: 'Company name', registrationNumber: 'Registration number', country: 'Country' },
   errors: { name: 'Add your name.', companyName: 'Add the company name.', registrationNumber: 'Add the registration number.', country: 'Pick your country.' },
-  typeNote: 'The type can’t be changed later. You can hold several accounts and switch between them.',
-  kindNote: 'Fiat only or Stablecoin and crypto only can become Hybrid at any time.',
+  // B61.4 (suite PR #1116): the type and the kind are fixed once the account is open; another of either is another account.
+  typeNote: 'The type can’t be changed later. To use another type, open another account.',
+  kindNote: 'The kind of money can’t be changed later. To use another kind, open another account.',
 }
 
 const mockStore = new Map<string, string>()
@@ -166,6 +167,7 @@ test("step 2 shows the web's words for the kind of money, and waits for one", as
     for (const item of WEB.lists.personal[i]) expect(screen.getByText(item)).toBeTruthy()
   })
   expect(screen.getByText(WEB.kindNote)).toBeTruthy()
+  expect(texts().some((t) => /can become Hybrid/.test(t))).toBe(false)
   expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled()
 
   await fireEvent.press(screen.getByRole('button', { name: 'Back' }))
