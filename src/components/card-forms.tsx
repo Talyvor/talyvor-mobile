@@ -1,4 +1,4 @@
-import { BffError, formatULXC, parseLXC, refusalText, rulesInWords, type Agent, type AgentRules, type BffClient, type Cardholder } from '@talyvor/bff-client'
+import { BffError, dollarsText, formatLXC, parseDollars, refusalText, rulesInWords, type Agent, type AgentRules, type BffClient, type Cardholder } from '@talyvor/bff-client'
 import { useState, type ReactNode } from 'react'
 import { Text, TextInput, View, type TextInputProps } from 'react-native'
 
@@ -74,21 +74,20 @@ const LIMITS = [
 
 type LimitField = (typeof LIMITS)[number][0]
 
-/** 25,000,000 µLXC → `25`; no limit → empty. */
-const limitText = (micros: number | undefined) => (micros && micros > 0 ? String(micros / 1_000_000) : '')
-
 /** The rules as read with only the limits changed: every other rule, the ones the phone does not draw included, is sent
- * back as it was, since a save replaces the rules whole. */
-function withLimits(rules: AgentRules, typed: Record<LimitField, string>): AgentRules {
+ * back as it was, since a save replaces the rules whole. B61.15: a limit is typed in dollars; one left as it was shown
+ * keeps its exact amount, so a limit Lens holds between two cents never moves by being shown. */
+function withLimits(rules: AgentRules, typed: Record<LimitField, string>, peg: number | null): AgentRules {
   const out: AgentRules = { ...rules }
   for (const [f] of LIMITS) {
-    const value = parseLXC(typed[f]) ?? 0
+    if (typed[f].trim() === dollarsText(rules[f], peg)) continue
+    const value = parseDollars(typed[f], peg) ?? 0
     if (value !== (rules[f] ?? 0)) out[f] = value
   }
   return out
 }
 
-/** The card's limits as sentences, and Change limits: the web's six limits in LXC, saved as the web's Save rules is. */
+/** The card's limits as sentences, and Change limits: the web's six limits in dollars, saved as the web's Save rules is. */
 export function CardLimits({ client, agent, rules, peg, onSaved }: { client: BffClient; agent: Agent; rules: AgentRules; peg: number | null; onSaved: () => void }) {
   const [typed, setTyped] = useState<Record<LimitField, string> | null>(null)
   // What Lens said the change last asked about loosens, while it is still the change on the form.
@@ -97,12 +96,12 @@ export function CardLimits({ client, agent, rules, peg, onSaved }: { client: Bff
   const [busy, setBusy] = useState(false)
 
   const open = () => {
-    setTyped(Object.fromEntries(LIMITS.map(([f]) => [f, limitText(rules[f])])) as Record<LimitField, string>)
+    setTyped(Object.fromEntries(LIMITS.map(([f]) => [f, dollarsText(rules[f], peg)])) as Record<LimitField, string>)
     setJudged(null)
     setSaid(null)
   }
-  const bad = typed !== null && LIMITS.some(([f]) => typed[f].trim() !== '' && parseLXC(typed[f]) === null)
-  const proposed = typed && !bad ? withLimits(rules, typed) : null
+  const bad = typed !== null && LIMITS.some(([f]) => typed[f].trim() !== '' && typed[f].trim() !== dollarsText(rules[f], peg) && parseDollars(typed[f], peg) === null)
+  const proposed = typed && !bad ? withLimits(rules, typed, peg) : null
   const shown = proposed && judged?.change === JSON.stringify(proposed) ? judged : null
 
   const save = async () => {
@@ -144,11 +143,12 @@ export function CardLimits({ client, agent, rules, peg, onSaved }: { client: Bff
               <Body style={{ flex: 1 }}>{r}</Body>
             </View>
           ))}
-          <Button label="Change limits" accessibilityLabel={`Change ${agent.name}’s limits`} onPress={open} />
+          {/* Until the peg is read, a typed dollar cannot be counted, so the limits are not opened. */}
+          <Button label="Change limits" accessibilityLabel={`Change ${agent.name}’s limits`} disabled={!peg} onPress={open} />
         </>
       ) : (
         <>
-          <Body muted>LXC; empty for no limit</Body>
+          <Body muted>Dollars; empty for no limit</Body>
           <View>
             {LIMITS.map(([f, label], i) => (
               <SettingRow
@@ -156,10 +156,10 @@ export function CardLimits({ client, agent, rules, peg, onSaved }: { client: Bff
                 testID={`limit-row-${f}`}
                 first={i === 0}
                 title={label}
-                sub={rules[f] && rules[f] > 0 ? formatULXC(rules[f]) : 'No limit'}
-                unit="LXC"
+                sub={rules[f] && rules[f] > 0 ? formatLXC(rules[f], peg) : 'No limit'}
+                unit="USD"
                 inputWidth={112}
-                accessibilityLabel={`${label} for ${agent.name}, in LXC`}
+                accessibilityLabel={`${label} for ${agent.name}, in dollars`}
                 inputMode="decimal"
                 placeholder="No limit"
                 value={typed[f]}
@@ -167,7 +167,7 @@ export function CardLimits({ client, agent, rules, peg, onSaved }: { client: Bff
               />
             ))}
           </View>
-          {bad ? <Body>A limit is an amount of LXC with at most six decimals, or empty.</Body> : null}
+          {bad ? <Body>A limit is an amount of dollars with at most two decimals, or empty.</Body> : null}
           {shown ? <Loosens name={agent.name} changes={shown.changes} /> : null}
           <Button primary label={busy ? 'Saving…' : shown ? `Save with ${biometricName}` : 'Save rules'} disabled={bad || busy} onPress={() => void save()} />
           <Button variant="ghost" label="Cancel" disabled={busy} onPress={() => setTyped(null)} />

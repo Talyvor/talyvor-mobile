@@ -122,7 +122,7 @@ test('Approve with Face ID sends this phone’s signature over the challenge, an
   expect(result.getByText('The card payment at Northwind Books goes ahead.')).toBeTruthy()
   expect(result.getByLabelText('Signed with: Face ID on this iPhone')).toBeTruthy()
   expect(result.getByLabelText('Paid from: Research’s card')).toBeTruthy()
-  expect(mockPhone.reasons).toEqual(['Approve $120.00 (1,200 LXC) at Northwind Books on Research’s card'])
+  expect(mockPhone.reasons).toEqual(['Approve $120.00 at Northwind Books on Research’s card'])
   expect(JSON.parse(calls.find((c) => c.path === '/api/agents/approvals/apr_3ds/approve')!.body!)).toEqual({ assertion: signed })
 })
 
@@ -134,7 +134,7 @@ test('Decline is signed at once, with no reason to give, and a phone with no key
   const result = within(await screen.findByTestId('approval-result'))
   expect(result.getByText('Declined. The card payment at Northwind Books does not go through.')).toBeTruthy()
   expect(result.getByLabelText('Declined with: Face ID on this iPhone')).toBeTruthy()
-  expect(mockPhone.reasons).toEqual(['Decline $120.00 (1,200 LXC) at Northwind Books on Research’s card'])
+  expect(mockPhone.reasons).toEqual(['Decline $120.00 at Northwind Books on Research’s card'])
   expect(JSON.parse(calls.find((c) => c.path === '/api/agents/approvals/apr_3ds/deny')!.body!)).toEqual({ assertion: signed })
 
   // Lens refuses an unsigned answer either way, so without a key neither button is offered.

@@ -15,7 +15,7 @@ import { fonts, useTheme } from '@/theme'
 // B59.35 — Activity, from Home and from an agent: every movement in a month, filtered by agent, by kind and by words as
 // the web's statement is (suite B28.51), and the statement for the period to download as the web's Download writes it.
 // B57.132 — drawn in Pocket: its own Back and headline with the label, the period as the statement's line under it, the
-// filters as Pocket's tabs, and every movement as the statement's rows, the dollars over the LXC.
+// filters as Pocket's tabs, and every movement as the statement's rows, in dollars (B61.15).
 
 const FORMATS: readonly [StatementFormat, string][] = [
   ['csv', 'CSV'],

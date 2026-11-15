@@ -44,7 +44,7 @@ test('a held payment stays on the lock screen until it is approved or declined',
   await syncLiveActivities(client)
   expect(mockActivities.map((a) => [a.url, a.props.state, a.props.title, a.props.amount])).toEqual([
     ['talyvor://approve/preq_1', 'waiting', 'Acme Hosting', '£25.00'],
-    ['talyvor://approvals/apr_1', 'waiting', 'Bolt Couriers', '$0.20 (2 LXC)'],
+    ['talyvor://approvals/apr_1', 'waiting', 'Bolt Couriers', '$0.20'],
   ])
   expect(mockActivities[0].props.hint).toBe('Tap to approve with Face ID')
 

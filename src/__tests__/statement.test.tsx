@@ -118,15 +118,15 @@ test('every movement reads by model and day, newest first, each model’s platfo
   expect(screen.getByText(/^Sales · Yesterday, \d\d:\d\d · 410 requests$/)).toBeTruthy()
 })
 
-test('each wallet now shows its balance dollars first and opens its agent, as each movement does', async () => {
+// B61.15: each agent's credit balance is the parked gateway's, so the statement draws its movements alone, in dollars.
+test('each movement is in dollars and opens its agent, and no credit balance is drawn', async () => {
   mockBff()
   await renderRouter('./src/app', { initialUrl: '/statement' })
-  expect(await screen.findByText('Each wallet now')).toBeTruthy()
-  expect(screen.getByLabelText('$1,650.00 (16,500 LXC)')).toBeTruthy()
-  expect(screen.getByLabelText('$1,200.00 (12,000 LXC)')).toBeTruthy()
-
-  await fireEvent.press(screen.getByRole('button', { name: /^Sales/ }))
-  await waitFor(() => expect(screen).toHavePathname('/agents/ag_2'))
+  expect(await screen.findByText('Claude Sonnet 5')).toBeTruthy()
+  expect(screen.queryByText('Each wallet now')).toBeNull()
+  expect(screen.queryByLabelText('$1,650.00')).toBeNull()
+  expect(screen.getByLabelText('-$42.00')).toBeTruthy()
+  expect(screen.queryByText(/LXC/)).toBeNull()
 
   await renderRouter('./src/app', { initialUrl: '/statement' })
   await fireEvent.press(await screen.findByRole('button', { name: /^claude-haiku-4-5/ }))

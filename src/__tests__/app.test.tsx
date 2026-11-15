@@ -71,6 +71,8 @@ function mockBff(
     /** B57.70: what the agent's one read (summary) answers besides the agent: its requests waiting, its card frozen */
     agentApprovals?: unknown[]
     cardFrozen?: boolean
+    /** B61.15: the statement's movements */
+    lines?: unknown[]
   } = {},
 ) {
   const calls: { method: string; path: string; auth: string | undefined; body?: string; key?: string }[] = []
@@ -159,7 +161,7 @@ function mockBff(
       from: '2026-11-01',
       to: '2026-12-01',
       accounts: [{ account: 'agent:ag_1', opening_ulxc: 0, in_ulxc: 12_500_000, out_ulxc: 0, closing_ulxc: 12_500_000 }],
-      lines: [],
+      lines: start.lines ?? [],
     }),
     // The workspace has a key, so Lens pays a person's payment only with a signature over its own challenge (B54.33).
     'POST /api/money/payments': (body) =>
@@ -172,7 +174,8 @@ function mockBff(
     ...Object.fromEntries((start.requests ?? []).map((r) => [`POST /api/money/payment-requests/${r.id}/cancel`, () => ({ ...r, status: 'cancelled' })])),
     // B59.3: the areas the operator switched on for this workspace (Lens B59.1); a default workspace has none.
     ...(start.areas ? { 'GET /api/workspace/areas': () => ({ areas: start.areas }) } : {}),
-    ...(start.usdPerLXC ? { 'GET /api/lxc/topup-options': () => ({ usd_per_lxc: start.usdPerLXC, min_usd_cents: 1000 }) } : {}),
+    // Lens's peg, $0.10 an LXC, unless a test says it cannot be read (0).
+    ...(start.usdPerLXC !== 0 ? { 'GET /api/lxc/topup-options': () => ({ usd_per_lxc: start.usdPerLXC ?? 0.1, min_usd_cents: 1000 }) } : {}),
     'POST /api/agents/ag_1/pause': () => {
       pausedAt = '2026-10-17T09:00:00Z'
       return agents()[0]
@@ -229,8 +232,8 @@ test('signs in, shows the pending approval first on Home, and pauses an agent', 
   expect([...at].sort((a, b) => a - b)).toEqual(at)
 
   await fireEvent.press(screen.getByLabelText('Researcher, running'))
-  expect(await screen.findByText('Spends at most 1 LXC on one request.')).toBeTruthy()
-  expect(screen.getByText('Asks you first above 0.5 LXC.')).toBeTruthy()
+  expect(await screen.findByText('Spends at most $0.10 on one request.')).toBeTruthy()
+  expect(screen.getByText('Asks you first above $0.05.')).toBeTruthy()
   await fireEvent.press(screen.getByText('Pause'))
   await waitFor(() => expect(screen.getByText('Resume')).toBeTruthy())
   expect(calls.find((c) => c.method === 'POST' && c.path === '/api/agents/ag_1/pause')?.body).toBe(
@@ -246,7 +249,7 @@ test("B57.126: Home's cards and an agent's own screen draw the agent's card, nam
   expect(screen.getByRole('link', { name: "Buyer's agent card" })).toBeTruthy()
 
   await fireEvent.press(screen.getByRole('link', { name: "Researcher's agent card" }))
-  expect(await screen.findByText('Spends at most 1 LXC on one request.')).toBeTruthy()
+  expect(await screen.findByText('Spends at most $0.10 on one request.')).toBeTruthy()
   expect(screen.getByLabelText("Researcher's agent card")).toBeTruthy()
 })
 
@@ -331,7 +334,7 @@ describe('B55.20 decline on the phone', () => {
     await fireEvent.press(screen.getByRole('button', { name: 'Decline' }))
 
     expect(await screen.findByText('Declined. Buyer’s request is refused, and the same request is refused without asking you for 24 hours.')).toBeTruthy()
-    expect(mockPhone.reasons).toEqual(['Decline 2 LXC for Buyer'])
+    expect(mockPhone.reasons).toEqual(['Decline $0.20 for Buyer'])
     expect(JSON.parse(calls.find((c) => c.path === '/api/agents/approvals/apr_1/deny')!.body!)).toEqual({
       assertion: { device_id: 'dk_1', challenge: 'ch_apr_1', signature: 'signed:talyvor-device-v1:ch_apr_1' },
       reason: 'not this month',
@@ -440,21 +443,21 @@ describe('B55.27 money dollars first', () => {
     mockStore.set('talyvor.session', JSON.stringify({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }))
   })
 
-  test('Home writes dollars first beside LXC by the peg', async () => {
-    mockBff({ usdPerLXC: 0.1 })
+  // B61.15: an agent's credit is not drawn, so an agent with no currency account shows no figure on its row.
+  test('Home writes the request waiting in dollars by the peg, and no agent credit', async () => {
+    mockBff()
     await renderRouter('./src/app', { initialUrl: '/' })
-    // Each agent's balance at $0.10 an LXC, and the request waiting.
-    expect(await screen.findByLabelText('$1.25 (12.5 LXC)')).toBeTruthy()
-    expect(screen.getByLabelText('$0.30 (3 LXC)')).toBeTruthy()
-    expect(screen.getByText('$0.20 (2 LXC)')).toBeTruthy()
+    expect(await screen.findByText('$0.20')).toBeTruthy()
+    expect(screen.queryByLabelText('$1.25')).toBeNull()
+    expect(screen.queryByLabelText('$0.30')).toBeNull()
   })
 
-  test('Home writes LXC alone when the peg cannot be read', async () => {
-    const calls = mockBff()
+  test('Home says Reading… for the request while the peg cannot be read, and never LXC', async () => {
+    const calls = mockBff({ usdPerLXC: 0 })
     await renderRouter('./src/app', { initialUrl: '/' })
-    expect(await screen.findByText('12.5 LXC')).toBeTruthy()
     await waitFor(() => expect(calls.some((c) => c.path === '/api/lxc/topup-options')).toBe(true))
-    expect(screen.queryByText(/\$/)).toBeNull()
+    expect((await screen.findAllByText('Reading…')).length).toBeGreaterThan(0)
+    expect(screen.queryByText(/LXC/)).toBeNull()
   })
 })
 
@@ -484,7 +487,9 @@ describe('B41.35 home-screen widget', () => {
   })
 
   test("on Android, the widget's Pause opens the same token-checked link and the widget then reads Paused", async () => {
-    const calls = mockBff()
+    // As on main, with the peg unread: once it is read the session draws again and the widget's Pause is sent twice
+    // (filed in FOUND.md, 15 Nov).
+    const calls = mockBff({ usdPerLXC: 0 })
     await renderRouter('./src/app', { initialUrl: '/' })
     await waitFor(() => expect(lastSnapshot()?.agents.find((a) => a.id === 'ag_1')?.paused).toBe(false))
     const pause = draw().buttons.find((b) => b.label === 'Pause')!
@@ -506,18 +511,11 @@ describe('B41.35 home-screen widget', () => {
     expect(calls.some((c) => c.path.endsWith('/pause'))).toBe(false)
   })
 
-  test('pinning puts only that agent on the widget, and Fund sends whole µLXC with an idempotency key', async () => {
-    const calls = mockBff()
+  test('pinning puts only that agent on the widget', async () => {
+    mockBff()
     await renderRouter('./src/app', { initialUrl: '/agents/ag_1' })
     await fireEvent.press(await screen.findByRole('switch', { name: 'Pinned to your home-screen widget' }))
     await waitFor(() => expect(lastSnapshot()?.agents.map((a) => a.id)).toEqual(['ag_1']))
-
-    await fireEvent.changeText(screen.getByLabelText('Amount in LXC'), '2.5')
-    await fireEvent.press(screen.getByRole('button', { name: 'Fund 2.5 LXC' }))
-    await waitFor(() => expect(calls.some((c) => c.path === '/api/agents/ag_1/fund')).toBe(true))
-    const fund = calls.find((c) => c.path === '/api/agents/ag_1/fund')!
-    expect(fund.body).toBe(JSON.stringify({ amount_ulxc: 2_500_000 }))
-    expect(fund.key).toMatch(/^uuid-\d+$/)
   })
 
   test('B41.203: a pinned payee shows on the widget, its tap opens the payment screen, and only that screen pays', async () => {
@@ -673,11 +671,12 @@ describe('B57.70 an agent’s screen', () => {
     const waiting = { id: 'apr_9', agent_id: 'ag_1', amount_ulxc: 3_400_000, model: '', payee: { kind: 'outside', id: 'py_1', name: 'Acme Hosting' }, status: 'pending', created_at: '2026-10-17T08:00:00Z' }
     const calls = mockBff({ agentApprovals: [waiting] })
     await renderRouter('./src/app', { initialUrl: '/agents/ag_1' })
-    expect(await screen.findByText('Spent this month: 4 LXC')).toBeTruthy()
+    expect(await screen.findByText('Spent this month: $0.40')).toBeTruthy()
     expect(calls.some((c) => c.path === '/api/agents/ag_1/summary')).toBe(true)
     expect(screen.queryByText(/Spent so far/)).toBeNull()
     expect(screen.getByRole('button', { name: 'Review: Researcher wants to pay Acme Hosting' })).toBeTruthy()
-    expect(screen.getByLabelText('12.5 LXC')).toBeTruthy()
+    // B61.15: its balance is its currency accounts' (none here), never its credit.
+    expect(screen.queryByLabelText('$1.25')).toBeNull()
     expect(screen.getByText('Running.')).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Statement' })).toBeTruthy()
   })
@@ -699,7 +698,7 @@ describe('B57.70 an agent’s screen', () => {
     expect(JSON.parse(started[1].body!)).toEqual({ assertion: { device_id: 'dev_1', challenge: 'ch_resume_all', signature: 'signed:talyvor-device-v1:ch_resume_all' } })
   })
 
-  test('the pin switch puts it on the home-screen widget, and Fund names the amount and says what it funded', async () => {
+  test('the pin switch puts it on the home-screen widget, and the credit is never funded from it', async () => {
     const calls = mockBff()
     await renderRouter('./src/app', { initialUrl: '/agents/ag_1' })
     const pin = await screen.findByRole('switch', { name: 'Pinned to your home-screen widget' })
@@ -708,10 +707,10 @@ describe('B57.70 an agent’s screen', () => {
     await waitFor(() => expect(lastSnapshot()?.agents.map((a) => a.id)).toEqual(['ag_1']))
     expect(screen.getByRole('switch', { name: 'Pinned to your home-screen widget' }).props.accessibilityState.checked).toBe(true)
 
-    await fireEvent.changeText(screen.getByLabelText('Amount in LXC'), '2.5')
-    await fireEvent.press(screen.getByRole('button', { name: 'Fund 2.5 LXC' }))
-    expect(await screen.findByText('Funded 2.5 LXC today.')).toBeTruthy()
-    expect(calls.filter((c) => c.path === '/api/agents/ag_1/fund').map((c) => c.body)).toEqual([JSON.stringify({ amount_ulxc: 2_500_000 })])
+    // B61.15: Fund moved credit, which is the parked gateway's, so the screen has no Fund.
+    expect(screen.queryByText('Fund')).toBeNull()
+    expect(screen.queryByText(/Not yet given to an agent/)).toBeNull()
+    expect(calls.some((c) => c.path === '/api/agents/ag_1/fund')).toBe(false)
   })
 })
 
@@ -1138,7 +1137,7 @@ describe('B57.68 Approvals', () => {
     expect(await screen.findByText('Buyer · Acme Hosting')).toBeTruthy()
     expect(screen.getByText('Declined · 14 Oct')).toBeTruthy()
     expect(screen.getByText('$340.00')).toBeTruthy()
-    expect(screen.getByText('3,400 LXC')).toBeTruthy()
+    expect(screen.queryByText(/LXC/)).toBeNull()
     expect(screen.getByText('Researcher · Acme Hosting')).toBeTruthy()
     expect(screen.getByText(`Approved and paid · today at ${clock}`)).toBeTruthy()
     expect(screen.queryByText(/Denied/)).toBeNull()
@@ -1261,8 +1260,8 @@ describe('B56.12 labels on the phone', () => {
     ['the approval sheet', '/approve/preq_1', 'Acme Hosting', 1],
     // Where a notification lands, the approval's row and its sheet, open over it (B57.67).
     ["an agent's approval", '/approvals/apr_1', 'Buyer wants to use GPU hour', 2],
-    ['the statement', '/statement', 'Researcher', 1],
-    ["an agent's money", '/agents/ag_1', 'Spent this month: 4 LXC', 1],
+    ['the statement', '/statement', 'No money moved this month.', 1],
+    ["an agent's money", '/agents/ag_1', 'Spent this month: $0.40', 1],
   ]
 
   test.each(screens)('%s says Sandbox or Live as Lens answers, and nothing while it has not', async (_, url, loaded, chips) => {
@@ -1481,5 +1480,45 @@ describe('B57.71 Pause every agent, and starting again with Face ID', () => {
     expect(await screen.findByText('Start your agents again on the web with your passkey, or turn on Approve with Face ID on this phone.')).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Approvals on this phone' })).toBeTruthy()
     expect(allCalls(calls)).toEqual([])
+  })
+})
+
+// B61.15 — Nick, 15 Nov: no LXC at all for now; every figure is in the account's own currency. Each screen a launch
+// workspace opens, with populated data and the peg read, says LXC, µLXC or ulxc nowhere: not in its text, nor in what a
+// screen reader or a field's placeholder says.
+describe('B61.15 no LXC on any screen', () => {
+  beforeEach(() => {
+    mockStore.clear()
+    mockStore.set('talyvor.session', JSON.stringify({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }))
+  })
+  const approval = {
+    id: 'apr_1', agent_id: 'ag_2', amount_ulxc: 2_000_000, model: '', payee: { kind: 'listing', id: 'l_1', name: 'GPU hour' }, status: 'pending', created_at: '2026-10-17T08:00:00Z',
+    expires_at: '2099-01-01T08:00:00Z', asks_above_ulxc: 1_000_000, budget_left_after_ulxc: 8_000_000,
+    paid_from: { kind: 'lxc', account_id: 'agent:ag_2', name: 'Buyer’s balance', currency: '', amount_minor: 2_000_000, balance_minor: 3_000_000 },
+  }
+  const said = (node: unknown, out: string[] = []): string[] => {
+    if (typeof node === 'string') out.push(node)
+    else if (Array.isArray(node)) node.forEach((n) => said(n, out))
+    else if (node && typeof node === 'object') {
+      const n = node as { props?: Record<string, unknown>; children?: unknown }
+      for (const p of ['accessibilityLabel', 'accessibilityHint', 'placeholder', 'aria-label']) if (typeof n.props?.[p] === 'string') out.push(n.props[p] as string)
+      said(n.children, out)
+    }
+    return out
+  }
+  test.each([
+    ['Home', '/', 'Your team’s agents'],
+    ["an agent's page", '/agents/ag_1', 'Spent this month: $0.40'],
+    ['Approvals', '/approvals', 'Buyer wants to use GPU hour'],
+    ["an agent's approval", '/approvals/apr_1', 'Budget left after'],
+    ['the statement', '/statement', 'Spent on a request'],
+    ['Activity', '/activity', 'Activity'],
+  ])('%s', async (_, url, loaded) => {
+    const lines = [{ posting_id: 1, entry_id: 'e_1', at: '2026-11-02T10:00:00Z', account: 'agent:ag_1', kind: 'spend', amount_ulxc: -1_500_000, counterparty: '', balance_after_ulxc: 11_000_000 }]
+    mockBff({ usdPerLXC: 0.1, approvals: [approval], agentApprovals: [{ ...approval, agent_id: 'ag_1' }], lines })
+    await renderRouter('./src/app', { initialUrl: url })
+    expect((await screen.findAllByText(loaded)).length).toBeGreaterThan(0)
+    await waitFor(() => expect(said(screen.toJSON()).join('\n')).toMatch(/\$\d/))
+    expect(said(screen.toJSON()).filter((s) => /lxc/i.test(s))).toEqual([])
   })
 })

@@ -1,4 +1,4 @@
-import { BffError, formatLXC, formatMinor, formatULXC, refusalText, type Agent, type AgentApproval, type PaymentRequest } from '@talyvor/bff-client'
+import { BffError, formatLXC, formatMinor, refusalText, type Agent, type AgentApproval, type PaymentRequest } from '@talyvor/bff-client'
 import { router } from 'expo-router'
 import { useEffect, useState } from 'react'
 import { Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native'
@@ -69,26 +69,25 @@ export function decidedWords(a: AgentApproval) {
   return 'Closed'
 }
 
-/** The amount, dollars first: an account's or a card's own currency when it pays it, the LXC its rules judge beside. */
+/** The amount in the currency that pays it: an account's or a card's own, else dollars (B61.15: never LXC beside it). */
 export function amountParts(a: AgentApproval, peg: number | null) {
-  if ((a.paid_from?.kind === 'account' || a.paid_from?.kind === 'card') && a.paid_from.currency) return { large: formatMinor(a.paid_from.amount_minor, a.paid_from.currency), small: formatULXC(a.amount_ulxc) }
+  if ((a.paid_from?.kind === 'account' || a.paid_from?.kind === 'card') && a.paid_from.currency) return { large: formatMinor(a.paid_from.amount_minor, a.paid_from.currency), small: null }
   return moneyParts(formatLXC(a.amount_ulxc, peg))
 }
 
-/** `$420.00 of $2,000.00 (4,200 of 20,000 LXC)`, or the amount alone while the monthly limit is unread. */
+/** `$420.00 of $2,000.00`, or the amount alone while the monthly limit is unread. */
 function budgetWords(left: number, limit: number, peg: number | null) {
   if (!limit) return formatLXC(left, peg)
-  const l = moneyParts(formatLXC(left, peg))
-  const m = moneyParts(formatLXC(limit, peg))
-  return l.small && m.small ? `${l.large} of ${m.large} (${l.small.replace(/ LXC$/, '')} of ${m.small})` : `${l.large} of ${m.large}`
+  return `${formatLXC(left, peg)} of ${formatLXC(limit, peg)}`
 }
 
+/** B61.15 — what pays it, unless it is the agent's credit, which is the parked gateway's and is not drawn. */
+const paidFrom = (a: AgentApproval) => (a.paid_from && a.paid_from.kind !== 'lxc' ? a.paid_from : null)
+
 /** `Research’s US dollar account (holds $400.00)`; the bill and a card hold nothing. */
-function paidFromWords(a: AgentApproval, peg: number | null) {
-  const p = a.paid_from!
+function paidFromWords(p: NonNullable<AgentApproval['paid_from']>) {
   if (p.balance_minor === null) return p.name
-  const holds = p.kind === 'lxc' ? moneyParts(formatLXC(p.balance_minor, peg)).large : formatMinor(p.balance_minor, p.currency)
-  return `${p.name} (holds ${holds})`
+  return `${p.name} (holds ${formatMinor(p.balance_minor, p.currency)})`
 }
 
 /** `Tomorrow at 09:17`, as the phone's clock reads it. */
@@ -129,7 +128,7 @@ function Facts({ rows, testID }: { rows: (Fact | null)[]; testID?: string }) {
   )
 }
 
-/** The amount large, and the LXC beside it small. */
+/** The amount large, and a note under it small. */
 function Amount({ large, small, size }: { large: string; small: string | null; size: number }) {
   const { c } = useTheme()
   return (
@@ -259,7 +258,7 @@ export function ApprovalSheet({
         rows={[
           card ? ['Why it’s asking', `${subject(a)} asked the card to check with you`] : null,
           a.asks_above_ulxc != null ? ['Why it’s asking', `It asks you above ${formatLXC(a.asks_above_ulxc, peg)}`] : null,
-          a.paid_from ? ['Paid from', paidFromWords(a, peg)] : null,
+          paidFrom(a) ? ['Paid from', paidFromWords(paidFrom(a)!)] : null,
           hasBudget ? ['Budget left after', budgetWords(a.budget_left_after_ulxc!, monthly, peg)] : null,
           a.expires_at ? ['Expires', expiresWords(a.expires_at), card ? 'No answer by then declines it.' : undefined] : null,
         ]}
@@ -327,7 +326,7 @@ export function ApprovalResult({ d, onDone, onNext }: { d: Decided; onDone: () =
               d.approved
                 ? [
                     d.signed ? ['Signed with', signedWith] : null,
-                    a.paid_from ? [a.paid_from.kind === 'marketplace_bill' ? 'Charged to' : 'Paid from', a.paid_from.name] : null,
+                    paidFrom(a) ? [paidFrom(a)!.kind === 'marketplace_bill' ? 'Charged to' : 'Paid from', paidFrom(a)!.name] : null,
                     left != null ? ['Budget left once it goes through', formatLXC(left, peg)] : null,
                   ]
                 : [d.signed ? ['Declined with', signedWith] : null, left != null ? [`${d.agent.name}’s budget left`, formatLXC(left + a.amount_ulxc, peg)] : null]

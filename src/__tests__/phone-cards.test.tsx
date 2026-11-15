@@ -66,6 +66,8 @@ function mockBff() {
         return json({ workspace_id: 'ws_1' })
       case 'GET /api/workspace/areas':
         return json({ areas: [] })
+      case 'GET /api/lxc/topup-options':
+        return json({ usd_per_lxc: 0.1, min_usd_cents: 1000 })
       case 'GET /api/agents':
         return json({ workspace_balance_ulxc: 7_000_000, allocated_ulxc: 7_000_000, unallocated_ulxc: 0, spent_ulxc: 0, agents })
       case 'GET /api/agents/approvals':
@@ -92,7 +94,7 @@ function mockBff() {
         // Lens judges a raise looser and asks for a signature; a cut is tighter and saved at once.
         const daily = (bodies[route] as { rules: { daily_limit_ulxc: number } }).rules.daily_limit_ulxc
         const looser = daily === 0 || daily > rules.daily_limit_ulxc
-        return json(looser ? { looser, changes: ['Daily limit: 25 LXC → 40 LXC'], challenge: 'ch_1', allow_credentials: [] } : { looser, changes: [], allow_credentials: [] })
+        return json(looser ? { looser, changes: ['Daily limit: $2.50 → $4.00'], challenge: 'ch_1', allow_credentials: [] } : { looser, changes: [], allow_credentials: [] })
       }
       case 'PUT /api/agents/ag_1/rules': {
         const b = bodies[route] as { rules?: typeof rules; assertion?: unknown }
@@ -238,13 +240,13 @@ test('B59.44: a raised limit is saved signed with Face ID, over the challenge Le
   await renderRouter('./src/app', { initialUrl: '/cards' })
   const limits = await screen.findByTestId('card-limits-ag_1')
   await fireEvent.press(within(limits).getByText('Change limits'))
-  const daily = within(screen.getByTestId('card-limits-ag_1')).getByLabelText('Daily limit for Research, in LXC')
-  expect(daily.props.value).toBe('25')
-  await fireEvent.changeText(daily, '40')
+  const daily = within(screen.getByTestId('card-limits-ag_1')).getByLabelText('Daily limit for Research, in dollars')
+  expect(daily.props.value).toBe('2.5')
+  await fireEvent.changeText(daily, '4')
   await fireEvent.press(within(screen.getByTestId('card-limits-ag_1')).getByText('Save rules'))
   // Looser: what it loosens is said first, and nothing is saved until the second press signs it.
   expect(await screen.findByText('This loosens Research’s rules:')).toBeTruthy()
-  expect(screen.getByText('Daily limit: 25 LXC → 40 LXC')).toBeTruthy()
+  expect(screen.getByText('Daily limit: $2.50 → $4.00')).toBeTruthy()
   expect(calls).not.toContain('PUT /api/agents/ag_1/rules')
   await fireEvent.press(screen.getByText('Save with Face ID'))
   expect(await screen.findByText('Saved. Lens applies these rules to the next request or payment.')).toBeTruthy()
@@ -258,15 +260,16 @@ test('B59.44: a lowered limit is saved at once, unsigned, and a limit that is no
   const calls = mockBff()
   await renderRouter('./src/app', { initialUrl: '/cards' })
   await fireEvent.press(within(await screen.findByTestId('card-limits-ag_1')).getByText('Change limits'))
-  const monthly = screen.getByLabelText('Monthly limit for Research, in LXC')
+  const monthly = screen.getByLabelText('Monthly limit for Research, in dollars')
   await fireEvent.changeText(monthly, 'lots')
-  expect(screen.getByText('A limit is an amount of LXC with at most six decimals, or empty.')).toBeTruthy()
+  expect(screen.getByText('A limit is an amount of dollars with at most two decimals, or empty.')).toBeTruthy()
   await fireEvent.changeText(monthly, '')
-  await fireEvent.changeText(screen.getByLabelText('Daily limit for Research, in LXC'), '10')
-  await fireEvent.changeText(monthly, '300')
+  // B61.15: dollars typed are sent as what they are worth at the peg, to the µLXC: $1.23 is 12.3 LXC.
+  await fireEvent.changeText(screen.getByLabelText('Daily limit for Research, in dollars'), '1.23')
+  await fireEvent.changeText(monthly, '30')
   await fireEvent.press(screen.getByText('Save rules'))
   expect(await screen.findByText('Saved. Lens applies these rules to the next request or payment.')).toBeTruthy()
-  expect(calls.bodies['PUT /api/agents/ag_1/rules']).toEqual({ ...rules, daily_limit_ulxc: 10_000_000 })
+  expect(calls.bodies['PUT /api/agents/ag_1/rules']).toEqual({ ...rules, daily_limit_ulxc: 12_300_000 })
   expect(mockPhone.signed).toEqual([])
 })
 
@@ -295,7 +298,7 @@ test('B59.44: an agent with no card is issued one with the web’s cardholder fo
 })
 
 // B57.160 — in Pocket: the owner's card at the top in its tier art, bare as P3's Cards strip draws it; Change limits as
-// the reference's rules draw a list of settings, each limit a row with what it is now and its amount in LXC; and the
+// the reference's rules draw a list of settings, each limit a row with what it is now and its amount in dollars; and the
 // cardholder form as a list of settings in one panel.
 describe('Cards’ forms in Pocket', () => {
   test('the owner’s card sits at the top, above Disputes and refunds, bare as the Cards strip draws it', async () => {
@@ -306,14 +309,15 @@ describe('Cards’ forms in Pocket', () => {
     expect(order).toEqual(['owner-card', 'cards-disputes'])
   })
 
-  test('Change limits draws each limit as a rule row: its name, what it is now, and its amount in LXC', async () => {
+  test('Change limits draws each limit as a rule row: its name, what it is now, and its amount in dollars', async () => {
     mockBff()
     await renderRouter('./src/app', { initialUrl: '/cards' })
     await fireEvent.press(within(await screen.findByTestId('card-limits-ag_1')).getByText('Change limits'))
     const daily = within(screen.getByTestId('limit-row-daily_limit_ulxc'))
     expect(daily.getByText('Daily limit')).toBeTruthy()
-    expect(daily.getByText('25 LXC')).toBeTruthy()
-    expect(daily.getByLabelText('Daily limit for Research, in LXC').props.value).toBe('25')
+    expect(daily.getByText('$2.50')).toBeTruthy()
+    expect(daily.getByLabelText('Daily limit for Research, in dollars').props.value).toBe('2.5')
+    expect(screen.queryByText(/LXC/)).toBeNull()
     expect(within(screen.getByTestId('limit-row-hourly_limit_ulxc')).getByText('No limit')).toBeTruthy()
   })
 
@@ -322,11 +326,11 @@ describe('Cards’ forms in Pocket', () => {
     mockStore.set('talyvor.device-workspace', 'ws_1')
     await renderRouter('./src/app', { initialUrl: '/cards' })
     await fireEvent.press(within(await screen.findByTestId('card-limits-ag_1')).getByText('Change limits'))
-    await fireEvent.changeText(screen.getByLabelText('Daily limit for Research, in LXC'), '40')
+    await fireEvent.changeText(screen.getByLabelText('Daily limit for Research, in dollars'), '4')
     await fireEvent.press(screen.getByText('Save rules'))
     const note = within(await screen.findByTestId('loosens-note'))
     expect(note.getByText('This loosens Research’s rules:')).toBeTruthy()
-    expect(note.getByText('Daily limit: 25 LXC → 40 LXC')).toBeTruthy()
+    expect(note.getByText('Daily limit: $2.50 → $4.00')).toBeTruthy()
   })
 
   test('the cardholder form is a list of settings rows in one panel', async () => {

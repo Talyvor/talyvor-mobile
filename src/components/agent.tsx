@@ -1,33 +1,33 @@
-import { BffError, type AgentRules, type AgentSummary, formatLXC, parseLXC, refusalText, rulesInWords } from '@talyvor/bff-client'
-import * as Crypto from 'expo-crypto'
+import { BffError, type AgentRules, type AgentSummary, formatLXC, refusalText, rulesInWords } from '@talyvor/bff-client'
 import { router } from 'expo-router'
 import { useState } from 'react'
-import { TextInput, useWindowDimensions, View } from 'react-native'
+import { useWindowDimensions, View } from 'react-native'
 
 import { useAccount } from '../account'
 import { WORDS as INSTANT_WORDS } from '../instant-transfer'
 import { biometricName, keyGone, keyGoneText, phoneKey, resumeWithThisPhone, signWithThisPhone } from '../keys'
 import { useSession } from '../session'
-import { fonts, useTheme } from '../theme'
+import { useTheme } from '../theme'
 import { setPinned, syncWidget } from '../widget-sync'
 import { PendingApprovals } from './approval-card'
 import { AgentCard } from './card'
 import { Icon } from './icon'
-import { Money, moneyParts } from './money'
+import { Money } from './money'
 import { AGENT_CREDIT, MoneyHeader } from './money-label'
 import { BottomSheet } from './pay-sheet'
 import { StartEveryAgentButton, StartEveryAgentSheet } from './start-every-agent'
+import { balancesByCurrency } from './home'
 import { Body, Button, Card, Chip, Eyebrow, Headline, Toggle } from './ui'
 
 // B57.70 — an agent's screen as Pocket draws it (design/pocket p-agent-research and its sheet presume-research): this
 // month's spend from the agent's one read (Lens B57.12, BFF B57.20), what waits for it with Review, its balance and
-// state, Pause at once, Resume signed with this phone's key over its resume challenge (B55.5), Fund, the widget pin as
-// a switch, its rules in words and its statement.
+// state, Pause at once, Resume signed with this phone's key over its resume challenge (B55.5), the widget pin as a
+// switch, its rules in words and its statement. B61.15: its balance is what its currency accounts hold; its credit, and
+// Fund, which moved credit to it, are the parked gateway's and are not drawn.
 
 export type AgentData = {
   summary: AgentSummary
   rules: AgentRules
-  unallocated: number
   pinned: boolean
   signs: boolean
 }
@@ -50,13 +50,10 @@ export function AgentView({ data, onChanged }: { data: AgentData; onChanged: () 
   const [sheetSaid, setSheetSaid] = useState('')
   const [note, setNote] = useState('')
   const [starting, setStarting] = useState(false)
-  const [amount, setAmount] = useState('')
-  const [funded, setFunded] = useState('')
-  // One key per amount typed, so a retry after a dropped answer funds once.
-  const [fundKey, setFundKey] = useState(() => Crypto.randomUUID())
-  const micros = parseLXC(amount)
   // B59.20 — "Can use Instant transfer", off by default; only a Hybrid account has the switch.
-  const instant = useAccount(client).shows?.instantTransfer === true
+  const shows = useAccount(client).shows
+  const instant = shows?.instantTransfer === true
+  const held = shows ? balancesByCurrency(summary.currency_accounts ?? [], shows) : []
   const [instantSaid, setInstantSaid] = useState('')
 
   const changed = () => {
@@ -95,14 +92,6 @@ export function AgentView({ data, onChanged }: { data: AgentData; onChanged: () 
     if (allPaused) setNote(`${agent.name} runs when you start every agent again. Until then it stays paused with every agent.`)
     changed()
   }
-
-  const fund = () =>
-    act(async () => {
-      await client.fund(agent.id, micros!, fundKey)
-      setFunded(`Funded ${formatLXC(micros!, peg)} today.`)
-      setAmount('')
-      setFundKey(Crypto.randomUUID())
-    })
 
   // Turning it on loosens the rules, so Lens takes it only signed with this phone's key over the change's challenge.
   const setInstant = (on: boolean) =>
@@ -162,7 +151,9 @@ export function AgentView({ data, onChanged }: { data: AgentData; onChanged: () 
 
       <Card>
         <MoneyHeader capability={AGENT_CREDIT}>Balance</MoneyHeader>
-        <Money micros={agent.balance_ulxc} peg={peg} balance />
+        {held.map((h) => (
+          <Money key={h.currency} minor={h.minor} currency={h.currency} />
+        ))}
         <Body style={paused || allPaused ? { color: c.caution } : undefined}>{state}</Body>
         {summary.card.status === 'frozen' ? <Body style={{ color: c.caution }}>Its card is frozen: every purchase on it is refused.</Body> : null}
       </Card>
@@ -184,44 +175,6 @@ export function AgentView({ data, onChanged }: { data: AgentData; onChanged: () 
       {note ? <Body>{note}</Body> : null}
       {refusal ? <Body style={{ color: c.danger }}>{refusal}</Body> : null}
 
-      <Card white>
-        <Eyebrow>Fund</Eyebrow>
-        <Body muted>Not yet given to an agent: {formatLXC(data.unallocated, peg)}</Body>
-        <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-          <TextInput
-            accessibilityLabel="Amount in LXC"
-            placeholder="Amount in LXC"
-            placeholderTextColor={c.inkMuted}
-            keyboardType="decimal-pad"
-            value={amount}
-            onChangeText={(v) => {
-              setAmount(v)
-              setFunded('')
-              setFundKey(Crypto.randomUUID())
-            }}
-            style={{
-              flex: 1,
-              height: 52,
-              borderWidth: 1,
-              borderColor: c.lineStrong,
-              borderRadius: 12,
-              paddingHorizontal: 12,
-              color: c.ink,
-              fontFamily: fonts.ui,
-              fontSize: 15,
-            }}
-          />
-          <Button
-            primary
-            small
-            label={micros === null ? 'Fund' : `Fund ${moneyParts(formatLXC(micros, peg)).large}`}
-            disabled={busy || micros === null}
-            hint="Type an amount first"
-            onPress={() => void fund()}
-          />
-        </View>
-        {funded ? <Body>{funded}</Body> : null}
-      </Card>
       <Card tight>
         <Toggle label="Pinned to your home-screen widget" value={data.pinned} disabled={busy} onValueChange={(on) => void act(() => setPinned(agent.id, on))} />
       </Card>

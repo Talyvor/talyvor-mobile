@@ -256,7 +256,7 @@ test("Approve with Face ID on an agent's approval signs exactly that approval's 
 
   expect(await screen.findByText(/^Approved (\d{1,2} [A-Z][a-z]{2}|today at \d\d:\d\d)\. Nothing is waiting for you here\.$/)).toBeTruthy()
   expect(lens.approvalApproved).toBe(true)
-  expect(mockReasons.at(-1)).toBe('Approve $0.20 (2 LXC) for Buyer')
+  expect(mockReasons.at(-1)).toBe('Approve $0.20 for Buyer')
   expect(mockCategories.agent_approval).toEqual([expect.objectContaining({ identifier: 'approve', buttonTitle: 'Approve with Face ID' })])
 })
 

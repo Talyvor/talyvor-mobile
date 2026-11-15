@@ -127,6 +127,8 @@ function mockLens(heard: string, labels?: 'live' | 'sandbox' | 'unread') {
         return json(request())
       case 'GET /api/money/payment-requests/preq_9':
         return json(request())
+      case 'GET /api/lxc/topup-options':
+        return json({ usd_per_lxc: 0.1, min_usd_cents: 1000 })
       case 'GET /api/agents': {
         const research = { id: 'ag_research', name: 'Research', balance_ulxc: 4_000_000, spent_ulxc: 1_230_000, created_at: '2026-10-01T00:00:00Z' }
         return json({ workspace_balance_ulxc: 5_230_000, allocated_ulxc: 5_230_000, unallocated_ulxc: 0, spent_ulxc: 1_230_000, agents: [research] })
@@ -258,7 +260,7 @@ test('B41.38: "what’s due this week?" said aloud reads back the payments waiti
 
   await fireEvent.changeText(screen.getByLabelText('Message'), 'What did Research spend?')
   await fireEvent.press(screen.getByText('Send'))
-  expect(await screen.findByText('Research has spent 1.23 LXC so far, and holds 4 LXC.')).toBeTruthy()
+  expect(await screen.findByText('Research has spent $0.12 so far, and holds $0.40.')).toBeTruthy()
   expect(lens.asked).toEqual([]) // answered from the wallet, not the model
   expect(lens.prepared).toEqual([])
   await fireEvent.press(screen.getByText('Open Research'))
