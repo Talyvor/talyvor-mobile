@@ -3,6 +3,7 @@ import { useCallback, useEffect } from 'react'
 
 import { useAccount } from '@/account'
 import { HomeError, HomeHeader, HomeLoading, HomeView } from '@/components/home'
+import { IdentityGate } from '@/components/identity-checks'
 import { KeyRecoveryCard } from '@/components/key-recovery-card'
 import { pendingPrepared } from '@/components/prepared-payment-card'
 import { Screen, useLoad } from '@/components/ui'
@@ -34,6 +35,8 @@ export default function Home() {
     <Screen onRefresh={reload} refreshing={loading && !!data}>
       <HomeHeader name={data?.name ?? null} account={account} />
       <KeyRecoveryCard />
+      {/* B61.21 — until the identity check passes the account can look and cannot move money: one sentence and the way back. */}
+      <IdentityGate />
       {data && shows ? (
         <HomeView data={data} account={account} shows={shows} name={data.name} peg={peg} onDecided={reload} />
       ) : error && !loading ? (
