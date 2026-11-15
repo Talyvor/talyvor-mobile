@@ -31,7 +31,7 @@ jest.mock('expo-auth-session', () => ({
 }))
 let mockUuid = 0
 jest.mock('expo-crypto', () => ({ randomUUID: () => `uuid-${++mockUuid}` }))
-const mockSnapshots: { signedIn: boolean; agents: { id: string; paused: boolean; pauseUrl: string }[]; payees: { id: string; name: string; last: string; openUrl: string }[] }[] = []
+const mockSnapshots: { signedIn: boolean; total: string; agents: { id: string; paused: boolean; pauseUrl: string }[]; payees: { id: string; name: string; last: string; openUrl: string }[] }[] = []
 jest.mock('expo-widgets', () => ({ ...jest.requireActual('../../__mocks__/expo-widgets'), createWidget: () => ({ updateSnapshot: (p: never) => mockSnapshots.push(p) }) }))
 jest.mock('../config', () => ({ config: { bffUrl: 'https://bff.test', oidcIssuer: 'https://idp', oidcClientId: 'mobile' } }))
 
@@ -502,6 +502,17 @@ describe('B41.35 home-screen widget', () => {
     const after = draw()
     expect(after.texts).toContain('Paused')
     expect(after.buttons.find((b) => b.label === 'Resume')?.target).toBe('talyvor://agents/ag_1')
+  })
+
+  // B61.44 — the Android layout, drawn from what Home pushed: the company's £1,000.00 as Home's total, no agent credit, no Fund.
+  test('the widget draws the accounts’ total and no agent credit or Fund', async () => {
+    mockBff()
+    await renderRouter('./src/app', { initialUrl: '/' })
+    await waitFor(() => expect(lastSnapshot()?.total).toBe('£1,000.00'))
+    const { texts, buttons } = draw()
+    expect(texts).toEqual(expect.arrayContaining(['YOUR COMPANY’S TOTAL', '£1,000.00']))
+    expect(texts.join(' ')).not.toMatch(/\$|LXC/)
+    expect(buttons.map((b) => b.label)).not.toContain('Fund')
   })
 
   test('a pause link that did not come from the widget changes nothing', async () => {

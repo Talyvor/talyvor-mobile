@@ -64,7 +64,7 @@ export const accountName = (a: CurrencyAccount, owner: string) =>
   a.purpose === 'company' && (!a.name || a.name.startsWith('The company')) ? `${owner} · ${a.currency}` : a.name || `Agent · ${a.currency}`
 
 /** Every workspace Lens had before B59.6 became Business and Hybrid, so nothing it used disappeared. */
-const AS_MIGRATED: Account = { account_type: 'business', money_kind: 'hybrid' }
+export const AS_MIGRATED: Account = { account_type: 'business', money_kind: 'hybrid' }
 
 /**
  * The session's workspace's type and kind, and what they show. While the read is on its way `shows` is null and a

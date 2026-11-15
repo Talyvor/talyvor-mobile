@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Pressable, ScrollView, Text, View } from 'react-native'
 
 import { accountChip, type Account, type Shows } from '../account'
+import { balancesByCurrency, CURRENCY_NAME, isStablecoin } from '../balances'
 import { fonts, palettes, useTheme } from '../theme'
 import { PendingApprovals } from './approval-card'
 import { AgentCard, agentCardLabel } from './card'
@@ -30,22 +31,7 @@ export interface HomeData {
 /** What Home's figures move money on: the agents' balances and the payments that wait. */
 const HOME_MONEY = [...AGENT_CREDIT, ...PAY_OUT]
 
-/** A currency's name on its tile, as P3 and P4 draw them; a stablecoin is named by its code. */
-export const CURRENCY_NAME: Record<string, string> = { USD: 'US dollar', EUR: 'Euro', GBP: 'British pound' }
-const FIAT_ORDER = ['USD', 'EUR', 'GBP']
-export const isStablecoin = (currency: string) => !(currency in CURRENCY_NAME)
-
-/** What each currency holds across the accounts in view, the company's and each agent's, fiat first; a currency the
- * account's kind does not show is left out. */
-export function balancesByCurrency(accounts: readonly CurrencyAccount[], shows: Pick<Shows, 'bankTransfers' | 'onChain'>): { currency: string; minor: number }[] {
-  const sums = new Map<string, number>()
-  for (const a of accounts) {
-    if (isStablecoin(a.currency) ? !shows.onChain : !shows.bankTransfers) continue
-    sums.set(a.currency, (sums.get(a.currency) ?? 0) + a.balance_minor)
-  }
-  const rank = (c: string) => (isStablecoin(c) ? 10 : FIAT_ORDER.indexOf(c))
-  return [...sums].map(([currency, minor]) => ({ currency, minor })).sort((a, b) => rank(a.currency) - rank(b.currency) || a.currency.localeCompare(b.currency))
-}
+export { balancesByCurrency, CURRENCY_NAME, isStablecoin } from '../balances'
 
 /** "2 payments wait for your yes", or "1 payment waits for your yes". */
 export const waitingWords = (n: number) => (n === 1 ? '1 payment waits for your yes' : `${n} payments wait for your yes`)

@@ -7,16 +7,19 @@ import type { Palette } from '../theme'
 /** Everything the widget shows, formatted by the app: the widget's runtime cannot import, fetch or format. */
 export interface AgentsWidgetProps {
   signedIn: boolean
-  safeToSpend: string
+  /** what the accounts hold, as Home's total: `$400.00`, or `$412.50 · 2.00 USDC` */
+  total: string
+  /** Home's words for it: `Your total`, or a Business's `Your company’s total` */
+  totalLabel: string
   pending: number
-  /** pinned agents first; `pauseUrl` pauses it through the app, `openUrl` opens its screen (resume, fund) */
+  /** pinned agents first; `balance` is what its accounts hold, or '' for none; `pauseUrl` pauses it through the app, `openUrl` opens its screen (resume) */
   agents: { id: string; name: string; balance: string; paused: boolean; pauseUrl: string; openUrl: string }[]
   /** pinned payees; `openUrl` opens the payment screen for it, and nothing is paid from the widget */
   payees: { id: string; name: string; last: string; openUrl: string }[]
   palette: { dark: Palette; light: Palette }
 }
 
-// Home-screen widget (iOS): safe to spend, what waits for approval, and pinned agents with Pause and Fund.
+// Home-screen widget (iOS): the total, what waits for approval, and pinned agents with what they hold and Pause.
 const AgentsWidget = (p: AgentsWidgetProps, env: WidgetEnvironment) => {
   'widget'
   const c = env.colorScheme === 'light' ? p.palette.light : p.palette.dark
@@ -43,8 +46,8 @@ const AgentsWidget = (p: AgentsWidgetProps, env: WidgetEnvironment) => {
   if (env.widgetFamily === 'systemSmall') {
     return (
       <VStack alignment="leading" spacing={4} modifiers={[containerBackground(c.canvas, 'widget'), widgetURL('talyvor://approvals')]}>
-        <Text modifiers={eyebrow}>Safe to spend</Text>
-        <Text modifiers={figure(18, c.ink)}>{p.safeToSpend}</Text>
+        <Text modifiers={eyebrow}>{p.totalLabel}</Text>
+        <Text modifiers={figure(18, c.ink)}>{p.total}</Text>
         <Spacer />
         <Text modifiers={body(p.pending ? c.caution : c.inkMuted)}>{waiting}</Text>
       </VStack>
@@ -58,8 +61,8 @@ const AgentsWidget = (p: AgentsWidgetProps, env: WidgetEnvironment) => {
     <VStack alignment="leading" spacing={8} modifiers={[containerBackground(c.canvas, 'widget')]}>
       <HStack>
         <VStack alignment="leading" spacing={2}>
-          <Text modifiers={eyebrow}>Safe to spend</Text>
-          <Text modifiers={figure(18, c.ink)}>{p.safeToSpend}</Text>
+          <Text modifiers={eyebrow}>{p.totalLabel}</Text>
+          <Text modifiers={figure(18, c.ink)}>{p.total}</Text>
         </VStack>
         <Spacer />
         <Link destination="talyvor://approvals">
@@ -74,13 +77,10 @@ const AgentsWidget = (p: AgentsWidgetProps, env: WidgetEnvironment) => {
             <Text modifiers={[font({ size: 11 }), foregroundStyle(a.paused ? c.caution : c.positive)]}>{a.paused ? 'Paused' : 'Active'}</Text>
           </VStack>
           <Spacer />
-          <Text modifiers={figure(13, c.ink)}>{a.balance}</Text>
+          {a.balance ? <Text modifiers={figure(13, c.ink)}>{a.balance}</Text> : null}
           {/* Resume is a decision to let it spend again, so it happens on the agent's screen, not from a home-screen tap. */}
           <Link destination={a.paused ? a.openUrl : a.pauseUrl}>
             <Text modifiers={action}>{a.paused ? 'Resume' : 'Pause'}</Text>
-          </Link>
-          <Link destination={a.openUrl}>
-            <Text modifiers={action}>Fund</Text>
           </Link>
         </HStack>
       ))}

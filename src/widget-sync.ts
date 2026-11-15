@@ -1,7 +1,9 @@
-import { formatBalance, formatMinor, safeToSpend, type AgentApproval, type AgentBook, type BffClient, type OutsidePayee, type OutsidePayment } from '@talyvor/bff-client'
+import { formatMinor, type AgentApproval, type AgentBook, type BffClient, type CurrencyAccount, type OutsidePayee, type OutsidePayment } from '@talyvor/bff-client'
 import * as Crypto from 'expo-crypto'
 import * as SecureStore from 'expo-secure-store'
 
+import { AS_MIGRATED, shows as showsOf, type Shows } from './account'
+import { balancesByCurrency } from './balances'
 import { palettes } from './theme'
 import { pushWidget } from './widget-push'
 import type { AgentsWidgetProps } from './widgets/agents-widget'
@@ -52,25 +54,34 @@ export async function widgetLinkValid(t: string | undefined): Promise<boolean> {
   return !!t && t === (await SecureStore.getItemAsync(TOKEN))
 }
 
-/** Pinned agents first, in the order they were pinned; with none pinned, every agent. Payees show only when pinned. */
+/** What a set of accounts holds in each currency, as one line: `$412.50 · 2.00 USDC`. */
+const heldWords = (accounts: readonly CurrencyAccount[], shows: Shows) =>
+  balancesByCurrency(accounts, shows)
+    .map((h) => formatMinor(h.minor, h.currency))
+    .join(' · ')
+
+/** Pinned agents first, in the order they were pinned; with none pinned, every agent. Payees show only when pinned.
+ * B61.44: the figures are Home's, what the currency accounts hold; an agent's credit is the parked gateway's and is not drawn. */
 export function widgetProps(
   book: AgentBook,
   approvals: AgentApproval[],
   pins: string[],
   token: string,
   payees: { pins: string[]; saved: OutsidePayee[]; payments: OutsidePayment[] } = { pins: [], saved: [], payments: [] },
-  peg: number | null = null,
+  money: { accounts: readonly CurrencyAccount[]; shows: Shows } = { accounts: [], shows: showsOf(AS_MIGRATED) },
 ): AgentsWidgetProps {
   const live = (book.agents ?? []).filter((a) => !a.archived_at)
   const shown = pins.length ? pins.flatMap((id) => live.filter((a) => a.id === id)) : live
   return {
     signedIn: true,
-    safeToSpend: formatBalance(safeToSpend(book, approvals), peg),
+    // As Home: with nothing held yet, the total reads $0.00.
+    total: heldWords(money.accounts, money.shows) || formatMinor(0, 'USD'),
+    totalLabel: money.shows.team ? 'Your company’s total' : 'Your total',
     pending: approvals.filter((a) => a.status === 'pending').length,
     agents: shown.map((a) => ({
       id: a.id,
       name: a.name,
-      balance: formatBalance(a.balance_ulxc, peg),
+      balance: heldWords(money.accounts.filter((x) => x.agent_id === a.id), money.shows),
       paused: !!a.paused_at,
       pauseUrl: `talyvor://widget?${new URLSearchParams({ do: 'pause', agent: a.id, t: token })}`,
       openUrl: `talyvor://agents/${encodeURIComponent(a.id)}`,
@@ -86,20 +97,23 @@ export function widgetProps(
   }
 }
 
-/** Puts the book and approvals on the home-screen widget, read again unless given; a failure keeps its last picture. */
-export async function syncWidget(client: BffClient, loaded?: { book: AgentBook; approvals: AgentApproval[] }) {
+/** Puts the book, approvals and accounts on the home-screen widget, read again unless given; a failure keeps its last picture. */
+export async function syncWidget(client: BffClient, loaded?: { book: AgentBook; approvals: AgentApproval[]; accounts?: CurrencyAccount[] }) {
   try {
     const payeePins = await pinnedPayees()
-    const [book, approvals, pins, token, saved, payments, peg] = await Promise.all([
+    const [book, approvals, pins, token, saved, payments, accounts, account] = await Promise.all([
       loaded?.book ?? client.book(),
       loaded?.approvals ?? client.approvals().then((r) => r.approvals ?? []),
       pinnedAgents(),
       linkToken(),
       payeePins.length ? client.payees().then((r) => r.payees ?? []) : [],
       payeePins.length ? client.payments().then((r) => r.payments ?? []) : [],
-      client.peg(),
+      loaded?.accounts ?? client.moneyAccounts().then((r) => r.accounts ?? []),
+      // A failed read draws as useAccount does: Business and Hybrid, so no figure is left out.
+      client.account().catch(() => null),
     ])
-    pushWidget(widgetProps(book, approvals, pins, token, { pins: payeePins, saved, payments }, peg))
+    const shows = showsOf(account ? { account_type: account.account_type, money_kind: account.money_kind } : AS_MIGRATED)
+    pushWidget(widgetProps(book, approvals, pins, token, { pins: payeePins, saved, payments }, { accounts, shows }))
   } catch {
     // the next screen load or action tries again
   }
@@ -107,6 +121,6 @@ export async function syncWidget(client: BffClient, loaded?: { book: AgentBook; 
 
 /** Signed out, the widget shows no figures, and the next account starts with no pins and a new link token. */
 export async function clearWidget() {
-  pushWidget({ signedIn: false, safeToSpend: '', pending: 0, agents: [], payees: [], palette: palettes })
+  pushWidget({ signedIn: false, total: '', totalLabel: '', pending: 0, agents: [], payees: [], palette: palettes })
   await Promise.all([SecureStore.deleteItemAsync(PINS), SecureStore.deleteItemAsync(PAYEE_PINS), SecureStore.deleteItemAsync(TOKEN)])
 }
