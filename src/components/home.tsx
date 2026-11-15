@@ -15,7 +15,7 @@ import { AGENT_CREDIT, MoneyLabel, PAY_OUT } from './money-label'
 import { OwnerCard } from './owner-card'
 import { PreparedPaymentCard } from './prepared-payment-card'
 import { StartEveryAgentButton, StartEveryAgentSheet, useSigns } from './start-every-agent'
-import { Body, Button } from './ui'
+import { Body, Button, Chip } from './ui'
 
 // B57.66 — the phone's Home as the launch pack draws it (design P3 to P5): the account and the Sandbox label, the total
 // in each currency the account's kind shows, Pay, the row that counts what waits for your yes with each request under
@@ -29,14 +29,14 @@ export interface HomeData {
 }
 
 /** What Home's figures move money on: the agents' balances and the payments that wait. */
-const HOME_MONEY = [...AGENT_CREDIT, ...PAY_OUT]
+export const HOME_MONEY = [...AGENT_CREDIT, ...PAY_OUT]
 
 export { balancesByCurrency, CURRENCY_NAME, isStablecoin } from '../balances'
 
 /** "2 payments wait for your yes", or "1 payment waits for your yes". */
 export const waitingWords = (n: number) => (n === 1 ? '1 payment waits for your yes' : `${n} payments wait for your yes`)
 
-function SectionHead({ title, more }: { title: string; more?: { href: '/cards'; label: string } }) {
+function SectionHead({ title, more }: { title: string; more?: { href: '/cards' | '/agents'; label: string } }) {
   const { c } = useTheme()
   return (
     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
@@ -181,7 +181,9 @@ function WaitingRow({ count }: { count: number }) {
   )
 }
 
-function AgentRow({ agent, accounts, shows, waiting, first }: { agent: Agent; accounts: readonly CurrencyAccount[]; shows: Shows; waiting: boolean; first: boolean }) {
+/** An agent's row: its picture, its name, what it does, and what it holds in its own currency. Home writes Running or
+ * Paused after what it does; the Agents tab (B61.54) puts a Paused chip on a paused one instead. */
+export function AgentRow({ agent, accounts, shows, waiting, first, paused, chip }: { agent: Agent; accounts: readonly CurrencyAccount[]; shows: Shows; waiting: boolean; first: boolean; paused?: boolean; chip?: boolean }) {
   const { c } = useTheme()
   const held = balancesByCurrency(
     accounts.filter((x) => x.agent_id === agent.id),
@@ -189,19 +191,29 @@ function AgentRow({ agent, accounts, shows, waiting, first }: { agent: Agent; ac
   )
   const fiat = held.filter((h) => !isStablecoin(h.currency))
   const coins = held.filter((h) => isStablecoin(h.currency))
-  const state = agent.paused_at ? 'Paused' : 'Running'
+  const asleep = paused ?? !!agent.paused_at
+  const state = asleep ? 'Paused' : 'Running'
   return (
     <Link href={{ pathname: '/agents/[id]', params: { id: agent.id } }} asChild>
       <Pressable
         accessibilityRole="link"
         accessibilityLabel={`${agent.name}, ${state.toLowerCase()}`}
         style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 58, paddingVertical: 10, borderTopWidth: first ? 0 : 1, borderTopColor: c.line }}>
-        <Face agent={agent} state={agent.paused_at ? 'asleep' : 'happy'} waiting={waiting} size={40} />
-        <View style={{ flex: 1, minWidth: 0 }}>
+        <Face agent={agent} state={asleep ? 'asleep' : 'happy'} waiting={waiting} size={40} />
+        <View style={{ flex: 1, minWidth: 0, gap: chip ? 4 : 0 }}>
           <Text style={{ fontFamily: fonts.uiMedium, fontSize: 15, color: c.ink }}>{agent.name}</Text>
-          <Text style={{ fontFamily: fonts.ui, fontSize: 13, color: c.ink3 }}>
-            {agent.description ? `${agent.description} · ${state}` : state}
-          </Text>
+          {chip ? (
+            <>
+              {agent.description ? <Text style={{ fontFamily: fonts.ui, fontSize: 13, color: c.ink3 }}>{agent.description}</Text> : null}
+              {asleep ? (
+                <View style={{ alignSelf: 'flex-start' }}>
+                  <Chip tone="paused">Paused</Chip>
+                </View>
+              ) : null}
+            </>
+          ) : (
+            <Text style={{ fontFamily: fonts.ui, fontSize: 13, color: c.ink3 }}>{agent.description ? `${agent.description} · ${state}` : state}</Text>
+          )}
         </View>
         <View style={{ alignItems: 'flex-end' }}>
           {/* B61.15: an agent's money is its currency accounts; its credit is the parked gateway's and is not drawn. */}
@@ -282,6 +294,8 @@ export function HomeView({
           <Body style={{ color: c.tangerineInk }}>See all in Activity</Body>
         </Pressable>
       </Link>
+      {/* B61.54 — Spending and Statement left the tab bar and open from here and from Activity. */}
+      <MoneyLinks />
 
       {/* B57.126 and B57.128: the owner's own card, then each agent's, each opening its screen. */}
       {agents.length || (account && name) ? (
@@ -307,7 +321,8 @@ export function HomeView({
       ) : null}
 
       {/* B59.11 — "Your agents", or a Business's "Your team’s agents", as the web's Home says. */}
-      <SectionHead title={shows.agents} />
+      {/* B61.54 — See all opens the Agents tab, as P5 draws it. */}
+      <SectionHead title={shows.agents} more={agents.length ? { href: '/agents', label: 'See all agents' } : undefined} />
       {agents.length === 0 ? (
         <View style={{ gap: 4 }}>
           <Body>No agents yet</Body>
@@ -332,6 +347,22 @@ export function HomeView({
         </Link>
       ) : null}
     </>
+  )
+}
+
+/** Spending and Statement, which open from Home and from Activity (B61.54). */
+export function MoneyLinks() {
+  const { c } = useTheme()
+  return (
+    <View style={{ flexDirection: 'row', gap: 20 }}>
+      {(['Spending', 'Statement'] as const).map((words) => (
+        <Link key={words} href={words === 'Spending' ? '/spending' : '/statement'} asChild>
+          <Pressable accessibilityRole="link" accessibilityLabel={words} style={{ minHeight: 48, justifyContent: 'center' }}>
+            <Body style={{ color: c.tangerineInk }}>{words}</Body>
+          </Pressable>
+        </Link>
+      ))}
+    </View>
   )
 }
 

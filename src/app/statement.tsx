@@ -7,7 +7,7 @@ import { Text, View } from 'react-native'
 
 import { AGENT_CREDIT, MoneyLabel } from '@/components/money-label'
 import { moneyParts } from '@/components/money'
-import { Body, Button, Card, Eyebrow, Headline, LoadState, Row, Screen, useLoad } from '@/components/ui'
+import { Back, Body, Button, Card, Eyebrow, Headline, LoadState, Row, Screen, useLoad } from '@/components/ui'
 import { day, monthName, monthPeriod, when } from '@/activity'
 import { agentOf, dayIn, lineWhat } from '@/statement'
 import { useSession } from '@/session'
@@ -75,6 +75,8 @@ export default function StatementScreen() {
 
   return (
     <Screen onRefresh={reload} refreshing={loading && !!data}>
+      {/* B61.54 — off the tab bar: it opens from Home and from Activity. */}
+      <Back home="/" />
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
         <Headline>Statement</Headline>
         <MoneyLabel capability={AGENT_CREDIT} />

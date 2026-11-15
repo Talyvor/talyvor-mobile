@@ -37,14 +37,14 @@ const accounts: CurrencyAccount[] = [
 const business = { account_type: 'business', money_kind: 'hybrid' } as const
 const preq = { id: 'preq_1', status: 'pending_approval', summary: '', client: 'chat', totals: { USD: 18_000 }, items: [], created_at: '2026-11-09T08:00:00Z' } as never
 
-test('Home: the waiting row, a prepared payment, Pay, Activity, the cards, each agent and Pause every agent each go somewhere', async () => {
+test('Home: the waiting row, a prepared payment, Pay, Activity, Spending, Statement, the cards, each agent and Pause every agent each go somewhere', async () => {
   const report = await pressEverything((said) => {
     mockGo.said = said
     return <HomeView data={{ book, approvals: [], prepared: [preq], accounts }} account={business} shows={shows(business)} name="Northwind Studio" peg={0.1} onDecided={() => said('decided')} />
   })
   expect(report.dead).toEqual([])
-  // waiting row, prepared payment, Wallets, Pay, Instant transfer (Hybrid), Activity, See all cards, the owner's card, two agents' cards, two rows, Pause every agent
-  expect(report.pressed).toBe(13)
+  // waiting row, prepared payment, Wallets, Pay, Instant transfer (Hybrid), Activity, Spending, Statement (B61.54), See all cards, the owner's card, two agents' cards, See all agents (B61.54), two rows, Pause every agent
+  expect(report.pressed).toBe(16)
 })
 
 test("Home's top and its failed read: Settings and Try again each do something", async () => {
