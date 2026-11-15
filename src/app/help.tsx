@@ -38,7 +38,8 @@ export default function HelpChatScreen() {
   const { client } = useSession()
   const { c } = useTheme()
   const { from } = useLocalSearchParams<{ from?: string }>()
-  const page = typeof from === 'string' && from.startsWith('/') ? from : '/settings'
+  // The page Help was opened from, as the BFF hears it: one of the app's own pages, never what a link said.
+  const page = typeof from === 'string' && from in HELP_PAGES ? from : '/settings'
   const load = useCallback(() => client.helpChat(), [client])
   const chat = useLoad(load)
   const [messages, setMessages] = useState<HelpMessage[] | null>(null)
