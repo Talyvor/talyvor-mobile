@@ -1,5 +1,6 @@
 import { createBffClient, dollarsText, formatBalance, formatLXC, formatMinor, parseDollars } from '@talyvor/bff-client'
 
+import { shows } from '../account'
 import { widgetProps } from '../widget-sync'
 
 // B55.27: the phone writes $450.00, dollars first beside LXC, and USDC to its six decimals.
@@ -28,15 +29,35 @@ test('µLXC reads in dollars alone by the peg, and Reading… while the peg is u
 // B59.36: a balance never shows more than it holds, so its dollars round down to the cent. An amount to approve or a
 // charge keeps the nearest cent, as the web's figures do.
 test('a balance of 1,255,000 µLXC at 0.1 USD per LXC reads $0.12; the same amount to approve reads $0.13', () => {
-  const book = { workspace_balance_ulxc: 1_255_000, allocated_ulxc: 1_255_000, unallocated_ulxc: 0, spent_ulxc: 0, agents: [{ id: 'ag-1', name: 'Scout', balance_ulxc: 1_255_000, spent_ulxc: 0, created_at: '2026-11-11T00:00:00Z' }] }
-  const widget = widgetProps(book, [], [], 'token-1', undefined, 0.1)
-  expect(widget.safeToSpend).toBe('$0.12')
-  expect(widget.agents[0].balance).toBe('$0.12')
   expect(formatBalance(1_255_000, 0.1)).toBe('$0.12')
   expect(formatBalance(900_000_000, 0.1)).toBe('$90.00')
   expect(formatBalance(-1_255_000, 0.1)).toBe('-$0.13')
   expect(formatBalance(1_255_000, null)).toBe('Reading…')
   expect(formatLXC(1_255_000, 0.1)).toBe('$0.13')
+})
+
+// B61.44 — the widget draws what Home draws: the accounts' total and what each agent's accounts hold, never the credit.
+test('the widget reads the $400.00 company account and no figure for an agent with 12.5 LXC of credit and no account', () => {
+  const book = { workspace_balance_ulxc: 12_500_000, allocated_ulxc: 12_500_000, unallocated_ulxc: 0, spent_ulxc: 0, agents: [{ id: 'ag-1', name: 'Scout', balance_ulxc: 12_500_000, spent_ulxc: 0, created_at: '2026-11-11T00:00:00Z' }] }
+  const accounts = [{ id: 'ca-1', currency: 'USD', purpose: 'company' as const, status: 'active', name: 'The company · USD', balance_minor: 40_000 }]
+  const widget = widgetProps(book, [], [], 'token-1', undefined, { accounts, shows: shows({ account_type: 'business', money_kind: 'fiat' }) })
+  expect(widget.total).toBe('$400.00')
+  expect(widget.totalLabel).toBe('Your company’s total')
+  expect(widget.agents[0].balance).toBe('')
+  expect(JSON.stringify(widget)).not.toMatch(/\$1\.25|LXC/)
+})
+
+test('on the widget an agent reads what its own accounts hold, and a total in two currencies reads both', () => {
+  const book = { workspace_balance_ulxc: 0, allocated_ulxc: 0, unallocated_ulxc: 0, spent_ulxc: 0, agents: [{ id: 'ag-1', name: 'Scout', balance_ulxc: 0, spent_ulxc: 0, created_at: '2026-11-11T00:00:00Z' }] }
+  const accounts = [
+    { id: 'ca-1', currency: 'USD', purpose: 'company' as const, status: 'active', name: 'The company · USD', balance_minor: 40_000 },
+    { id: 'ca-2', agent_id: 'ag-1', currency: 'USD', purpose: 'agent' as const, status: 'active', name: 'Scout · USD', balance_minor: 1_250 },
+    { id: 'ca-3', agent_id: 'ag-1', currency: 'USDC', purpose: 'agent' as const, status: 'active', name: 'Scout · USDC', balance_minor: 2_000_000 },
+  ]
+  const widget = widgetProps(book, [], [], 'token-1', undefined, { accounts, shows: shows({ account_type: 'personal', money_kind: 'hybrid' }) })
+  expect(widget.total).toBe('$412.50 · 2.00 USDC')
+  expect(widget.totalLabel).toBe('Your total')
+  expect(widget.agents[0].balance).toBe('$12.50 · 2.00 USDC')
 })
 
 // B61.15 — what is typed is what reads back: dollars typed become µLXC at the peg, exact, and are written back the same.

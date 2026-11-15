@@ -504,6 +504,17 @@ describe('B41.35 home-screen widget', () => {
     expect(after.buttons.find((b) => b.label === 'Resume')?.target).toBe('talyvor://agents/ag_1')
   })
 
+  // B61.44 — the Android layout, drawn from what Home pushed: the company's £1,000.00 as Home's total, no agent credit, no Fund.
+  test('the widget draws the accounts’ total and no agent credit or Fund', async () => {
+    mockBff()
+    await renderRouter('./src/app', { initialUrl: '/' })
+    await waitFor(() => expect(lastSnapshot()?.total).toBe('£1,000.00'))
+    const { texts, buttons } = draw()
+    expect(texts).toEqual(expect.arrayContaining(['YOUR COMPANY’S TOTAL', '£1,000.00']))
+    expect(texts.join(' ')).not.toMatch(/\$|LXC/)
+    expect(buttons.map((b) => b.label)).not.toContain('Fund')
+  })
+
   test('a pause link that did not come from the widget changes nothing', async () => {
     const calls = mockBff()
     await renderRouter('./src/app', { initialUrl: '/widget?do=pause&agent=ag_1&t=forged' })

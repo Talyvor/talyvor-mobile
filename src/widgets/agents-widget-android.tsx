@@ -48,8 +48,8 @@ export const AgentsWidgetAndroid = (p: AgentsWidgetProps, env: WidgetEnvironment
     <Column modifiers={frame}>
       {ends(
         <Column>
-          <Text {...eyebrow}>SAFE TO SPEND</Text>
-          <Text {...text(18, c.ink, '500')}>{p.safeToSpend}</Text>
+          <Text {...eyebrow}>{p.totalLabel.toUpperCase()}</Text>
+          <Text {...text(18, c.ink, '500')}>{p.total}</Text>
         </Column>,
         tap(p.pending ? `${p.pending} waiting` : 'Nothing waiting', 'talyvor://approvals'),
       )}
@@ -63,12 +63,10 @@ export const AgentsWidgetAndroid = (p: AgentsWidgetProps, env: WidgetEnvironment
               <Text {...text(11, a.paused ? c.caution : c.positive)}>{a.paused ? 'Paused' : 'Active'}</Text>
             </Column>,
             <Row verticalAlignment="center">
-              <Text {...text(13, c.ink, '500')}>{a.balance}</Text>
-              <Spacer modifiers={[width(8)]} />
+              {a.balance ? <Text {...text(13, c.ink, '500')}>{a.balance}</Text> : null}
+              {a.balance ? <Spacer modifiers={[width(8)]} /> : null}
               {/* Resume is a decision to let it spend again, so it happens on the agent's screen, not from a home-screen tap. */}
               {tap(a.paused ? 'Resume' : 'Pause', a.paused ? a.openUrl : a.pauseUrl)}
-              <Spacer modifiers={[width(6)]} />
-              {tap('Fund', a.openUrl)}
             </Row>,
           )}
         </Column>
