@@ -21,16 +21,13 @@ jest.mock('../../modules/talyvor-keys', () => ({ isAvailable: () => true, sign: 
 const WEB = {
   typeLabel: { business: 'Business', personal: 'Personal' },
   kindLabel: { fiat: 'Fiat only', stablecoin: 'Stablecoin and crypto only', hybrid: 'Hybrid' },
-  kindLine: {
-    fiat: 'Your agents pay ordinary bills with cards and bank transfers.',
-    stablecoin: 'Your agents work on chain.',
-    hybrid: 'Both side by side, under one set of rules.',
-  },
   chip: { business: { fiat: 'Business · Fiat', stablecoin: 'Business · Stablecoin', hybrid: 'Business · Hybrid' }, personal: { fiat: 'Personal · Fiat', stablecoin: 'Personal · Stablecoin', hybrid: 'Personal · Hybrid' } },
   agents: { business: 'Your team’s agents', personal: 'Your agents' },
   owner: { business: 'The company', personal: 'Your account' },
   cardTiers: { business: ['Team', 'Business', 'Enterprise'], personal: ['Daily', 'Premium', 'Platinum'] },
-  typeFixed: 'The type can’t be changed. You can hold several accounts and switch between them.',
+  // B61.4 (suite PR #1116): Settings says sign-up's two sentences; the type and the kind are fixed.
+  typeFixed: 'The type can’t be changed later. To use another type, open another account.',
+  kindFixed: 'The kind of money can’t be changed later. To use another kind, open another account.',
   // The web's Pay links "Agent Wallets"; the words around the link are these.
   payOnChain: 'Your agents work on chain: each agent’s wallet address is on Agent Wallets.',
 } as const
@@ -81,15 +78,13 @@ function mockBff(account_type: Type, money_kind: Kind) {
   }) as unknown as typeof fetch
 }
 
-/** Every word the screen draws, and every accessibility label. Settings' kind of money choices (B57.138, P11) are left
- * out: they name every kind on purpose, as the choices an account has, and draw none of the things a kind hides. */
+/** Every word the screen draws, and every accessibility label. */
 function drawn(): string {
   const out: string[] = []
   const walk = (n: unknown) => {
     if (typeof n === 'string') out.push(n)
     else if (Array.isArray(n)) n.forEach(walk)
     else if (n && typeof n === 'object') {
-      if ((n as { props?: { testID?: unknown } }).props?.testID === 'settings-money-kind') return
       const label = (n as { props?: { accessibilityLabel?: unknown } }).props?.accessibilityLabel
       if (typeof label === 'string') out.push(label)
       walk((n as { children?: unknown }).children)
@@ -157,7 +152,7 @@ test.each(COMBINATIONS)('%s and %s: Home, Pay, a payee, an agent, Statement and 
   await renderRouter('./src/app', { initialUrl: '/settings' })
   expect(await screen.findByText(WEB.chip[type][kind])).toBeTruthy()
   expect(screen.getByText(WEB.kindLabel[kind])).toBeTruthy()
-  expect(screen.getByText(WEB.kindLine[kind])).toBeTruthy()
+  expect(screen.getByText(WEB.kindFixed)).toBeTruthy()
   expect(screen.getByText(WEB.typeLabel[type])).toBeTruthy()
   expect(screen.getByText(WEB.typeFixed)).toBeTruthy()
   nothingHidden()
@@ -167,8 +162,6 @@ test("the phone's words for each type and kind are the web's", () => {
   const phone = jest.requireActual<typeof import('../account')>('../account')
   expect(phone.TYPE_LABEL).toEqual(WEB.typeLabel)
   expect(phone.KIND_LABEL).toEqual(WEB.kindLabel)
-  expect(phone.KIND_LINE).toEqual(WEB.kindLine)
-  expect(phone.TYPE_FIXED).toBe(WEB.typeFixed)
   expect(phone.PAY_ON_CHAIN).toBe(WEB.payOnChain)
   for (const [type, kind] of COMBINATIONS) {
     const s = phone.shows({ account_type: type, money_kind: kind })
