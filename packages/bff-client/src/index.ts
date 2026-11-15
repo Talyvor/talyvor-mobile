@@ -316,7 +316,29 @@ export interface OutsidePayee {
   /** B59.20 — a payee paid at a wallet: its network and address (Lens B46); none for a bank account */
   network?: string
   address?: string
+  /** B59.33 — a bank of the owner's own, the one Wallets withdraws to (Lens B59.51) */
+  own?: boolean
   created_at: string
+}
+
+/** B59.33 — a withdrawal from a company account to a bank saved as the owner's own (Lens economy.Withdrawal). */
+export interface WithdrawalRequest {
+  payee_id: string
+  amount_minor: number
+}
+
+/** B59.33 — Lens economy.Conversion between the company's two sides (B59.51): sell_minor leaves, the fee (margin) included. */
+export interface SideConversion {
+  id: string
+  sell_minor: number
+  sell_currency: string
+  margin_minor: number
+  buy_minor: number
+  buy_currency: string
+  /** what the owner gets, the margin taken, in whole units */
+  rate: string
+  status: string
+  expires_at: string
 }
 
 /** B59.20 — who an Instant transfer pays (Lens economy.InstantTo…): a Talyvor account, an outside wallet or a bank account. */
@@ -811,6 +833,20 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     },
     moneyAccounts: () => call<{ accounts: CurrencyAccount[] | null }>('GET', '/api/money/accounts'),
     payees: () => call<{ payees: OutsidePayee[] | null }>('GET', '/api/money/payees'),
+    // B59.33 — Wallets (the web's B59.53, through the BFF's B59.52 to Lens B17.255 and B59.51): Sandbox money into a company
+    // account, a withdrawal to a bank of the owner's own and a conversion between the two sides, each once under its key and
+    // the last two signed over a challenge that names that key.
+    walletTopUp: (accountId: string, amount_minor: number, key: string) =>
+      call<unknown>('POST', `/api/money/accounts/${e(accountId)}/top-up`, { amount_minor }, { 'Idempotency-Key': key }),
+    walletWithdrawChallenge: (accountId: string, body: WithdrawalRequest, key: string) =>
+      call<{ challenge: string; allow_credentials: string[] | null }>('POST', `/api/money/accounts/${e(accountId)}/withdraw/challenge`, body, { 'Idempotency-Key': key }),
+    walletWithdraw: (accountId: string, body: WithdrawalRequest, key: string, assertion?: DeviceAssertion) =>
+      call<OutsidePayment>('POST', `/api/money/accounts/${e(accountId)}/withdraw`, assertion ? { ...body, assertion } : body, { 'Idempotency-Key': key }),
+    sideConvertQuote: (body: { sell_currency: string; buy_currency: string; sell_minor: number }) => call<SideConversion>('POST', '/api/money/convert/quote', body),
+    sideConvertChallenge: (quote_id: string, key: string) =>
+      call<{ challenge: string; allow_credentials: string[] | null }>('POST', '/api/money/convert/challenge', { quote_id }, { 'Idempotency-Key': key }),
+    sideConvert: (quote_id: string, key: string, assertion?: DeviceAssertion) =>
+      call<SideConversion>('POST', '/api/money/convert', assertion ? { quote_id, assertion } : { quote_id }, { 'Idempotency-Key': key }),
     // B59.26 — card disputes, refunds and the card export (the web's B59.25, on Lens B59.24). Lens decides whose payment
     // may be disputed and what a won dispute or a refund credits.
     /** One currency account's postings over [from, to), YYYY-MM-DD: its card payments carry the id a dispute names. */
@@ -1015,6 +1051,16 @@ export function parseMinor(text: string): number | null {
   if (!m) return null
   const minor = Number(m[1]) * 100 + Number((m[2] ?? '').padEnd(2, '0'))
   return minor > 0 && Number.isSafeInteger(minor) ? minor : null
+}
+
+/** B59.33 — "12.50" → 1250, or for USDC (six places) 12500000: a typed amount in the currency's minor units; null when
+ * not positive. The web's Wallets reads amounts the same way (amountMinor in talyvor-suite Wallets.tsx). */
+export function amountMinor(text: string, currency: string): number | null {
+  const places = currency === 'USDC' ? 6 : 2
+  const m = new RegExp(`^\\s*(\\d+)(?:\\.(\\d{1,${places}}))?\\s*$`).exec(text)
+  if (m === null) return null
+  const minor = Number(m[1]) * 10 ** places + Number((m[2] ?? '').padEnd(places, '0'))
+  return Number.isSafeInteger(minor) && minor > 0 ? minor : null
 }
 
 /** What the owner can still spend: the workspace's balance less every approval still waiting. */
