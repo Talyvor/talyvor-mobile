@@ -1,4 +1,4 @@
-import { formatMinor, refusalText, type Agent, type AgentCard as Held, type AgentRules, type CardAuthorization } from '@talyvor/bff-client'
+import { formatMinor, refusalText, type Agent, type AgentCard as Held, type AgentRules, type CardAuthorization, type CardSpend } from '@talyvor/bff-client'
 import { router, useFocusEffect } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { useWindowDimensions, View } from 'react-native'
@@ -6,6 +6,7 @@ import { useWindowDimensions, View } from 'react-native'
 import { useAccount } from '@/account'
 import { AgentCard } from '@/components/card'
 import { DisputesAndRefunds } from '@/components/card-disputes'
+import { CardSpends } from '@/components/card-spends'
 import { CardLimits, IssueCard } from '@/components/card-forms'
 import { Icon } from '@/components/icon'
 import { OwnerCard } from '@/components/owner-card'
@@ -26,8 +27,10 @@ import { useSession } from '@/session'
 // as the web's Save rules is and signed with the phone's key when it loosens them; and Issue a card for an agent with none.
 // B57.160 — in Pocket: the owner's card at the top, in its tier art, bare and full width as P3's Cards strip draws it,
 // above Disputes and refunds; Change limits and Issue a card as the reference's rules draw a list of settings.
+// B59.55 — under each agent's card, its one-time and standing cards with the budget the owner approved (Lens B59.21), and
+// Open Approvals for one still waiting.
 
-type Entry = { agent: Agent; card: Held | null; purchases: CardAuthorization[]; rules: AgentRules }
+type Entry = { agent: Agent; card: Held | null; purchases: CardAuthorization[]; rules: AgentRules; spends: CardSpend[] | null }
 
 const money = (minor: number, currency: string) => formatMinor(minor, currency.toUpperCase())
 const expiry = (card: Held) => `expires ${String(card.exp_month).padStart(2, '0')}/${String(card.exp_year).slice(-2)} · ${card.currency.toUpperCase()}`
@@ -94,8 +97,9 @@ export default function Cards() {
     const agents = (book.agents ?? []).filter((a) => !a.archived_at)
     const entries = await Promise.all(
       agents.map(async (agent): Promise<Entry> => {
-        const [held, rules] = await Promise.all([client.card(agent.id), client.rules(agent.id)])
-        return { agent, card: held?.card ?? null, purchases: held?.authorizations ?? [], rules }
+        // The one-time and standing cards only add to the card: a read that fails says so under it, and raises nothing.
+        const [held, rules, spends] = await Promise.all([client.card(agent.id), client.rules(agent.id), client.cardSpends(agent.id).catch(() => null)])
+        return { agent, card: held?.card ?? null, purchases: held?.authorizations ?? [], rules, spends }
       }),
     )
     return { entries, disputes, refunds, name }
@@ -183,6 +187,7 @@ export default function Cards() {
               ) : null}
             </Card>
           </View>
+          <CardSpends spends={h.spends} />
           {h.card ? (
             <>
               <Details card={h.card} shown={shown === h.agent.id} onShow={() => void show(h.agent.id)} onHide={() => setShown(null)} />

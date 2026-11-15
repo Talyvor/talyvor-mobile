@@ -48,6 +48,13 @@ function mockBff() {
   const calls: string[] = []
   const bodies: Record<string, unknown> = {}
   const card = { id: 'ic_1', agent_id: 'ag_1', last4: '4242', exp_month: 9, exp_year: 2028, currency: 'gbp', livemode: false, created_at: '2026-11-01T00:00:00Z', frozen: false }
+  // B59.55 — Research's one-time and standing cards (Lens B59.21 through the BFF's B59.54); Sales has none.
+  const spends = [
+    { id: 'cs_1', agent_id: 'ag_1', merchant: 'Figma', amount_minor: 3_900, currency: 'GBP', status: 'active', card: { id: 'mc_1', merchant: 'Figma', cap_minor: 3_900, currency: 'GBP', status: 'active' }, created_at: '2026-11-12T09:00:00Z' },
+    { id: 'cs_2', agent_id: 'ag_1', merchant: 'Notion', amount_minor: 2_000, currency: 'USD', standing_card_id: 'rc_1', status: 'active', expires_at: '2026-12-16T09:00:00Z', created_at: '2026-11-11T09:00:00Z' },
+    { id: 'cs_3', agent_id: 'ag_1', merchant: 'Linear', amount_minor: 1_200, currency: 'EUR', status: 'awaiting_approval', approval_id: 'ap_1', created_at: '2026-11-10T09:00:00Z' },
+  ]
+  const spendsAsked: string[] = []
   const purchases = [{ id: 'ca_1', approved: false, reason: 'Over its daily limit.', amount_minor: 4_500, currency: 'gbp', merchant_name: '', created_at: '2026-11-10T09:00:00Z' }]
   globalThis.fetch = jest.fn(async (url: string, init: RequestInit = {}) => {
     const route = `${init.method ?? 'GET'} ${url.replace('https://bff.test', '').split('?')[0]}`
@@ -76,6 +83,11 @@ function mockBff() {
         return json({ id: 'ws_1', name: 'Nora Vance' })
       case 'GET /api/agents/ag_1/card':
         return json({ card, authorizations: purchases })
+      case 'GET /api/money/card-spends': {
+        const agent = new URL(url).searchParams.get('agent_id') ?? ''
+        spendsAsked.push(agent)
+        return json({ card_spends: spends.filter((s) => s.agent_id === agent) })
+      }
       case 'POST /api/agents/ag_1/rules-challenge': {
         // Lens judges a raise looser and asks for a signature; a cut is tighter and saved at once.
         const daily = (bodies[route] as { rules: { daily_limit_ulxc: number } }).rules.daily_limit_ulxc
@@ -97,7 +109,7 @@ function mockBff() {
     }
     return json({ error: 'not found' }, 404)
   }) as unknown as typeof fetch
-  return Object.assign(calls, { bodies })
+  return Object.assign(calls, { bodies, spendsAsked })
 }
 
 beforeEach(() => {
@@ -328,4 +340,34 @@ describe('Cards’ forms in Pocket', () => {
       expect(row.getByLabelText(label)).toBeTruthy()
     }
   })
+})
+
+// B59.55 — under each agent's card, its one-time and standing cards (Lens B59.21, the BFF's B59.54): which it is, its
+// merchant and the budget the owner approved, a standing card's raise until when, and one still waiting opens Approvals.
+test('B59.55: a one-time card and a standing card show under the agent’s card with the budget the owner approved', async () => {
+  const calls = mockBff()
+  await renderRouter('./src/app', { initialUrl: '/cards' })
+  const oneTime = await screen.findByTestId('card-spend-cs_1')
+  expect(within(oneTime).getByText('One-time card · Figma')).toBeTruthy()
+  expect(within(oneTime).getByText('£39.00')).toBeTruthy()
+  expect(within(oneTime).getByText('Budget you approved')).toBeTruthy()
+  const standing = screen.getByTestId('card-spend-cs_2')
+  expect(within(standing).getByText('Standing card · Notion')).toBeTruthy()
+  expect(within(standing).getByText('$20.00')).toBeTruthy()
+  expect(within(standing).getByText('Budget you approved, until 16 Dec')).toBeTruthy()
+  // Each agent's own are asked for by its id, and sit under its card: Sales has none, so nothing is drawn for it.
+  expect(calls.spendsAsked.sort()).toEqual(['ag_1', 'ag_2'])
+  const order = screen.getAllByTestId(/^(card-head-ag_1|card-spends|card-head-ag_2)$/).map((v) => v.props.testID)
+  expect(order).toEqual(['card-head-ag_1', 'card-spends', 'card-head-ag_2'])
+})
+
+test('B59.55: a spend still waiting for the owner says so and opens Approvals', async () => {
+  mockBff()
+  await renderRouter('./src/app', { initialUrl: '/cards' })
+  const waiting = await screen.findByTestId('card-spend-cs_3')
+  expect(within(waiting).getByText('One-time card · Linear')).toBeTruthy()
+  expect(within(waiting).getByText('€12.00')).toBeTruthy()
+  expect(within(waiting).getByText('Waiting for your approval')).toBeTruthy()
+  await fireEvent.press(screen.getByText('Open Approvals'))
+  await waitFor(() => expect(screen).toHavePathname('/approvals'))
 })

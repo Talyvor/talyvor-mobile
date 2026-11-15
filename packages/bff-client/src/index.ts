@@ -276,6 +276,30 @@ export interface CardRefund {
   created_at: string
 }
 
+/** B59.55 — where a card spend stands (Lens economy.CardSpend*). */
+export type CardSpendStatus = 'asked' | 'awaiting_approval' | 'issuing' | 'active' | 'expired' | 'failed'
+
+/** B59.55 — Lens economy.CardSpend (B59.21): an agent's ask to pay a merchant by card, on a one-time card for the amount
+ * or by raising a standing card's limit for it. The amount is the budget the owner approved. */
+export interface CardSpend {
+  id: string
+  agent_id: string
+  merchant: string
+  amount_minor: number
+  currency: string
+  /** the standing card whose limit it raises; absent for a one-time card */
+  standing_card_id?: string
+  status: CardSpendStatus
+  /** the approval it waits on in Approvals */
+  approval_id?: string
+  detail?: string
+  /** the one-time card, once issued */
+  card?: { id: string; merchant: string; cap_minor: number; currency: string; status: string; last4?: string; expires_at?: string }
+  /** when a standing card's raise ends */
+  expires_at?: string
+  created_at: string
+}
+
 /** Lens economy.OutsidePayee (B30.16): a saved payee outside Talyvor. */
 export interface OutsidePayee {
   id: string
@@ -798,6 +822,9 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     openCardDispute: (paymentId: string, reason: string) => call<CardDispute>('POST', '/api/money/card-disputes', { payment_id: paymentId, reason }),
     /** The merchants' refunds on the workspace's card payments, newest first. */
     cardRefunds: async () => (await call<{ card_refunds: CardRefund[] | null }>('GET', '/api/money/card-refunds')).card_refunds ?? [],
+    /** B59.55 — the agent's one-time and standing cards (B59.54, Lens B59.21), each with the budget the owner approved. */
+    cardSpends: async (agentId: string) =>
+      (await call<{ card_spends: CardSpend[] | null }>('GET', `/api/money/card-spends?${new URLSearchParams({ agent_id: agentId })}`)).card_spends ?? [],
     /** The card payments, disputes and refunds from one day to another, both included, as Lens's CSV. */
     cardExportFile: async (from: string, through: string) =>
       (await send('GET', `/api/money/card-exports?${new URLSearchParams({ from, to: through })}`, undefined, { Accept: 'text/csv' })).arrayBuffer(),
