@@ -195,7 +195,7 @@ function WaitingRow({ count }: { count: number }) {
   )
 }
 
-function AgentRow({ agent, accounts, shows, peg, waiting, first }: { agent: Agent; accounts: readonly CurrencyAccount[]; shows: Shows; peg: number | null; waiting: boolean; first: boolean }) {
+function AgentRow({ agent, accounts, shows, waiting, first }: { agent: Agent; accounts: readonly CurrencyAccount[]; shows: Shows; waiting: boolean; first: boolean }) {
   const { c } = useTheme()
   const held = balancesByCurrency(
     accounts.filter((x) => x.agent_id === agent.id),
@@ -218,9 +218,8 @@ function AgentRow({ agent, accounts, shows, peg, waiting, first }: { agent: Agen
           </Text>
         </View>
         <View style={{ alignItems: 'flex-end' }}>
-          {held.length === 0 ? (
-            <Money micros={agent.balance_ulxc} peg={peg} size={15} balance />
-          ) : (
+          {/* B61.15: an agent's money is its currency accounts; its credit is the parked gateway's and is not drawn. */}
+          {held.length === 0 ? null : (
             <>
               {fiat.length ? (
                 <Text style={{ fontFamily: fonts.uiBold, fontSize: 15, color: c.ink, fontVariant: ['tabular-nums'] }}>{fiat.map((h) => formatMinor(h.minor, h.currency)).join(' + ')}</Text>
@@ -243,14 +242,14 @@ export function HomeView({
   account,
   shows,
   name,
-  peg,
   onDecided,
 }: {
   data: HomeData
   account: Account | null
   shows: Shows
   name: string | null
-  peg: number | null
+  /** unread since B61.15: Home draws no figure at the peg */
+  peg?: number | null
   onDecided: () => void
 }) {
   const { c } = useTheme()
@@ -331,7 +330,7 @@ export function HomeView({
       ) : (
         <View>
           {agents.map((a, i) => (
-            <AgentRow key={a.id} agent={a} accounts={data.accounts} shows={shows} peg={peg} waiting={pending.some((p) => p.agent_id === a.id)} first={i === 0} />
+            <AgentRow key={a.id} agent={a} accounts={data.accounts} shows={shows} waiting={pending.some((p) => p.agent_id === a.id)} first={i === 0} />
           ))}
         </View>
       )}

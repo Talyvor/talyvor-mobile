@@ -86,7 +86,6 @@ test.each([
   const data: AgentData = {
     summary: summary(paused),
     rules,
-    unallocated: 90_900_000_000,
     pinned: false,
     signs,
   }
@@ -95,6 +94,6 @@ test.each([
     return <AgentView data={data} onChanged={() => said('changed')} />
   })
   expect(report.dead).toEqual([])
-  // Review, Pause or Resume, the pin switch, Can use Instant transfer and Statement; Fund waits for an amount and says so
+  // Review, Pause or Resume, the pin switch, Can use Instant transfer and Statement
   expect(report.pressed).toBe(pressed)
 })

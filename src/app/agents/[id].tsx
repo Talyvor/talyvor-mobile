@@ -19,9 +19,8 @@ export default function AgentScreen() {
       if (err instanceof BffError && err.status === 404) return null
       throw err
     }
-    const [summary, book, rules, pins, device] = await Promise.all([
+    const [summary, rules, pins, device] = await Promise.all([
       client.summary(id).catch(gone),
-      client.book(),
       client.rules(id).catch(gone),
       pinnedAgents(),
       phoneKey(client),
@@ -30,7 +29,6 @@ export default function AgentScreen() {
       ? {
           summary,
           rules,
-          unallocated: book.unallocated_ulxc,
           pinned: pins.includes(id),
           signs: !!device?.here,
         }

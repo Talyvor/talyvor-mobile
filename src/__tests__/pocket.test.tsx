@@ -67,10 +67,10 @@ describe('the theme', () => {
 })
 
 describe('money', () => {
-  it('is dollars large and LXC small, and LXC large when the one switch flips', () => {
-    expect(moneyParts(formatLXC(900_000_000, 0.1))).toEqual({ large: '$90.00', small: '900 LXC' })
-    expect(moneyParts(formatLXC(900_000_000, 0.1, 'lxc-first'))).toEqual({ large: '900 LXC', small: '$90.00' })
-    expect(moneyParts(formatLXC(900_000_000, null))).toEqual({ large: '900 LXC', small: null })
+  // B61.15: dollars alone, with no LXC beside them.
+  it('is dollars large with nothing beside them', () => {
+    expect(moneyParts(formatLXC(900_000_000, 0.1))).toEqual({ large: '$90.00', small: null })
+    expect(moneyParts(formatLXC(900_000_000, null))).toEqual({ large: 'Reading…', small: null })
   })
 
   it('draws $450.00 for a currency amount, never 450.00 USD', async () => {
@@ -83,11 +83,11 @@ describe('money', () => {
       </>,
     )
     expect(screen.getAllByText('$450.00')).toHaveLength(2)
-    expect(screen.getByText('4,500 LXC')).toBeTruthy()
     expect(screen.getByText('£24.00')).toBeTruthy()
     expect(screen.getByText('400.00 USDC')).toBeTruthy()
     expect(screen.queryByText(/USD$/)).toBeNull()
-    expect(screen.getAllByLabelText('$450.00 (4,500 LXC)')).toHaveLength(1)
+    expect(screen.getAllByLabelText('$450.00')).toHaveLength(2)
+    expect(screen.queryByText(/LXC/)).toBeNull()
   })
 })
 

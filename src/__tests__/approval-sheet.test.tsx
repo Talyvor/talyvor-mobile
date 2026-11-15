@@ -61,7 +61,7 @@ const lead = {
   budget_left_after_ulxc: 3_100_000_000,
 }
 
-/** The BFF: two agents, Acme Hosting's payment and Lead finder's use waiting, Sandbox labels, $0.10 an LXC. */
+/** The BFF: two agents, Acme Hosting's payment and Lead finder's use waiting, Sandbox labels, and Lens's peg. */
 function mockBff() {
   const calls: { method: string; path: string; body?: string }[] = []
   const status: Record<string, string> = { apr_acme: 'pending', apr_lead: 'pending' }
@@ -121,16 +121,16 @@ test('Review opens the sheet over Home: what pays it, the budget left after, whe
   await renderRouter('./src/app', { initialUrl: '/' })
   await fireEvent.press(await screen.findByRole('button', { name: 'Review: Research wants to pay Acme Hosting' }))
 
-  await waitFor(() => expect(sheet().getByText('$420.00 of $2,000.00 (4,200 of 20,000 LXC)')).toBeTruthy())
+  await waitFor(() => expect(sheet().getByText('$420.00 of $2,000.00')).toBeTruthy())
   expect(sheet().getByText('Research wants to pay')).toBeTruthy()
   expect(sheet().getByText('October hosting invoice')).toBeTruthy()
   expect(sheet().getByLabelText('Sandbox')).toBeTruthy()
   expect(sheet().getByText('$340.00')).toBeTruthy()
   expect(sheet().getByText('Acme Hosting')).toBeTruthy()
   for (const [label, value] of [
-    ['Why it’s asking', 'It asks you above $250.00 (2,500 LXC)'],
+    ['Why it’s asking', 'It asks you above $250.00'],
     ['Paid from', 'Research’s US dollar account (holds $400.00)'],
-    ['Budget left after', '$420.00 of $2,000.00 (4,200 of 20,000 LXC)'],
+    ['Budget left after', '$420.00 of $2,000.00'],
     ['Expires', 'Tomorrow at 09:17'],
   ])
     expect(sheet().getByLabelText(`${label}: ${value}`)).toBeTruthy()
@@ -156,11 +156,11 @@ test('Approve with Face ID signs this approval’s challenge, then the result sc
   expect(result.getByText('Research’s payment to Acme Hosting goes through the next time it sends it, once. Your approval lasts 24 hours.')).toBeTruthy()
   expect(result.getByLabelText('Signed with: Face ID on this iPhone')).toBeTruthy()
   expect(result.getByLabelText('Paid from: Research’s US dollar account')).toBeTruthy()
-  expect(result.getByLabelText('Budget left once it goes through: $420.00 (4,200 LXC)')).toBeTruthy()
-  expect(result.getByText('3,400 LXC for its rules')).toBeTruthy()
+  expect(result.getByLabelText('Budget left once it goes through: $420.00')).toBeTruthy()
+  expect(result.queryByText(/LXC/)).toBeNull()
   expect(result.getByRole('button', { name: 'Done' })).toBeTruthy()
   // The statement Face ID shows is the amount the sheet showed.
-  expect(mockPhone.reasons).toEqual(['Approve $340.00 (3,400 LXC) for Research'])
+  expect(mockPhone.reasons).toEqual(['Approve $340.00 for Research'])
   expect(JSON.parse(calls.find((c) => c.path === '/api/agents/approvals/apr_acme/approve')!.body!)).toEqual({
     assertion: { device_id: 'dk_1', challenge: 'ch_apr_acme', signature: 'signed:talyvor-device-v1:ch_apr_acme' },
   })
@@ -178,8 +178,8 @@ test('Decline signs, keeps the reason, and the declined screen says what declini
   expect(result.getByText('Declined')).toBeTruthy()
   expect(result.getByText('Declined. Research’s payment is refused, and the same request is refused without asking you for 24 hours.')).toBeTruthy()
   expect(result.getByLabelText('Declined with: Face ID on this iPhone')).toBeTruthy()
-  expect(result.getByLabelText('Research’s budget left: $760.00 (7,600 LXC)')).toBeTruthy()
-  expect(mockPhone.reasons).toEqual(['Decline $340.00 (3,400 LXC) for Research'])
+  expect(result.getByLabelText('Research’s budget left: $760.00')).toBeTruthy()
+  expect(mockPhone.reasons).toEqual(['Decline $340.00 for Research'])
   expect(JSON.parse(calls.find((c) => c.path === '/api/agents/approvals/apr_acme/deny')!.body!)).toEqual({
     assertion: { device_id: 'dk_1', challenge: 'ch_apr_acme', signature: 'signed:talyvor-device-v1:ch_apr_acme' },
     reason: 'not this month',

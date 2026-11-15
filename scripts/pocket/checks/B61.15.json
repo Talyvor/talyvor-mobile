@@ -1,0 +1,8 @@
+[
+  {"route": "/", "screen": "p-home", "words": "report", "why": "B61.15: no LXC on Home; each agent's row shows its accounts, never its credit"},
+  {"route": "/agents/agt_research", "screen": "p-agent-research", "phoneKey": true, "words": "report", "why": "B61.15: the agent's spend in dollars, its balance from its accounts, no credit and no Fund"},
+  {"route": "/agents/agt_research", "screen": "p-agent-research", "phoneKey": true, "name": "lower", "scroll": "Rules", "words": "report", "why": "B61.15: its rules in dollars, no model, provider or requests-a-minute rules"},
+  {"route": "/approvals", "screen": "p-approvals", "words": "report", "why": "B61.15: every amount in dollars alone"},
+  {"route": "/cards", "screen": "p-agent-research", "name": "limits", "words": "report", "press": ["Change Research’s limits"], "scroll": "Limit per request", "why": "B61.15: the limits typed in dollars"},
+  {"route": "/statement", "screen": "p-statement", "words": "report", "why": "B61.15: the movements in dollars; no credit balance per wallet"}
+]

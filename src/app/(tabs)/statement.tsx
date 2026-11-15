@@ -1,4 +1,4 @@
-import { formatBalance, formatLXC, refusalText } from '@talyvor/bff-client'
+import { formatLXC, refusalText } from '@talyvor/bff-client'
 import { File, Paths } from 'expo-file-system'
 import { router } from 'expo-router'
 import * as Sharing from 'expo-sharing'
@@ -81,20 +81,7 @@ export default function StatementScreen() {
       </View>
       <Body muted>This month: {monthName(period.from)}</Body>
       <LoadState loading={loading && !data} error={error} />
-      {data?.statement.accounts?.length ? (
-        <Card white>
-          <Eyebrow>Each wallet now</Eyebrow>
-          {data.statement.accounts.map((a, i) => (
-            <Row
-              key={a.account}
-              first={i === 0}
-              title={accountName(a.account)}
-              right={<Amount written={formatBalance(a.closing_ulxc, peg)} />}
-              onPress={open(a.account)}
-            />
-          ))}
-        </Card>
-      ) : null}
+      {/* B61.15: each agent's credit balance is the parked gateway's and is not drawn; its movements are, in dollars. */}
       {data && lines.length === 0 ? <Body muted>No money moved this month.</Body> : null}
       {lines.length > 0 ? (
         <Card white>

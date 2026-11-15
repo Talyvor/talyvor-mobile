@@ -1006,43 +1006,44 @@ export function answerOf(events: string): string {
   return text.trim()
 }
 
-/** 12,500,000 µLXC → `12.5 LXC`: every µLXC shown, no trailing zeros. */
-export function formatULXC(micros: number): string {
-  return `${(micros / 1_000_000).toLocaleString('en-US', { maximumFractionDigits: 6 })} LXC`
-}
-
-/** `2.5` → 2,500,000 µLXC, in whole numbers only; null for anything that is not a positive amount with at most 6 decimals. */
-export function parseLXC(text: string): number | null {
-  const m = /^(\d+)(?:\.(\d{1,6}))?$/.exec(text.trim())
-  if (!m) return null
-  const micros = Number(m[1]) * 1_000_000 + Number((m[2] ?? '').padEnd(6, '0'))
-  return micros > 0 && Number.isSafeInteger(micros) ? micros : null
-}
-
 /** 45000, USD → `$450.00`; 1250, GBP → `£12.50`; USDC counts six decimals, so 1,500,000 → `1.50 USDC`. */
 export function formatMinor(minor: number, currency: string): string {
   if (currency === 'USDC') return `${(minor / 1_000_000).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 })} USDC`
   return (minor / 100).toLocaleString('en-US', { style: 'currency', currency, minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-/** The one switch for every figure the phone draws in LXC: dollars first, or LXC first. */
-export const MONEY_ORDER: 'usd-first' | 'lxc-first' = 'usd-first'
+// B61.15 — Nick, 15 Nov: "get rid of the lxc at all for now ... it should only be in the actual account currency only."
+// What Lens still counts in µLXC is written in the dollars it is worth at the peg, and never beside its LXC.
 
-/** 900,000,000 µLXC at 0.1 USD per LXC → `$90.00 (900 LXC)`; `900 LXC` while the peg is unread. */
-export function formatLXC(micros: number, peg: number | null, order: typeof MONEY_ORDER = MONEY_ORDER): string {
-  return writeLXC(micros, peg, order, Math.round)
+/** 900,000,000 µLXC at 0.1 USD per LXC → `$90.00`; `Reading…` while the peg is unread, as the phone says of any read. */
+export function formatLXC(micros: number, peg: number | null): string {
+  return writeLXC(micros, peg, Math.round)
 }
 
-/** B59.36 — a balance as formatLXC writes it, its dollars rounded down to the cent: 1,255,000 µLXC at 0.1 → `$0.12 (1.255 LXC)`. */
-export function formatBalance(micros: number, peg: number | null, order: typeof MONEY_ORDER = MONEY_ORDER): string {
-  return writeLXC(micros, peg, order, Math.floor)
+/** B59.36 — a balance as formatLXC writes it, its dollars rounded down to the cent: 1,255,000 µLXC at 0.1 → `$0.12`. */
+export function formatBalance(micros: number, peg: number | null): string {
+  return writeLXC(micros, peg, Math.floor)
 }
 
-function writeLXC(micros: number, peg: number | null, order: typeof MONEY_ORDER, toCents: (cents: number) => number): string {
-  if (!peg) return formatULXC(micros)
+function writeLXC(micros: number, peg: number | null, toCents: (cents: number) => number): string {
+  if (!peg) return 'Reading…'
   // Whole µUSD first, so 0.1's float error never pulls an exact cent down a cent.
-  const usd = formatMinor(toCents(Math.round(micros * peg) / 10_000), 'USD')
-  return order === 'usd-first' ? `${usd} (${formatULXC(micros)})` : `${formatULXC(micros)} (${usd})`
+  return formatMinor(toCents(Math.round(micros * peg) / 10_000), 'USD')
+}
+
+/** B61.15 — dollars typed, as the µLXC Lens counts at the peg: `12.34` at 0.1 → 123,400,000, which formatLXC writes back
+ * as `$12.34`; null for anything that is not a positive amount with at most 2 decimals, and while the peg is unread. */
+export function parseDollars(text: string, peg: number | null): number | null {
+  const cents = parseMinor(text)
+  if (cents === null || !peg) return null
+  const micros = Math.round((cents * 10_000) / peg)
+  return micros > 0 && Number.isSafeInteger(micros) ? micros : null
+}
+
+/** µLXC as the dollars to type in a field: 123,400,000 at 0.1 → `12.34`, 250,000,000 → `25`; empty for none. */
+export function dollarsText(micros: number | undefined, peg: number | null): string {
+  if (!micros || micros <= 0 || !peg) return ''
+  return String(Math.round(Math.round(micros * peg) / 10_000) / 100)
 }
 
 /** `12.5` → 1250 minor units; null for anything that is not a positive amount with at most 2 decimals. */
@@ -1081,9 +1082,7 @@ export function rulesInWords(r: AgentRules, peg: number | null = null): string[]
   limit(r.weekly_limit_ulxc, (x) => `Spends at most ${x} a week.`)
   limit(r.monthly_limit_ulxc, (x) => `Spends at most ${x} a month.`)
   limit(r.approval_above_ulxc, (x) => `Asks you first above ${x}.`)
-  if (r.requests_per_minute && r.requests_per_minute > 0) out.push(`No more than ${r.requests_per_minute} requests a minute.`)
-  if (r.allowed_models?.length) out.push(`Only these models: ${r.allowed_models.join(', ')}.`)
-  if (r.allowed_providers?.length) out.push(`Only these providers: ${r.allowed_providers.join(', ')}.`)
+  // B61.15: the requests-a-minute, model and provider rules are the parked gateway's, and are not drawn.
   if (r.allowed_payees?.length) out.push(`Pays only ${r.allowed_payees.length} named payee${r.allowed_payees.length === 1 ? '' : 's'}.`)
   if (r.blocked_payees?.length) out.push(`Never pays ${r.blocked_payees.length} blocked payee${r.blocked_payees.length === 1 ? '' : 's'}.`)
   if (r.active_from && r.active_until) out.push(`Works only from ${r.active_from} to ${r.active_until} (${r.timezone || 'UTC'}).`)
