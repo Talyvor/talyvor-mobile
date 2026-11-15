@@ -711,6 +711,50 @@ export interface CompanyDetails {
   people: ControlPerson[]
 }
 
+/** B61.21 — Lens economy.VerificationCheck (B30.4), through the BFF's /api/verification (suite B30.116): one check, as the
+ * provider that made it answered. */
+export interface VerificationCheck {
+  level: string
+  subject: string
+  /** The provider that checked. */
+  method: string
+  /** Checked by the Test provider: it counts in Sandbox only. */
+  test: boolean
+  status: 'pending' | 'completed' | 'failed' | 'returned'
+  evidence_ref: string
+  verified_name?: string
+  country?: string
+  company_number?: string
+  detail?: string
+}
+
+/** Lens economy.WorkspaceVerification (B30.4): the level the checks reach, the level live money is judged by, every check. */
+export interface WorkspaceVerification {
+  level: string
+  meaning: string
+  live_level: string
+  live_meaning: string
+  checks: VerificationCheck[] | null
+}
+
+/** What a check answers: the check, and the record after it. */
+export interface VerificationAnswer {
+  check: VerificationCheck
+  verification: WorkspaceVerification
+}
+
+/** What each level's check is asked to confirm (Lens economy.VerificationRequest). */
+export type VerificationBody =
+  | { kind: 'contact'; email: string; phone: string }
+  | { kind: 'identity'; name: string; country: string; date_of_birth: string }
+  | { kind: 'company'; name: string; country: string; company_number: string; directors: string[]; people_with_significant_control: string[] }
+
+const VERIFY_PATH: Record<VerificationBody['kind'], string> = {
+  contact: '/api/verification/contact',
+  identity: '/api/verification/identity',
+  company: '/api/verification/company',
+}
+
 /** B59.39 — Track's memberView: a person in the workspace and their role. */
 export type MemberRole = 'owner' | 'member'
 
@@ -983,6 +1027,10 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
       const got = await call<CompanyDetails>('PUT', '/api/workspace/business', details)
       return { ...got, people: got.people ?? [] }
     },
+    /** B61.21 — the workspace's identity checks and the level they reach (Lens B30.4). */
+    verification: () => call<WorkspaceVerification>('GET', '/api/verification'),
+    /** Runs one level's check against the provider (the Test provider in Sandbox) and answers it with the record after. */
+    verify: ({ kind, ...body }: VerificationBody) => call<VerificationAnswer>('POST', VERIFY_PATH[kind], body),
     /** B59.39 — the workspace's members and their roles (Track, through the BFF's track_members.go). */
     members: async () => (await call<Member[] | null>('GET', '/api/members')) ?? [],
     /** Adds a person by the email they sign in with; Track refuses with a code (MEMBER_EXISTS, OWNER_REQUIRED, …). */

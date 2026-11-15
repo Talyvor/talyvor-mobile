@@ -10,13 +10,14 @@ import { Card } from '@/components/card'
 import { Icon } from '@/components/icon'
 import { MoneyLabel, useMoneyLabels } from '@/components/money-label'
 import { PhoneKeyCard } from '@/components/phone-key-card'
-import { CompanyDetailsSection } from '@/components/company-details'
 import { CountryField, FieldError } from '@/components/country-field'
+import { IdentityChecks } from '@/components/identity-checks'
 import { Body, Button, Field, Headline, Screen } from '@/components/ui'
 import { config } from '@/config'
 import { useSession } from '@/session'
 import {
   ACCOUNT_TYPES,
+  IDENTITY_WORDS,
   KIND_NOTE,
   MONEY_KINDS,
   PROFILE_ERRORS,
@@ -36,6 +37,9 @@ import { fonts, useTheme } from '@/theme'
 //
 // B57.135 — drawn in Pocket as the launch pack's P1 and P2: the logo (or Back) with Sandbox at the top, the step bars,
 // each type on its card face, and the decisions held at the foot. Step 3 is not drawn there, so it takes the same look.
+//
+// B61.21 — step 4 is the identity check, as the web's B61.20: Lens's checks against the Sandbox provider, and Home only
+// once they pass. A Business's company details moved here from step 3, beside the check they go to.
 //
 // The name is the workspace's name. Country and the registration number are asked as the spec says, and kept on this
 // screen only: Lens has nowhere to hold them yet (the web does the same).
@@ -100,15 +104,18 @@ function Header({ onBack }: { onBack?: () => void }) {
   )
 }
 
-/** The phone's step bars: three bars, tangerine when reached, then "Step n of 3". */
-function Steps({ at }: { at: 1 | 2 | 3 }) {
+type StepAt = 1 | 2 | 3 | 4
+
+/** The phone's step bars: a bar a step, tangerine when reached, then "Step n of 4". */
+function Steps({ at }: { at: StepAt }) {
   const { c } = useTheme()
+  const of = SIGNUP_STEPS.length
   return (
-    <View accessible accessibilityLabel={`Step ${at} of 3, ${SIGNUP_STEPS[at - 1]}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-      {[1, 2, 3].map((n) => (
-        <View key={n} style={{ width: 28, height: 6, borderRadius: 3, backgroundColor: n <= at ? c.tangerine : c.cloud2 }} />
+    <View accessible accessibilityLabel={`Step ${at} of ${of}, ${SIGNUP_STEPS[at - 1]}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+      {SIGNUP_STEPS.map((_, i) => (
+        <View key={i} style={{ width: 28, height: 6, borderRadius: 3, backgroundColor: i < at ? c.tangerine : c.cloud2 }} />
       ))}
-      <Text style={{ marginLeft: 6, fontFamily: fonts.uiMedium, fontSize: 13, color: c.ink2 }}>{`Step ${at} of 3`}</Text>
+      <Text style={{ marginLeft: 6, fontFamily: fonts.uiMedium, fontSize: 13, color: c.ink2 }}>{`Step ${at} of ${of}`}</Text>
     </View>
   )
 }
@@ -259,19 +266,29 @@ function StepKind({ type, name, kind, setKind, busy, failed, onContinue, onBack 
   )
 }
 
-/** Step 3: this phone's key, made with Face ID. The app opens once it is on, or later from Approvals. */
-function StepKey() {
+/** Step 3: this phone's key, made with Face ID, or later from Approvals. Either way the identity check follows. */
+function StepKey({ onContinue }: { onContinue: () => void }) {
   const [on, setOn] = useState(false)
   const onOn = useCallback(() => setOn(true), [])
   return (
-    <Screen
-      footer={on ? <Button primary label="Open the app" onPress={() => router.replace('/')} /> : <Button variant="ghost" label="Do this later" onPress={() => router.replace('/')} />}>
+    <Screen footer={on ? <Button primary label="Continue" onPress={onContinue} /> : <Button variant="ghost" label="Do this later" onPress={onContinue} />}>
       <Header />
       <Steps at={3} />
       <Headline>{SIGNUP_STEPS[2]}</Headline>
       <PhoneKeyCard onOn={onOn} />
-      {/* B59.32 — a Business adds its company details and the people with control here, or later in Settings. */}
-      <CompanyDetailsSection titled />
+    </Screen>
+  )
+}
+
+/** Step 4 (B61.21): the identity check. The app opens on Home only once Lens's checks for the account pass. */
+function StepConfirm() {
+  return (
+    <Screen>
+      <Header />
+      <Steps at={4} />
+      <Headline>{SIGNUP_STEPS[3]}</Headline>
+      {/* B59.32 — a Business gives its company details and the people with control here, beside the check they go to. */}
+      <IdentityChecks done={<Button primary label={IDENTITY_WORDS.open} onPress={() => router.replace('/')} />} />
     </Screen>
   )
 }
@@ -283,14 +300,14 @@ export default function SignUp() {
     { clientId: config.oidcClientId, redirectUri, scopes: ['openid', 'email', 'profile'] },
     discovery,
   )
-  const [step, setStep] = useState<1 | 2 | 3>(1)
+  const [step, setStep] = useState<StepAt>(1)
   const [type, setType] = useState<AccountType | null>(null)
   const [profile, setProfile] = useState<Profile>(EMPTY)
   const [kind, setKind] = useState<MoneyKind | null>(null)
   const [busy, setBusy] = useState(false)
   const [failed, setFailed] = useState(false)
   // Someone already signed in has an account: this screen is for opening one, so Home shows instead. Once this sign-up has
-  // started, the session it makes is its own and step 3 follows.
+  // started, the session it makes is its own and steps 3 and 4 follow.
   const [started, setStarted] = useState(false)
   if (signedIn && !started) return <Redirect href="/" />
 
@@ -319,8 +336,10 @@ export default function SignUp() {
     }
   }
 
-  return step === 3 ? (
-    <StepKey />
+  return step === 4 ? (
+    <StepConfirm />
+  ) : step === 3 ? (
+    <StepKey onContinue={() => setStep(4)} />
   ) : step === 2 && type ? (
     <StepKind type={type} name={name} kind={kind} setKind={setKind} busy={busy} failed={failed} onContinue={() => void finish()} onBack={() => setStep(1)} />
   ) : (

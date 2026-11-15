@@ -20,22 +20,22 @@ export function FieldError({ children }: { children: string }) {
   )
 }
 
-/** Country: the web's list, opened in place. */
-export function CountryField({ value, onChange }: { value: string; onChange: (code: string) => void }) {
+/** Country: the web's list, opened in place. `label` names it where it asks something else (B61.21's country lived in). */
+export function CountryField({ value, onChange, label = PROFILE_LABELS.country }: { value: string; onChange: (code: string) => void; label?: string }) {
   const { c } = useTheme()
   const [open, setOpen] = useState(false)
   const picked = COUNTRIES.find(([code]) => code === value)?.[1]
   return (
     <View style={{ gap: 6 }}>
-      <Text style={{ fontFamily: fonts.uiMedium, fontSize: 13, color: c.ink2 }}>{PROFILE_LABELS.country}</Text>
+      <Text style={{ fontFamily: fonts.uiMedium, fontSize: 13, color: c.ink2 }}>{label}</Text>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={PROFILE_LABELS.country}
+        accessibilityLabel={label}
         accessibilityValue={picked ? { text: picked } : undefined}
         accessibilityState={{ expanded: open }}
         onPress={() => setOpen(!open)}
         style={{ minHeight: 48, borderRadius: 14, borderWidth: 1.5, borderColor: c.control, backgroundColor: c.page, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center' }}>
-        <Text style={{ flex: 1, fontFamily: fonts.ui, fontSize: 15, color: picked ? c.ink : c.ink3 }}>{picked ?? PROFILE_LABELS.country}</Text>
+        <Text style={{ flex: 1, fontFamily: fonts.ui, fontSize: 15, color: picked ? c.ink : c.ink3 }}>{picked ?? label}</Text>
         <View style={{ transform: [{ rotate: open ? '-90deg' : '90deg' }] }}>
           <Icon name="chev" size={16} color={c.ink2} />
         </View>
