@@ -12,14 +12,15 @@ import { useWaiting } from '@/waiting'
 // B57.65 — Pocket's tab bar (design/pocket pocket.css, .pk.phone .tabs): each tab's icon over its word, the tab you are
 // on in ink with its icon on a tangerine-50 pill, the others ink-3, and Approvals' count of what waits for you.
 // B59.3 — a tab in an area the workspace does not have is not there, and a link to it opens Home.
+// B61.54 — the launch pack's five (design/launch-pack/design/DESIGN.md, choice 1): Home, Agents, Cards, Pay, Approvals.
+// Spending and Statement open from Home and from Activity, and Settings from the top right of Home.
 const TABS: { name: string; title: string; icon: IconName; area?: Area }[] = [
   { name: 'index', title: 'Home', icon: 'home' },
+  { name: 'agents', title: 'Agents', icon: 'agents' },
   { name: 'cards', title: 'Cards', icon: 'card' },
-  { name: 'chat', title: 'Chat', icon: 'chat', area: 'chat' },
-  { name: 'approvals', title: 'Approvals', icon: 'approvals' },
-  { name: 'spending', title: 'Spending', icon: 'spending' },
-  { name: 'statement', title: 'Statement', icon: 'statements' },
   { name: 'pay', title: 'Pay', icon: 'payments' },
+  { name: 'approvals', title: 'Approvals', icon: 'approvals' },
+  { name: 'chat', title: 'Chat', icon: 'chat', area: 'chat' },
 ]
 
 export default function TabsLayout() {
@@ -38,7 +39,7 @@ export default function TabsLayout() {
         tabBarActiveTintColor: c.ink,
         tabBarInactiveTintColor: c.ink3,
         tabBarItemStyle: { justifyContent: 'center' },
-        // Six labels across a 390-wide phone: the tab's own 5-point side padding would cut "Statement" short.
+        // The tab's own 5-point side padding would cut "Approvals" short on a narrow phone.
         tabBarButton: ({ style, ...props }) => <PlatformPressable {...props} style={[style, { paddingHorizontal: 0 }]} />,
         tabBarLabelPosition: 'below-icon',
       }}>
@@ -50,6 +51,7 @@ export default function TabsLayout() {
               name={t.name}
               options={{
                 title: t.title,
+                tabBarButtonTestID: `tab-${t.name}`,
                 tabBarAccessibilityLabel: badge ? `${t.title}, ${badge} waiting` : t.title,
                 tabBarLabel: ({ focused, color }) => (
                   <Text style={{ color, fontFamily: focused ? fonts.uiHeavy : fonts.uiMedium, fontSize: 11, letterSpacing: -0.11, marginTop: 4 }}>{t.title}</Text>

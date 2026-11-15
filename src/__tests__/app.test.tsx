@@ -1362,16 +1362,20 @@ describe('B57.65 the tab bar', () => {
   // The bar draws each tab's icon twice, on and off, and fades between them.
   const badges = () => screen.queryAllByTestId('approvals-badge').map((b) => within(b).getByText(/\d/).props.children)
 
-  test('each tab has its icon over its word, and pressing it opens it', async () => {
+  // B61.54: the tab bar's buttons, in the order the bar draws them.
+  const tabs = () => screen.getAllByTestId(/^tab-/).map((b) => b.props.accessibilityLabel)
+
+  test('B61.54: the bar is Home, Agents, Cards, Pay and Approvals, in that order, each icon over its word, and pressing each opens it', async () => {
     mockBff()
     await renderRouter('./src/app', { initialUrl: '/' })
     await screen.findByText('1 payment waits for your yes')
-    for (const icon of ['home', 'approvals', 'spending', 'statements', 'payments']) expect(screen.getAllByTestId(`icon-${icon}`, { includeHiddenElements: true }).length).toBeGreaterThan(0)
-    for (const word of ['Home', 'Approvals', 'Spending', 'Statement', 'Pay']) expect(screen.getAllByText(word).length).toBeGreaterThan(0)
-    // Every tab, pressed, is the one you are on: none leads nowhere. Chat's own test opens Chat, with its recorder
-    // stood in for, in a workspace that has it (B59.3).
-    for (const name of ['Approvals', 'Spending', 'Statement', 'Pay', 'Home']) {
-      const label = name === 'Approvals' ? 'Approvals, 1 waiting' : name
+    expect(tabs()).toEqual(['Home', 'Agents', 'Cards', 'Pay', 'Approvals, 1 waiting'])
+    for (const icon of ['home', 'agents', 'card', 'payments', 'approvals']) expect(screen.getAllByTestId(`icon-${icon}`, { includeHiddenElements: true }).length).toBeGreaterThan(0)
+    // Spending and Statement are not tabs: they open from Home and from Activity.
+    expect(screen.queryAllByTestId('icon-spending', { includeHiddenElements: true })).toHaveLength(0)
+    expect(screen.queryAllByTestId('icon-statements', { includeHiddenElements: true })).toHaveLength(0)
+    // Every tab, pressed, is the one you are on: none leads nowhere.
+    for (const label of ['Agents', 'Cards', 'Pay', 'Approvals, 1 waiting', 'Home']) {
       await fireEvent.press(screen.getByRole('button', { name: label }))
       await waitFor(() => expect(screen.getByRole('button', { name: label, selected: true })).toBeTruthy())
     }
@@ -1392,6 +1396,61 @@ describe('B57.65 the tab bar', () => {
     __receive({ type: 'agent_approval', approval_id: 'apr_9' })
     await waitFor(() => expect(badges()).toEqual([]))
     expect(screen.getByLabelText('Approvals')).toBeTruthy()
+  })
+})
+
+describe('B61.54 the Agents tab', () => {
+  beforeEach(() => {
+    mockStore.clear()
+    mockStore.set('talyvor.session', JSON.stringify({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }))
+  })
+  const accounts = [
+    { id: 'acc_gbp', currency: 'GBP', purpose: 'company', status: 'open', name: 'The company · GBP', balance_minor: 100_000 },
+    { id: 'acc_ag1_gbp', currency: 'GBP', purpose: 'agent', agent_id: 'ag_1', status: 'open', name: 'Researcher · GBP', balance_minor: 4_250 },
+    { id: 'acc_ag2_usdc', currency: 'USDC', purpose: 'agent', agent_id: 'ag_2', status: 'open', name: 'Buyer · USDC', balance_minor: 12_000_000 },
+  ]
+
+  test('lists every agent with its picture, what it holds in its own currency and Paused, and opens its page', async () => {
+    mockBff({ paused: true, accounts })
+    await renderRouter('./src/app', { initialUrl: '/agents' })
+    const researcher = await screen.findByRole('link', { name: 'Researcher, paused' })
+    const buyer = screen.getByRole('link', { name: 'Buyer, running' })
+    expect(within(researcher).getByText('Paused')).toBeTruthy()
+    expect(within(buyer).queryByText('Paused')).toBeNull()
+    expect(within(researcher).getByText('£42.50')).toBeTruthy()
+    expect(within(buyer).getByText(/12\.00 USDC/)).toBeTruthy()
+    // The company's own account is not an agent's.
+    expect(screen.queryByText('£1,000.00')).toBeNull()
+    expect(screen.queryByText(/LXC/)).toBeNull()
+    expect(screen.getByRole('button', { name: 'Agents', selected: true })).toBeTruthy()
+
+    await fireEvent.press(researcher)
+    expect(await screen.findByTestId('agent-head')).toBeTruthy()
+  })
+
+  test('Pause every agent at the top right opens the pause-all screen', async () => {
+    mockBff({ accounts })
+    await renderRouter('./src/app', { initialUrl: '/agents' })
+    await fireEvent.press(await screen.findByRole('link', { name: 'Pause every agent' }))
+    expect(await screen.findByRole('button', { name: /Pause every agent/ })).toBeTruthy()
+  })
+
+  test('the old Spending and Statement links still open their screens, Home and Activity open them, and Home opens Agents', async () => {
+    mockBff()
+    await renderRouter('./src/app', { initialUrl: '/spending' })
+    expect(await screen.findByText('Where your money went')).toBeTruthy()
+    await renderRouter('./src/app', { initialUrl: '/statement' })
+    expect(await screen.findByRole('header', { name: 'Statement' })).toBeTruthy()
+
+    await renderRouter('./src/app', { initialUrl: '/' })
+    await fireEvent.press(await screen.findByRole('link', { name: 'See all agents' }))
+    expect(await screen.findByRole('button', { name: 'Agents', selected: true })).toBeTruthy()
+    await renderRouter('./src/app', { initialUrl: '/' })
+    await fireEvent.press(await screen.findByRole('link', { name: 'Spending' }))
+    expect(await screen.findByText('Where your money went')).toBeTruthy()
+    await renderRouter('./src/app', { initialUrl: '/activity' })
+    await fireEvent.press(await screen.findByRole('link', { name: 'Statement' }))
+    expect(await screen.findByRole('header', { name: 'Statement' })).toBeTruthy()
   })
 })
 

@@ -43,6 +43,8 @@ function Navigator() {
           <Stack.Screen name="pause-all" />
           <Stack.Screen name="settings" />
           <Stack.Screen name="activity" />
+          <Stack.Screen name="spending" />
+          <Stack.Screen name="statement" />
           <Stack.Screen name="widget" />
         </Stack.Protected>
         <Stack.Protected guard={!signedIn}>

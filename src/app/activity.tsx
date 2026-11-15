@@ -5,6 +5,7 @@ import * as Sharing from 'expo-sharing'
 import { useCallback, useState } from 'react'
 import { Pressable, ScrollView, Text, View } from 'react-native'
 
+import { MoneyLinks } from '@/components/home'
 import { AGENT_CREDIT, MoneyLabel } from '@/components/money-label'
 import { moneyParts } from '@/components/money'
 import { Back, Body, Button, Card, Eyebrow, Field, Headline, LoadState, Row, Screen, useLoad } from '@/components/ui'
@@ -116,6 +117,7 @@ export default function ActivityScreen() {
       <Body muted>
         {month === 'this' ? 'This month' : 'Last month'}: {monthName(period.from)}
       </Body>
+      <MoneyLinks />
       <Pills label="Period" options={[['this', 'This month'], ['last', 'Last month']] as const} value={month} onChange={setMonth} />
       <Pills label="Agent" options={[[null, 'Every agent'], ...agents.map((a): [string, string] => [a.id, a.name])]} value={agent} onChange={setAgent} />
       <Pills label="Kind of line" options={ACTIVITY_KINDS.map((k, i): [number, string] => [i, k.label])} value={kindAt} onChange={setKindAt} />

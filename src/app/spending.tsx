@@ -4,7 +4,7 @@ import { useCallback } from 'react'
 import { Pressable, Text, View } from 'react-native'
 
 import { NoticeSettingsCard } from '@/components/notice-settings'
-import { Body, Card, Eyebrow, Figure, Headline, LoadState, Screen, useLoad } from '@/components/ui'
+import { Back, Body, Card, Eyebrow, Figure, Headline, LoadState, Screen, useLoad } from '@/components/ui'
 import { useSession } from '@/session'
 import { byCategory, categoryName, day, RULES, spendPeriod } from '@/spending'
 import { fonts, useTheme } from '@/theme'
@@ -66,6 +66,8 @@ export default function SpendingScreen() {
 
   return (
     <Screen onRefresh={reload} refreshing={loading && !!data}>
+      {/* B61.54 — off the tab bar: it opens from Home and from Activity. */}
+      <Back home="/" />
       <Eyebrow>Spending</Eyebrow>
       <Headline>Where your money went</Headline>
       <LoadState loading={loading && !data} error={error} />
