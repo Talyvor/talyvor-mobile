@@ -42,6 +42,7 @@ function Navigator() {
           <Stack.Screen name="disputes" />
           <Stack.Screen name="pause-all" />
           <Stack.Screen name="settings" />
+          <Stack.Screen name="help" />
           <Stack.Screen name="activity" />
           <Stack.Screen name="spending" />
           <Stack.Screen name="statement" />

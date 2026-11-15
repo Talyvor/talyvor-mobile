@@ -1,0 +1,16 @@
+[
+  { "route": "/help", "screen": "p-chat", "words": "report", "why": "Pocket Live's phone help (design/pocket-live), drawn in Pocket's p-chat: an empty chat offers the three questions to start with, the question box at the foot", "answers": { "/api/help/chat": { "messages": [], "kept_days": 30 } } },
+  { "route": "/help", "screen": "p-chat", "name": "answered", "words": "report", "why": "an answer with who wrote it and the screen that answers it; a question the help pages do not answer offers Send to our team above the question box", "answers": { "/api/help/chat": { "kept_days": 30, "messages": [
+    { "by": "you", "text": "How do approvals work?", "at": "2026-11-15T09:00:00Z" },
+    { "by": "ai", "text": "Each agent has rules you set: per payment, per day, per month, and an amount to ask you above. A payment outside them waits for your yes.", "page": "/approvals", "at": "2026-11-15T09:00:02Z" },
+    { "by": "you", "text": "Can my agent pay in yen?", "at": "2026-11-15T09:01:00Z" },
+    { "by": "ai", "text": "I don't know that. Our team answers it: press Send to our team.", "team": true, "at": "2026-11-15T09:01:02Z" }
+  ] } } },
+  { "route": "/help", "screen": "p-chat", "name": "answered", "dark": true, "words": "report", "why": "the same, with the phone set to dark", "answers": { "/api/help/chat": { "kept_days": 30, "messages": [
+    { "by": "you", "text": "How do approvals work?", "at": "2026-11-15T09:00:00Z" },
+    { "by": "ai", "text": "Each agent has rules you set: per payment, per day, per month, and an amount to ask you above. A payment outside them waits for your yes.", "page": "/approvals", "at": "2026-11-15T09:00:02Z" },
+    { "by": "you", "text": "Can my agent pay in yen?", "at": "2026-11-15T09:01:00Z" },
+    { "by": "ai", "text": "I don't know that. Our team answers it: press Send to our team.", "team": true, "at": "2026-11-15T09:01:02Z" }
+  ] } } },
+  { "route": "/settings", "screen": "p-spending", "words": "report", "scroll": "Help and your account", "why": "Settings, Help, first in Help and your account, in Pocket Live's words: Ask anything, any time" }
+]

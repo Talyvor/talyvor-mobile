@@ -128,7 +128,12 @@ describe('links', () => {
 
   test('no link can send the person to another address: nothing opens a URL it was given', () => {
     const opens = appSources.filter((f) => /Linking\.openURL|openBrowserAsync|openAuthSessionAsync|\+native-intent/.test(readFileSync(f, 'utf8')))
-    expect(opens).toEqual([])
+    // B61.39 — the one exception: Help's "Send to our team" opens the phone's mail app, always to COMPANY_CONTACT.
+    expect(opens.map((f) => f.replace(root, ''))).toEqual(['/src/help-words.ts'])
+    const help = readFileSync(join(root, 'src/help-words.ts'), 'utf8')
+    expect(help.match(/Linking\.openURL\([^)]*\)/g)).toEqual(['Linking.openURL(helpMailto(question)'])
+    expect(help).toMatch(/helpMailto = \(question: string\) =>\s+`mailto:\$\{COMPANY_CONTACT\}\?subject=\$\{encodeURIComponent\('Help with Talyvor'\)\}&body=\$\{encodeURIComponent\(question\)\}`/)
+    expect(help).toContain("export const COMPANY_CONTACT = 'hello@talyvor.com'")
     expect(readdirSync(join(root, 'src/app')).filter((f) => f.startsWith('+native-intent'))).toEqual([])
   })
 })

@@ -693,6 +693,33 @@ export interface AccountRequest {
   updated_at: string
 }
 
+/** B61.39 — the Help chat (suite B61.38, the BFF's help_chat.go): who wrote a line is the person, Help's AI, or a person
+ * on Talyvor's team, who answers in the same chat later. */
+export type HelpBy = 'you' | 'ai' | 'team'
+
+export interface HelpMessage {
+  by: HelpBy
+  text: string
+  /** a page of the app that answers it, as the web names it (/approvals, /settings/data, …) */
+  page?: string
+  /** the reply offers "Send to our team" */
+  team?: boolean
+  /** "complaint": the reply offers the complaints form instead */
+  topic?: string
+  at: string
+}
+
+/** The day's questions were all asked: the BFF's sentence, and the chat with the question in it. */
+export class HelpLimitError extends BffError {
+  constructor(
+    path: string,
+    sentence: string,
+    readonly messages: HelpMessage[],
+  ) {
+    super(429, path, sentence)
+  }
+}
+
 /** B59.32 — a Business workspace's company details and the people with control, for the partner's identity check later
  * (Lens B59.30, through the BFF's workspace_business.go, suite B59.31). No identity document is asked for. */
 export type ControlRole = 'director' | 'shareholder' | 'other'
@@ -774,13 +801,14 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     if (t) headers.Authorization = `Bearer ${t}`
     const res = await fetchImpl(baseUrl + path, { method, headers, body })
     if (!res.ok) {
-      let body: { error?: string; code?: string; field?: string; balances?: Record<string, number> } = {}
+      let body: { error?: string; code?: string; field?: string; balances?: Record<string, number>; messages?: HelpMessage[] | null } = {}
       try {
         body = (await res.json()) as typeof body
       } catch {
         // a body that is not JSON carries no sentence
       }
       if (res.status === 409 && body.code === 'balances_not_empty' && body.balances) throw new BalancesHeldError(path, body.error ?? '', body.balances)
+      if (res.status === 429 && path === '/api/help/ask') throw new HelpLimitError(path, body.error ?? '', body.messages ?? [])
       throw new BffError(res.status, path, body.error ?? '', body.code ?? '', body.field ?? '')
     }
     return res
@@ -1035,6 +1063,12 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     members: async () => (await call<Member[] | null>('GET', '/api/members')) ?? [],
     /** Adds a person by the email they sign in with; Track refuses with a code (MEMBER_EXISTS, OWNER_REQUIRED, …). */
     addMember: (email: string, role: MemberRole) => call<Member>('POST', '/api/members', { email, role }),
+    /** B61.39 — the Help chat the BFF keeps for the workspace, 30 days. */
+    helpChat: async () => (await call<{ messages: HelpMessage[] | null }>('GET', '/api/help/chat')).messages ?? [],
+    /** Asks one question from `page`; answers the chat with the reply last. Past the day's questions: HelpLimitError. */
+    askHelp: async (question: string, page: string) => (await call<{ messages: HelpMessage[] | null }>('POST', '/api/help/ask', { question, page })).messages ?? [],
+    /** Files the chat so far in the help inbox, as Help's form does. */
+    sendHelpToTeam: () => call<AccountRequest>('POST', '/api/help/team', {}),
     requestExport: async (id: number) => (await send('GET', `/api/workspace/requests/${id}/export`, undefined, { Accept: 'application/json' })).arrayBuffer(),
   }
 }

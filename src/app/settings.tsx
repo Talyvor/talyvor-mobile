@@ -4,6 +4,7 @@ import { Text, View } from 'react-native'
 
 import { accountChip, useAccount } from '@/account'
 import { COMPANY_ROW } from '@/company-words'
+import { HELP_ROW } from '@/help-words'
 import { AccountSettings } from '@/components/account-settings'
 import { Icon, type IconName } from '@/components/icon'
 import { NoticeSettingsCard } from '@/components/notice-settings'
@@ -19,9 +20,11 @@ import { fonts, useTheme } from '@/theme'
 // B59.29 — Help and complaints, Your data and Close this account, as the web's Settings lists them (suite B59.28).
 // B59.32 — a Business's Company details, under its profile (suite B59.31).
 // B57.138 — the kind of money as launch-pack P11's choices and the Account type card (components/account-settings.tsx).
+// B61.39 — Help, first in its card, opens the Help chat (/help), as Pocket Live's Settings draws it.
 // B59.39 — Security keys, Team and roles (a Business's alone: not drawn at all for Personal), and each agent's Limits.
 
-const HELP_ROWS: readonly { to: '/settings/help' | '/settings/data' | '/settings/close'; icon: IconName; title: string; line: string }[] = [
+const HELP_ROWS: readonly { to: '/help' | '/settings/help' | '/settings/data' | '/settings/close'; icon: IconName; title: string; line: string }[] = [
+  { to: '/help', icon: 'chat', title: HELP_ROW.title, line: HELP_ROW.line },
   { to: '/settings/help', icon: 'send', title: 'Help and complaints', line: 'Ask us something, or make a complaint' },
   { to: '/settings/data', icon: 'download', title: 'Your data', line: 'A copy of your data, or ask for it to be deleted' },
   { to: '/settings/close', icon: 'lock', title: 'Close this account', line: 'What must be empty first, and asking to close' },

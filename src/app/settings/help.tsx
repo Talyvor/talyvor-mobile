@@ -1,15 +1,20 @@
+import { router, useLocalSearchParams } from 'expo-router'
 import { useState } from 'react'
 
 import { CardTitle, Choices, Lead, MessageBox, SaidLine, SentList, useRequests, useSend } from '@/components/account-requests'
 import { Back, Body, Button, Card, Headline, Screen } from '@/components/ui'
+import { ASK_CARD } from '@/help-words'
 
 // B59.29 — /settings/help, the web's Help and complaints (suite B59.28): ask for help or make a complaint, and what was
 // sent. A complaint shows its reference as soon as it is sent. B57.140: what was sent comes before the form, as p-chat
 // draws the thread above where a message is written.
+// B61.39 — a card that opens the Help chat, as the web's AskCard, and the chat's "Make a complaint" opens this form on
+// a complaint (?kind=complaint).
 
 export default function HelpScreen() {
   const requests = useRequests()
-  const [kind, setKind] = useState<'support' | 'complaint'>('support')
+  const params = useLocalSearchParams<{ kind?: string }>()
+  const [kind, setKind] = useState<'support' | 'complaint'>(() => (params.kind === 'complaint' ? 'complaint' : 'support'))
   const [message, setMessage] = useState('')
   const sent = () => {
     setMessage('')
@@ -27,6 +32,11 @@ export default function HelpScreen() {
       <Lead>Ask us something, or make a complaint</Lead>
       <Body muted>Ask us about your account, or tell us what went wrong. A person at Talyvor reads every message and answers on this page.</Body>
       <Body muted>A complaint gets a reference as soon as you send it. Quote it whenever you write to us about it.</Body>
+      <Card>
+        <CardTitle>{ASK_CARD.title}</CardTitle>
+        <Body muted>{ASK_CARD.line}</Body>
+        <Button label={ASK_CARD.open} onPress={() => router.push({ pathname: '/help', params: { from: '/settings/help' } })} />
+      </Card>
       <SentList requests={requests} kinds={['support', 'complaint']} title="What you sent" empty="Nothing sent yet." />
       <Card>
         <CardTitle>Write to us</CardTitle>
