@@ -1,0 +1,267 @@
+[
+  {
+    "route": "/sign-in",
+    "screen": "p-signin",
+    "signedOut": true,
+    "live": "await P.flow('su', { type: 'Personal', kind: 'Fiat', find: 'yes' }); ",
+    "words": "report",
+    "why": "B57.185 draws Pocket Live's su0 (design/pocket-live texts.json 'ph su0'); words B61.27 listed under Words to confirm are reported, not failed",
+    "name": "su0"
+  },
+  {
+    "route": "/sign-in",
+    "screen": "p-signin",
+    "signedOut": true,
+    "live": "await P.flow('su', { type: 'Personal', kind: 'Fiat', find: 'yes' }); await P.push('su', [1]);",
+    "words": "report",
+    "why": "B57.185 draws Pocket Live's su1 (design/pocket-live texts.json 'ph su1'); words B61.27 listed under Words to confirm are reported, not failed",
+    "name": "su1",
+    "answers": {
+      "/auth/me": {
+        "authenticated": false,
+        "google_signin": true
+      },
+      "/auth/phone/start": {
+        "expires_at": "2099-01-01T00:00:00Z",
+        "sandbox": true,
+        "sandbox_code": "482913"
+      }
+    },
+    "steps": [
+      [
+        "fill",
+        "Phone number",
+        "7700 900456"
+      ],
+      [
+        "press",
+        "Continue"
+      ]
+    ]
+  },
+  {
+    "route": "/sign-in",
+    "screen": "p-signin",
+    "signedOut": true,
+    "live": "await P.flow('su', { type: 'Personal', kind: 'Fiat', find: 'yes' }); await P.push('su', [2]);",
+    "words": "report",
+    "why": "B57.185 draws Pocket Live's su2 (design/pocket-live texts.json 'ph su2'); words B61.27 listed under Words to confirm are reported, not failed",
+    "name": "su2",
+    "answers": {
+      "/auth/me": {
+        "authenticated": false,
+        "google_signin": true
+      },
+      "/auth/phone/start": {
+        "expires_at": "2099-01-01T00:00:00Z",
+        "sandbox": true,
+        "sandbox_code": "482913"
+      },
+      "/auth/phone/finish": {
+        "check": "chk_1",
+        "has_person": false,
+        "expires_at": "2099-01-01T00:00:00Z"
+      }
+    },
+    "steps": [
+      [
+        "fill",
+        "Phone number",
+        "7700 900456"
+      ],
+      [
+        "press",
+        "Continue"
+      ],
+      [
+        "fill",
+        "Code",
+        "482913"
+      ]
+    ]
+  },
+  {
+    "route": "/",
+    "screen": "p-signin",
+    "locked": true,
+    "live": "",
+    "words": "report",
+    "why": "B57.185 draws Pocket Live's lock (design/pocket-live texts.json 'ph lock'); words B61.27 listed under Words to confirm are reported, not failed",
+    "name": "lock"
+  },
+  {
+    "route": "/settings",
+    "screen": "p-settings",
+    "locked": true,
+    "newKey": true,
+    "live": "await P.unlock(); await P.push('sub', ['security']);",
+    "words": "report",
+    "why": "B57.185 draws Pocket Live's sub:security (design/pocket-live texts.json 'ph sub:security'); words B61.27 listed under Words to confirm are reported, not failed",
+    "name": "security",
+    "answers": {
+      "/auth/unlock": {}
+    },
+    "steps": [
+      [
+        "press",
+        "4"
+      ],
+      [
+        "press",
+        "1"
+      ],
+      [
+        "press",
+        "8"
+      ],
+      [
+        "press",
+        "2"
+      ],
+      [
+        "press",
+        "6"
+      ],
+      [
+        "press",
+        "3"
+      ]
+    ],
+    "scroll": "Your passcode opens the phone app. It never approves a payment."
+  },
+  {
+    "route": "/sign-in",
+    "screen": "p-signin",
+    "signedOut": true,
+    "live": "await P.flow('su', { type: 'Personal', kind: 'Fiat', find: 'yes' }); ",
+    "words": "report",
+    "why": "B57.185 draws Pocket Live's su0 (design/pocket-live texts.json 'ph su0'); words B61.27 listed under Words to confirm are reported, not failed",
+    "name": "su0",
+    "dark": true
+  },
+  {
+    "route": "/sign-in",
+    "screen": "p-signin",
+    "signedOut": true,
+    "live": "await P.flow('su', { type: 'Personal', kind: 'Fiat', find: 'yes' }); await P.push('su', [1]);",
+    "words": "report",
+    "why": "B57.185 draws Pocket Live's su1 (design/pocket-live texts.json 'ph su1'); words B61.27 listed under Words to confirm are reported, not failed",
+    "name": "su1",
+    "answers": {
+      "/auth/me": {
+        "authenticated": false,
+        "google_signin": true
+      },
+      "/auth/phone/start": {
+        "expires_at": "2099-01-01T00:00:00Z",
+        "sandbox": true,
+        "sandbox_code": "482913"
+      }
+    },
+    "steps": [
+      [
+        "fill",
+        "Phone number",
+        "7700 900456"
+      ],
+      [
+        "press",
+        "Continue"
+      ]
+    ],
+    "dark": true
+  },
+  {
+    "route": "/sign-in",
+    "screen": "p-signin",
+    "signedOut": true,
+    "live": "await P.flow('su', { type: 'Personal', kind: 'Fiat', find: 'yes' }); await P.push('su', [2]);",
+    "words": "report",
+    "why": "B57.185 draws Pocket Live's su2 (design/pocket-live texts.json 'ph su2'); words B61.27 listed under Words to confirm are reported, not failed",
+    "name": "su2",
+    "answers": {
+      "/auth/me": {
+        "authenticated": false,
+        "google_signin": true
+      },
+      "/auth/phone/start": {
+        "expires_at": "2099-01-01T00:00:00Z",
+        "sandbox": true,
+        "sandbox_code": "482913"
+      },
+      "/auth/phone/finish": {
+        "check": "chk_1",
+        "has_person": false,
+        "expires_at": "2099-01-01T00:00:00Z"
+      }
+    },
+    "steps": [
+      [
+        "fill",
+        "Phone number",
+        "7700 900456"
+      ],
+      [
+        "press",
+        "Continue"
+      ],
+      [
+        "fill",
+        "Code",
+        "482913"
+      ]
+    ],
+    "dark": true
+  },
+  {
+    "route": "/",
+    "screen": "p-signin",
+    "locked": true,
+    "live": "",
+    "words": "report",
+    "why": "B57.185 draws Pocket Live's lock (design/pocket-live texts.json 'ph lock'); words B61.27 listed under Words to confirm are reported, not failed",
+    "name": "lock",
+    "dark": true
+  },
+  {
+    "route": "/settings",
+    "screen": "p-settings",
+    "locked": true,
+    "newKey": true,
+    "live": "await P.unlock(); await P.push('sub', ['security']);",
+    "words": "report",
+    "why": "B57.185 draws Pocket Live's sub:security (design/pocket-live texts.json 'ph sub:security'); words B61.27 listed under Words to confirm are reported, not failed",
+    "name": "security",
+    "answers": {
+      "/auth/unlock": {}
+    },
+    "steps": [
+      [
+        "press",
+        "4"
+      ],
+      [
+        "press",
+        "1"
+      ],
+      [
+        "press",
+        "8"
+      ],
+      [
+        "press",
+        "2"
+      ],
+      [
+        "press",
+        "6"
+      ],
+      [
+        "press",
+        "3"
+      ]
+    ],
+    "scroll": "Your passcode opens the phone app. It never approves a payment.",
+    "dark": true
+  }
+]

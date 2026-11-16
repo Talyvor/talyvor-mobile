@@ -20,6 +20,9 @@
  * B57.146: `newKey` opens the app with no key but one it can make, so Turn on registers it (with `answers` for its calls).
  * B61.27: `locked` opens the app on a session the door opened, so it opens on the lock.
  * B57.71: `refState` sets the reference's own state before its shot, as {"K": "1"} for every agent paused.
+ * B57.185: `live` stands Pocket Live's phone (design/pocket-live) beside the app in place of the Pocket screen `screen`
+ * names: its value is the script that takes Pocket Live's phone, `P`, to the view, as "await P.flow('su')" (an empty
+ * string is the lock it opens on).
  *
  * It exports the app for the web once (npx expo export --platform web) with the sample session in the keychain
  * (metro.config.js, POCKET_SHOTS=1), serves it, answers every BFF request from scripts/pocket/sample.mjs, and shoots
@@ -30,7 +33,8 @@
  * The press check is jest's: src/testing/press-everything.tsx.
  *
  * The reference folder is POCKET_REFERENCE, default ~/talyvor-queue/design/pocket; the launch pack's is
- * LAUNCH_PACK_REFERENCE, default ~/talyvor-queue/design/launch-pack/design.
+ * LAUNCH_PACK_REFERENCE, default ~/talyvor-queue/design/launch-pack/design; Pocket Live's is POCKET_LIVE_REFERENCE,
+ * default ~/talyvor-queue/design/pocket-live.
  */
 import { spawnSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
@@ -48,6 +52,7 @@ const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const DIST = join(REPO, '.pocket-shots')
 const BFF = 'https://bff.pocket-shots.invalid'
 const REFERENCE = resolve(process.env.POCKET_REFERENCE || join(homedir(), 'talyvor-queue/design/pocket'))
+const LIVE = resolve(process.env.POCKET_LIVE_REFERENCE || join(homedir(), 'talyvor-queue/design/pocket-live'))
 const LAUNCH_PACK = resolve(process.env.LAUNCH_PACK_REFERENCE || join(homedir(), 'talyvor-queue/design/launch-pack/design'))
 const SIZE = { width: 390, height: 844 }
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.ttf': 'font/ttf', '.ico': 'image/x-icon' }
@@ -145,6 +150,7 @@ function normalise(s) {
 
 async function reference(c) {
   if (c.launchPack) return launchPackReference(c)
+  if (c.live !== undefined) return liveReference(c)
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } })
   await page.goto('file://' + join(REFERENCE, 'index.html'))
   await page.waitForFunction(() => window.__proto)
@@ -156,6 +162,26 @@ async function reference(c) {
   const hold = page.locator('#proto .phold > *').first()
   const words = await page.evaluate(`(${wordsOf})(document.querySelector('#proto .phold'))`)
   const png = await hold.screenshot()
+  await page.close()
+  return { words, png }
+}
+
+/** A Pocket Live phone view (B57.185): its phone, taken there by the check's script, and its words. */
+async function liveReference(c) {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' })
+  await page.goto('file://' + join(LIVE, 'index.html'))
+  await page.waitForFunction(() => window.__pocket)
+  await page.evaluate(
+    async ({ script, dark }) => {
+      const P = window.__pocket.resetPhone()
+      if (dark) P.setTheme('dark')
+      await new Function('P', `return (async () => { ${script} })()`)(P)
+    },
+    { script: c.live, dark: !!c.dark },
+  )
+  await page.waitForTimeout(800)
+  const words = await page.evaluate(`(${wordsOf})(document.querySelector('#ph'))`)
+  const png = await page.locator('#ph').screenshot()
   await page.close()
   return { words, png }
 }
@@ -224,7 +250,7 @@ for (const c of checks) {
   const ref = await reference(c)
   const { ctx, page } = await app(c)
   const file = join(OUT, `${label}-390.png`)
-  await sideBySide(await page.screenshot(), ref.png, file, c.launchPack ? `Launch pack ${c.launchPack}` : 'Pocket reference')
+  await sideBySide(await page.screenshot(), ref.png, file, c.launchPack ? `Launch pack ${c.launchPack}` : c.live !== undefined ? 'Pocket Live' : 'Pocket reference')
   console.log(`  wrote ${file.slice(REPO.length + 1)}`)
   const hay = normalise(await page.evaluate(`(${haystackOf})(document.body)`))
   const missing = ref.words.filter((w) => !hay.includes(normalise(w.text))).map((w) => `${w.kind} “${w.text}”`)

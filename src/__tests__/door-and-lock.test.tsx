@@ -1,7 +1,7 @@
 /// <reference types="node" />
-import { act, fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library'
+import { act, fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library'
 import { router } from 'expo-router'
-import { AppState, Linking, type AppStateStatus } from 'react-native'
+import { AppState, Linking, StyleSheet, type AppStateStatus } from 'react-native'
 
 // B61.27 — the phone's front door and its lock (suite B61.25's BFF): the number, the texted code, and the passcode, or a
 // new one chosen twice that goes on to sign-up; and every time the app opens, or comes back after 2 minutes away, the
@@ -285,4 +285,42 @@ test('Settings, Security: Face ID off leaves the lock asking for the passcode al
   await fireEvent.press(toggle)
   await waitFor(() => expect(mockStore.get('talyvor.signin-off')).toBe('1'))
   expect(mockStore.get('talyvor.signin-key')).toBe('pk_1')
+})
+
+// B57.185 — the door and the lock as Pocket Live draws them (`su0` to `su2`, `lock`, `sub:security`).
+
+test('the lock is drawn as Pocket Live draws it: the dots under the words, the number pad at the foot, keys 70 high and round', async () => {
+  mockBff()
+  signedInBefore()
+  await renderRouter('./src/app', { initialUrl: '/' })
+  const lock = await screen.findByTestId('lock-screen')
+  const keys = within(lock).getByTestId('passcode-keys')
+  expect(within(keys).getAllByRole('button').map((b) => b.props.accessibilityLabel)).toEqual(['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'Delete'])
+  expect(StyleSheet.flatten(within(keys).getByRole('button', { name: '5' }).props.style)).toMatchObject({ height: 70, borderRadius: 35 })
+  expect(StyleSheet.flatten(keys.props.style)).toMatchObject({ maxWidth: 300 })
+})
+
+test('the code is six dots typed with the phone’s own keyboard, and the Sandbox code sits in a note', async () => {
+  mockBff()
+  await renderRouter('./src/app', { initialUrl: '/' })
+  await toCode()
+  const dots = screen.getByTestId('code-dots')
+  expect(dots.children).toHaveLength(6)
+  await fireEvent.changeText(screen.getByLabelText('Code'), '48')
+  const filled = dots.children.map((d) => typeof d !== 'string' && StyleSheet.flatten(d.props.style)?.borderWidth === 0)
+  expect(filled).toEqual([true, true, false, false, false, false])
+  expect(screen.getByTestId('icon-help', { includeHiddenElements: true })).toBeTruthy()
+  expect(screen.getByText('In Sandbox no text is sent. Your code is 482 913.')).toBeTruthy()
+})
+
+test('Settings, Security draws Unlock with Face ID with its line, and the passcode’s note with its shield', async () => {
+  mockBff()
+  signedInBefore()
+  mockStore.set('talyvor.signin-key', 'pk_1')
+  await renderRouter('./src/app', { initialUrl: '/settings' })
+  await waitFor(() => expect(screen.queryByTestId('lock-screen')).toBeNull())
+  await screen.findByRole('switch', { name: 'Unlock with Face ID' })
+  expect(screen.getByText('This phone’s key never leaves it')).toBeTruthy()
+  expect(screen.getByText('Your passcode opens the phone app. It never approves a payment.')).toBeTruthy()
+  expect(screen.getByTestId('icon-shield', { includeHiddenElements: true })).toBeTruthy()
 })
