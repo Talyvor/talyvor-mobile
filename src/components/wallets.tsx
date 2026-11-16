@@ -35,7 +35,7 @@ export function WalletSide({ side, totals, accounts, owner }: ReturnType<typeof 
     <View style={{ gap: 12 }}>
       <Eyebrow>{SIDE_WORD[side]}</Eyebrow>
       {totals.length === 0 ? (
-        <Body muted>{side === 'fiat' ? 'Top up to get started.' : 'Receive stablecoins to get started.'}</Body>
+        <Body muted>{side === 'fiat' ? 'Add money to get started.' : 'Receive stablecoins to get started.'}</Body>
       ) : (
         <>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: 14, borderRadius: 24, padding: 16, backgroundColor: c.cloud }}>

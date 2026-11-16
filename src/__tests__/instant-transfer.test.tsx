@@ -31,7 +31,7 @@ const WEB = {
   expired: 'This quote expired. Nothing was sent.',
   screened: 'We can’t send to this recipient. Nothing was sent.',
   rule: 'Remy can’t use Instant transfer. Turn it on in Remy’s rules.',
-  holds: 'Remy’s US dollar balance holds $6,200.00. Lower the amount or top up.',
+  holds: 'Remy’s US dollar balance holds $6,200.00. Lower the amount or add money.',
   approvesOnly: 'This approves this payment only.',
   declined: 'Declined. Nothing was sent.',
   steps: ['Sent', 'Converted', 'On its way', 'Received'],

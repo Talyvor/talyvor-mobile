@@ -104,7 +104,7 @@ export function sendRefusal(err: unknown, agent: string, holds: { minor: number;
     if (err.code === 'screened') return WORDS.screened
     if (err.status === 409 && /quote/i.test(err.sentence)) return WORDS.expired
     if (err.status === 409 && /holds/i.test(err.sentence) && holds)
-      return `${agent}’s ${BALANCE_WORDS[holds.currency] ?? holds.currency} balance holds ${formatMinor(holds.minor, holds.currency)}. Lower the amount or top up.`
+      return `${agent}’s ${BALANCE_WORDS[holds.currency] ?? holds.currency} balance holds ${formatMinor(holds.minor, holds.currency)}. Lower the amount or add money.`
   }
   return refusalText(err)
 }

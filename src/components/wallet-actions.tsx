@@ -32,14 +32,14 @@ import { Body, Button, Card, Eyebrow, Field, Figure, Headline } from './ui'
 
 export type WalletAction = 'top-up' | 'withdraw' | 'convert'
 
-const TITLE: Record<WalletAction, string> = { 'top-up': 'Top up', withdraw: 'Withdraw', convert: 'Convert' }
+const TITLE: Record<WalletAction, string> = { 'top-up': 'Add money', withdraw: 'Withdraw', convert: 'Convert' }
 
-/** The actions the kind shows: Top up always, Withdraw with bank transfers, Convert for Hybrid. */
+/** The actions the kind shows: Add money always, Withdraw with bank transfers, Convert for Hybrid. */
 export function walletActions(shows: Pick<Shows, 'bankTransfers' | 'convert'>): WalletAction[] {
   return ['top-up', ...(shows.bankTransfers ? (['withdraw'] as const) : []), ...(shows.convert ? (['convert'] as const) : [])]
 }
 
-/** Top up, Withdraw and Convert, as the kind has them. */
+/** Add money, Withdraw and Convert, as the kind has them. */
 export function WalletButtons({ shows, onPress }: { shows: Shows; onPress: (a: WalletAction) => void }) {
   return (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
@@ -182,7 +182,7 @@ function AccountPicker({ accounts, owner, chosen, onChoose }: { accounts: Curren
 
 const NO_ACCOUNT = 'Open an account in Talyvor on the web first.'
 
-/** Top up: Sandbox money into one of the company's accounts, once under its key, after Face ID. */
+/** Add money (B61.80; was Top up): Sandbox money into one of the company's accounts, once under its key, after Face ID. */
 function TopUp({ client, shows, accounts: all, hasKey, open, onClose, onDone }: SheetProps & { open: boolean }) {
   const accounts = companyAccounts(all, shows)
   const [accountID, setAccountID] = useState('')
@@ -204,7 +204,7 @@ function TopUp({ client, shows, accounts: all, hasKey, open, onClose, onDone }: 
     setBusy(true)
     setRefusal('')
     try {
-      const check = await checkItsYou(`Top up ${total}`)
+      const check = await checkItsYou(`Add ${total}`)
       if (check === 'gone') return setRefusal(await keyWentText())
       if (check !== 'ok') return setRefusal('Nothing changed.')
       await client.walletTopUp(account!.id, minor!, key)
@@ -221,7 +221,7 @@ function TopUp({ client, shows, accounts: all, hasKey, open, onClose, onDone }: 
   return (
     <BottomSheet visible={open} onClose={close} testID="top-up">
       <SheetBody>
-      <Headline>Top up</Headline>
+      <Headline>Add money</Headline>
       {accounts.length === 0 ? (
         <Body muted>{NO_ACCOUNT}</Body>
       ) : key && account && minor !== null ? (
@@ -229,7 +229,7 @@ function TopUp({ client, shows, accounts: all, hasKey, open, onClose, onDone }: 
           <Figure size={28}>{total}</Figure>
           <Facts facts={[['To', `${shows.owner} · ${account.currency}`]]} />
           <ConfirmButtons
-            label="Top up"
+            label="Add money"
             busy={busy}
             busyLabel="Adding…"
             hasKey={hasKey}
