@@ -63,14 +63,15 @@ const signedIn = () => mockStore.set('talyvor.session', JSON.stringify({ token: 
 
 beforeEach(() => mockStore.clear())
 
-test('sign-in is p-signin: the logo, its headline and line, Sign in, and which account to use', async () => {
+test('B61.27: sign-in is the door: the logo, the phone number and Continue, and Google under it while the BFF offers it', async () => {
   mockBff()
   await renderRouter('./src/app', { initialUrl: '/' })
-  expect(await screen.findByText('Every agent’s money, in your pocket.')).toBeTruthy()
+  expect(await screen.findByText('What’s your phone number?')).toBeTruthy()
   expect(screen.getByLabelText('Talyvor')).toBeTruthy()
-  expect(screen.getByText('Approve what your agents ask for, see what each one holds, and pause one in a tap.')).toBeTruthy()
-  expect(screen.getByRole('button', { name: 'Sign in' })).toBeTruthy()
-  expect(screen.getByText('Use the same account you signed up with on the web.')).toBeTruthy()
+  expect(screen.getByText('We text you a code to check it’s yours.')).toBeTruthy()
+  expect(screen.getByLabelText('Phone number')).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Continue' })).toBeTruthy()
+  expect(await screen.findByRole('button', { name: 'Continue with Google' })).toBeTruthy()
   expect(screen.queryByText('Agent wallets')).toBeNull()
 })
 

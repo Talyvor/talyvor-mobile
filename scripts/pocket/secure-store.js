@@ -11,6 +11,8 @@ export async function getItemAsync(key) {
   if (globalThis.__POCKET_SHOTS_PHONE_KEY && key === 'talyvor.device-workspace') return 'ws_northwind'
   // B57.102: and its name, for a check whose BFF signs in to another workspace (`answers` for /auth/me).
   if (globalThis.__POCKET_SHOTS_PHONE_KEY && key === 'talyvor.device-workspace-name') return 'Northwind Studio'
+  // B61.27: a check with `locked` opens on a session the door opened, so the app opens on its lock.
+  if (globalThis.__POCKET_SHOTS_LOCKED && key === 'talyvor.session') return JSON.stringify({ ...JSON.parse(SESSION), person: true })
   return key === 'talyvor.session' ? SESSION : null
 }
 export async function setItemAsync() {}

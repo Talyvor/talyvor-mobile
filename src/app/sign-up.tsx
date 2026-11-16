@@ -1,20 +1,19 @@
-import { exchangeCodeAsync, makeRedirectUri, useAuthRequest, useAutoDiscovery } from 'expo-auth-session'
 import { Image } from 'expo-image'
 import { BffError } from '@talyvor/bff-client'
 import { Redirect, router, useLocalSearchParams } from 'expo-router'
-import * as WebBrowser from 'expo-web-browser'
-import { useCallback, useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Pressable, Text, View } from 'react-native'
 
 import { CARDS, type CardFace } from '@/cards'
 import { Card } from '@/components/card'
 import { Icon } from '@/components/icon'
 import { MoneyLabel, useMoneyLabels } from '@/components/money-label'
-import { PhoneKeyCard } from '@/components/phone-key-card'
+import { PasscodePad } from '@/components/passcode-pad'
 import { CountryField, FieldError } from '@/components/country-field'
 import { IdentityChecks } from '@/components/identity-checks'
 import { Body, Button, Field, Headline, Screen } from '@/components/ui'
-import { config } from '@/config'
+import { DOOR_WORDS, doorRefusal } from '@/door-words'
+import { keysAvailable, turnOnFaceID } from '@/keys'
 import { useSession } from '@/session'
 import {
   ACCOUNT_TYPES,
@@ -46,12 +45,12 @@ import { fonts, useTheme } from '@/theme'
 // BFF's POST /api/accounts (suite B61.8) opens the account and moves the session to it, and the identity check runs for
 // it, as the web's B61.9. The key step is left out: this phone's key is the person's already.
 //
+// B61.27 — sign-up starts at the door: the number, the code and a passcode open a sign-up session (suite B61.25), and
+// steps 1 and 2 choose its account with POST /auth/signup/account. Step 3 is Pocket Live's `su6`: one key made with
+// Face ID, kept as the account's approval key and the person's sign-in key, with the passcode just chosen as Lens's proof.
+//
 // The name is the workspace's name. Country and the registration number are asked as the spec says, and kept on this
 // screen only: Lens has nowhere to hold them yet (the web does the same).
-
-WebBrowser.maybeCompleteAuthSession()
-
-const redirectUri = makeRedirectUri({ scheme: 'talyvor', path: 'auth' })
 
 /** Why Continue waits: nothing is picked yet. */
 const PICK_TYPE = 'Pick who this account is for.'
@@ -213,7 +212,6 @@ function StepWho({ type, setType, profile, setProfile, onContinue, another }: {
               if (!Object.keys(missing(type, profile)).length) onContinue()
             }}
           />
-          {another ? null : <Button variant="ghost" label="Sign in instead" onPress={() => router.replace('/sign-in')} />}
         </>
       }>
       <Header onBack={another ? () => (router.canGoBack() ? router.back() : router.replace('/')) : undefined} />
@@ -284,16 +282,64 @@ function StepKind({ type, name, kind, setKind, busy, failed, onContinue, onBack,
   )
 }
 
-/** Step 3: this phone's key, made with Face ID, or later from Approvals. Either way the identity check follows. */
+/** Step 3 (Pocket Live `su6`): Face ID, or later. The key it makes approves payments and unlocks the app; Lens takes it
+ * with the passcode just chosen, or the one typed here when the app was opened again since. Either way the identity check
+ * follows. */
 function StepKey({ onContinue }: { onContinue: () => void }) {
-  const [on, setOn] = useState(false)
-  const onOn = useCallback(() => setOn(true), [])
+  const { client, takeNewPasscode } = useSession()
+  const { c } = useTheme()
+  const [asking, setAsking] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [failed, setFailed] = useState('')
+  const [round, setRound] = useState(0)
+  const make = async (passcode: string) => {
+    setBusy(true)
+    setFailed('')
+    try {
+      await turnOnFaceID(client, passcode)
+      onContinue()
+    } catch (err) {
+      setFailed(err instanceof BffError ? doorRefusal(err) : DOOR_WORDS.failed)
+      setAsking(err instanceof BffError && err.code === 'wrong_passcode')
+      setRound((n) => n + 1)
+    } finally {
+      setBusy(false)
+    }
+  }
+  const on = () => {
+    const p = takeNewPasscode()
+    if (p) void make(p)
+    else setAsking(true)
+  }
   return (
-    <Screen footer={on ? <Button primary label="Continue" onPress={onContinue} /> : <Button variant="ghost" label="Do this later" onPress={onContinue} />}>
+    <Screen
+      footer={
+        asking ? (
+          failed ? <FieldError>{failed}</FieldError> : null
+        ) : (
+          <>
+            {failed ? <FieldError>{failed}</FieldError> : null}
+            <Button primary icon="faceid" label={DOOR_WORDS.faceID.on} disabled={busy || !keysAvailable()} onPress={on} />
+            <Button variant="ghost" label={DOOR_WORDS.faceID.later} disabled={busy} onPress={onContinue} />
+          </>
+        )
+      }>
       <Header />
       <Steps at={3} />
-      <Headline>{SIGNUP_STEPS[2]}</Headline>
-      <PhoneKeyCard onOn={onOn} />
+      {asking ? (
+        <>
+          <Headline>{DOOR_WORDS.enter.title}</Headline>
+          <PasscodePad onDone={make} disabled={busy} reset={round} />
+        </>
+      ) : (
+        <View style={{ alignItems: 'center', gap: 10, paddingTop: 40 }}>
+          <View style={{ width: 96, height: 96, borderRadius: 48, backgroundColor: c.cloud2, alignItems: 'center', justifyContent: 'center' }}>
+            <Icon name="faceid" size={48} color={c.ink} />
+          </View>
+          <Headline>{DOOR_WORDS.faceID.title}</Headline>
+          <Text style={{ maxWidth: 300, textAlign: 'center', fontFamily: fonts.ui, fontSize: 15, lineHeight: 22, color: c.ink2 }}>{DOOR_WORDS.faceID.line}</Text>
+        </View>
+      )}
     </Screen>
   )
 }
@@ -312,13 +358,8 @@ function StepConfirm({ another }: { another: boolean }) {
 }
 
 export default function SignUp() {
-  const { signedIn, signIn, openAccount } = useSession()
+  const { signedIn, joining, finishSignup, openAccount } = useSession()
   const another = useLocalSearchParams<{ another?: string }>().another === '1'
-  const discovery = useAutoDiscovery(config.oidcIssuer)
-  const [request, , promptAsync] = useAuthRequest(
-    { clientId: config.oidcClientId, redirectUri, scopes: ['openid', 'email', 'profile'] },
-    discovery,
-  )
   const [step, setStep] = useState<StepAt>(1)
   const [type, setType] = useState<AccountType | null>(null)
   const [profile, setProfile] = useState<Profile>(EMPTY)
@@ -328,9 +369,10 @@ export default function SignUp() {
   // Someone already signed in has an account: this screen is for opening one, so Home shows instead. Once this sign-up has
   // started, the session it makes is its own and steps 3 and 4 follow.
   const [started, setStarted] = useState(false)
-  // Another account is opened beside one the person has, so only someone signed in can open one.
-  if (another && !signedIn) return <Redirect href="/sign-in" />
-  if (!another && signedIn && !started) return <Redirect href="/" />
+  // Another account is opened beside one the person has, so only someone signed in can open one. B61.27: a sign-up
+  // starts at the door, which opens the sign-up session these steps finish.
+  if (!signedIn) return <Redirect href="/sign-in" />
+  if (!another && !joining && !started) return <Redirect href="/" />
 
   const name = (type === 'personal' ? profile.name : profile.companyName).trim()
 
@@ -349,19 +391,12 @@ export default function SignUp() {
   }
 
   const finish = async () => {
-    if (!type || !kind || !request || !discovery) return
+    if (!type || !kind) return
     setBusy(true)
     setFailed(null)
     try {
-      const result = await promptAsync()
-      if (result.type !== 'success') return
-      const tokens = await exchangeCodeAsync(
-        { clientId: config.oidcClientId, code: result.params.code, redirectUri, extraParams: { code_verifier: request.codeVerifier ?? '' } },
-        discovery,
-      )
-      if (!tokens.idToken) throw new Error('no ID token')
       setStarted(true)
-      await signIn(tokens.idToken, { account_type: type, money_kind: kind, name })
+      await finishSignup({ type, kind, name, country: profile.country, ...(type === 'business' ? { registration_number: profile.registrationNumber.trim() } : {}) })
       setStep(3)
     } catch {
       setStarted(false)

@@ -4,7 +4,8 @@ import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/te
 // B59.9 — sign-up on the phone shows the web's words (talyvor-suite B59.8, apps/web/src/areas/auth/signupWords.ts at
 // a8240e4), asks who the account is for and the kind of money before the identity provider, sends both with the name to
 // the BFF's /auth/mobile/session, and its step 3 makes this phone's key with Face ID. B61.21: step 4 is the identity
-// check (the web's B61.20), and the app opens on Home only once Lens's checks pass.
+// check (the web's B61.20), and the app opens on Home only once Lens's checks pass. B61.27: sign-up starts at the door,
+// so these steps finish a sign-up session (POST /auth/signup/account), and step 3 is Pocket Live's "Approve with Face ID".
 
 jest.setTimeout(30_000)
 
@@ -92,6 +93,7 @@ jest.mock('../../modules/talyvor-keys', () => ({
 function mockBff(refuseSession = false, { failPerson = false, level = 'L0' } = {}) {
   const sessions: Record<string, unknown>[] = []
   const devices: unknown[] = []
+  const signInKeys: { name: string; device: { challenge: string; public_key: string }; passcode: string }[] = []
   // B61.21 — Lens's identity checks against the Test provider: each level's check passes unless told otherwise.
   const checks: { level: string; subject: string; status: string; test: boolean }[] = []
   const verified: Record<string, unknown>[] = []
@@ -101,12 +103,22 @@ function mockBff(refuseSession = false, { failPerson = false, level = 'L0' } = {
     const route = `${init.method ?? 'GET'} ${url.replace('https://bff.test', '')}`
     const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status })
     if (route === 'GET /api/pricing') return json({ labels: { payments_out: 'sandbox' } })
-    if (route === 'POST /auth/mobile/session') {
+    const auth = (init.headers as Record<string, string>).Authorization
+    // B61.27 — the sign-up session chooses its account, and the BFF answers the account's session in its place.
+    if (route === 'POST /auth/signup/account' && auth === 'Bearer signup-1') {
       sessions.push(JSON.parse(init.body as string))
       if (refuseSession) return json({ error: 'sign-up needs who the account is for' }, 400)
-      return json({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' })
+      return json({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z', account_id: 'ws_new', created: true })
     }
-    if ((init.headers as Record<string, string>).Authorization !== 'Bearer session-1') return json({}, 401)
+    if (auth !== 'Bearer session-1') return json({}, 401)
+    // B61.27 — the one challenge the key is made over, and the person's sign-in key, kept with the passcode as proof.
+    if (route === 'POST /auth/passkey/register/challenge') return json({ challenge: 'ch_register' })
+    if (route === 'POST /auth/passkey/register') {
+      const r = JSON.parse(init.body as string)
+      if (r.passcode !== '418263') return json({ error: 'That passcode is not right.', reason: 'wrong_passcode' }, 400)
+      signInKeys.push(r)
+      return json({ id: 'pk_1', kind: 'device', name: r.name, created_at: '2026-11-16T12:00:00Z' }, 201)
+    }
     if (route === 'GET /auth/me') return json({ workspace_id: 'ws_new' })
     if (route === 'GET /api/workspace/name') return json({ id: 'ws_new', name: 'Maya Lind' })
     // B59.32 — the workspace is what sign-up asked for; only a Business has company details.
@@ -135,12 +147,16 @@ function mockBff(refuseSession = false, { failPerson = false, level = 'L0' } = {
     }
     return json({ error: 'no' }, 404)
   }) as unknown as typeof fetch
-  return { sessions, devices, verified, company }
+  return { sessions, devices, verified, company, signInKeys }
 }
+
+/** B61.27 — the door's sign-up session, as the keychain keeps it after the app opened again: no passcode in memory. */
+const joining = () => mockStore.set('talyvor.session', JSON.stringify({ token: 'signup-1', expires_at: '2099-01-01T00:00:00Z', joining: true }))
 
 beforeEach(() => {
   mockStore.clear()
   mockPhone.made = 0
+  joining()
 })
 
 const texts = () => screen.getAllByText(/./).map((t) => [t.props.children].flat().join(''))
@@ -162,7 +178,7 @@ async function toStepFour(type: 'Personal' | 'Business', name: string) {
   await stepOne(type, name)
   await fireEvent.press(await screen.findByRole('radio', { name: /^Hybrid\./ }))
   await fireEvent.press(screen.getByRole('button', { name: 'Continue' }))
-  await fireEvent.press(await screen.findByRole('button', { name: 'Do this later' }))
+  await fireEvent.press(await screen.findByRole('button', { name: 'Not now' }))
   expect(await screen.findByText(WEB.steps[3])).toBeTruthy()
 }
 
@@ -177,13 +193,6 @@ async function fillYou() {
   await fireEvent.press(screen.getAllByRole('button', { name: 'United Kingdom' }).at(-1)!)
 }
 
-test('sign-in leads a new person to sign-up', async () => {
-  mockBff()
-  await renderRouter('./src/app', { initialUrl: '/' })
-  await fireEvent.press(await screen.findByText('Create a workspace'))
-  expect(await screen.findByText(WEB.steps[0])).toBeTruthy()
-})
-
 test("step 1 shows the web's words, and each type asks for its own profile before it continues", async () => {
   mockBff()
   await renderRouter('./src/app', { initialUrl: '/sign-up' })
@@ -192,7 +201,6 @@ test("step 1 shows the web's words, and each type asks for its own profile befor
   for (const [title, line] of WEB.types) expect(screen.getByRole('radio', { name: `${title}. ${line}` })).toBeTruthy()
   expect(screen.getByText(WEB.typeNote)).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled()
-  expect(screen.getByText('Sign in instead')).toBeTruthy()
 
   await fireEvent.press(screen.getByRole('radio', { name: /^Personal/ }))
   expect(screen.getByLabelText(WEB.labels.name)).toBeTruthy()
@@ -252,29 +260,33 @@ test.each([
   await stepOne(type, name)
   await fireEvent.press(await screen.findByRole('radio', { name: new RegExp(`^${kind}\\.`) }))
   await fireEvent.press(screen.getByRole('button', { name: 'Continue' }))
-  expect(await screen.findByText(WEB.steps[2])).toBeTruthy()
-  expect(bff.sessions).toEqual([{ id_token: 'id-token-1', account_type: accountType, money_kind: moneyKind, name }])
+  expect(await screen.findByText('Approve with Face ID')).toBeTruthy()
+  expect(bff.sessions).toEqual([expect.objectContaining({ account_type: accountType, money_kind: moneyKind, name, country: 'GB' })])
+  await waitFor(() => expect(JSON.parse(mockStore.get('talyvor.session')!)).toMatchObject({ token: 'session-1', joining: false, person: true }))
 })
 
-test("step 3 makes this phone's key with Face ID, and then goes on to the identity check", async () => {
+test("B61.27: step 3 makes one key with Face ID, kept as the account's approval key and the person's sign-in key", async () => {
   const bff = mockBff()
   await renderRouter('./src/app', { initialUrl: '/sign-up' })
   await stepOne('Personal', 'Maya Lind')
   await fireEvent.press(await screen.findByRole('radio', { name: /^Hybrid\./ }))
   await fireEvent.press(screen.getByRole('button', { name: 'Continue' }))
-  expect(await screen.findByText(WEB.steps[2])).toBeTruthy()
+  expect(await screen.findByText('Approve with Face ID')).toBeTruthy()
+  expect(screen.getByText('This phone gets a key that never leaves it. You say yes to payments with a look.')).toBeTruthy()
   expect(screen.getByText('Step 3 of 4')).toBeTruthy()
-  expect(screen.getByText('Do this later')).toBeTruthy()
+  expect(screen.getByText('Not now')).toBeTruthy()
 
-  await fireEvent.press(screen.getByText('Turn on'))
-  expect(await screen.findByText(/^On\. This phone signs your approvals/)).toBeTruthy()
-  expect(mockPhone.made).toBe(1)
-  expect(bff.devices).toHaveLength(1)
-  expect(mockStore.get('talyvor.device-key')).toBe('dev_1')
-  expect(screen.queryByRole('button', { name: 'Open the app' })).toBeNull()
-  await fireEvent.press(screen.getByRole('button', { name: 'Continue' }))
+  // The app opened again since the passcode was chosen, so Lens's proof is asked for here.
+  await fireEvent.press(screen.getByRole('button', { name: 'Turn on Face ID' }))
+  expect(await screen.findByText('Enter your passcode')).toBeTruthy()
+  for (const d of '418263') await fireEvent.press(screen.getByRole('button', { name: d }))
   expect(await screen.findByText(WEB.steps[3])).toBeTruthy()
   expect(screen.getByText('Step 4 of 4')).toBeTruthy()
+  expect(mockPhone.made).toBe(1)
+  expect(bff.signInKeys).toEqual([expect.objectContaining({ name: 'iPhone', passcode: '418263', device: expect.objectContaining({ challenge: 'ch_register' }) })])
+  expect(bff.devices).toHaveLength(1)
+  expect(mockStore.get('talyvor.device-key')).toBe('dev_1')
+  expect(mockStore.get('talyvor.signin-key')).toBe('pk_1')
 })
 
 test('B59.32, B61.21: at step 4 a Business adds its company details and the people with control', async () => {
@@ -302,8 +314,9 @@ test('a sign-up the BFF refuses says nothing changed and offers to try again', a
   await fireEvent.press(screen.getByRole('button', { name: 'Continue' }))
   expect(await screen.findByText('We couldn’t save that. Nothing changed.')).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy()
-  await waitFor(() => expect(mockStore.get('talyvor.session')).toBeUndefined())
-  expect(screen.queryByText(WEB.steps[2])).toBeNull()
+  // The sign-up session stays, to try again with.
+  expect(JSON.parse(mockStore.get('talyvor.session')!).token).toBe('signup-1')
+  expect(screen.queryByText('Approve with Face ID')).toBeNull()
 })
 
 test('B57.135: sign-up is drawn in Pocket: the logo or Back with Sandbox at the top, each type on its card face, the actions held at the foot', async () => {
@@ -315,7 +328,6 @@ test('B57.135: sign-up is drawn in Pocket: the logo or Back with Sandbox at the 
   expect(within(screen.getByRole('radio', { name: /^Business/ })).getByTestId('choice-face-team', { includeHiddenElements: true })).toBeTruthy()
   let foot = within(screen.getByTestId('screen-footer'))
   expect(foot.getByRole('button', { name: 'Continue' })).toBeTruthy()
-  expect(foot.getByRole('button', { name: 'Sign in instead' })).toBeTruthy()
 
   await stepOne('Personal', 'Maya Lind')
   expect(await screen.findByText(WEB.steps[1])).toBeTruthy()
@@ -327,8 +339,8 @@ test('B57.135: sign-up is drawn in Pocket: the logo or Back with Sandbox at the 
 
   await fireEvent.press(screen.getByRole('radio', { name: /^Hybrid\./ }))
   await fireEvent.press(foot.getByRole('button', { name: 'Continue' }))
-  expect(await screen.findByText(WEB.steps[2])).toBeTruthy()
-  expect(within(screen.getByTestId('screen-footer')).getByRole('button', { name: 'Do this later' })).toBeTruthy()
+  expect(await screen.findByText('Approve with Face ID')).toBeTruthy()
+  expect(within(screen.getByTestId('screen-footer')).getByRole('button', { name: 'Not now' })).toBeTruthy()
 })
 
 test('B61.21: a Personal sign-up ends on the identity step and reaches Home only once the checks pass', async () => {
@@ -347,7 +359,7 @@ test('B61.21: a Personal sign-up ends on the identity step and reaches Home only
   expect(texts().some((t) => /upload|choose a file|take a photo/i.test(t))).toBe(false)
   // No way on to Home until the checks pass.
   expect(screen.queryByRole('button', { name: WEB.identity.open })).toBeNull()
-  expect(screen.queryByRole('button', { name: 'Do this later' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Not now' })).toBeNull()
 
   await fillYou()
   await fireEvent.press(screen.getByRole('button', { name: WEB.identity.run }))

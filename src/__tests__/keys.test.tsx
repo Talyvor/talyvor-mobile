@@ -157,7 +157,7 @@ const holdKey = (workspace = 'ws_1') => {
 /** Home gets a 401, so the app signs out; the key must still be on the phone then. */
 async function signedOutOnHome() {
   await renderRouter('./src/app', { initialUrl: '/' })
-  const signIn = await screen.findByText('Sign in')
+  const signIn = await screen.findByText('Continue with Google')
   expect(mockPhone.keys.has('approval')).toBe(true)
   expect(mockStore.get('talyvor.device-key')).toBe('dev_1')
   expect(mockStore.has('talyvor.session')).toBe(false)

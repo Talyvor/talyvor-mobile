@@ -12,6 +12,10 @@ const ALIAS = 'approval'
 const DEVICE = 'talyvor.device-key'
 const DEVICE_WORKSPACE = 'talyvor.device-workspace'
 const DEVICE_WORKSPACE_NAME = 'talyvor.device-workspace-name'
+/** B61.27 — the Lens id of this phone's key as the person's sign-in key, which unlocks the app with Face ID. */
+const SIGNIN_KEY = 'talyvor.signin-key'
+/** B61.27 — set while Face ID unlocking is turned off in Settings: the key stays, the lock asks for the passcode. */
+const SIGNIN_OFF = 'talyvor.signin-off'
 
 export const biometricName = Platform.OS === 'ios' ? 'Face ID' : 'your fingerprint'
 
@@ -88,6 +92,65 @@ export async function turnOnPhoneApprovals(client: BffClient): Promise<DeviceKey
   } catch (err) {
     // Making the key deleted any key before it, so a failed move leaves the phone with none.
     await forgetThisPhone()
+    throw err
+  }
+}
+
+/** B61.27 — "Turn on Face ID": one key in the phone's hardware, made over one challenge, kept by Lens as the account's
+ * approval key and as the person's sign-in key (suite B61.25, Lens B61.24). Lens asks for the passcode as proof once one is
+ * set, so the person's passcode comes with it. The sign-in key is kept first: a wrong passcode leaves nothing made. */
+export async function turnOnFaceID(client: BffClient, passcode: string): Promise<void> {
+  if (!TalyvorKeys) throw new Error('This phone cannot hold a key.')
+  const [{ workspace_id }, workspace] = await Promise.all([client.me(), workspaceName(client)])
+  const { challenge } = await client.keyRegisterChallenge()
+  const message = utf8(deviceMessage(challenge))
+  try {
+    const publicKey = await TalyvorKeys.createKey(ALIAS, toBase64url(await sha256(message)))
+    const spki = fromBase64url(publicKey)
+    const bound = new Uint8Array(message.length + spki.length)
+    bound.set(message)
+    bound.set(spki, message.length)
+    const attestation = await TalyvorKeys.attest(ALIAS, toBase64url(await sha256(bound)))
+    const signature = await TalyvorKeys.sign(ALIAS, deviceMessage(challenge), `Turn on ${biometricName}`)
+    const made = { platform: keyPlatform, public_key: publicKey, challenge, signature, attestation }
+    const key = await client.registerSignInKey(phoneName, made, passcode)
+    await SecureStore.setItemAsync(SIGNIN_KEY, key.id)
+    await SecureStore.deleteItemAsync(SIGNIN_OFF)
+    const device = await client.registerDevice({ ...made, name: phoneName })
+    // An account that has a key already keeps this one waiting for the web: it unlocks the app, and approves once let in.
+    if (!('enrolment' in device)) await keepThisPhone(device.id, workspace_id, workspace)
+  } catch (err) {
+    await forgetThisPhone()
+    throw err
+  }
+}
+
+/** B61.27 — whether the lock offers Face ID: this phone holds a sign-in key, and Settings has not turned it off. */
+export async function faceIDUnlocks(): Promise<boolean> {
+  if (!TalyvorKeys) return false
+  const [id, off] = await Promise.all([SecureStore.getItemAsync(SIGNIN_KEY), SecureStore.getItemAsync(SIGNIN_OFF)])
+  return !!id && !off
+}
+
+/** B61.27 — whether this phone holds a sign-in key at all, on or off. */
+export const hasSignInKey = async () => !!(await SecureStore.getItemAsync(SIGNIN_KEY))
+
+/** B61.27 — Settings, Security: Face ID unlocking on or off. Off keeps the key, so on again asks for nothing. */
+export async function setFaceIDUnlocks(on: boolean): Promise<void> {
+  if (on) await SecureStore.deleteItemAsync(SIGNIN_OFF)
+  else await SecureStore.setItemAsync(SIGNIN_OFF, '1')
+}
+
+/** B61.27 — opens the BFF's lock with the sign-in key: a fresh challenge for this person, signed after Face ID. A key
+ * Lens no longer takes, or one the phone lost, is forgotten, so the lock asks for the passcode from then on. */
+export async function unlockWithFaceID(client: BffClient): Promise<void> {
+  const id = await SecureStore.getItemAsync(SIGNIN_KEY)
+  if (!TalyvorKeys || !id) throw new Error(`${biometricName} is not on for this phone.`)
+  const { challenge } = await client.unlockChallenge()
+  try {
+    await client.unlock({ device_id: id, challenge, signature: await TalyvorKeys.sign(ALIAS, deviceMessage(challenge), 'Unlock Talyvor') })
+  } catch (err) {
+    if (keyGone(err) || (err instanceof BffError && (err.code === 'no_key' || err.code === 'key_refused'))) await SecureStore.deleteItemAsync(SIGNIN_KEY)
     throw err
   }
 }
@@ -237,5 +300,7 @@ export async function forgetThisPhone(): Promise<void> {
   await SecureStore.deleteItemAsync(DEVICE)
   await SecureStore.deleteItemAsync(DEVICE_WORKSPACE)
   await SecureStore.deleteItemAsync(DEVICE_WORKSPACE_NAME)
+  // B61.27 — the sign-in key is the same key in the chip, so it goes with it.
+  await SecureStore.deleteItemAsync(SIGNIN_KEY)
   await TalyvorKeys?.deleteKey(ALIAS)
 }
