@@ -14,6 +14,8 @@ import { fonts, useTheme } from '@/theme'
 // B61.27 — Pocket Live's `lock`: the app's mark, the six dots and the number pad, and Face ID offered first once it is
 // on. It is drawn INSTEAD of the app, never over it, so nothing of the account is behind it; the lock itself is the
 // BFF's (suite B61.25), so the passcode and the Face ID signature are checked there and a copied session opens nothing.
+// B57.185 — laid out as Pocket Live draws it: the mark and the words at the top, the dots under them, the number pad at
+// the foot with the two ways out under it, small, over the full background.
 
 const W = DOOR_WORDS.lock
 
@@ -91,20 +93,23 @@ export function LockScreen() {
     )
 
   return (
-    <Screen backdrop="full">
-      <View testID="lock-screen" style={{ alignItems: 'center', paddingTop: 48 }}>
-        <Image source={icon} style={{ width: 64, height: 64, borderRadius: 16 }} accessibilityLabel="Talyvor" />
-        <Text accessibilityRole="header" style={{ marginTop: 14, fontFamily: fonts.display, fontSize: 28, color: c.ink }}>
-          {W.title}
-        </Text>
-        <Text accessibilityLiveRegion="polite" style={{ minHeight: 40, marginTop: 6, textAlign: 'center', fontFamily: fonts.ui, fontSize: 14, lineHeight: 20, color: c.critical }}>
-          {said}
-        </Text>
-      </View>
-      <PasscodePad onDone={typed} faceID={face ? () => void tryFace() : undefined} disabled={busy || waitUntil > 0} reset={tries} />
-      <View style={{ alignItems: 'center', gap: 2 }}>
-        <Button variant="ghost" label={W.forgot} onPress={() => setForgot(true)} />
-        <Button variant="ghost" label={W.signup} onPress={() => void signOut()} />
+    <Screen backdrop="full" fill>
+      <View testID="lock-screen" style={{ flex: 1 }}>
+        <View style={{ alignItems: 'center', paddingTop: 48 }}>
+          <Image source={icon} style={{ width: 64, height: 64, borderRadius: 16 }} accessibilityLabel="Talyvor" />
+          <Text accessibilityRole="header" style={{ marginTop: 14, fontFamily: fonts.display, fontSize: 28, lineHeight: 34, letterSpacing: -0.4, color: c.ink }}>
+            {W.title}
+          </Text>
+        </View>
+        <PasscodePad spread onDone={typed} faceID={face ? () => void tryFace() : undefined} disabled={busy || waitUntil > 0} reset={tries}>
+          <Text accessibilityLiveRegion="polite" style={{ minHeight: 40, marginTop: 6, textAlign: 'center', fontFamily: fonts.ui, fontSize: 14, lineHeight: 20, color: c.critical }}>
+            {said}
+          </Text>
+        </PasscodePad>
+        <View style={{ alignItems: 'center', marginTop: 10 }}>
+          <Button variant="ghost" small label={W.forgot} onPress={() => setForgot(true)} />
+          <Button variant="ghost" small label={W.signup} onPress={() => void signOut()} />
+        </View>
       </View>
     </Screen>
   )

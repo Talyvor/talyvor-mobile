@@ -6,10 +6,13 @@ import { fonts, useTheme } from '@/theme'
 
 // B61.27 — Pocket Live's passcode: six dots, then the number pad (1 to 9; Face ID or nothing; 0; delete). The digits go
 // to `onDone` once six are typed and are never kept: the passcode is checked by the server, never on the phone.
+// B57.185 — drawn as Pocket Live's .dots and .keys: keys 70 high and round, 300 wide at most, the display face at 30, a
+// cloud-2 press. `spread` puts the dots under the words and the keys at the foot of the screen, as Pocket Live's lock
+// and sign-up steps do; `children` sits under the dots (what the screen says back).
 
 const LENGTH = 6
 
-export function PasscodePad({ onDone, faceID, disabled, reset }: {
+export function PasscodePad({ onDone, faceID, disabled, reset, spread, children }: {
   /** six digits typed; the dots empty again once it settles */
   onDone: (digits: string) => Promise<void> | void
   /** the Face ID key in the corner, when Face ID is on */
@@ -18,6 +21,9 @@ export function PasscodePad({ onDone, faceID, disabled, reset }: {
   disabled?: boolean
   /** changes when the screen asks for the digits again */
   reset?: unknown
+  /** the keys at the foot of the screen, in a Screen that `fill`s */
+  spread?: boolean
+  children?: ReactNode
 }) {
   const { c } = useTheme()
   const [digits, setDigits] = useState('')
@@ -45,14 +51,34 @@ export function PasscodePad({ onDone, faceID, disabled, reset }: {
       accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={() => (k === 'face' ? faceID?.() : press(k))}
-      style={({ pressed }) => ({ width: '33.33%', height: 64, alignItems: 'center', justifyContent: 'center', opacity: pressed || disabled ? 0.5 : 1 })}>
+      style={({ pressed }) => ({
+        flex: 1,
+        height: 70,
+        borderRadius: 35,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: pressed ? c.cloud2 : 'transparent',
+        transform: [{ scale: pressed ? 0.94 : 1 }],
+        opacity: disabled ? 0.5 : 1,
+      })}>
       {child}
     </Pressable>
   )
-  const digit = (n: string) => key(n, n, <Text style={{ fontFamily: fonts.uiBold, fontSize: 28, color: c.ink }}>{n}</Text>)
+  const digit = (n: string) =>
+    key(n, n, <Text style={{ fontFamily: fonts.display, fontSize: 30, lineHeight: 36, color: c.ink, fontVariant: ['tabular-nums'] }}>{n}</Text>)
+  const rows: ReactNode[][] = [
+    ['1', '2', '3'].map(digit),
+    ['4', '5', '6'].map(digit),
+    ['7', '8', '9'].map(digit),
+    [
+      faceID ? key('face', 'Face ID', <Icon name="faceid" size={26} color={c.ink} />) : <View key="none" style={{ flex: 1, height: 70 }} />,
+      digit('0'),
+      key('del', 'Delete', <Icon name="del" size={26} color={c.ink} />),
+    ],
+  ]
 
   return (
-    <View style={{ gap: 18 }}>
+    <View style={spread ? { flex: 1 } : { gap: 18 }}>
       <View
         accessible
         accessibilityLabel={`${digits.length} of ${LENGTH} digits typed`}
@@ -65,11 +91,14 @@ export function PasscodePad({ onDone, faceID, disabled, reset }: {
           />
         ))}
       </View>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-        {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(digit)}
-        {faceID ? key('face', 'Face ID', <Icon name="faceid" size={28} color={c.ink} />) : <View style={{ width: '33.33%', height: 64 }} />}
-        {digit('0')}
-        {key('del', 'Delete', <Icon name="back" size={24} color={c.ink} />)}
+      {children}
+      {spread ? <View style={{ flex: 1, minHeight: 18 }} /> : null}
+      <View testID="passcode-keys" style={{ width: '100%', maxWidth: 300, alignSelf: 'center', gap: 6 }}>
+        {rows.map((row, i) => (
+          <View key={i} style={{ flexDirection: 'row', gap: 22 }}>
+            {row}
+          </View>
+        ))}
       </View>
     </View>
   )

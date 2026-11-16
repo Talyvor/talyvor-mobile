@@ -43,7 +43,8 @@ export function useLoad<T>(load: () => Promise<T>) {
 /** A screen that scrolls; `footer` holds its decisions at the foot, out of the scroll, as Pocket's .pfoot does. B61.71:
  * every screen draws Talyvor's background behind its top, Calm unless `backdrop` is "full" (Home, an agent's page);
  * `hues` is an agent's own colour on its page, otherwise the account's two. B57.177: `toEnd` keeps a chat's latest line
- * in view, scrolling to the end each time what is in it grows. */
+ * in view, scrolling to the end each time what is in it grows. B57.185: `fill` lets the screen's words grow to its height,
+ * so a number pad can sit at its foot as Pocket Live's lock and sign-up steps draw it. */
 export function Screen({
   children,
   onRefresh,
@@ -53,6 +54,7 @@ export function Screen({
   agent,
   hues,
   toEnd,
+  fill,
 }: {
   children: ReactNode
   onRefresh?: () => void
@@ -62,6 +64,7 @@ export function Screen({
   agent?: boolean
   hues?: Hues
   toEnd?: boolean
+  fill?: boolean
 }) {
   const { c } = useTheme()
   const scroller = useRef<ComponentRef<typeof ScrollView>>(null)
@@ -70,7 +73,7 @@ export function Screen({
   const body = (
     <Animated.ScrollView
       ref={scroller}
-      contentContainerStyle={styles.screen}
+      contentContainerStyle={[styles.screen, fill && { flexGrow: 1 }]}
       onContentSizeChange={toEnd ? () => scroller.current?.scrollToEnd({ animated: true }) : undefined}
       onScroll={onScroll}
       scrollEventThrottle={16}
@@ -244,8 +247,8 @@ export function Chip({ children, tone = 'plain', dot }: { children: ReactNode; t
   )
 }
 
-/** A role switch with its words beside it. */
-export function Toggle({ label, value, onValueChange, disabled }: { label: string; value: boolean; onValueChange: (on: boolean) => void; disabled?: boolean }) {
+/** A role switch with its words beside it; `sub` is the line under them, as Pocket Live's setting rows draw it. */
+export function Toggle({ label, sub, value, onValueChange, disabled }: { label: string; sub?: string; value: boolean; onValueChange: (on: boolean) => void; disabled?: boolean }) {
   const { c, dark } = useTheme()
   return (
     <Pressable
@@ -255,7 +258,14 @@ export function Toggle({ label, value, onValueChange, disabled }: { label: strin
       disabled={disabled}
       onPress={() => onValueChange(!value)}
       style={styles.toggleRow}>
-      <Text style={[styles.body, { color: c.ink, flex: 1 }]}>{label}</Text>
+      {sub ? (
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={[styles.body, { color: c.ink, fontFamily: fonts.uiMedium }]}>{label}</Text>
+          <Text style={[styles.sub, { color: c.ink3 }]}>{sub}</Text>
+        </View>
+      ) : (
+        <Text style={[styles.body, { color: c.ink, flex: 1 }]}>{label}</Text>
+      )}
       <View style={[styles.toggle, { backgroundColor: value ? c.ink : c.control }]}>
         <View style={[styles.knob, { left: value ? 21 : 3, backgroundColor: value && dark ? '#111216' : '#FFFFFF' }]} />
       </View>
@@ -275,6 +285,17 @@ export function Field({ label, ...input }: { label: string } & Omit<TextInputPro
         style={[styles.input, { backgroundColor: c.page, borderColor: c.control, color: c.ink }]}
         {...input}
       />
+    </View>
+  )
+}
+
+/** Pocket's .note: a small line on cloud with its mark, for what a screen tells rather than asks. */
+export function Note({ icon, children }: { icon: IconName; children: string }) {
+  const { c } = useTheme()
+  return (
+    <View style={{ flexDirection: 'row', gap: 10, paddingVertical: 12, paddingHorizontal: 14, borderRadius: 14, backgroundColor: c.cloud }}>
+      <Icon name={icon} size={20} color={c.ink2} />
+      <Text style={{ flex: 1, fontFamily: fonts.ui, fontSize: 13.5, lineHeight: 19, color: c.ink2 }}>{children}</Text>
     </View>
   )
 }
