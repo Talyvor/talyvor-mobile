@@ -5,7 +5,8 @@ import { Pressable, Text, TextInput, View } from 'react-native'
 
 import { useAccount } from '@/account'
 import { AGENT_KINDS, type AgentKindChoice, newAgentRules, RULE_FIELDS, type RuleKey } from '@/agent-kinds'
-import { Face, type FaceColour } from '@/components/face'
+import { AGENT_PICTURES, type AgentPicture, lookFor } from '@/agent-pictures'
+import { Face } from '@/components/face'
 import { HOME_MONEY } from '@/components/home'
 import { Icon } from '@/components/icon'
 import { MoneyLabel } from '@/components/money-label'
@@ -23,6 +24,7 @@ import { fonts, useTheme } from '@/theme'
 // A save Lens judges looser is signed with this phone's key, as every rules save on the phone is (B59.44).
 // B57.178 — as Pocket Live draws it: the back arrow alone, three step bars without words, the pictures at 56, and the
 // limits as a card of rows, each its amount in the account's currency, opening its own sheet (ruleEdit) to change it.
+// B61.103 — your own picks from the web's gallery of 27: the six's faces, lime's, and the twenty drawn ones (B61.36).
 
 const FIAT_ORDER = ['USD', 'EUR', 'GBP']
 const STEPS = 3
@@ -60,8 +62,9 @@ function Steps({ at }: { at: number }) {
   )
 }
 
-/** A picture as the agent will be drawn: its colour's face. */
-const picture = (colour: FaceColour, name: string, size: number) => <Face agent={{ id: `new-${colour}`, name, colour, face: 'circle' }} size={size} />
+/** A picture as the agent will be drawn: its colour's face, or the drawn picture it is. */
+const drawn = (p: AgentPicture, name: string, size: number) => <Face agent={{ id: `new-${p.id}`, name, colour: p.colour, face: 'circle', picture: p.id }} size={size} />
+const pictureOfKind = (k: AgentKindChoice) => AGENT_PICTURES.find((p) => p.id === k.colour) as AgentPicture
 
 /** One choice of the first step: radio semantics; cloud when off, white with a 2px ink ring when on. */
 function Choice({ picked, onPick, title, line, left, wide }: { picked: boolean; onPick: () => void; title: string; line: string; left: ReactNode; wide?: boolean }) {
@@ -106,7 +109,7 @@ export default function NewAgentScreen() {
   const [start, setStart] = useState<Start | null>(null)
   const [name, setName] = useState('')
   const [does, setDoes] = useState('')
-  const [colour, setColour] = useState<FaceColour>('cobalt')
+  const [picture, setPicture] = useState<AgentPicture>(AGENT_PICTURES[0])
   const [typed, setTyped] = useState<Typed>(NOTHING_TYPED)
   const [busy, setBusy] = useState(false)
   const [said, setSaid] = useState('')
@@ -116,7 +119,7 @@ export default function NewAgentScreen() {
   const ours = start && start !== 'own' ? start : null
   const pick = (s: Start) => {
     setStart(s)
-    setColour(s === 'own' ? colour : s.colour)
+    setPicture(s === 'own' ? picture : pictureOfKind(s))
     setTyped(s === 'own' ? NOTHING_TYPED : typedFrom(s.rules))
   }
   const back = () => (step > 0 ? setStep(step - 1) : router.canGoBack() ? router.back() : router.replace('/agents'))
@@ -131,7 +134,8 @@ export default function NewAgentScreen() {
     setSaid('')
     let agent: Agent
     try {
-      agent = await client.createAgent(trimmed, colour, currency === 'USDC' ? undefined : currency)
+      const look = lookFor(picture)
+      agent = await client.createAgent(trimmed, look.colour, currency === 'USDC' ? undefined : currency, look.picture)
     } catch (err) {
       setBusy(false)
       return setSaid(refusalText(err))
@@ -179,7 +183,7 @@ export default function NewAgentScreen() {
         <Body muted>Pick one of ours, or make your own.</Body>
         <View accessibilityRole="radiogroup" style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 10 }}>
           {AGENT_KINDS.map((k) => (
-            <Choice key={k.kind} picked={ours?.kind === k.kind} onPick={() => pick(k)} title={k.kind} line={k.line} left={picture(k.colour, k.kind, 56)} />
+            <Choice key={k.kind} picked={ours?.kind === k.kind} onPick={() => pick(k)} title={k.kind} line={k.line} left={drawn(pictureOfKind(k), k.kind, 56)} />
           ))}
           <Choice
             wide
@@ -201,7 +205,7 @@ export default function NewAgentScreen() {
     body = (
       <>
         <Headline>{ours ? 'Name your agent' : 'Make it yours'}</Headline>
-        <View style={{ alignItems: 'center', paddingVertical: 10 }}>{picture(colour, trimmed || 'New', 72)}</View>
+        <View style={{ alignItems: 'center', paddingVertical: 10 }}>{drawn(picture, trimmed || 'New', 72)}</View>
         <Field label="Its name" value={name} onChangeText={setName} placeholder={`For example, ${ours ? ours.kind : 'Sidekick'}`} maxLength={24} autoCorrect={false} />
         {ours ? null : (
           <>
@@ -209,21 +213,18 @@ export default function NewAgentScreen() {
             <View style={{ gap: 6 }}>
               <Text style={{ fontFamily: fonts.uiMedium, fontSize: 14, color: c.ink2 }}>Its picture</Text>
               <View accessibilityRole="radiogroup" style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-                {AGENT_KINDS.map((k, i) => (
+                {AGENT_PICTURES.map((p, i) => (
                   <Pressable
-                    key={k.colour}
+                    key={p.id}
                     accessibilityRole="radio"
                     accessibilityLabel={`Picture ${i + 1}`}
-                    accessibilityState={{ checked: colour === k.colour }}
-                    onPress={() => setColour(k.colour)}
-                    style={{ padding: 3, borderRadius: 999, borderWidth: 2, borderColor: colour === k.colour ? c.ink : 'transparent' }}>
-                    {picture(k.colour, `Picture ${i + 1}`, 44)}
+                    accessibilityState={{ checked: picture.id === p.id }}
+                    onPress={() => setPicture(p)}
+                    style={{ padding: 3, borderRadius: 999, borderWidth: 2, borderColor: picture.id === p.id ? c.ink : 'transparent' }}>
+                    {drawn(p, `Picture ${i + 1}`, 44)}
                   </Pressable>
                 ))}
               </View>
-              <Body muted style={{ fontSize: 13 }}>
-                More pictures are being drawn.
-              </Body>
             </View>
           </>
         )}

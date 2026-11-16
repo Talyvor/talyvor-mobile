@@ -1,6 +1,7 @@
-import { View } from 'react-native'
+import { Image, View } from 'react-native'
 import Svg, { Circle, Path, Polygon, Rect } from 'react-native-svg'
 
+import { artOf } from '../agent-pictures'
 import { agentColours, useTheme } from '../theme'
 
 // B57.64 — an agent's face, as the web draws it (talyvor-suite B57.6, packages/ui/src/pocket/Face.tsx): seven colours
@@ -73,7 +74,8 @@ export function Face({
   waiting = false,
   size = 34,
 }: {
-  agent: { id: string; name: string; colour?: string; face?: string }
+  /** B61.103: an agent whose picture is one of the twenty drawn ones wears it, round, in place of its colour's face. */
+  agent: { id: string; name: string; colour?: string; face?: string; picture?: string }
   state?: FaceState
   /** The tangerine badge: something of this agent's waits for a person. */
   waiting?: boolean
@@ -83,12 +85,22 @@ export function Face({
   const { c } = useTheme()
   const { colour, shape } = faceOf(agent)
   const badge = Math.max(9, size * 0.3)
+  const art = artOf(agent.picture)
   return (
-    <View accessible accessibilityRole="image" accessibilityLabel={`${agent.name} agent`} testID={`face-${colour}-${shape}-${state}`} style={{ width: size, height: size }}>
-      <Svg viewBox="0 0 100 100" width={size} height={size}>
-        {shapeOf(shape, agentColours[colour])}
-        {featuresOf(state, colour === 'cobalt' ? '#FFFFFF' : '#111216')}
-      </Svg>
+    <View
+      accessible
+      accessibilityRole="image"
+      accessibilityLabel={`${agent.name} agent`}
+      testID={art ? `face-picture-${agent.picture}-${state}` : `face-${colour}-${shape}-${state}`}
+      style={{ width: size, height: size }}>
+      {art ? (
+        <Image source={art} style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: agentColours[colour] }} />
+      ) : (
+        <Svg viewBox="0 0 100 100" width={size} height={size}>
+          {shapeOf(shape, agentColours[colour])}
+          {featuresOf(state, colour === 'cobalt' ? '#FFFFFF' : '#111216')}
+        </Svg>
+      )}
       {/* pocket.css .face .badge: 30% of the face, at least 9, ringed in the page colour. */}
       {waiting ? (
         <View
