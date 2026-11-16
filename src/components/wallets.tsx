@@ -53,7 +53,7 @@ export function WalletSide({ side, totals, accounts, owner }: ReturnType<typeof 
           <Card white>
             {accounts.map((a, i) => {
               const name = accountName(a, owner)
-              const amount = formatMinor(a.balance_minor, a.currency)
+              const amount = formatMinor(a.live_minor, a.currency)
               return (
                 <View key={a.id} accessible accessibilityLabel={`${name}, ${amount}`}>
                   <Row first={i === 0} title={name} sub={CURRENCY_NAME[a.currency] ?? a.currency} right={<Figure>{amount}</Figure>} />

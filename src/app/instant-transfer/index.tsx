@@ -165,7 +165,7 @@ function InstantTransferForm() {
     return () => clearTimeout(timer)
   }, [q, quoted, busy, approvalID])
 
-  const holds = account ? { minor: account.balance_minor, currency: account.currency } : null
+  const holds = account ? { minor: account.live_minor, currency: account.currency } : null
   const sendAt = (quote: InstantQuote) =>
     client.instantSend(account?.agent_id ?? '', { quote_id: quote.id, ...(to === 'talyvor_account' ? { to_account_id: recipient } : { to_payee_id: recipient }) }, key)
   const sent = (t: InstantTransfer) => {
@@ -331,7 +331,7 @@ function InstantTransferForm() {
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderTopWidth: i ? 1 : 0, borderTopColor: c.line }}>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontFamily: fonts.uiBold, fontSize: 15, color: c.ink }}>{[who?.name ?? 'This agent', who?.description].filter(Boolean).join(' · ')}</Text>
-                  <Text style={{ fontFamily: fonts.ui, fontSize: 13, color: c.ink3 }}>{`${BALANCE_WORDS[a.currency] ?? a.currency} balance · holds ${formatMinor(a.balance_minor, a.currency)}`}</Text>
+                  <Text style={{ fontFamily: fonts.ui, fontSize: 13, color: c.ink3 }}>{`${BALANCE_WORDS[a.currency] ?? a.currency} balance · holds ${formatMinor(a.live_minor, a.currency)}`}</Text>
                 </View>
                 {account?.id === a.id ? <Icon name="check" color={c.ink} /> : null}
               </Pressable>
@@ -414,7 +414,7 @@ function InstantTransferForm() {
             </Body>
             <Body muted>{`They get ${formatMinor(q.receive_minor, q.receive_currency)} · ${arrivesText(q)}`}</Body>
             <View style={{ backgroundColor: c.cloud, borderRadius: 16, paddingHorizontal: 14 }}>
-              <QuoteFact label={WORDS.paidFrom} value={`${agent}’s ${BALANCE_WORDS[account.currency] ?? account.currency} balance`} note={`(holds ${formatMinor(account.balance_minor, account.currency)})`} padded />
+              <QuoteFact label={WORDS.paidFrom} value={`${agent}’s ${BALANCE_WORDS[account.currency] ?? account.currency} balance`} note={`(holds ${formatMinor(account.live_minor, account.currency)})`} padded />
               <QuoteFact label="Expires" value={seconds > 0 ? `In ${seconds} seconds, with the quote` : WORDS.expired} padded line />
             </View>
             <View style={{ flexDirection: 'row', gap: 8 }}>

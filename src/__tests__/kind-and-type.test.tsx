@@ -70,7 +70,7 @@ function mockBff(account_type: Type, money_kind: Kind) {
         return json({ payments: [] })
       case 'GET /api/money/accounts':
         // Lens names the owner's account as a company's whatever the type; the phone names it by the type.
-        return json({ accounts: [{ id: 'acc_gbp', currency: 'GBP', purpose: 'company', status: 'open', name: 'The company · GBP', balance_minor: 100_000 }] })
+        return json({ accounts: [{ id: 'acc_gbp', currency: 'GBP', purpose: 'company', status: 'open', name: 'The company · GBP', balance_minor: 100_000, test_minor: 0, live_minor: 100_000 }] })
       case 'GET /api/money/notices':
         return json({ settings: { timezone: 'Europe/London', quiet_from: '', quiet_until: '', off: [] }, notices: [] })
     }

@@ -43,7 +43,7 @@ const WEB = {
   payRow: 'Arrives in seconds, any day, any hour',
 } as const
 
-const REMY_USD = { id: 'macc_remy', agent_id: 'agt_remy', currency: 'USD', purpose: 'agent' as const, status: 'open', name: 'USD account', balance_minor: 620_000 }
+const REMY_USD = { id: 'macc_remy', agent_id: 'agt_remy', currency: 'USD', purpose: 'agent' as const, status: 'open', name: 'USD account', balance_minor: 620_000, test_minor: 0, live_minor: 620_000 }
 const LUMEN = { id: 'payee_lf', name: 'Lumen Freight GmbH', country: 'DE', needs_confirmation: false, created_at: '2026-11-01T09:00:00Z' }
 
 let quotes = 0

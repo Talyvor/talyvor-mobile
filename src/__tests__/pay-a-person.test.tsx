@@ -31,9 +31,9 @@ jest.mock('../../modules/talyvor-keys', () => ({
 
 const NOBODY = 'Nobody found. Check the name or number, or ask them to turn on being found in Settings.'
 const accounts = [
-  { id: 'acc_usd', currency: 'USD', purpose: 'company', status: 'open', name: '', balance_minor: 200_000 },
-  { id: 'acc_eur', currency: 'EUR', purpose: 'company', status: 'open', name: '', balance_minor: 50_000 },
-  { id: 'acc_r_usd', agent_id: 'ag_1', currency: 'USD', purpose: 'agent', status: 'open', name: 'Research · USD', balance_minor: 1_000 },
+  { id: 'acc_usd', currency: 'USD', purpose: 'company', status: 'open', name: '', balance_minor: 200_000, test_minor: 0, live_minor: 200_000 },
+  { id: 'acc_eur', currency: 'EUR', purpose: 'company', status: 'open', name: '', balance_minor: 50_000, test_minor: 0, live_minor: 50_000 },
+  { id: 'acc_r_usd', agent_id: 'ag_1', currency: 'USD', purpose: 'agent', status: 'open', name: 'Research · USD', balance_minor: 1_000, test_minor: 0, live_minor: 1_000 },
 ]
 
 /** Every write the screens sent: its method and path, and its body. */

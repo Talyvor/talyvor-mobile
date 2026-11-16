@@ -208,11 +208,11 @@ export default function PayeeScreen() {
             {account ? (
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={`From ${accountName(account, owner)}, ${formatMinor(account.balance_minor, account.currency)}`}
+                accessibilityLabel={`From ${accountName(account, owner)}, ${formatMinor(account.live_minor, account.currency)}`}
                 onPress={() => setChoosing(true)}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 12, height: 46, borderRadius: 14, borderWidth: 1.5, borderColor: c.control, paddingHorizontal: 14, backgroundColor: c.page }}>
                 <Body style={{ flex: 1 }}>{accountName(account, owner)}</Body>
-                <Text style={{ fontFamily: fonts.ui, fontSize: 13, color: c.ink3, fontVariant: ['tabular-nums'] }}>{formatMinor(account.balance_minor, account.currency)}</Text>
+                <Text style={{ fontFamily: fonts.ui, fontSize: 13, color: c.ink3, fontVariant: ['tabular-nums'] }}>{formatMinor(account.live_minor, account.currency)}</Text>
                 <View style={{ transform: [{ rotate: '90deg' }] }}>
                   <Icon name="chev" size={16} color={c.ink3} />
                 </View>
@@ -264,7 +264,7 @@ export default function PayeeScreen() {
               <AccountChoice
                 key={a.id}
                 name={accountName(a, owner)}
-                balance={formatMinor(a.balance_minor, a.currency)}
+                balance={formatMinor(a.live_minor, a.currency)}
                 chosen={a.id === account?.id}
                 onPress={() => {
                   setAccountID(a.id)

@@ -279,7 +279,10 @@ export interface CurrencyAccount {
   purpose: 'company' | 'agent'
   status: string
   name: string
+  /** test plus live (B54.31): never shown as money, which is live_minor alone */
   balance_minor: number
+  test_minor: number
+  live_minor: number
 }
 
 /** B59.26 — Lens economy.MoneyStatementLine (B56.14): one posting to a currency account, money in positive, out negative. */

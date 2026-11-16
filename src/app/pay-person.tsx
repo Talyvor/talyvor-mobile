@@ -150,10 +150,10 @@ export default function PayPersonScreen() {
           <Field label={`Amount in ${currency}`} placeholder="0.00" keyboardType="decimal-pad" value={amount} onChangeText={setAmount} />
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={`From ${owner} · ${formatMinor(account.balance_minor, currency)}`}
+            accessibilityLabel={`From ${owner} · ${formatMinor(account.live_minor, currency)}`}
             onPress={() => setChoosing(true)}
             style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'center', gap: 6, height: 44, paddingHorizontal: 16, borderRadius: 999, backgroundColor: c.cloud2 }}>
-            <Text style={{ fontFamily: fonts.uiMedium, fontSize: 13.5, color: c.ink }}>{`From ${owner} · ${formatMinor(account.balance_minor, currency)}`}</Text>
+            <Text style={{ fontFamily: fonts.uiMedium, fontSize: 13.5, color: c.ink }}>{`From ${owner} · ${formatMinor(account.live_minor, currency)}`}</Text>
             <View style={{ transform: [{ rotate: '90deg' }] }}>
               <Icon name="chev" size={14} color={c.ink2} />
             </View>
@@ -176,7 +176,7 @@ export default function PayPersonScreen() {
                 <AccountChoice
                   key={a.id}
                   name={accountName(a, owner)}
-                  balance={formatMinor(a.balance_minor, a.currency)}
+                  balance={formatMinor(a.live_minor, a.currency)}
                   chosen={a.id === account.id}
                   onPress={() => {
                     setAccountID(a.id)

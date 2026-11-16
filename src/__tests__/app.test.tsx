@@ -138,7 +138,7 @@ function mockBff(
       payments: [{ id: 'pm_1', payee_id: 'py_1', payee_name: 'Acme Hosting', amount_minor: 2500, currency: 'GBP', reference: 'Sept', status: 'completed', created_at: '2026-10-03T10:00:00Z' }],
     }),
     'GET /api/money/accounts': () =>
-      start.accounts === 'fail' ? new Response(JSON.stringify({ error: 'down' }), { status: 502 }) : { accounts: start.accounts ?? [{ id: 'acc_gbp', currency: 'GBP', purpose: 'company', status: 'open', name: 'The company · GBP', balance_minor: 100_000 }] },
+      start.accounts === 'fail' ? new Response(JSON.stringify({ error: 'down' }), { status: 502 }) : { accounts: start.accounts ?? [{ id: 'acc_gbp', currency: 'GBP', purpose: 'company', status: 'open', name: 'The company · GBP', balance_minor: 100_000, test_minor: 0, live_minor: 100_000 }] },
     ...(start.account ? { 'GET /api/workspace/account': () => ({ workspace_id: 'ws_1', ...start.account }) } : {}),
     ...(start.name ? { 'GET /api/workspace/name': () => ({ id: 'ws_1', name: start.name }) } : {}),
     'POST /api/money/payments/challenge': () => ({ challenge: 'ch_pay_1', allow_credentials: [] }),
@@ -374,7 +374,7 @@ describe('B57.66 Home', () => {
     mockStore.clear()
     mockStore.set('talyvor.session', JSON.stringify({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }))
   })
-  const acc = (id: string, currency: string, balance_minor: number, agent_id = '') => ({ id, agent_id, currency, purpose: agent_id ? 'agent' : 'company', status: 'open', name: '', balance_minor })
+  const acc = (id: string, currency: string, balance_minor: number, agent_id = '') => ({ id, agent_id, currency, purpose: agent_id ? 'agent' : 'company', status: 'open', name: '', balance_minor, test_minor: 0, live_minor: balance_minor })
   const preq = { id: 'preq_1', status: 'pending_approval', summary: '', client: 'chat', totals: { USD: 18_000 }, items: [{ position: 1, payee_id: 'py_1', payee_name: 'Northwind Data', currency: 'USD', amount_minor: 18_000, reference: '', decision: 'needs_approval', reason: '' }], created_at: '2026-11-09T08:00:00Z' }
 
   test('Business and Hybrid: the account, each currency it holds, what waits, and each agent Running or Paused', async () => {
@@ -815,8 +815,8 @@ describe('B55.25 a payment from the phone confirms with Face ID', () => {
     globalThis.fetch = ((f) => async (url: string, init: RequestInit = {}) =>
       url.endsWith('/api/money/accounts')
         ? new Response(JSON.stringify({ accounts: [
-            { id: 'acc_gbp', currency: 'GBP', purpose: 'company', status: 'open', name: 'The company · GBP', balance_minor: 100_000 },
-            { id: 'acc_gbp_2', currency: 'GBP', purpose: 'company', status: 'open', name: 'Payroll · GBP', balance_minor: 50_000 },
+            { id: 'acc_gbp', currency: 'GBP', purpose: 'company', status: 'open', name: 'The company · GBP', balance_minor: 100_000, test_minor: 0, live_minor: 100_000 },
+            { id: 'acc_gbp_2', currency: 'GBP', purpose: 'company', status: 'open', name: 'Payroll · GBP', balance_minor: 50_000, test_minor: 0, live_minor: 50_000 },
           ] }))
         : f(url, init))(globalThis.fetch) as typeof fetch
     await typePayment('py_1')
@@ -956,9 +956,9 @@ describe('B57.72 Pay and a payee', () => {
     answer((url) =>
       url.endsWith('/api/money/accounts')
         ? new Response(JSON.stringify({ accounts: [
-            { id: 'acc_gbp', currency: 'GBP', purpose: 'company', status: 'open', name: 'The company · GBP', balance_minor: 100_000 },
-            { id: 'acc_usd', currency: 'USD', purpose: 'company', status: 'open', name: 'The company · USD', balance_minor: 320_000 },
-            { id: 'acc_old', currency: 'EUR', purpose: 'company', status: 'closed', name: 'Old · EUR', balance_minor: 0 },
+            { id: 'acc_gbp', currency: 'GBP', purpose: 'company', status: 'open', name: 'The company · GBP', balance_minor: 100_000, test_minor: 0, live_minor: 100_000 },
+            { id: 'acc_usd', currency: 'USD', purpose: 'company', status: 'open', name: 'The company · USD', balance_minor: 320_000, test_minor: 0, live_minor: 320_000 },
+            { id: 'acc_old', currency: 'EUR', purpose: 'company', status: 'closed', name: 'Old · EUR', balance_minor: 0, test_minor: 0, live_minor: 0 },
           ] }))
         : undefined,
     )
@@ -1437,9 +1437,9 @@ describe('B61.54 the Agents tab', () => {
     mockStore.set('talyvor.session', JSON.stringify({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }))
   })
   const accounts = [
-    { id: 'acc_gbp', currency: 'GBP', purpose: 'company', status: 'open', name: 'The company · GBP', balance_minor: 100_000 },
-    { id: 'acc_ag1_gbp', currency: 'GBP', purpose: 'agent', agent_id: 'ag_1', status: 'open', name: 'Researcher · GBP', balance_minor: 4_250 },
-    { id: 'acc_ag2_usdc', currency: 'USDC', purpose: 'agent', agent_id: 'ag_2', status: 'open', name: 'Buyer · USDC', balance_minor: 12_000_000 },
+    { id: 'acc_gbp', currency: 'GBP', purpose: 'company', status: 'open', name: 'The company · GBP', balance_minor: 100_000, test_minor: 0, live_minor: 100_000 },
+    { id: 'acc_ag1_gbp', currency: 'GBP', purpose: 'agent', agent_id: 'ag_1', status: 'open', name: 'Researcher · GBP', balance_minor: 4_250, test_minor: 0, live_minor: 4_250 },
+    { id: 'acc_ag2_usdc', currency: 'USDC', purpose: 'agent', agent_id: 'ag_2', status: 'open', name: 'Buyer · USDC', balance_minor: 12_000_000, test_minor: 0, live_minor: 12_000_000 },
   ]
 
   test('lists every agent with its picture, what it holds in its own currency and Paused, and opens its page', async () => {
@@ -1492,8 +1492,8 @@ describe('B57.176 the Agents tab as Pocket Live draws it', () => {
     mockStore.set('talyvor.session', JSON.stringify({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }))
   })
   const accounts = [
-    { id: 'acc_ag1_gbp', currency: 'GBP', purpose: 'agent', agent_id: 'ag_1', status: 'open', name: 'Researcher · GBP', balance_minor: 4_250 },
-    { id: 'acc_ag2_usdc', currency: 'USDC', purpose: 'agent', agent_id: 'ag_2', status: 'open', name: 'Buyer · USDC', balance_minor: 12_000_000 },
+    { id: 'acc_ag1_gbp', currency: 'GBP', purpose: 'agent', agent_id: 'ag_1', status: 'open', name: 'Researcher · GBP', balance_minor: 4_250, test_minor: 0, live_minor: 4_250 },
+    { id: 'acc_ag2_usdc', currency: 'USDC', purpose: 'agent', agent_id: 'ag_2', status: 'open', name: 'Buyer · USDC', balance_minor: 12_000_000, test_minor: 0, live_minor: 12_000_000 },
   ]
   // Each agent's rules in its own currency (B61.88) and this month's spending by agent (B53.9), which mockBff leaves out.
   const withMonth = () => {

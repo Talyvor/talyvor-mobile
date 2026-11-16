@@ -39,7 +39,7 @@ test('a balance of 1,255,000 µLXC at 0.1 USD per LXC reads $0.12; the same amou
 // B61.44 — the widget draws what Home draws: the accounts' total and what each agent's accounts hold, never the credit.
 test('the widget reads the $400.00 company account and no figure for an agent with 12.5 LXC of credit and no account', () => {
   const book = { workspace_balance_ulxc: 12_500_000, allocated_ulxc: 12_500_000, unallocated_ulxc: 0, spent_ulxc: 0, agents: [{ id: 'ag-1', name: 'Scout', balance_ulxc: 12_500_000, spent_ulxc: 0, created_at: '2026-11-11T00:00:00Z' }] }
-  const accounts = [{ id: 'ca-1', currency: 'USD', purpose: 'company' as const, status: 'active', name: 'The company · USD', balance_minor: 40_000 }]
+  const accounts = [{ id: 'ca-1', currency: 'USD', purpose: 'company' as const, status: 'active', name: 'The company · USD', balance_minor: 40_000, test_minor: 0, live_minor: 40_000 }]
   const widget = widgetProps(book, [], [], 'token-1', undefined, { accounts, shows: shows({ account_type: 'business', money_kind: 'fiat' }) })
   expect(widget.total).toBe('$400.00')
   expect(widget.totalLabel).toBe('Your company’s total')
@@ -50,9 +50,9 @@ test('the widget reads the $400.00 company account and no figure for an agent wi
 test('on the widget an agent reads what its own accounts hold, and a total in two currencies reads both', () => {
   const book = { workspace_balance_ulxc: 0, allocated_ulxc: 0, unallocated_ulxc: 0, spent_ulxc: 0, agents: [{ id: 'ag-1', name: 'Scout', balance_ulxc: 0, spent_ulxc: 0, created_at: '2026-11-11T00:00:00Z' }] }
   const accounts = [
-    { id: 'ca-1', currency: 'USD', purpose: 'company' as const, status: 'active', name: 'The company · USD', balance_minor: 40_000 },
-    { id: 'ca-2', agent_id: 'ag-1', currency: 'USD', purpose: 'agent' as const, status: 'active', name: 'Scout · USD', balance_minor: 1_250 },
-    { id: 'ca-3', agent_id: 'ag-1', currency: 'USDC', purpose: 'agent' as const, status: 'active', name: 'Scout · USDC', balance_minor: 2_000_000 },
+    { id: 'ca-1', currency: 'USD', purpose: 'company' as const, status: 'active', name: 'The company · USD', balance_minor: 40_000, test_minor: 0, live_minor: 40_000 },
+    { id: 'ca-2', agent_id: 'ag-1', currency: 'USD', purpose: 'agent' as const, status: 'active', name: 'Scout · USD', balance_minor: 1_250, test_minor: 0, live_minor: 1_250 },
+    { id: 'ca-3', agent_id: 'ag-1', currency: 'USDC', purpose: 'agent' as const, status: 'active', name: 'Scout · USDC', balance_minor: 2_000_000, test_minor: 0, live_minor: 2_000_000 },
   ]
   const widget = widgetProps(book, [], [], 'token-1', undefined, { accounts, shows: shows({ account_type: 'personal', money_kind: 'hybrid' }) })
   expect(widget.total).toBe('$412.50 · 2.00 USDC')

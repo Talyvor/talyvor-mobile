@@ -174,7 +174,7 @@ function AccountPicker({ accounts, owner, chosen, onChoose }: { accounts: Curren
     <View style={{ gap: 8 }}>
       <Eyebrow>Account</Eyebrow>
       {accounts.map((a) => (
-        <AccountChoice key={a.id} name={`${owner} · ${a.currency}`} balance={formatMinor(a.balance_minor, a.currency)} chosen={a.id === chosen?.id} onPress={() => onChoose(a.id)} />
+        <AccountChoice key={a.id} name={`${owner} · ${a.currency}`} balance={formatMinor(a.live_minor, a.currency)} chosen={a.id === chosen?.id} onPress={() => onChoose(a.id)} />
       ))}
     </View>
   )
@@ -380,7 +380,7 @@ function Convert({ client, shows, accounts: all, hasKey, open, onClose, onDone }
   const to = targets.includes(buy) ? buy : (targets[0] ?? '')
   const minor = amountMinor(amount, from)
   const why = targets.length === 0 ? 'Open an account on the other side first.' : minor === null ? 'Add an amount first.' : undefined
-  const balance = (currency: string) => formatMinor(accounts.filter((a) => a.currency === currency).reduce((s, a) => s + a.balance_minor, 0), currency)
+  const balance = (currency: string) => formatMinor(accounts.filter((a) => a.currency === currency).reduce((s, a) => s + a.live_minor, 0), currency)
   const close = () => {
     if (busy) return
     setQuote(null)

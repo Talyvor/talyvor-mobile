@@ -71,7 +71,7 @@ function mockBff(plan: Plan, { currency = 'GBP', change }: { currency?: string; 
       case 'GET /api/money/notices':
         return json({ settings: { timezone: 'Europe/London', quiet_from: '', quiet_until: '', off: [] }, notices: [] })
       case 'GET /api/money/accounts':
-        return json({ accounts: [{ id: 'ca_1', currency, purpose: 'company', status: 'open', name: '', balance_minor: 0 }] })
+        return json({ accounts: [{ id: 'ca_1', currency, purpose: 'company', status: 'open', name: '', balance_minor: 0, test_minor: 0, live_minor: 0 }] })
       case 'GET /api/wallets/capabilities':
         return json({ capabilities: [{ capability: 'spend_on_talyvor', label: 'sandbox' }] })
       case 'GET /api/pricing':
