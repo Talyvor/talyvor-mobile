@@ -1,6 +1,7 @@
 import { exchangeCodeAsync, makeRedirectUri, useAuthRequest, useAutoDiscovery } from 'expo-auth-session'
 import { Image } from 'expo-image'
-import { Redirect, router } from 'expo-router'
+import { BffError } from '@talyvor/bff-client'
+import { Redirect, router, useLocalSearchParams } from 'expo-router'
 import * as WebBrowser from 'expo-web-browser'
 import { useCallback, useState, type ReactNode } from 'react'
 import { Pressable, Text, View } from 'react-native'
@@ -41,6 +42,10 @@ import { fonts, useTheme } from '@/theme'
 // B61.21 — step 4 is the identity check, as the web's B61.20: Lens's checks against the Sandbox provider, and Home only
 // once they pass. A Business's company details moved here from step 3, beside the check they go to.
 //
+// B61.10 — "Open another account", from Your accounts (?another=1): a person already signed in walks steps 1 and 2, the
+// BFF's POST /api/accounts (suite B61.8) opens the account and moves the session to it, and the identity check runs for
+// it, as the web's B61.9. The key step is left out: this phone's key is the person's already.
+//
 // The name is the workspace's name. Country and the registration number are asked as the spec says, and kept on this
 // screen only: Lens has nowhere to hold them yet (the web does the same).
 
@@ -52,6 +57,14 @@ const redirectUri = makeRedirectUri({ scheme: 'talyvor', path: 'auth' })
 const PICK_TYPE = 'Pick who this account is for.'
 const PICK_KIND = 'Pick the kind of money.'
 const SAVE_FAILED = 'We couldn’t save that. Nothing changed.'
+const OPEN_FAILED = 'The account didn’t open. Try again.'
+
+/** Another account's steps: sign-up's, without the key. */
+const ANOTHER_STEPS = [SIGNUP_STEPS[0], SIGNUP_STEPS[1], SIGNUP_STEPS[3]] as const
+type StepList = readonly string[]
+
+/** Lens's own sentence for a refusal it worded (the eleventh account), and otherwise ours. */
+const openFailure = (err: unknown) => (err instanceof BffError && err.sentence && err.status < 500 ? err.sentence : OPEN_FAILED)
 
 interface Profile {
   name: string
@@ -106,13 +119,13 @@ function Header({ onBack }: { onBack?: () => void }) {
 
 type StepAt = 1 | 2 | 3 | 4
 
-/** The phone's step bars: a bar a step, tangerine when reached, then "Step n of 4". */
-function Steps({ at }: { at: StepAt }) {
+/** The phone's step bars: a bar a step, tangerine when reached, then "Step n of 4" (of 3, for another account). */
+function Steps({ at, steps = SIGNUP_STEPS }: { at: StepAt; steps?: StepList }) {
   const { c } = useTheme()
-  const of = SIGNUP_STEPS.length
+  const of = steps.length
   return (
-    <View accessible accessibilityLabel={`Step ${at} of ${of}, ${SIGNUP_STEPS[at - 1]}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-      {SIGNUP_STEPS.map((_, i) => (
+    <View accessible accessibilityLabel={`Step ${at} of ${of}, ${steps[at - 1]}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+      {steps.map((_, i) => (
         <View key={i} style={{ width: 28, height: 6, borderRadius: 3, backgroundColor: i < at ? c.tangerine : c.cloud2 }} />
       ))}
       <Text style={{ marginLeft: 6, fontFamily: fonts.uiMedium, fontSize: 13, color: c.ink2 }}>{`Step ${at} of ${of}`}</Text>
@@ -160,12 +173,14 @@ function Note({ children }: { children: string }) {
 }
 
 /** Step 1 (P1): who the account is for, and the profile for that type. */
-function StepWho({ type, setType, profile, setProfile, onContinue }: {
+function StepWho({ type, setType, profile, setProfile, onContinue, another }: {
   type: AccountType | null
   setType: (t: AccountType) => void
   profile: Profile
   setProfile: (p: Profile) => void
   onContinue: () => void
+  /** B61.10 — a person signed in, opening another account: Back leaves, and there is no signing in instead. */
+  another: boolean
 }) {
   const [tried, setTried] = useState(false)
   const errors = type && tried ? missing(type, profile) : {}
@@ -198,11 +213,11 @@ function StepWho({ type, setType, profile, setProfile, onContinue }: {
               if (!Object.keys(missing(type, profile)).length) onContinue()
             }}
           />
-          <Button variant="ghost" label="Sign in instead" onPress={() => router.replace('/sign-in')} />
+          {another ? null : <Button variant="ghost" label="Sign in instead" onPress={() => router.replace('/sign-in')} />}
         </>
       }>
-      <Header />
-      <Steps at={1} />
+      <Header onBack={another ? () => (router.canGoBack() ? router.back() : router.replace('/')) : undefined} />
+      <Steps at={1} steps={another ? ANOTHER_STEPS : SIGNUP_STEPS} />
       <Headline>{SIGNUP_STEPS[0]}</Headline>
       <View accessibilityRole="radiogroup" style={{ gap: 10 }}>
         {ACCOUNT_TYPES.map((t) => (
@@ -224,27 +239,30 @@ function StepWho({ type, setType, profile, setProfile, onContinue }: {
 }
 
 /** Step 2 (P2): the kind of money. Continue goes to the identity provider, then to the BFF with every answer. */
-function StepKind({ type, name, kind, setKind, busy, failed, onContinue, onBack }: {
+function StepKind({ type, name, kind, setKind, busy, failed, onContinue, onBack, another }: {
   type: AccountType
   name: string
   kind: MoneyKind | null
   setKind: (k: MoneyKind) => void
   busy: boolean
-  failed: boolean
+  /** what went wrong, in words; null when nothing did */
+  failed: string | null
   onContinue: () => void
   onBack: () => void
+  /** B61.10 — Continue opens another account for the person signed in, rather than going to the identity provider. */
+  another: boolean
 }) {
   const { c } = useTheme()
   return (
     <Screen
       footer={
         <>
-          {failed ? <FieldError>{SAVE_FAILED}</FieldError> : null}
-          <Button primary label={busy ? 'Saving…' : failed ? 'Try again' : 'Continue'} disabled={!kind || busy} hint={kind ? undefined : PICK_KIND} onPress={onContinue} />
+          {failed ? <FieldError>{failed}</FieldError> : null}
+          <Button primary label={busy ? (another ? 'Opening…' : 'Saving…') : failed ? 'Try again' : 'Continue'} disabled={!kind || busy} hint={kind ? undefined : PICK_KIND} onPress={onContinue} />
         </>
       }>
       <Header onBack={busy ? undefined : onBack} />
-      <Steps at={2} />
+      <Steps at={2} steps={another ? ANOTHER_STEPS : SIGNUP_STEPS} />
       <Headline>{SIGNUP_STEPS[1]}</Headline>
       <Body muted>{kindFor(name, type)}</Body>
       <View accessibilityRole="radiogroup" style={{ gap: 10 }}>
@@ -281,11 +299,11 @@ function StepKey({ onContinue }: { onContinue: () => void }) {
 }
 
 /** Step 4 (B61.21): the identity check. The app opens on Home only once Lens's checks for the account pass. */
-function StepConfirm() {
+function StepConfirm({ another }: { another: boolean }) {
   return (
     <Screen>
       <Header />
-      <Steps at={4} />
+      {another ? <Steps at={3} steps={ANOTHER_STEPS} /> : <Steps at={4} />}
       <Headline>{SIGNUP_STEPS[3]}</Headline>
       {/* B59.32 — a Business gives its company details and the people with control here, beside the check they go to. */}
       <IdentityChecks done={<Button primary label={IDENTITY_WORDS.open} onPress={() => router.replace('/')} />} />
@@ -294,7 +312,8 @@ function StepConfirm() {
 }
 
 export default function SignUp() {
-  const { signedIn, signIn } = useSession()
+  const { signedIn, signIn, openAccount } = useSession()
+  const another = useLocalSearchParams<{ another?: string }>().another === '1'
   const discovery = useAutoDiscovery(config.oidcIssuer)
   const [request, , promptAsync] = useAuthRequest(
     { clientId: config.oidcClientId, redirectUri, scopes: ['openid', 'email', 'profile'] },
@@ -305,18 +324,34 @@ export default function SignUp() {
   const [profile, setProfile] = useState<Profile>(EMPTY)
   const [kind, setKind] = useState<MoneyKind | null>(null)
   const [busy, setBusy] = useState(false)
-  const [failed, setFailed] = useState(false)
+  const [failed, setFailed] = useState<string | null>(null)
   // Someone already signed in has an account: this screen is for opening one, so Home shows instead. Once this sign-up has
   // started, the session it makes is its own and steps 3 and 4 follow.
   const [started, setStarted] = useState(false)
-  if (signedIn && !started) return <Redirect href="/" />
+  // Another account is opened beside one the person has, so only someone signed in can open one.
+  if (another && !signedIn) return <Redirect href="/sign-in" />
+  if (!another && signedIn && !started) return <Redirect href="/" />
 
   const name = (type === 'personal' ? profile.name : profile.companyName).trim()
+
+  const open = async () => {
+    if (!type || !kind) return
+    setBusy(true)
+    setFailed(null)
+    try {
+      await openAccount({ type, kind, name, country: profile.country, ...(type === 'business' ? { registration_number: profile.registrationNumber.trim() } : {}) })
+      setStep(4)
+    } catch (err) {
+      setFailed(openFailure(err))
+    } finally {
+      setBusy(false)
+    }
+  }
 
   const finish = async () => {
     if (!type || !kind || !request || !discovery) return
     setBusy(true)
-    setFailed(false)
+    setFailed(null)
     try {
       const result = await promptAsync()
       if (result.type !== 'success') return
@@ -330,19 +365,19 @@ export default function SignUp() {
       setStep(3)
     } catch {
       setStarted(false)
-      setFailed(true)
+      setFailed(SAVE_FAILED)
     } finally {
       setBusy(false)
     }
   }
 
   return step === 4 ? (
-    <StepConfirm />
+    <StepConfirm another={another} />
   ) : step === 3 ? (
     <StepKey onContinue={() => setStep(4)} />
   ) : step === 2 && type ? (
-    <StepKind type={type} name={name} kind={kind} setKind={setKind} busy={busy} failed={failed} onContinue={() => void finish()} onBack={() => setStep(1)} />
+    <StepKind type={type} name={name} kind={kind} setKind={setKind} busy={busy} failed={failed} onContinue={() => void (another ? open() : finish())} onBack={() => setStep(1)} another={another} />
   ) : (
-    <StepWho type={type} setType={setType} profile={profile} setProfile={setProfile} onContinue={() => setStep(2)} />
+    <StepWho type={type} setType={setType} profile={profile} setProfile={setProfile} onContinue={() => setStep(2)} another={another} />
   )
 }

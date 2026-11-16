@@ -383,7 +383,7 @@ describe('B57.66 Home', () => {
     })
     await renderRouter('./src/app', { initialUrl: '/' })
     expect(await screen.findByText('2 payments wait for your yes')).toBeTruthy()
-    expect(within(screen.getByLabelText('Northwind Studio, Business · Hybrid')).getByText('Business · Hybrid')).toBeTruthy()
+    expect(within(screen.getByLabelText('Switch account. Northwind Studio, Business · Hybrid')).getByText('Business · Hybrid')).toBeTruthy()
     expect(screen.getByText('Your company’s total')).toBeTruthy()
     // Every account in view, the company's and each agent's, by currency.
     for (const [label, amount] of [['US dollar', '$24,600.00'], ['Euro', '€7,500.00'], ['USDC', '15,500.00']]) expect(within(screen.getByLabelText(`${label}, ${amount}`)).getByText(amount)).toBeTruthy()
@@ -406,7 +406,7 @@ describe('B57.66 Home', () => {
     mockBff({ account: { account_type: 'personal', money_kind: 'fiat' }, name: 'Maya Lind', accounts: [acc('a1', 'USD', 240_000), acc('a2', 'USDC', 400_000_000)] })
     await renderRouter('./src/app', { initialUrl: '/' })
     expect(await screen.findByText('1 payment waits for your yes')).toBeTruthy()
-    expect(screen.getByLabelText('Maya Lind, Personal · Fiat')).toBeTruthy()
+    expect(screen.getByLabelText('Switch account. Maya Lind, Personal · Fiat')).toBeTruthy()
     expect(screen.getByText('Your total')).toBeTruthy()
     expect(screen.getByLabelText('$2,400.00')).toBeTruthy()
     expect(screen.queryByText(/USDC/)).toBeNull()

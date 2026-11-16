@@ -8,6 +8,8 @@ import { pressEverything } from '../testing/press-everything'
 // B57.66 — pressEverything on Home: every link, button and row does something.
 
 const mockClient = {
+  // B61.10 — the account pill opens Your accounts, which reads them.
+  accounts: async () => [],
   capabilities: async () => ({ capabilities: [{ capability: 'payments_out', name: 'payments_out', class: 'GREEN', real_money: false, label: 'sandbox' }] }),
 }
 jest.mock('../session', () => ({ useSession: () => ({ client: mockClient, peg: 0.1, signedIn: true }) }))
@@ -47,11 +49,11 @@ test('Home: the waiting row, a prepared payment, Pay, Activity, Spending, Statem
   expect(report.pressed).toBe(16)
 })
 
-test("Home's top and its failed read: Settings and Try again each do something", async () => {
+test("Home's top and its failed read: the account pill (B61.10), Settings and Try again each do something", async () => {
   const top = await pressEverything((said) => {
     mockGo.said = said
     return <HomeHeader name="Maya Lind" account={{ account_type: 'personal', money_kind: 'fiat' }} />
   })
-  expect(top).toEqual({ pressed: 1, dead: [] })
+  expect(top).toEqual({ pressed: 2, dead: [] })
   expect((await pressEverything((said) => <HomeError onRetry={() => said('retry')} />)).dead).toEqual([])
 })
