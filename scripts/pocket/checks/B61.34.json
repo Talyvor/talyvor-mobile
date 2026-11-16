@@ -1,0 +1,401 @@
+[
+ {
+  "route": "/pay",
+  "screen": "p-pay",
+  "name": "to-a-person",
+  "words": "report",
+  "why": "Pocket Live's phone pay (design/pocket-live, ph pay): the one field, Name, phone number or email, first on Pay",
+  "answers": {
+   "/api/money/people/find": {
+    "shown_name": "Dana R."
+   },
+   "/api/money/people/pay/challenge": {
+    "challenge": "ch-shot",
+    "allow_credentials": [
+     "dk_shot"
+    ]
+   },
+   "/api/money/people/pay": {
+    "id": "pp_1",
+    "to_shown_name": "Dana R.",
+    "from_account_id": "acc_usd",
+    "amount_minor": 4200,
+    "currency": "USD",
+    "note": "Dinner",
+    "idempotency_key": "k",
+    "created_at": "2026-11-16T10:00:00Z"
+   }
+  }
+ },
+ {
+  "route": "/pay",
+  "screen": "p-pay",
+  "name": "found",
+  "words": "report",
+  "steps": [
+   [
+    "fill",
+    "Name, phone number or email",
+    "dana"
+   ],
+   [
+    "press",
+    "Find"
+   ]
+  ],
+  "why": "a match: the shown name Lens answers, On Talyvor, and Pay",
+  "answers": {
+   "/api/money/people/find": {
+    "shown_name": "Dana R."
+   },
+   "/api/money/people/pay/challenge": {
+    "challenge": "ch-shot",
+    "allow_credentials": [
+     "dk_shot"
+    ]
+   },
+   "/api/money/people/pay": {
+    "id": "pp_1",
+    "to_shown_name": "Dana R.",
+    "from_account_id": "acc_usd",
+    "amount_minor": 4200,
+    "currency": "USD",
+    "note": "Dinner",
+    "idempotency_key": "k",
+    "created_at": "2026-11-16T10:00:00Z"
+   }
+  }
+ },
+ {
+  "route": "/pay-person?to=dana",
+  "screen": "p-pay",
+  "name": "amount",
+  "words": "report",
+  "steps": [
+   [
+    "fill",
+    "Amount in USD",
+    "42"
+   ],
+   [
+    "fill",
+    "Note",
+    "Dinner"
+   ]
+  ],
+  "why": "Pocket Live's ph payAmount: Pay Dana, the person, the amount, From Your account and what it holds",
+  "answers": {
+   "/api/money/people/find": {
+    "shown_name": "Dana R."
+   },
+   "/api/money/people/pay/challenge": {
+    "challenge": "ch-shot",
+    "allow_credentials": [
+     "dk_shot"
+    ]
+   },
+   "/api/money/people/pay": {
+    "id": "pp_1",
+    "to_shown_name": "Dana R.",
+    "from_account_id": "acc_usd",
+    "amount_minor": 4200,
+    "currency": "USD",
+    "note": "Dinner",
+    "idempotency_key": "k",
+    "created_at": "2026-11-16T10:00:00Z"
+   }
+  },
+  "phoneKey": true
+ },
+ {
+  "route": "/pay-person?to=dana",
+  "screen": "p-pay",
+  "name": "review",
+  "words": "report",
+  "steps": [
+   [
+    "fill",
+    "Amount in USD",
+    "42"
+   ],
+   [
+    "fill",
+    "Note",
+    "Dinner"
+   ],
+   [
+    "press",
+    "Review"
+   ]
+  ],
+  "why": "Pocket Live's sheet review: Check and send, From, Arrives In seconds, Fee, They get, Send with Face ID",
+  "answers": {
+   "/api/money/people/find": {
+    "shown_name": "Dana R."
+   },
+   "/api/money/people/pay/challenge": {
+    "challenge": "ch-shot",
+    "allow_credentials": [
+     "dk_shot"
+    ]
+   },
+   "/api/money/people/pay": {
+    "id": "pp_1",
+    "to_shown_name": "Dana R.",
+    "from_account_id": "acc_usd",
+    "amount_minor": 4200,
+    "currency": "USD",
+    "note": "Dinner",
+    "idempotency_key": "k",
+    "created_at": "2026-11-16T10:00:00Z"
+   }
+  },
+  "phoneKey": true
+ },
+ {
+  "route": "/pay-person?to=dana",
+  "screen": "p-pay",
+  "name": "sent",
+  "words": "report",
+  "steps": [
+   [
+    "fill",
+    "Amount in USD",
+    "42"
+   ],
+   [
+    "press",
+    "Review"
+   ],
+   [
+    "press",
+    "Send with your fingerprint"
+   ]
+  ],
+  "why": "Pocket Live's done: Sent, $42.00 to Dana R. It is there now, Done, See it in Activity",
+  "answers": {
+   "/api/money/people/find": {
+    "shown_name": "Dana R."
+   },
+   "/api/money/people/pay/challenge": {
+    "challenge": "ch-shot",
+    "allow_credentials": [
+     "dk_shot"
+    ]
+   },
+   "/api/money/people/pay": {
+    "id": "pp_1",
+    "to_shown_name": "Dana R.",
+    "from_account_id": "acc_usd",
+    "amount_minor": 4200,
+    "currency": "USD",
+    "note": "Dinner",
+    "idempotency_key": "k",
+    "created_at": "2026-11-16T10:00:00Z"
+   }
+  },
+  "phoneKey": true
+ },
+ {
+  "route": "/pay",
+  "screen": "p-pay",
+  "name": "to-a-person",
+  "words": "report",
+  "why": "Pocket Live's phone pay (design/pocket-live, ph pay): the one field, Name, phone number or email, first on Pay",
+  "answers": {
+   "/api/money/people/find": {
+    "shown_name": "Dana R."
+   },
+   "/api/money/people/pay/challenge": {
+    "challenge": "ch-shot",
+    "allow_credentials": [
+     "dk_shot"
+    ]
+   },
+   "/api/money/people/pay": {
+    "id": "pp_1",
+    "to_shown_name": "Dana R.",
+    "from_account_id": "acc_usd",
+    "amount_minor": 4200,
+    "currency": "USD",
+    "note": "Dinner",
+    "idempotency_key": "k",
+    "created_at": "2026-11-16T10:00:00Z"
+   }
+  },
+  "dark": true
+ },
+ {
+  "route": "/pay",
+  "screen": "p-pay",
+  "name": "found",
+  "words": "report",
+  "steps": [
+   [
+    "fill",
+    "Name, phone number or email",
+    "dana"
+   ],
+   [
+    "press",
+    "Find"
+   ]
+  ],
+  "why": "a match: the shown name Lens answers, On Talyvor, and Pay",
+  "answers": {
+   "/api/money/people/find": {
+    "shown_name": "Dana R."
+   },
+   "/api/money/people/pay/challenge": {
+    "challenge": "ch-shot",
+    "allow_credentials": [
+     "dk_shot"
+    ]
+   },
+   "/api/money/people/pay": {
+    "id": "pp_1",
+    "to_shown_name": "Dana R.",
+    "from_account_id": "acc_usd",
+    "amount_minor": 4200,
+    "currency": "USD",
+    "note": "Dinner",
+    "idempotency_key": "k",
+    "created_at": "2026-11-16T10:00:00Z"
+   }
+  },
+  "dark": true
+ },
+ {
+  "route": "/pay-person?to=dana",
+  "screen": "p-pay",
+  "name": "amount",
+  "words": "report",
+  "steps": [
+   [
+    "fill",
+    "Amount in USD",
+    "42"
+   ],
+   [
+    "fill",
+    "Note",
+    "Dinner"
+   ]
+  ],
+  "why": "Pocket Live's ph payAmount: Pay Dana, the person, the amount, From Your account and what it holds",
+  "answers": {
+   "/api/money/people/find": {
+    "shown_name": "Dana R."
+   },
+   "/api/money/people/pay/challenge": {
+    "challenge": "ch-shot",
+    "allow_credentials": [
+     "dk_shot"
+    ]
+   },
+   "/api/money/people/pay": {
+    "id": "pp_1",
+    "to_shown_name": "Dana R.",
+    "from_account_id": "acc_usd",
+    "amount_minor": 4200,
+    "currency": "USD",
+    "note": "Dinner",
+    "idempotency_key": "k",
+    "created_at": "2026-11-16T10:00:00Z"
+   }
+  },
+  "phoneKey": true,
+  "dark": true
+ },
+ {
+  "route": "/pay-person?to=dana",
+  "screen": "p-pay",
+  "name": "review",
+  "words": "report",
+  "steps": [
+   [
+    "fill",
+    "Amount in USD",
+    "42"
+   ],
+   [
+    "fill",
+    "Note",
+    "Dinner"
+   ],
+   [
+    "press",
+    "Review"
+   ]
+  ],
+  "why": "Pocket Live's sheet review: Check and send, From, Arrives In seconds, Fee, They get, Send with Face ID",
+  "answers": {
+   "/api/money/people/find": {
+    "shown_name": "Dana R."
+   },
+   "/api/money/people/pay/challenge": {
+    "challenge": "ch-shot",
+    "allow_credentials": [
+     "dk_shot"
+    ]
+   },
+   "/api/money/people/pay": {
+    "id": "pp_1",
+    "to_shown_name": "Dana R.",
+    "from_account_id": "acc_usd",
+    "amount_minor": 4200,
+    "currency": "USD",
+    "note": "Dinner",
+    "idempotency_key": "k",
+    "created_at": "2026-11-16T10:00:00Z"
+   }
+  },
+  "phoneKey": true,
+  "dark": true
+ },
+ {
+  "route": "/pay-person?to=dana",
+  "screen": "p-pay",
+  "name": "sent",
+  "words": "report",
+  "steps": [
+   [
+    "fill",
+    "Amount in USD",
+    "42"
+   ],
+   [
+    "press",
+    "Review"
+   ],
+   [
+    "press",
+    "Send with your fingerprint"
+   ]
+  ],
+  "why": "Pocket Live's done: Sent, $42.00 to Dana R. It is there now, Done, See it in Activity",
+  "answers": {
+   "/api/money/people/find": {
+    "shown_name": "Dana R."
+   },
+   "/api/money/people/pay/challenge": {
+    "challenge": "ch-shot",
+    "allow_credentials": [
+     "dk_shot"
+    ]
+   },
+   "/api/money/people/pay": {
+    "id": "pp_1",
+    "to_shown_name": "Dana R.",
+    "from_account_id": "acc_usd",
+    "amount_minor": 4200,
+    "currency": "USD",
+    "note": "Dinner",
+    "idempotency_key": "k",
+    "created_at": "2026-11-16T10:00:00Z"
+   }
+  },
+  "phoneKey": true,
+  "dark": true
+ }
+]

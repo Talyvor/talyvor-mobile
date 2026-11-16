@@ -35,6 +35,7 @@ function Navigator() {
           <Stack.Screen name="agents/[id]" />
           <Stack.Screen name="agents/new" />
           <Stack.Screen name="payees/[id]" />
+          <Stack.Screen name="pay-person" />
           <Stack.Screen name="instant-transfer/index" />
           <Stack.Screen name="instant-transfer/[id]" />
           <Stack.Screen name="approve/[id]" options={{ headerShown: true, title: 'Approve' }} />

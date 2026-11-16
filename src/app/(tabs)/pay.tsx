@@ -5,12 +5,13 @@ import { Pressable, View } from 'react-native'
 import { PAY_ON_CHAIN, useAccount } from '@/account'
 import { Icon } from '@/components/icon'
 import { MoneyLabel, PAY_OUT } from '@/components/money-label'
+import { PayToAPerson } from '@/components/pay-a-person'
 import { Body, Card, Eyebrow, Headline, LoadState, Row, Screen, useLoad } from '@/components/ui'
 import { useSession } from '@/session'
 import { useTheme } from '@/theme'
 import { lastPaid } from '@/widget-sync'
 
-/** Your saved payees, each with its last payment; a tap opens its payment screen. Below them, the bills due. B59.11: a Stablecoin and crypto account
+/** To a person first (B61.34), then your saved payees, each with its last payment; a tap opens its payment screen. Below them, the bills due. B59.11: a Stablecoin and crypto account
  * has no bank transfers, so it has no payees here, only where its agents' addresses are. */
 export default function PayScreen() {
   const { client } = useSession()
@@ -28,6 +29,8 @@ export default function PayScreen() {
         <Headline>Pay</Headline>
         <MoneyLabel capability={PAY_OUT} />
       </View>
+      {/* B61.34 — To a person, first: found by their Talyvor name, phone number or email (Lens B61.32). */}
+      <PayToAPerson />
       {shows && !shows.bankTransfers ? (
         <Body muted>{PAY_ON_CHAIN}</Body>
       ) : (

@@ -1,4 +1,4 @@
-import { BffError, refusalText, type BffClient, type DeviceAssertion, type DeviceKey, type KeyEnrolment, type OutsidePaymentRequest } from '@talyvor/bff-client'
+import { BffError, refusalText, type BffClient, type DeviceAssertion, type DeviceKey, type KeyEnrolment, type OutsidePaymentRequest, type PersonPaymentRequest } from '@talyvor/bff-client'
 import * as Crypto from 'expo-crypto'
 import * as SecureStore from 'expo-secure-store'
 import { Platform } from 'react-native'
@@ -201,6 +201,15 @@ export async function signPayment(client: BffClient, payment: OutsidePaymentRequ
   const key = await phoneKey(client)
   if (!TalyvorKeys || !key?.here) return null
   const { challenge } = await client.paymentChallenge(payment)
+  return { device_id: key.id, challenge, signature: await TalyvorKeys.sign(ALIAS, deviceMessage(challenge), reason) }
+}
+
+/** B61.34 — a payment to a person from this phone, signed the same way over Lens's challenge naming exactly this payment
+ * (Lens B61.32), idempotency key included. null when approving on this phone is off for this workspace. */
+export async function signPersonPayment(client: BffClient, payment: PersonPaymentRequest, reason: string): Promise<DeviceAssertion | null> {
+  const key = await phoneKey(client)
+  if (!TalyvorKeys || !key?.here) return null
+  const { challenge } = await client.personPaymentChallenge(payment)
   return { device_id: key.id, challenge, signature: await TalyvorKeys.sign(ALIAS, deviceMessage(challenge), reason) }
 }
 
