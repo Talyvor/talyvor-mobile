@@ -12,7 +12,7 @@ import { Body, Button, Card, Eyebrow, Field, Row } from './ui'
 // B61.34 — Pay, to a person on Talyvor, on the phone: the web's B61.33 (talyvor-suite PayPerson.tsx) with its words, as
 // Pocket Live's phone `pay` draws it. One field takes their Talyvor name, phone number or email; Lens answers the
 // person's shown name and nothing else (BFF B61.33, Lens B61.32), or its one answer for nobody found. Pay opens
-// /pay-person. The people paid before are chips: Lens keeps only a hash of what the sender typed, so the phone keeps
+// /pay-person with what was typed, never the name. The people paid before are chips: Lens keeps only a hash of what the sender typed, so the phone keeps
 // what was typed and the shown name, by workspace, in its keychain.
 
 /** Said when Lens finds nobody; Lens's own words, the same whatever the reason (economy.PersonNotFoundWords). */
@@ -55,6 +55,13 @@ export async function rememberPaid(client: BffClient, person: PaidPerson): Promi
     // nothing kept: no chip next time
   }
 }
+
+// The shown name Lens answered for what was typed, kept in memory for /pay-person: the screen never takes a name from its
+// link, which anyone could write, so it names the person only as Lens did, here or by finding them again.
+const answered = new Map<string, string>()
+
+/** The shown name Lens gave for `to` in this run of the app, or ''. */
+export const foundName = (to: string) => answered.get(to) ?? ''
 
 /** "Dana R." → "DR". */
 export const initials = (name: string) =>
@@ -106,6 +113,7 @@ export function PayToAPerson() {
     setBusy(true)
     try {
       const f = await client.findPerson(q)
+      answered.set(q, f.shown_name)
       setFound({ to: q, shown_name: f.shown_name })
     } catch (err) {
       // Lens's words for nobody found, as it said them; the same words if it said none.
@@ -115,7 +123,7 @@ export function PayToAPerson() {
     }
   }
   const pay = (p: PaidPerson) => {
-    router.push({ pathname: '/pay-person', params: { to: p.to, name: p.shown_name } })
+    router.push({ pathname: '/pay-person', params: { to: p.to } })
     setFound(null)
     setTyped('')
   }

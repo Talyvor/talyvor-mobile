@@ -51,7 +51,7 @@ function mockBff(pay: ('ok' | 'dropped' | { status: number; error: string })[] =
     if (init.method === 'POST') writes.push({ call, body })
     switch (call) {
       case 'POST /api/money/people/find':
-        if (body.to === 'dana') return json({ shown_name: 'Dana R.' })
+        if (body.to === 'dana' || body.to === 'dana.reyes') return json({ shown_name: 'Dana R.' })
         if (body.to === 'many') return json({ error: 'economy: too many lookups this hour. Try again in an hour.' }, 429)
         return json({ error: NOBODY }, 404)
       case 'POST /api/money/people/pay/challenge':
@@ -187,7 +187,7 @@ test('the pay sheet: amount, account and note, one review, Send with Face ID, pa
 
 test("a refusal is said in Lens's words, and nothing is said to be sent", async () => {
   mockBff([{ status: 409, error: 'economy: Dana R. holds no account in EUR, so nothing was sent' }])
-  await renderRouter('./src/app', { initialUrl: '/pay-person?to=dana&name=Dana%20R.' })
+  await renderRouter('./src/app', { initialUrl: '/pay-person?to=dana' })
   await fireEvent.changeText(await screen.findByLabelText('Amount in USD'), '5')
   await fireEvent.press(screen.getByRole('button', { name: 'Review' }))
   await fireEvent.press(await screen.findByRole('button', { name: 'Send with Face ID' }))
@@ -198,11 +198,22 @@ test("a refusal is said in Lens's words, and nothing is said to be sent", async 
 test('with no key on this phone, nothing is sent and the sheet offers Approvals on this phone', async () => {
   mockBff()
   mockStore.delete('talyvor.device-key')
-  await renderRouter('./src/app', { initialUrl: '/pay-person?to=dana&name=Dana%20R.' })
+  await renderRouter('./src/app', { initialUrl: '/pay-person?to=dana' })
   await fireEvent.changeText(await screen.findByLabelText('Amount in USD'), '5')
   await fireEvent.press(screen.getByRole('button', { name: 'Review' }))
   const sheet = within(await screen.findByTestId('pay-a-person-review'))
   expect(sheet.queryByRole('button', { name: 'Send with Face ID' })).toBeNull()
   expect(sheet.getByRole('button', { name: 'Approvals on this phone' })).toBeTruthy()
   await waitFor(() => expect(pays()).toEqual([]))
+})
+
+test('a link names nobody: the screen names the person only as Lens answers for what it carries', async () => {
+  mockBff()
+  await renderRouter('./src/app', { initialUrl: '/pay-person?to=dana.reyes&name=Mum' })
+  expect(await screen.findByText('Pay Dana')).toBeTruthy()
+  expect(screen.queryByText(/Mum/)).toBeNull()
+  expect(finds()).toEqual([{ call: 'POST /api/money/people/find', body: { to: 'dana.reyes' } }])
+  await renderRouter('./src/app', { initialUrl: '/pay-person?to=someone' })
+  expect(await screen.findByText(NOBODY)).toBeTruthy()
+  expect(screen.queryByLabelText('Amount in USD')).toBeNull()
 })

@@ -67,7 +67,7 @@
   }
  },
  {
-  "route": "/pay-person?to=dana&name=Dana%20R.",
+  "route": "/pay-person?to=dana",
   "screen": "p-pay",
   "name": "amount",
   "words": "report",
@@ -108,7 +108,7 @@
   "phoneKey": true
  },
  {
-  "route": "/pay-person?to=dana&name=Dana%20R.",
+  "route": "/pay-person?to=dana",
   "screen": "p-pay",
   "name": "review",
   "words": "report",
@@ -153,7 +153,7 @@
   "phoneKey": true
  },
  {
-  "route": "/pay-person?to=dana&name=Dana%20R.",
+  "route": "/pay-person?to=dana",
   "screen": "p-pay",
   "name": "sent",
   "words": "report",
@@ -266,7 +266,7 @@
   "dark": true
  },
  {
-  "route": "/pay-person?to=dana&name=Dana%20R.",
+  "route": "/pay-person?to=dana",
   "screen": "p-pay",
   "name": "amount",
   "words": "report",
@@ -308,7 +308,7 @@
   "dark": true
  },
  {
-  "route": "/pay-person?to=dana&name=Dana%20R.",
+  "route": "/pay-person?to=dana",
   "screen": "p-pay",
   "name": "review",
   "words": "report",
@@ -354,7 +354,7 @@
   "dark": true
  },
  {
-  "route": "/pay-person?to=dana&name=Dana%20R.",
+  "route": "/pay-person?to=dana",
   "screen": "p-pay",
   "name": "sent",
   "words": "report",

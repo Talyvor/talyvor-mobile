@@ -6,7 +6,7 @@ import { Pressable, Text, View } from 'react-native'
 
 import { accountName, useAccount } from '@/account'
 import { Icon } from '@/components/icon'
-import { Initials, rememberPaid } from '@/components/pay-a-person'
+import { foundName, Initials, NOBODY_FOUND, rememberPaid } from '@/components/pay-a-person'
 import { AccountChoice, BottomSheet } from '@/components/pay-sheet'
 import { Back, Body, Button, Card, Field, Figure, Headline, LoadState, Screen, useLoad } from '@/components/ui'
 import { biometricName, forgetThisPhone, keyGone, keyGoneText, keysAvailable, phoneKey, signPersonPayment } from '@/keys'
@@ -37,18 +37,24 @@ function Facts({ facts }: { facts: [string, ReactNode][] }) {
 }
 
 export default function PayPersonScreen() {
-  const { to = '', name = '' } = useLocalSearchParams<{ to: string; name: string }>()
+  const { to = '' } = useLocalSearchParams<{ to: string }>()
   const { client } = useSession()
   const { c } = useTheme()
   const { shows } = useAccount(client)
   const owner = shows?.owner ?? 'The company'
   const load = useCallback(async () => {
-    const [accounts, key] = await Promise.all([client.moneyAccounts(), phoneKey(client).catch(() => null)])
+    // The name is only ever Lens's: the one Find just answered, else Lens is asked again (a link carries no name).
+    const [accounts, key, shown] = await Promise.all([
+      client.moneyAccounts(),
+      phoneKey(client).catch(() => null),
+      foundName(to) ? Promise.resolve(foundName(to)) : client.findPerson(to).then((f) => f.shown_name, (err: unknown) => err),
+    ])
     return {
+      shown,
       accounts: (accounts.accounts ?? []).filter((a) => a.status === 'open' && a.purpose === 'company'),
       hasKey: !!key?.here && keysAvailable(),
     }
-  }, [client])
+  }, [client, to])
   const { data, error, loading, reload } = useLoad(load)
   const [accountID, setAccountID] = useState('')
   const [amount, setAmount] = useState('')
@@ -62,6 +68,7 @@ export default function PayPersonScreen() {
   const currency = account?.currency ?? ''
   const minor = currency ? amountMinor(amount, currency) : null
   const total = minor !== null ? formatMinor(minor, currency) : ''
+  const name = typeof data?.shown === 'string' ? data.shown : ''
   const first = name.split(/\s+/)[0] || name
 
   // Another payment is another key: a retry of this one keeps it, so it is paid once.
@@ -125,15 +132,20 @@ export default function PayPersonScreen() {
   return (
     <Screen onRefresh={reload} refreshing={loading && !!data}>
       <Back home="/pay" />
-      <Headline>{`Pay ${first}`}</Headline>
-      <View style={{ alignItems: 'center', gap: 4 }}>
-        <Initials name={name} size={56} />
-        <Text style={{ fontFamily: fonts.uiBold, fontSize: 17, color: c.ink }}>{name}</Text>
-        <Body muted>On Talyvor</Body>
-      </View>
       <LoadState loading={loading && !data} error={error} />
-      {data && !account ? <Body muted>You have no open account to pay from.</Body> : null}
-      {data && account ? (
+      {data && !name ? <Body>{data.shown instanceof BffError && data.shown.status === 404 ? data.shown.sentence || NOBODY_FOUND : refusalText(data.shown)}</Body> : null}
+      {name ? (
+        <>
+          <Headline>{`Pay ${first}`}</Headline>
+          <View style={{ alignItems: 'center', gap: 4 }}>
+            <Initials name={name} size={56} />
+            <Text style={{ fontFamily: fonts.uiBold, fontSize: 17, color: c.ink }}>{name}</Text>
+            <Body muted>On Talyvor</Body>
+          </View>
+        </>
+      ) : null}
+      {data && name && !account ? <Body muted>You have no open account to pay from.</Body> : null}
+      {data && name && account ? (
         <>
           <Field label={`Amount in ${currency}`} placeholder="0.00" keyboardType="decimal-pad" value={amount} onChangeText={setAmount} />
           <Pressable
