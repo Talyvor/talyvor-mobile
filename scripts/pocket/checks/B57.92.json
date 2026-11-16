@@ -1,0 +1,341 @@
+[
+ {
+  "route": "/spending",
+  "screen": "p-spending",
+  "words": "report",
+  "why": "B57.92: the reference's Spending is the old sixth tab (its tab bar is the old six); the phone keeps its five tabs and opens Spending from Home and Activity",
+  "answers": {
+   "/api/money/spending": {
+    "from": "",
+    "to": "",
+    "payments": [
+     {
+      "entry_id": "ent_kite",
+      "kind": "card",
+      "merchant": "Kite Accounting",
+      "agent_id": "",
+      "amount_minor": 45000,
+      "currency": "USD",
+      "category": "bills",
+      "created_at": "2026-10-01T08:00:00Z"
+     }
+    ],
+    "totals": [
+     {
+      "currency": "USD",
+      "total_minor": 45000,
+      "by_category": {
+       "bills": 45000
+      }
+     }
+    ]
+   },
+   "/api/money/spending/unusual": {
+    "findings": []
+   },
+   "/api/money/coach": {
+    "lines": [],
+    "review": []
+   },
+   "/api/money/budgets": {
+    "budgets": []
+   },
+   "/api/money/spending/subscriptions": {
+    "subscriptions": []
+   },
+   "/api/money/notices": {
+    "settings": {
+     "timezone": "Europe/London",
+     "quiet_from": "22:00",
+     "quiet_until": "07:00",
+     "off": []
+    },
+    "notices": [
+     {
+      "id": "ntc_kite",
+      "kind": "payment",
+      "title": "You paid $450.00 at Kite Accounting",
+      "body": "Bills",
+      "data": {
+       "entry_id": "ent_kite"
+      },
+      "status": "sent",
+      "created_at": "2026-10-01T08:01:00Z"
+     }
+    ]
+   }
+  }
+ },
+ {
+  "route": "/spending",
+  "screen": "p-spending",
+  "dark": true,
+  "words": "report",
+  "why": "B57.92: the reference's Spending is the old sixth tab (its tab bar is the old six); the phone keeps its five tabs and opens Spending from Home and Activity",
+  "answers": {
+   "/api/money/spending": {
+    "from": "",
+    "to": "",
+    "payments": [
+     {
+      "entry_id": "ent_kite",
+      "kind": "card",
+      "merchant": "Kite Accounting",
+      "agent_id": "",
+      "amount_minor": 45000,
+      "currency": "USD",
+      "category": "bills",
+      "created_at": "2026-10-01T08:00:00Z"
+     }
+    ],
+    "totals": [
+     {
+      "currency": "USD",
+      "total_minor": 45000,
+      "by_category": {
+       "bills": 45000
+      }
+     }
+    ]
+   },
+   "/api/money/spending/unusual": {
+    "findings": []
+   },
+   "/api/money/coach": {
+    "lines": [],
+    "review": []
+   },
+   "/api/money/budgets": {
+    "budgets": []
+   },
+   "/api/money/spending/subscriptions": {
+    "subscriptions": []
+   },
+   "/api/money/notices": {
+    "settings": {
+     "timezone": "Europe/London",
+     "quiet_from": "22:00",
+     "quiet_until": "07:00",
+     "off": []
+    },
+    "notices": [
+     {
+      "id": "ntc_kite",
+      "kind": "payment",
+      "title": "You paid $450.00 at Kite Accounting",
+      "body": "Bills",
+      "data": {
+       "entry_id": "ent_kite"
+      },
+      "status": "sent",
+      "created_at": "2026-10-01T08:01:00Z"
+     }
+    ]
+   }
+  }
+ },
+ {
+  "route": "/spending",
+  "screen": "p-spending",
+  "name": "notices",
+  "scroll": "Save notice settings",
+  "words": "report",
+  "why": "B57.92: the reference's Spending is the old sixth tab (its tab bar is the old six); the phone keeps its five tabs and opens Spending from Home and Activity",
+  "answers": {
+   "/api/money/spending": {
+    "from": "",
+    "to": "",
+    "payments": [
+     {
+      "entry_id": "ent_kite",
+      "kind": "card",
+      "merchant": "Kite Accounting",
+      "agent_id": "",
+      "amount_minor": 45000,
+      "currency": "USD",
+      "category": "bills",
+      "created_at": "2026-10-01T08:00:00Z"
+     }
+    ],
+    "totals": [
+     {
+      "currency": "USD",
+      "total_minor": 45000,
+      "by_category": {
+       "bills": 45000
+      }
+     }
+    ]
+   },
+   "/api/money/spending/unusual": {
+    "findings": []
+   },
+   "/api/money/coach": {
+    "lines": [],
+    "review": []
+   },
+   "/api/money/budgets": {
+    "budgets": []
+   },
+   "/api/money/spending/subscriptions": {
+    "subscriptions": []
+   },
+   "/api/money/notices": {
+    "settings": {
+     "timezone": "Europe/London",
+     "quiet_from": "22:00",
+     "quiet_until": "07:00",
+     "off": []
+    },
+    "notices": [
+     {
+      "id": "ntc_kite",
+      "kind": "payment",
+      "title": "You paid $450.00 at Kite Accounting",
+      "body": "Bills",
+      "data": {
+       "entry_id": "ent_kite"
+      },
+      "status": "sent",
+      "created_at": "2026-10-01T08:01:00Z"
+     }
+    ]
+   }
+  }
+ },
+ {
+  "route": "/notices/ntc_kite",
+  "screen": "p-notice",
+  "words": "report",
+  "why": "B57.92: the reference draws the old six-tab bar under the notice; the phone keeps its five tabs",
+  "answers": {
+   "/api/money/spending": {
+    "from": "",
+    "to": "",
+    "payments": [
+     {
+      "entry_id": "ent_kite",
+      "kind": "card",
+      "merchant": "Kite Accounting",
+      "agent_id": "",
+      "amount_minor": 45000,
+      "currency": "USD",
+      "category": "bills",
+      "created_at": "2026-10-01T08:00:00Z"
+     }
+    ],
+    "totals": [
+     {
+      "currency": "USD",
+      "total_minor": 45000,
+      "by_category": {
+       "bills": 45000
+      }
+     }
+    ]
+   },
+   "/api/money/spending/unusual": {
+    "findings": []
+   },
+   "/api/money/coach": {
+    "lines": [],
+    "review": []
+   },
+   "/api/money/budgets": {
+    "budgets": []
+   },
+   "/api/money/spending/subscriptions": {
+    "subscriptions": []
+   },
+   "/api/money/notices": {
+    "settings": {
+     "timezone": "Europe/London",
+     "quiet_from": "22:00",
+     "quiet_until": "07:00",
+     "off": []
+    },
+    "notices": [
+     {
+      "id": "ntc_kite",
+      "kind": "payment",
+      "title": "You paid $450.00 at Kite Accounting",
+      "body": "Bills",
+      "data": {
+       "entry_id": "ent_kite"
+      },
+      "status": "sent",
+      "created_at": "2026-10-01T08:01:00Z"
+     }
+    ]
+   }
+  }
+ },
+ {
+  "route": "/notices/ntc_kite",
+  "screen": "p-notice",
+  "dark": true,
+  "words": "report",
+  "why": "B57.92: the reference draws the old six-tab bar under the notice; the phone keeps its five tabs",
+  "answers": {
+   "/api/money/spending": {
+    "from": "",
+    "to": "",
+    "payments": [
+     {
+      "entry_id": "ent_kite",
+      "kind": "card",
+      "merchant": "Kite Accounting",
+      "agent_id": "",
+      "amount_minor": 45000,
+      "currency": "USD",
+      "category": "bills",
+      "created_at": "2026-10-01T08:00:00Z"
+     }
+    ],
+    "totals": [
+     {
+      "currency": "USD",
+      "total_minor": 45000,
+      "by_category": {
+       "bills": 45000
+      }
+     }
+    ]
+   },
+   "/api/money/spending/unusual": {
+    "findings": []
+   },
+   "/api/money/coach": {
+    "lines": [],
+    "review": []
+   },
+   "/api/money/budgets": {
+    "budgets": []
+   },
+   "/api/money/spending/subscriptions": {
+    "subscriptions": []
+   },
+   "/api/money/notices": {
+    "settings": {
+     "timezone": "Europe/London",
+     "quiet_from": "22:00",
+     "quiet_until": "07:00",
+     "off": []
+    },
+    "notices": [
+     {
+      "id": "ntc_kite",
+      "kind": "payment",
+      "title": "You paid $450.00 at Kite Accounting",
+      "body": "Bills",
+      "data": {
+       "entry_id": "ent_kite"
+      },
+      "status": "sent",
+      "created_at": "2026-10-01T08:01:00Z"
+     }
+    ]
+   }
+  }
+ }
+]

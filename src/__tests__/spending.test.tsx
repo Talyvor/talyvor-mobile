@@ -24,7 +24,8 @@ jest.mock('expo-notifications', () => ({
 const payment = { entry_id: 'ent_2', kind: 'card', merchant: 'Pret A Manger', agent_id: '', amount_minor: 1250, currency: 'GBP', category: 'eating_out', created_at: '2026-11-03T12:30:00Z' }
 
 /** Lens behind the BFF, as B53.3–B53.7 answer; `settings` is what the notice settings save sent. */
-function mockLens() {
+function mockLens(over: { body?: string; category?: string } = {}) {
+  const pay = { ...payment, category: over.category ?? payment.category }
   const sent: { settings?: unknown } = {}
   const settings = { timezone: 'Europe/London', quiet_from: '', quiet_until: '', off: [] as string[] }
   globalThis.fetch = jest.fn(async (url: string, init: RequestInit = {}) => {
@@ -34,7 +35,7 @@ function mockLens() {
       case 'GET /api/agents':
         return json({ workspace_balance_ulxc: 0, allocated_ulxc: 0, unallocated_ulxc: 0, spent_ulxc: 0, agents: [{ id: 'ag_1', name: 'Buyer', balance_ulxc: 0, spent_ulxc: 0, created_at: '2026-10-01T00:00:00Z' }] })
       case 'GET /api/money/spending':
-        return json({ from: '', to: '', payments: [payment], totals: [{ currency: 'GBP', total_minor: 4250, by_category: { eating_out: 1250, groceries: 3000 } }] })
+        return json({ from: '', to: '', payments: [pay], totals: [{ currency: 'GBP', total_minor: 4250, by_category: { eating_out: 1250, groceries: 3000 } }] })
       case 'GET /api/money/spending/unusual':
         return json({ findings: [{ rule: 'duplicate', entry_id: 'ent_3', merchant: 'Tesco', amount_minor: 3000, currency: 'GBP', at: '2026-11-03T09:00:00Z' }] })
       case 'GET /api/money/coach':
@@ -47,7 +48,7 @@ function mockLens() {
         return json({
           settings,
           notices: [
-            { id: 'ntc_1', kind: 'payment', title: 'You paid 12.50 GBP at Pret A Manger', body: 'Eating out · 9.00 GBP left of this month’s eating out budget', data: { entry_id: 'ent_2' }, status: 'sent', created_at: '2026-11-03T12:31:00Z' },
+            { id: 'ntc_1', kind: 'payment', title: 'You paid 12.50 GBP at Pret A Manger', body: over.body ?? 'Eating out · 9.00 GBP left of this month’s eating out budget', data: { entry_id: 'ent_2' }, status: 'sent', created_at: '2026-11-03T12:31:00Z' },
           ],
         })
       case 'PUT /api/money/notices/settings':
@@ -84,6 +85,41 @@ test('the Spending tab shows totals, budgets, the unusual payment with the Coach
   expect(sent.settings).toEqual({ timezone: 'Europe/London', quiet_from: '22:00', quiet_until: '07:00', off: ['payment'] })
 })
 
+// B57.92 — the sixth switch the web has (suite Spending.tsx KINDS), so both say the same.
+test('the notice settings carry the web’s sixth switch, When the month plan is off', async () => {
+  const sent = mockLens()
+  await renderRouter('./src/app', { initialUrl: '/spending' })
+
+  await fireEvent(await screen.findByLabelText('When the month plan is off'), 'valueChange', false)
+  await fireEvent.press(screen.getByText('Save notice settings'))
+  expect(await screen.findByText('Saved.')).toBeTruthy()
+  expect(sent.settings).toEqual({ timezone: 'Europe/London', quiet_from: '', quiet_until: '', off: ['plan'] })
+})
+
+// B57.92 — a payment's notice in Pocket: the title as the eyebrow, the merchant, the amount, its category, when and whose;
+// the body only for what it says beyond the category; See all your spending, and Back to Spending.
+test('a payment’s notice says what the payment was, and the body only where it says more than the category', async () => {
+  mockLens()
+  await renderRouter('./src/app', { initialUrl: '/notices/ntc_1' })
+
+  expect(await screen.findByText('You paid 12.50 GBP at Pret A Manger')).toBeTruthy()
+  expect(await screen.findByText('Pret A Manger')).toBeTruthy()
+  expect(screen.getByLabelText('£12.50')).toBeTruthy()
+  expect(screen.getByText('Eating out')).toBeTruthy()
+  expect(screen.getByText(/^3 Nov · \d\d:30 · Your own wallet$/)).toBeTruthy()
+  expect(screen.getByText('9.00 GBP left of this month’s eating out budget')).toBeTruthy()
+  expect(screen.getByText('See all your spending')).toBeTruthy()
+  expect(screen.getByLabelText('Back to Spending')).toBeTruthy()
+})
+
+test('a notice whose body is just its category does not say it twice', async () => {
+  mockLens({ body: 'Bills', category: 'bills' })
+  await renderRouter('./src/app', { initialUrl: '/notices/ntc_1' })
+
+  expect(await screen.findByText('Pret A Manger')).toBeTruthy()
+  expect(await screen.findAllByText('Bills')).toHaveLength(1)
+})
+
 test("a payment's push opens that payment", async () => {
   mockLens()
   const data = { type: 'spend_notice', kind: 'payment', notice_id: 'ntc_1', workspace_id: 'ws_1' }
@@ -93,5 +129,5 @@ test("a payment's push opens that payment", async () => {
   expect(await screen.findByText('Pret A Manger', {}, { timeout: 5000 })).toBeTruthy()
   await waitFor(() => expect(screen.getByText('£12.50')).toBeTruthy())
   expect(screen.getByText('Eating out')).toBeTruthy()
-  expect(screen.getByText('Eating out · 9.00 GBP left of this month’s eating out budget')).toBeTruthy()
+  expect(screen.getByText('9.00 GBP left of this month’s eating out budget')).toBeTruthy()
 })
