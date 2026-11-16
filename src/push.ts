@@ -1,10 +1,9 @@
-import { BffError, formatLXC, refusalText, type BffClient } from '@talyvor/bff-client'
+import { formatLXC, type BffClient } from '@talyvor/bff-client'
 import * as Notifications from 'expo-notifications'
 import { router, type Href } from 'expo-router'
 import { useEffect, useRef } from 'react'
-import { Alert } from 'react-native'
 
-import { approveBatch, batchOf, noteRefusal, notApproved } from './approve-batch'
+import { approveBatch, batchOf, noteApproved, noteRefusal, notApproved } from './approve-batch'
 import { biometricName, phoneKey, signWithThisPhone } from './keys'
 import { syncLiveActivities } from './live-activity'
 
@@ -91,13 +90,17 @@ export function usePushApprovals(client: BffClient, signedIn: boolean) {
     if (response.actionIdentifier === APPROVE_ACTION && data && href && ((data.type === 'payment_request' && batch) || data.type === 'agent_approval')) {
       approved.current = response
       const approving = data.type === 'agent_approval' ? approveAgentApproval(client, data) : approveBatch(client, String(data.request_id), batch!)
+      // B57.93, B57.105: the screen the person lands on says what happened: a prepared payment's card, or an agent's
+      // Approved screen, and Nothing was approved with Lens's sentence on its card or sheet, never in an alert.
+      const id = String(data.type === 'agent_approval' ? data.approval_id : data.request_id)
       approving
-        .then(() => syncLiveActivities(client))
-        .catch((err: Error) =>
-          // B57.93: a prepared payment's card says it, where the person lands; an agent's approval sheet still alerts.
-          data.type === 'payment_request'
-            ? noteRefusal(String(data.request_id), notApproved(err))
-            : Alert.alert('Nothing was approved', err instanceof BffError ? refusalText(err) : err.message))
+        .then(
+          () => {
+            if (data.type === 'agent_approval') noteApproved(id)
+            void syncLiveActivities(client)
+          },
+          (err: Error) => noteRefusal(id, notApproved(err)),
+        )
         .finally(() => router.push(href))
     } else if (spend && response.actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER) {
       approved.current = response

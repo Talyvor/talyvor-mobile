@@ -1,16 +1,23 @@
 import { useLocalSearchParams } from 'expo-router'
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 
-import { DecidedCard, PendingApprovals } from '@/components/approval-card'
+import { takeApproved, takeRefusal } from '@/approve-batch'
+import { ApprovedFromNotification, DecidedCard, PendingApprovals } from '@/components/approval-card'
 import { Back, Body, Headline, LoadState, Screen, useLoad } from '@/components/ui'
 import { useSession } from '@/session'
+import { useTheme } from '@/theme'
 
 /** One agent's held payment or request, where its notification lands: its approval sheet opens over it (B57.67), and the
  * other requests waiting follow it with Next. B57.78: one already decided or expired is Pocket's p-approval-landing, which
- * says so in words. */
+ * says so in words. B57.105: approved with Face ID on its notification, it lands on Pocket's Approved screen; refused, its
+ * sheet says Nothing was approved in Lens's sentence. */
 export default function ApprovalScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const { client } = useSession()
+  const { c } = useTheme()
+  // What the notification's Approve with Face ID did, said once, here.
+  const [approved, setApproved] = useState(() => takeApproved(id))
+  const [refused] = useState(() => takeRefusal(id))
   const load = useCallback(async () => {
     const [book, approvals] = await Promise.all([client.book(), client.approvals()])
     const all = approvals.approvals ?? []
@@ -29,8 +36,12 @@ export default function ApprovalScreen() {
       <Headline>{!a ? 'Approval' : a.status === 'pending' ? `${agentName} is waiting for you` : `${agentName}’s request`}</Headline>
       <LoadState loading={loading && !data} error={error} />
       {data && !a ? <Body muted>There is no approval at this address. It may belong to another workspace.</Body> : null}
-      {data ? <PendingApprovals pending={data.pending} agents={data.book.agents ?? []} allPaused={!!data.book.all_paused_at} focus={id} onDecided={reload} /> : null}
+      {data && refused && a?.status !== 'pending' ? <Body style={{ color: c.critical }}>{refused}</Body> : null}
+      {data ? <PendingApprovals pending={data.pending} agents={data.book.agents ?? []} allPaused={!!data.book.all_paused_at} focus={id} refused={refused} onDecided={reload} /> : null}
       {a && a.status !== 'pending' ? <DecidedCard approval={a} agentName={agentName} /> : null}
+      {data && a && approved && a.status !== 'pending' ? (
+        <ApprovedFromNotification approval={a} agents={data.book.agents ?? []} allPaused={!!data.book.all_paused_at} pending={data.pending} onDone={() => setApproved(false)} />
+      ) : null}
     </Screen>
   )
 }
