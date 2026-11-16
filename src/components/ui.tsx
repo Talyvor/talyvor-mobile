@@ -8,6 +8,7 @@ import { useSession } from '../session'
 import { fonts, useTheme } from '../theme'
 import { Backdrop, type BackdropStrength, type Hues } from './backdrop'
 import { Icon, type IconName } from './icon'
+import { Press } from './press'
 
 /** Loads once and on reload (pull-to-refresh, or after a change); a 401 means the session ended, so it signs out. */
 export function useLoad<T>(load: () => Promise<T>) {
@@ -155,6 +156,7 @@ export function Button({
   small,
   icon,
   testID,
+  haptic,
 }: {
   label: string
   onPress: () => void
@@ -169,6 +171,8 @@ export function Button({
   /** a mark before the label in its colour, as Approve with Face ID draws one (B57.147) */
   icon?: IconName
   testID?: string
+  /** a light haptic when pressed; false on a decline (B61.73) */
+  haptic?: boolean
 }) {
   const { c } = useTheme()
   const look = {
@@ -181,7 +185,7 @@ export function Button({
   const { color, ...box } = look
   const text = <Text style={[styles.buttonText, { color }, small && { fontSize: 14 }]}>{label}</Text>
   return (
-    <Pressable
+    <Press
       accessibilityRole="button"
       testID={testID}
       accessibilityLabel={accessibilityLabel}
@@ -189,6 +193,7 @@ export function Button({
       accessibilityHint={disabled ? hint : undefined}
       disabled={disabled}
       onPress={onPress}
+      haptic={haptic}
       hitSlop={small ? 8 : undefined}
       style={({ pressed }) => [styles.button, box, small ? styles.small : variant === 'primary' && { alignSelf: 'stretch' }, (pressed || disabled) && { opacity: 0.6 }]}>
       {icon ? (
@@ -199,7 +204,7 @@ export function Button({
       ) : (
         text
       )}
-    </Pressable>
+    </Press>
   )
 }
 
@@ -273,9 +278,9 @@ export function Row({ left, title, sub, right, first, onPress }: { left?: ReactN
   )
   const style = [styles.row, !first && { borderTopWidth: 1, borderTopColor: c.line }]
   return onPress ? (
-    <Pressable accessibilityRole="button" onPress={onPress} style={style}>
+    <Press kind="row" accessibilityRole="button" onPress={onPress} style={style}>
       {body}
-    </Pressable>
+    </Press>
   ) : (
     <View style={style}>{body}</View>
   )

@@ -10,6 +10,7 @@ import { MoneyHeader, paymentRequestCapabilities } from '@/components/money-labe
 import { Back, Body, Button, Card, Figure, Headline, LoadState, Screen, Sheet, useLoad } from '@/components/ui'
 import { biometricName } from '@/keys'
 import { syncLiveActivities } from '@/live-activity'
+import { haptic } from '@/motion'
 import { useSession } from '@/session'
 import { fonts, useTheme } from '@/theme'
 
@@ -91,8 +92,10 @@ export default function ApproveScreen() {
     setRefusal('')
     try {
       setDone(await approveBatch(client, r!.id, ticked))
+      haptic('success')
       void syncLiveActivities(client)
     } catch (err) {
+      if (err instanceof BffError) haptic('warning')
       setRefusal(err instanceof BffError ? refusalText(err) : `Nothing was approved: ${(err as Error).message}`)
     } finally {
       setBusy(false)
@@ -181,7 +184,7 @@ export default function ApproveScreen() {
         // Behind the Decline sheet, its buttons are hidden from a screen reader as well as disabled.
         <View aria-hidden={declining} style={{ gap: 10 }}>
           <Button primary label={busy ? 'Approving…' : `Approve ${payWord(ticked.length)} with ${biometricName}`} disabled={busy || declining || !ticked.length} onPress={() => void approve()} />
-          <Button variant="secondary" label="Decline" disabled={busy || declining} onPress={() => setDeclining(true)} />
+          <Button variant="secondary" label="Decline" haptic={false} disabled={busy || declining} onPress={() => setDeclining(true)} />
         </View>
       ) : r ? (
         <Card tight>
@@ -210,7 +213,7 @@ export default function ApproveScreen() {
               <Headline>Decline these payments?</Headline>
               <Body muted>Nothing waiting here is paid.</Body>
               {refusal ? <Body style={{ color: c.critical }}>{refusal}</Body> : null}
-              <Button variant="danger" label="Decline" disabled={busy} hint="Declining…" onPress={() => void decline()} />
+              <Button variant="danger" label="Decline" haptic={false} disabled={busy} hint="Declining…" onPress={() => void decline()} />
               <Button variant="secondary" label="Keep it" disabled={busy} onPress={() => setDeclining(false)} />
             </View>
           </Sheet>

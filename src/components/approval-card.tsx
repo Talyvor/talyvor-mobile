@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { onDay } from '../activity'
 import { biometricName, phoneKey, signWithThisPhone } from '../keys'
 import { syncLiveActivities } from '../live-activity'
+import { haptic } from '../motion'
 import { useSession } from '../session'
 import { fonts, useTheme } from '../theme'
 import { AgentCard } from './card'
@@ -227,8 +228,10 @@ export function ApprovalSheet({
       if (decision === 'approve') await client.approve(a.id, assertion)
       else await client.deny(a.id, assertion, why.trim())
       void syncLiveActivities(client)
+      if (decision === 'approve') haptic('success')
       onDecided(decision === 'approve', !!assertion)
     } catch (err) {
+      if (decision === 'approve' && err instanceof BffError) haptic('warning')
       setRefusal(err instanceof BffError ? refusalText(err) : `Nothing changed: ${(err as Error).message}`)
     } finally {
       setBusy(false)
@@ -280,14 +283,14 @@ export function ApprovalSheet({
       {declining ? (
         <>
           <Field label="Why (optional, the agent sees it)" value={why} onChangeText={setWhy} maxLength={200} autoFocus />
-          <Button primary label="Decline" disabled={busy} hint="Declining…" onPress={() => void decide('deny')} />
+          <Button primary label="Decline" haptic={false} disabled={busy} hint="Declining…" onPress={() => void decide('deny')} />
           <Button variant="secondary" label="Cancel" disabled={busy} onPress={() => setDeclining(false)} />
         </>
       ) : (
         <>
           {signs ? <Button primary icon={biometricName === 'Face ID' ? 'faceid' : 'key'} label={`Approve with ${biometricName}`} disabled={busy} hint="Approving…" onPress={() => void decide('approve')} /> : null}
-          {!card ? <Button variant="secondary" label="Decline" disabled={busy} onPress={() => setDeclining(true)} /> : null}
-          {card && signs ? <Button variant="secondary" label="Decline" disabled={busy} hint="Declining…" onPress={() => void decide('deny')} /> : null}
+          {!card ? <Button variant="secondary" label="Decline" haptic={false} disabled={busy} onPress={() => setDeclining(true)} /> : null}
+          {card && signs ? <Button variant="secondary" label="Decline" haptic={false} disabled={busy} hint="Declining…" onPress={() => void decide('deny')} /> : null}
         </>
       )}
     </View>

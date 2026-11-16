@@ -27,6 +27,7 @@ import {
   sendRefusal,
 } from '@/instant-transfer'
 import { biometricName, checkItsYou, keyGone, keyGoneText, phoneKey, signWithThisPhone } from '@/keys'
+import { haptic } from '@/motion'
 import { useSession } from '@/session'
 import { fonts, useTheme } from '@/theme'
 
@@ -168,6 +169,7 @@ function InstantTransferForm() {
   const sendAt = (quote: InstantQuote) =>
     client.instantSend(account?.agent_id ?? '', { quote_id: quote.id, ...(to === 'talyvor_account' ? { to_account_id: recipient } : { to_payee_id: recipient }) }, key)
   const sent = (t: InstantTransfer) => {
+    haptic('success')
     setKey(Crypto.randomUUID())
     router.push({ pathname: '/instant-transfer/[id]', params: { id: t.id } })
   }
@@ -194,6 +196,7 @@ function InstantTransferForm() {
         setSheetSaid('')
         setApprovalID(id)
       } else {
+        if (err instanceof BffError) haptic('warning')
         setRefused(sendRefusal(err, agent, holds))
         setRuleRefused(err instanceof BffError && err.field === 'may_instant_transfer')
       }
@@ -219,8 +222,10 @@ function InstantTransferForm() {
       sent(t)
     } catch (err) {
       if (keyGone(err)) setSheetSaid(keyGoneText)
-      else if (err instanceof BffError) setSheetSaid(sendRefusal(err, agent, holds))
-      else setSheetSaid('Cancelled. Nothing was sent.')
+      else if (err instanceof BffError) {
+        haptic('warning')
+        setSheetSaid(sendRefusal(err, agent, holds))
+      } else setSheetSaid('Cancelled. Nothing was sent.')
     } finally {
       setBusy(false)
     }
@@ -434,7 +439,7 @@ function InstantTransferForm() {
                 />
               </>
             )}
-            <Button variant="secondary" label="Decline" disabled={busy} hint="Declining…" onPress={() => void decline()} />
+            <Button variant="secondary" label="Decline" haptic={false} disabled={busy} hint="Declining…" onPress={() => void decline()} />
           </View>
         ) : null}
       </BottomSheet>
