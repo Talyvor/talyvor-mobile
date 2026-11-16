@@ -1,4 +1,4 @@
-import { formatLXC, type AgentApproval, type AgentBook, type BffClient, type PaymentRequest } from '@talyvor/bff-client'
+import { formatLXC, formatMinor, type AgentApproval, type AgentBook, type BffClient, type PaymentRequest } from '@talyvor/bff-client'
 import * as Notifications from 'expo-notifications'
 import * as SecureStore from 'expo-secure-store'
 import { useEffect } from 'react'
@@ -25,7 +25,15 @@ export interface Held {
   props: ApprovalActivityProps
 }
 
-/** What is waiting for the owner, as the activities show it. */
+/** B57.76 — an agent's held payment in the currency that pays it, as its approval sheet writes it: an account's or a card's
+ * own, else dollars; never LXC (B61.15). */
+function approvalAmount(a: AgentApproval, peg: number | null) {
+  const from = a.paid_from
+  return (from?.kind === 'account' || from?.kind === 'card') && from.currency ? formatMinor(from.amount_minor, from.currency) : formatLXC(a.amount_ulxc, peg)
+}
+
+/** What is waiting for the owner, as the activities show it. A tap opens the request's own sheet: an agent's approval
+ * over talyvor://approvals/<id> (B57.67), a prepared payment on its Approve payments screen (B57.74). */
 export function heldPayments(requests: PaymentRequest[], approvals: AgentApproval[], book: AgentBook, peg: number | null = null): Held[] {
   const nameOf = (id: string) => book.agents?.find((a) => a.id === id)?.name ?? id
   const base = { state: 'waiting' as const, hint: `Tap to approve with ${biometricName}`, palette: palettes }
@@ -41,7 +49,7 @@ export function heldPayments(requests: PaymentRequest[], approvals: AgentApprova
             ...base,
             title: asked.length === 1 ? asked[0].payee_name : r.summary || payWord(asked.length),
             amount: totalsOf(asked),
-            detail: r.agent_id ? `From ${nameOf(r.agent_id)}’s account` : 'From the company’s account',
+            detail: r.agent_id ? `${nameOf(r.agent_id)} asks` : 'From the company’s account',
           },
         }
       }),
@@ -50,7 +58,7 @@ export function heldPayments(requests: PaymentRequest[], approvals: AgentApprova
       .map((a) => ({
         key: `ap:${a.id}`,
         url: `talyvor://approvals/${encodeURIComponent(a.id)}`,
-        props: { ...base, title: a.payee ? a.payee.name || a.payee.id : `Ask ${a.model}`, amount: formatLXC(a.amount_ulxc, peg), detail: `${nameOf(a.agent_id)} asks` },
+        props: { ...base, title: a.payee ? a.payee.name || a.payee.id : `Ask ${a.model}`, amount: approvalAmount(a, peg), detail: `${nameOf(a.agent_id)} asks` },
       })),
   ]
 }
