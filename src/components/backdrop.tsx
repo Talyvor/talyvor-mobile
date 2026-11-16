@@ -110,10 +110,12 @@ const STREAMS = {
 } as const
 
 /** Light and dark (DESIGN.md's satin table). The grain's 38% and 26% are for a soft-light blend, which the phone has
- * not: the alpha tile at a normal blend is matched by eye to index.html, as the table asks. */
+ * not: the alpha tile at a normal blend is matched by eye to index.html, as the table asks. B61.99: the dark washes are
+ * 32%, not the table's 34%: measured on the phone's own pixels (scripts/pocket-contrast.mjs), Pay's "Saved payees" in
+ * ink-2 fell to 4.47 to 1 where Business's two washes cross under the sheen; at 32% every line passes. */
 const SATIN = {
   light: { wash: 0.4, veil: 0.22, sheen: 0.5, grain: 0.1, streams: 0.5 },
-  dark: { wash: 0.34, veil: 0.12, sheen: 0.08, grain: 0.08, streams: 0.9 },
+  dark: { wash: 0.32, veil: 0.12, sheen: 0.08, grain: 0.08, streams: 0.9 },
 } as const
 
 const N = 22
@@ -271,6 +273,7 @@ export const Backdrop = memo(function Backdrop({ strength, agent, hues, scrollY 
       {SWAYS.map((sw, j) => (
         <Animated.View
           key={j}
+          testID="backdrop-streams"
           style={{
             position: 'absolute',
             left: 0,
