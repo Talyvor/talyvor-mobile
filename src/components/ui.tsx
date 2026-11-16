@@ -1,11 +1,12 @@
 import { BffError } from '@talyvor/bff-client'
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, type TextInputProps, type TextStyle } from 'react-native'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { ActivityIndicator, Animated, KeyboardAvoidingView, Platform, Pressable, RefreshControl, StyleSheet, Text, TextInput, View, type TextInputProps, type TextStyle } from 'react-native'
 import { router, type Href } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { useSession } from '../session'
 import { fonts, useTheme } from '../theme'
+import { Backdrop, type BackdropStrength, type Hues } from './backdrop'
 import { Icon, type IconName } from './icon'
 
 /** Loads once and on reload (pull-to-refresh, or after a change); a 401 means the session ended, so it signs out. */
@@ -38,29 +39,54 @@ export function useLoad<T>(load: () => Promise<T>) {
   return { data, error, loading, reload }
 }
 
-/** A screen that scrolls; `footer` holds its decisions at the foot, out of the scroll, as Pocket's .pfoot does. */
-export function Screen({ children, onRefresh, refreshing = false, footer }: { children: ReactNode; onRefresh?: () => void; refreshing?: boolean; footer?: ReactNode }) {
+/** A screen that scrolls; `footer` holds its decisions at the foot, out of the scroll, as Pocket's .pfoot does. B61.71:
+ * every screen draws Talyvor's background behind its top, Calm unless `backdrop` is "full" (Home, an agent's page);
+ * `hues` is an agent's own colour on its page, otherwise the account's two. */
+export function Screen({
+  children,
+  onRefresh,
+  refreshing = false,
+  footer,
+  backdrop = 'calm',
+  agent,
+  hues,
+}: {
+  children: ReactNode
+  onRefresh?: () => void
+  refreshing?: boolean
+  footer?: ReactNode
+  backdrop?: BackdropStrength
+  agent?: boolean
+  hues?: Hues
+}) {
   const { c } = useTheme()
+  const [scrollY] = useState(() => new Animated.Value(0))
+  const onScroll = useMemo(() => Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true }), [scrollY])
   const body = (
-    <ScrollView
+    <Animated.ScrollView
       contentContainerStyle={styles.screen}
+      onScroll={onScroll}
+      scrollEventThrottle={16}
       refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={c.ink} /> : undefined}>
       {children}
-    </ScrollView>
+    </Animated.ScrollView>
   )
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: c.page }} edges={footer ? ['top', 'left', 'right', 'bottom'] : ['top', 'left', 'right']}>
-      {footer ? (
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          {body}
-          <View testID="screen-footer" style={styles.footer}>
-            {footer}
-          </View>
-        </KeyboardAvoidingView>
-      ) : (
-        body
-      )}
-    </SafeAreaView>
+    <View style={{ flex: 1, backgroundColor: c.page }}>
+      <Backdrop strength={backdrop} agent={agent} hues={hues} scrollY={scrollY} />
+      <SafeAreaView style={{ flex: 1 }} edges={footer ? ['top', 'left', 'right', 'bottom'] : ['top', 'left', 'right']}>
+        {footer ? (
+          <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+            {body}
+            <View testID="screen-footer" style={styles.footer}>
+              {footer}
+            </View>
+          </KeyboardAvoidingView>
+        ) : (
+          body
+        )}
+      </SafeAreaView>
+    </View>
   )
 }
 

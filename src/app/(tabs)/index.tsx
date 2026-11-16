@@ -32,7 +32,7 @@ export default function Home() {
   }, [data, waiting])
 
   return (
-    <Screen onRefresh={reload} refreshing={loading && !!data}>
+    <Screen backdrop="full" onRefresh={reload} refreshing={loading && !!data}>
       <HomeHeader name={data?.name ?? null} account={account} />
       <KeyRecoveryCard />
       {/* B61.21 — until the identity check passes the account can look and cannot move money: one sentence and the way back. */}

@@ -5,6 +5,7 @@ import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 
 import { useHideFromAppSwitcher } from '@/app-switcher'
+import { BackdropHues } from '@/components/backdrop'
 import { useLiveActivities } from '@/live-activity'
 import { usePushApprovals } from '@/push'
 import { SessionProvider, useSession } from '@/session'
@@ -71,7 +72,9 @@ export default function RootLayout() {
   if (!loaded) return null
   return (
     <SessionProvider>
-      <Navigator />
+      <BackdropHues>
+        <Navigator />
+      </BackdropHues>
     </SessionProvider>
   )
 }
