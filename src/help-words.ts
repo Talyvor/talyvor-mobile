@@ -5,13 +5,14 @@ import { Linking } from 'react-native'
 // help-words.ts — B61.39: the Help chat's words, copied word for word from the web's (talyvor-suite B61.38,
 // apps/web/src/components/HelpChat.tsx and areas/lens/helpChat.ts at 0c98444), so the phone and the web say the same
 // thing. The suggested questions are Pocket Live's phone `help` (design/pocket-live/index.html).
+// B57.177 — the words the web took from Pocket Live's Help box (suite B57.175, HelpChat.tsx at c71d1e2): the greeting,
+// "Send it to our team", and "Ask your question first." while there is nothing to send yet.
 
 /** Talyvor's published contact, as the web's apps/web/src/company.ts COMPANY_CONTACT. */
 export const COMPANY_CONTACT = 'hello@talyvor.com'
 
 export const HELP_WORDS = {
   title: 'Help',
-  lead: 'Ask us anything about Talyvor.',
   ai: 'Answers are written by AI.',
   question: 'Your question',
   placeholder: 'Ask a question',
@@ -21,7 +22,8 @@ export const HELP_WORDS = {
   unread: 'The chat could not be read. You can still ask.',
   failed: 'Help could not answer just now. You can try again.',
   byEmail: 'We answer by email.',
-  team: 'Send to our team',
+  team: 'Send it to our team',
+  askFirst: 'Ask your question first.',
   sending: 'Sending…',
   notSent: 'Nothing was sent. You can try again.',
   sent: 'Sent to our team. We answer by email.',
@@ -32,7 +34,10 @@ export const HELP_WORDS = {
 /** The questions offered before the first one is asked. */
 export const HELP_SUGGESTED = ['How do approvals work?', 'How do I pause an agent?', 'How do I add money?'] as const
 
-/** The words each author is shown under. */
+/** Help's first line, by the person's first name when it is known, as the web's helpGreeting. */
+export const helpGreeting = (firstName: string) => `Hi${firstName ? ` ${firstName}` : ''}. Ask me how anything in Talyvor works.`
+
+/** Who wrote each line: said aloud for every line, and shown for our team's, which is a person and not the AI. */
 export const HELP_BY: Record<HelpBy, string> = { you: 'You', ai: 'Talyvor AI', team: 'Talyvor team' }
 
 /** Settings' row, as Pocket Live's Settings draws it. */

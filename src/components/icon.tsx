@@ -62,6 +62,12 @@ const ICONS = {
     </>
   ),
   chat: <Path d="M5 6.5h14v9.5H11l-4 3.5v-3.5H5z" />,
+  help: (
+    <>
+      <Path d="M4.5 6.5A2.5 2.5 0 0 1 7 4h10a2.5 2.5 0 0 1 2.5 2.5v8A2.5 2.5 0 0 1 17 17h-5l-4.5 3.5V17H7a2.5 2.5 0 0 1-2.5-2.5z" />
+      <Path d="M9 9.5h6M9 12.5h3.5" />
+    </>
+  ),
   scan: (
     <>
       <Path d="M5 19V5" />
@@ -146,6 +152,7 @@ const ICONS = {
     </>
   ),
   arrow: <Path d="M5 12h14M13 6l6 6-6 6" />,
+  arrowUp: <Path d="M12 19V5M6 11l6-6 6 6" />,
   copy: (
     <>
       <Rect x="8" y="8" width="11" height="11" rx="2.5" />
