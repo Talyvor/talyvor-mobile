@@ -864,6 +864,12 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     /** B59.3 — the areas the operator switched on for this workspace (Lens B59.1); none until then. */
     areas: async () => (await call<{ areas: string[] | null }>('GET', '/api/workspace/areas')).areas ?? [],
     book: () => call<AgentBook>('GET', '/api/agents'),
+    /** B61.37 — a new agent with the name its owner typed and its picture's colour (Lens picks one without); with
+     * fiat_currency (GBP, EUR or USD) its own account opens in that currency, as the web's New agent does (B61.87). */
+    createAgent: (name: string, colour?: string, fiat_currency?: string) =>
+      call<Agent>('POST', '/api/agents', { name, ...(colour ? { colour } : {}), ...(fiat_currency ? { fiat_currency } : {}) }),
+    /** B61.37 — what the agent does, in the owner's words. */
+    describeAgent: (id: string, description: string) => call<Agent>('PATCH', `/api/agents/${e(id)}`, { description }),
     approvals: () => call<{ approvals: AgentApproval[] | null }>('GET', '/api/agents/approvals'),
     /** The challenge approving or declining one approval is signed over. */
     approvalChallenge: (id: string) => call<{ challenge: string }>('POST', `/api/agents/approvals/${e(id)}/challenge`),

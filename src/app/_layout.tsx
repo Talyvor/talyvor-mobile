@@ -32,6 +32,7 @@ function Navigator() {
         <Stack.Protected guard={signedIn}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="agents/[id]" />
+          <Stack.Screen name="agents/new" />
           <Stack.Screen name="payees/[id]" />
           <Stack.Screen name="instant-transfer/index" />
           <Stack.Screen name="instant-transfer/[id]" />
