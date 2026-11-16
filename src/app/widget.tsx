@@ -2,7 +2,7 @@ import { refusalText } from '@talyvor/bff-client'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useEffect, useState } from 'react'
 
-import { Body, Eyebrow, Screen } from '@/components/ui'
+import { Back, Body, Eyebrow, Screen } from '@/components/ui'
 import { useSession } from '@/session'
 import { syncWidget, widgetLinkValid } from '@/widget-sync'
 
@@ -35,6 +35,7 @@ export default function WidgetAction() {
 
   return (
     <Screen>
+      <Back home="/" />
       <Eyebrow>Widget</Eyebrow>
       <Body>{said}</Body>
     </Screen>

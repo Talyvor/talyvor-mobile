@@ -13,7 +13,8 @@ import { pinnedAgents } from '@/widget-sync'
 /** One agent (B57.70): its page in one read, with what it holds, what waits, pause or resume, fund, its widget pin and
  * its rules. */
 export default function AgentScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>()
+  // B57.77: the home-screen widget's Resume and Fund land here with the sheet they open.
+  const { id, open } = useLocalSearchParams<{ id: string; open?: string }>()
   const { client } = useSession()
   const load = useCallback(async () => {
     // Lens answers 404 for an agent that is not in this workspace.
@@ -45,7 +46,7 @@ export default function AgentScreen() {
       <Back home="/" />
       <LoadState loading={loading && !data} error={error} />
       {data === 'gone' ? <Body muted>This agent is not in your workspace.</Body> : null}
-      {data && data !== 'gone' ? <AgentView data={data} onChanged={reload} /> : null}
+      {data && data !== 'gone' ? <AgentView data={data} onChanged={reload} opens={open === 'resume' || open === 'fund' ? open : undefined} /> : null}
     </Screen>
   )
 }

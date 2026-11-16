@@ -5,7 +5,7 @@ import type { JSX } from 'react'
 
 import type { AgentsWidgetProps } from './agents-widget'
 
-// Home-screen widget (Android): the iOS widget's content, drawn with Glance. Android gives the layout no size, so one layout fits all.
+// Home-screen widget (Android, B57.77): the iOS widget's content, drawn with Glance. Android gives the layout no size, so one layout fits all.
 export const AgentsWidgetAndroid = (p: AgentsWidgetProps, env: WidgetEnvironment) => {
   'widget'
   // A widget tap carries this target; a talyvor:// one opens the app there (plugins/with-android-widget-links.js).
@@ -51,7 +51,7 @@ export const AgentsWidgetAndroid = (p: AgentsWidgetProps, env: WidgetEnvironment
           <Text {...eyebrow}>{p.totalLabel.toUpperCase()}</Text>
           <Text {...text(18, c.ink, '500')}>{p.total}</Text>
         </Column>,
-        tap(p.pending ? `${p.pending} waiting` : 'Nothing waiting', 'talyvor://approvals'),
+        tap(p.pending ? `${p.pending} waiting for you` : 'All caught up', 'talyvor://approvals'),
       )}
       {p.agents.length === 0 ? <Text {...body(c.inkMuted)}>No agents yet.</Text> : null}
       {p.agents.slice(0, 4 - Math.min(p.payees.length, 2)).map((a) => (
@@ -60,13 +60,15 @@ export const AgentsWidgetAndroid = (p: AgentsWidgetProps, env: WidgetEnvironment
           {ends(
             <Column>
               <Text {...body(c.ink)} maxLines={1}>{a.name}</Text>
-              <Text {...text(11, a.paused ? c.caution : c.positive)}>{a.paused ? 'Paused' : 'Active'}</Text>
+              <Text {...text(11, a.paused ? c.caution : c.positive)}>{a.paused ? 'Paused' : 'Running'}</Text>
             </Column>,
             <Row verticalAlignment="center">
               {a.balance ? <Text {...text(13, c.ink, '500')}>{a.balance}</Text> : null}
               {a.balance ? <Spacer modifiers={[width(8)]} /> : null}
-              {/* Resume is a decision to let it spend again, so it happens on the agent's screen, not from a home-screen tap. */}
-              {tap(a.paused ? 'Resume' : 'Pause', a.paused ? a.openUrl : a.pauseUrl)}
+              {/* Resume is a decision to let it spend again, so it opens the agent's resume sheet, not a home-screen tap. */}
+              {tap(a.paused ? 'Resume' : 'Pause', a.paused ? a.resumeUrl : a.pauseUrl)}
+              <Spacer modifiers={[width(6)]} />
+              {tap('Fund', a.fundUrl)}
             </Row>,
           )}
         </Column>
