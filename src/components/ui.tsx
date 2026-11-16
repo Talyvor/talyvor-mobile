@@ -1,6 +1,6 @@
 import { BffError } from '@talyvor/bff-client'
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { ActivityIndicator, Animated, KeyboardAvoidingView, Platform, Pressable, RefreshControl, StyleSheet, Text, TextInput, View, type TextInputProps, type TextStyle } from 'react-native'
+import { type ComponentRef, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { ActivityIndicator, Animated, KeyboardAvoidingView, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, type TextInputProps, type TextStyle } from 'react-native'
 import { router, type Href } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
@@ -42,7 +42,8 @@ export function useLoad<T>(load: () => Promise<T>) {
 
 /** A screen that scrolls; `footer` holds its decisions at the foot, out of the scroll, as Pocket's .pfoot does. B61.71:
  * every screen draws Talyvor's background behind its top, Calm unless `backdrop` is "full" (Home, an agent's page);
- * `hues` is an agent's own colour on its page, otherwise the account's two. */
+ * `hues` is an agent's own colour on its page, otherwise the account's two. B57.177: `toEnd` keeps a chat's latest line
+ * in view, scrolling to the end each time what is in it grows. */
 export function Screen({
   children,
   onRefresh,
@@ -51,6 +52,7 @@ export function Screen({
   backdrop = 'calm',
   agent,
   hues,
+  toEnd,
 }: {
   children: ReactNode
   onRefresh?: () => void
@@ -59,13 +61,17 @@ export function Screen({
   backdrop?: BackdropStrength
   agent?: boolean
   hues?: Hues
+  toEnd?: boolean
 }) {
   const { c } = useTheme()
+  const scroller = useRef<ComponentRef<typeof ScrollView>>(null)
   const [scrollY] = useState(() => new Animated.Value(0))
   const onScroll = useMemo(() => Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true }), [scrollY])
   const body = (
     <Animated.ScrollView
+      ref={scroller}
       contentContainerStyle={styles.screen}
+      onContentSizeChange={toEnd ? () => scroller.current?.scrollToEnd({ animated: true }) : undefined}
       onScroll={onScroll}
       scrollEventThrottle={16}
       refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={c.ink} /> : undefined}>

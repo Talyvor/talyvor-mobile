@@ -6,6 +6,8 @@ import { Linking } from 'react-native'
 // and the screen that answers it; "I don't know that" offers "Send to our team", which files the chat in the help
 // inbox and opens the phone's mail app to Talyvor with the question filled in; past the day's questions the BFF's
 // sentence is shown and the team is still one press away.
+// B57.177 — as Pocket Live's phone `help` draws it, in the web's words (suite B57.175): Help greets the person, the
+// chat is bubbles, the three questions show until one is asked, and "Send it to our team" sits above a round box.
 
 jest.setTimeout(30_000)
 
@@ -22,9 +24,9 @@ type Msg = { by: string; text: string; page?: string; team?: boolean; topic?: st
 type Reply = { status: number; body: unknown }
 
 /** The BFF's Help routes; `reply` answers each question with the chat so far. */
-function mockBff(reply: (q: string, chat: Msg[]) => Reply) {
+function mockBff(reply: (q: string, chat: Msg[]) => Reply, start: Msg[] = []) {
   const calls: { method: string; path: string; body?: unknown }[] = []
-  const chat: Msg[] = []
+  const chat: Msg[] = [...start]
   globalThis.fetch = jest.fn(async (url: string, init: RequestInit = {}) => {
     const path = url.replace('https://bff.test', '').split('?')[0]
     const method = init.method ?? 'GET'
@@ -55,6 +57,7 @@ function mockBff(reply: (q: string, chat: Msg[]) => Reply) {
 }
 
 const at = '2026-11-15T21:00:00Z'
+const GREETING = 'Hi Maya. Ask me how anything in Talyvor works.'
 const answered = (q: string, chat: Msg[], a: Omit<Msg, 'at'>): Reply => {
   chat.push({ by: 'you', text: q, at }, { ...a, at })
   return { status: 200, body: { messages: [...chat] } }
@@ -74,34 +77,34 @@ test('Settings, Help opens the chat; an answer shows who wrote it and opens the 
   )
   await renderRouter('./src/app', { initialUrl: '/settings' })
   await fireEvent.press(await screen.findByText('Ask anything, any time'))
-  expect(await screen.findByText('Ask us anything about Talyvor.')).toBeTruthy()
+  expect(await screen.findByText(GREETING)).toBeTruthy()
   expect(screen.getByText('Answers are written by AI.')).toBeTruthy()
 
   await fireEvent.press(await screen.findByText('How do approvals work?'))
   const ai = await screen.findByTestId('help-ai')
-  expect(within(ai).getByText('Talyvor AI')).toBeTruthy()
+  expect(ai.props.accessibilityLabel).toBe('Talyvor AI: Each agent has rules you set. A payment outside them waits for your yes.')
   expect(within(ai).getByText('Each agent has rules you set. A payment outside them waits for your yes.')).toBeTruthy()
   expect(within(screen.getByTestId('help-you')).getByText('How do approvals work?')).toBeTruthy()
   expect(calls.filter((c) => c.path === '/api/help/ask').map((c) => c.body)).toEqual([{ question: 'How do approvals work?', page: '/settings' }])
-  expect(screen.queryByText('Send to our team')).toBeNull()
+  expect(screen.queryByText('We answer by email.')).toBeNull()
 
-  await fireEvent.press(within(ai).getByText('Open Approvals'))
-  await waitFor(() => expect(screen.queryByText('Ask us anything about Talyvor.')).toBeNull())
+  await fireEvent.press(screen.getByText('Open Approvals'))
+  await waitFor(() => expect(screen.queryByText(GREETING)).toBeNull())
 })
 
 test('"I don\'t know that" offers Send to our team, which files the chat and opens mail to Talyvor with the question', async () => {
   const calls = mockBff((q, chat) => answered(q, chat, { by: 'ai', text: "I don't know that. Our team can answer it.", team: true }))
   await renderRouter('./src/app', { initialUrl: '/help' })
   await fireEvent.changeText(await screen.findByLabelText('Your question'), 'Can my agent pay in yen?')
-  await fireEvent.press(screen.getByText('Ask'))
+  await fireEvent.press(screen.getByRole('button', { name: 'Ask' }))
   expect(await screen.findByText("I don't know that. Our team can answer it.")).toBeTruthy()
   expect(screen.getByText('We answer by email.')).toBeTruthy()
 
-  await fireEvent.press(screen.getByText('Send to our team'))
+  await fireEvent.press(screen.getByText('Send it to our team'))
   expect(await screen.findByText('Sent to our team. We answer by email.')).toBeTruthy()
   expect(calls.filter((c) => c.method === 'POST' && c.path === '/api/help/team')).toHaveLength(1)
   expect(openURL).toHaveBeenCalledWith('mailto:hello@talyvor.com?subject=Help%20with%20Talyvor&body=Can%20my%20agent%20pay%20in%20yen%3F')
-  expect(screen.queryByText('Send to our team')).toBeNull()
+  expect(screen.queryByText('Send it to our team')).toBeNull()
 })
 
 test("past the day's questions the BFF's sentence is shown and the team is still one press away", async () => {
@@ -109,8 +112,44 @@ test("past the day's questions the BFF's sentence is shown and the team is still
   mockBff((q, chat) => ({ status: 429, body: { error: sentence, messages: [...chat, { by: 'you', text: q, at }] } }))
   await renderRouter('./src/app', { initialUrl: '/help' })
   await fireEvent.changeText(await screen.findByLabelText('Your question'), 'One more?')
-  await fireEvent.press(screen.getByText('Ask'))
+  await fireEvent.press(screen.getByRole('button', { name: 'Ask' }))
   expect(await screen.findByText(sentence)).toBeTruthy()
   expect(within(screen.getByTestId('help-you')).getByText('One more?')).toBeTruthy()
-  expect(screen.getByText('Send to our team')).toBeTruthy()
+  expect(screen.getByText('Send it to our team')).toBeTruthy()
+})
+
+test('B57.177 as Pocket Live draws it: Help greets the person by name, offers three questions, and keeps Send it to our team above a round question box', async () => {
+  mockBff((q, chat) => answered(q, chat, { by: 'ai', text: 'Open the agent and press Pause.' }))
+  await renderRouter('./src/app', { initialUrl: '/help' })
+  expect(within(await screen.findByTestId('help-hello')).getByText(GREETING)).toBeTruthy()
+  for (const q of ['How do approvals work?', 'How do I pause an agent?', 'How do I add money?']) expect(screen.getByRole('button', { name: q })).toBeTruthy()
+
+  const dock = screen.getByTestId('screen-footer')
+  const team = within(dock).getByRole('button', { name: 'Send it to our team' })
+  expect(team.props.accessibilityState).toMatchObject({ disabled: true })
+  const ask = within(dock).getByRole('button', { name: 'Ask' })
+  expect(within(ask).getByTestId('icon-arrowUp', { includeHiddenElements: true })).toBeTruthy()
+  expect(within(ask).queryByText('Ask')).toBeNull()
+  expect(within(dock).getByTestId('icon-help', { includeHiddenElements: true })).toBeTruthy()
+  expect(within(dock).getByPlaceholderText('Ask a question')).toBeTruthy()
+
+  await fireEvent.press(screen.getByRole('button', { name: 'How do I pause an agent?' }))
+  expect(await screen.findByText('Open the agent and press Pause.')).toBeTruthy()
+  expect(screen.queryByRole('button', { name: 'How do I add money?' })).toBeNull()
+  expect(within(screen.getByTestId('screen-footer')).getByRole('button', { name: 'Send it to our team' }).props.accessibilityState).toMatchObject({ disabled: false })
+})
+
+test('B57.177 a line from our team says so where it can be seen; the AI\'s and your own say it aloud', async () => {
+  mockBff(() => ({ status: 500, body: {} }), [
+    { by: 'you', text: 'Can I get a refund?', at },
+    { by: 'ai', text: "I don't know that. Our team can answer it.", team: true, at },
+    { by: 'team', text: 'Yes. We have sent it back to your account.', at },
+  ])
+  await renderRouter('./src/app', { initialUrl: '/help' })
+  const team = await screen.findByTestId('help-team')
+  expect(within(team).getByText('Talyvor team')).toBeTruthy()
+  expect(screen.getByTestId('help-you').props.accessibilityLabel).toBe('You: Can I get a refund?')
+  expect(screen.queryByText('Talyvor AI')).toBeNull()
+  expect(screen.queryByText('You')).toBeNull()
+  expect(screen.queryByRole('button', { name: 'How do approvals work?' })).toBeNull()
 })

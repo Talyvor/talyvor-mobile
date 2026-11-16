@@ -1,0 +1,161 @@
+[
+  {
+    "route": "/help",
+    "screen": "p-chat",
+    "account": "personal:fiat",
+    "words": "report",
+    "why": "Pocket Live's phone view help is the reference (design/pocket-live/index.html PS.help); the older reference draws no Help chat on the phone",
+    "name": "help",
+    "answers": {
+      "/api/workspace/name": {
+        "id": "ws_maya",
+        "name": "Maya Lind"
+      },
+      "/api/help/chat": {
+        "messages": [],
+        "kept_days": 30
+      }
+    }
+  },
+  {
+    "route": "/help",
+    "screen": "p-chat",
+    "account": "personal:fiat",
+    "words": "report",
+    "why": "Pocket Live's phone view help is the reference (design/pocket-live/index.html PS.help); the older reference draws no Help chat on the phone",
+    "name": "help-answer",
+    "answers": {
+      "/api/workspace/name": {
+        "id": "ws_maya",
+        "name": "Maya Lind"
+      },
+      "/api/help/chat": {
+        "messages": [
+          {
+            "by": "you",
+            "text": "How do approvals work?",
+            "at": "2026-11-16T09:00:00Z"
+          },
+          {
+            "by": "ai",
+            "text": "Each agent has rules you set: per payment, per day, per month, and an amount to ask you above. A payment outside them waits for your yes. Nothing is paid until you approve it.",
+            "page": "/approvals",
+            "at": "2026-11-16T09:00:00Z"
+          }
+        ],
+        "kept_days": 30
+      }
+    }
+  },
+  {
+    "route": "/help",
+    "screen": "p-chat",
+    "account": "personal:fiat",
+    "words": "report",
+    "why": "Pocket Live's phone view help is the reference (design/pocket-live/index.html PS.help); the older reference draws no Help chat on the phone",
+    "name": "help-team",
+    "answers": {
+      "/api/workspace/name": {
+        "id": "ws_maya",
+        "name": "Maya Lind"
+      },
+      "/api/help/chat": {
+        "messages": [
+          {
+            "by": "you",
+            "text": "Can my agent pay in yen?",
+            "at": "2026-11-16T09:00:00Z"
+          },
+          {
+            "by": "ai",
+            "text": "I don't know that. Our team can answer it.",
+            "team": true,
+            "at": "2026-11-16T09:00:00Z"
+          }
+        ],
+        "kept_days": 30
+      }
+    }
+  },
+  {
+    "route": "/help",
+    "screen": "p-chat",
+    "account": "personal:fiat",
+    "words": "report",
+    "why": "Pocket Live's phone view help is the reference (design/pocket-live/index.html PS.help); the older reference draws no Help chat on the phone",
+    "name": "help",
+    "dark": true,
+    "answers": {
+      "/api/workspace/name": {
+        "id": "ws_maya",
+        "name": "Maya Lind"
+      },
+      "/api/help/chat": {
+        "messages": [],
+        "kept_days": 30
+      }
+    }
+  },
+  {
+    "route": "/help",
+    "screen": "p-chat",
+    "account": "personal:fiat",
+    "words": "report",
+    "why": "Pocket Live's phone view help is the reference (design/pocket-live/index.html PS.help); the older reference draws no Help chat on the phone",
+    "name": "help-answer",
+    "dark": true,
+    "answers": {
+      "/api/workspace/name": {
+        "id": "ws_maya",
+        "name": "Maya Lind"
+      },
+      "/api/help/chat": {
+        "messages": [
+          {
+            "by": "you",
+            "text": "How do approvals work?",
+            "at": "2026-11-16T09:00:00Z"
+          },
+          {
+            "by": "ai",
+            "text": "Each agent has rules you set: per payment, per day, per month, and an amount to ask you above. A payment outside them waits for your yes. Nothing is paid until you approve it.",
+            "page": "/approvals",
+            "at": "2026-11-16T09:00:00Z"
+          }
+        ],
+        "kept_days": 30
+      }
+    }
+  },
+  {
+    "route": "/help",
+    "screen": "p-chat",
+    "account": "personal:fiat",
+    "words": "report",
+    "why": "Pocket Live's phone view help is the reference (design/pocket-live/index.html PS.help); the older reference draws no Help chat on the phone",
+    "name": "help-team",
+    "dark": true,
+    "answers": {
+      "/api/workspace/name": {
+        "id": "ws_maya",
+        "name": "Maya Lind"
+      },
+      "/api/help/chat": {
+        "messages": [
+          {
+            "by": "you",
+            "text": "Can my agent pay in yen?",
+            "at": "2026-11-16T09:00:00Z"
+          },
+          {
+            "by": "ai",
+            "text": "I don't know that. Our team can answer it.",
+            "team": true,
+            "at": "2026-11-16T09:00:00Z"
+          }
+        ],
+        "kept_days": 30
+      }
+    }
+  }
+]
