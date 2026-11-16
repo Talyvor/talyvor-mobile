@@ -14,6 +14,7 @@ import { Money } from './money'
 import { AGENT_CREDIT, MoneyLabel, PAY_OUT } from './money-label'
 import { OwnerCard } from './owner-card'
 import { PreparedPaymentCard } from './prepared-payment-card'
+import { Press } from './press'
 import { StartEveryAgentButton, StartEveryAgentSheet, useSigns } from './start-every-agent'
 import { Body, Button, Chip } from './ui'
 import { YourAccountsSheet } from './your-accounts'
@@ -148,22 +149,22 @@ function Actions({ instant }: { instant: boolean }) {
   return (
     <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
       <Link href="/pay" asChild>
-        <Pressable accessibilityRole="link" accessibilityLabel="Pay" style={{ alignItems: 'center', gap: 6, minWidth: 72 }}>
+        <Press kind="round" accessibilityRole="link" accessibilityLabel="Pay" style={{ alignItems: 'center', gap: 6, minWidth: 72 }}>
           <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: c.cloud, alignItems: 'center', justifyContent: 'center' }}>
             <Icon name="payments" color={c.ink} />
           </View>
           <Text style={{ fontFamily: fonts.uiBold, fontSize: 12.5, color: c.ink }}>Pay</Text>
-        </Pressable>
+        </Press>
       </Link>
       {/* B59.20 — Instant transfer, for a Hybrid account. */}
       {instant ? (
         <Link href="/instant-transfer" asChild>
-          <Pressable accessibilityRole="link" accessibilityLabel="Instant transfer" style={{ alignItems: 'center', gap: 6, minWidth: 72 }}>
+          <Press kind="round" accessibilityRole="link" accessibilityLabel="Instant transfer" style={{ alignItems: 'center', gap: 6, minWidth: 72 }}>
             <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: c.cloud, alignItems: 'center', justifyContent: 'center' }}>
               <Icon name="send" color={c.ink} />
             </View>
             <Text style={{ fontFamily: fonts.uiBold, fontSize: 12.5, color: c.ink }}>Instant transfer</Text>
-          </Pressable>
+          </Press>
         </Link>
       ) : null}
     </View>

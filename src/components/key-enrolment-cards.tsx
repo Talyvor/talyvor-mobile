@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from 'react'
 import { Text, View } from 'react-native'
 
 import { biometricName, keyGone, keyGoneText, phoneKey, signWithThisPhone } from '../keys'
+import { haptic } from '../motion'
 import { useSession } from '../session'
 import { fonts, useTheme } from '../theme'
 import { Icon } from './icon'
@@ -100,8 +101,10 @@ export function KeyEnrolmentSheet({ enrolment, onClose, onDecided }: { enrolment
         const { challenge } = await client.enrolmentChallenge(enrolment.id)
         await client.approveEnrolment(enrolment.id, await signWithThisPhone(client, challenge, browser(enrolment) ? 'Let a browser approve payments' : 'Let a phone approve payments'))
       } else await client.declineEnrolment(enrolment.id)
+      if (approve) haptic('success')
       onDecided(approve)
     } catch (err) {
+      if (approve && err instanceof BffError) haptic('warning')
       setRefusal(err instanceof BffError ? refusalText(err) : keyGone(err) ? keyGoneText : `Nothing changed: ${(err as Error).message}`)
     } finally {
       deciding.current = false
@@ -121,7 +124,7 @@ export function KeyEnrolmentSheet({ enrolment, onClose, onDecided }: { enrolment
         <Body muted>{codeLine(enrolment)}</Body>
         {refusal ? <Body style={{ color: c.critical }}>{refusal}</Body> : null}
         <Button primary icon="faceid" label="Let it approve" disabled={busy} onPress={() => void decide(true)} />
-        <Button variant="secondary" label="Not this one" disabled={busy} onPress={() => void decide(false)} />
+        <Button variant="secondary" label="Not this one" haptic={false} disabled={busy} onPress={() => void decide(false)} />
       </View>
     </BottomSheet>
   )

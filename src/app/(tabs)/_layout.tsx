@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { useAreas, type Area } from '@/areas'
 import { Icon, type IconName } from '@/components/icon'
+import { haptic } from '@/motion'
 import { useSession } from '@/session'
 import { fonts, palettes, useTheme } from '@/theme'
 import { useWaiting } from '@/waiting'
@@ -32,6 +33,8 @@ export default function TabsLayout() {
   if (!areas) return null
   return (
     <Tabs
+      // B61.73 — a light haptic when the tab changes.
+      screenListeners={({ navigation }) => ({ tabPress: () => !navigation.isFocused() && haptic('light') })}
       screenOptions={{
         headerShown: false,
         // The reference's 84: 8 above, the icon and its word, and the home indicator's space below.
