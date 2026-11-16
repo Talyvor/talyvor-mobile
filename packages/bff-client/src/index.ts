@@ -19,6 +19,8 @@ export interface Agent {
   /** B57.10: the colour and face Lens picked from the id (or the owner chose); the phone draws them. */
   colour?: string
   face?: string
+  /** B61.103 — the picture it wears from Lens's gallery (B61.35): its colour's id, or one of the twenty drawn ones. */
+  picture?: string
   /** B48.1 — fiat, crypto or both: the wallets it owns, and the currency its fiat wallet is in (B61.88: its rules' currency). */
   wallet_kind?: 'fiat' | 'crypto' | 'both'
   fiat_currency?: string
@@ -1071,9 +1073,10 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     areas: async () => (await call<{ areas: string[] | null }>('GET', '/api/workspace/areas')).areas ?? [],
     book: () => call<AgentBook>('GET', '/api/agents'),
     /** B61.37 — a new agent with the name its owner typed and its picture's colour (Lens picks one without); with
-     * fiat_currency (GBP, EUR or USD) its own account opens in that currency, as the web's New agent does (B61.87). */
-    createAgent: (name: string, colour?: string, fiat_currency?: string) =>
-      call<Agent>('POST', '/api/agents', { name, ...(colour ? { colour } : {}), ...(fiat_currency ? { fiat_currency } : {}) }),
+     * fiat_currency (GBP, EUR or USD) its own account opens in that currency, as the web's New agent does (B61.87).
+     * B61.103: and the picture, when it is one of the twenty drawn ones; its colour is the picture's own. */
+    createAgent: (name: string, colour?: string, fiat_currency?: string, picture?: string) =>
+      call<Agent>('POST', '/api/agents', { name, ...(colour ? { colour } : {}), ...(picture ? { picture } : {}), ...(fiat_currency ? { fiat_currency } : {}) }),
     /** B61.37 — what the agent does, in the owner's words. */
     describeAgent: (id: string, description: string) => call<Agent>('PATCH', `/api/agents/${e(id)}`, { description }),
     approvals: () => call<{ approvals: AgentApproval[] | null }>('GET', '/api/agents/approvals'),

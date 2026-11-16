@@ -1,0 +1,57 @@
+[
+  {
+    "route": "/agents/new",
+    "screen": "p-agent-research",
+    "account": "personal:fiat",
+    "words": "report",
+    "why": "Pocket Live's phone view na is the reference (texts.json 'ph na1own'); the older reference draws no New agent on the phone; B61.103's gallery of 27",
+    "name": "na1own-gallery",
+    "steps": [
+      [
+        "press",
+        "Your own. You pick its name, its picture and what it does"
+      ],
+      [
+        "press",
+        "Continue"
+      ],
+      [
+        "fill",
+        "Its name",
+        "Supper"
+      ],
+      [
+        "press",
+        "Picture 20"
+      ]
+    ]
+  },
+  {
+    "route": "/agents/new",
+    "screen": "p-agent-research",
+    "account": "personal:fiat",
+    "words": "report",
+    "why": "Pocket Live's phone view na is the reference (texts.json 'ph na1own'); the older reference draws no New agent on the phone; B61.103's gallery of 27",
+    "name": "na1own-gallery",
+    "steps": [
+      [
+        "press",
+        "Your own. You pick its name, its picture and what it does"
+      ],
+      [
+        "press",
+        "Continue"
+      ],
+      [
+        "fill",
+        "Its name",
+        "Supper"
+      ],
+      [
+        "press",
+        "Picture 20"
+      ]
+    ],
+    "dark": true
+  }
+]

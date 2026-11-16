@@ -193,3 +193,23 @@ test('B57.178 the limits are rows that each open a sheet, and the screen reads a
   await waitFor(() => expect(screen).toHavePathname('/agents/ag_new'))
   expect(bodies['PUT /api/agents/ag_new/rules']).toMatchObject({ currency: 'GBP', max_per_payment_minor: 1_250, daily_limit_minor: 300_000, monthly_limit_minor: 600_000, approval_above_minor: 0 })
 })
+
+// B61.103 — your own picks from the web's gallery of 27 (the six's faces, lime's and the twenty drawn ones): the chef is
+// sent as its picture, in its own lemon, and is what the new agent is drawn with.
+test('B61.103 the gallery offers 27 pictures, and choosing the chef sends picture chef in its colour', async () => {
+  const bodies = mockBff()
+  await openNewAgent()
+  await fireEvent.press(screen.getByRole('radio', { name: /^Your own\./ }))
+  await fireEvent.press(screen.getByText('Continue'))
+  await fireEvent.changeText(await screen.findByLabelText('Its name'), 'Supper')
+  expect(screen.getAllByRole('radio', { name: /^Picture \d+$/ }).map((r) => r.props.accessibilityLabel)).toEqual(Array.from({ length: 27 }, (_, i) => `Picture ${i + 1}`))
+  expect(screen.queryByText('More pictures are being drawn.')).toBeNull()
+  await fireEvent.press(screen.getByRole('radio', { name: 'Picture 20' }))
+  expect(screen.getByRole('radio', { name: 'Picture 20' }).props.accessibilityState).toEqual({ checked: true })
+  expect(screen.getAllByTestId('face-picture-chef-happy')).toHaveLength(2)
+  expect(screen.queryByText(HELPERS)).toBeNull()
+  await fireEvent.press(screen.getByText('Continue'))
+  await fireEvent.press(await screen.findByText('Create agent'))
+  await waitFor(() => expect(screen).toHavePathname('/agents/ag_new'))
+  expect(bodies['POST /api/agents']).toEqual({ name: 'Supper', colour: 'lemon', picture: 'chef', fiat_currency: 'GBP' })
+})
