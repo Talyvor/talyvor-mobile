@@ -1,0 +1,23 @@
+[
+ {
+  "route": "/",
+  "screen": "p-home",
+  "words": "report",
+  "why": "B61.80: Home's round quick action says Instant (Pocket Live, ph home@north); the rest of Home is its own items'"
+ },
+ {
+  "route": "/wallets",
+  "screen": "p-home",
+  "name": "wallets",
+  "words": "report",
+  "why": "B61.80: Wallets says Add money where it said Top up (Pocket Live, ph wallets)"
+ },
+ {
+  "route": "/wallets",
+  "screen": "p-home",
+  "name": "add-money",
+  "words": "report",
+  "why": "B61.80: the Add money sheet (Pocket Live, ph sheet:topup)",
+  "press": ["Add money"]
+ }
+]

@@ -121,7 +121,7 @@ function Total({ business, shows, accounts }: { business: boolean; shows: Shows;
       {held.length === 0 ? (
         <>
           <Money minor={0} currency="USD" size={44} />
-          <Body muted>{shows.bankTransfers ? 'Top up to get started.' : 'Receive stablecoins to get started.'}</Body>
+          <Body muted>{shows.bankTransfers ? 'Add money to get started.' : 'Receive stablecoins to get started.'}</Body>
         </>
       ) : held.length === 1 ? (
         <Money minor={held[0].minor} currency={held[0].currency} size={44} />
@@ -156,14 +156,14 @@ function Actions({ instant }: { instant: boolean }) {
           <Text style={{ fontFamily: fonts.uiBold, fontSize: 12.5, color: c.ink }}>Pay</Text>
         </Press>
       </Link>
-      {/* B59.20 — Instant transfer, for a Hybrid account. */}
+      {/* B59.20 — Instant transfer, for a Hybrid account; B61.80: "Instant" under the round action. */}
       {instant ? (
         <Link href="/instant-transfer" asChild>
-          <Press kind="round" accessibilityRole="link" accessibilityLabel="Instant transfer" style={{ alignItems: 'center', gap: 6, minWidth: 72 }}>
+          <Press kind="round" accessibilityRole="link" accessibilityLabel="Instant" style={{ alignItems: 'center', gap: 6, minWidth: 72 }}>
             <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: c.cloud, alignItems: 'center', justifyContent: 'center' }}>
               <Icon name="send" color={c.ink} />
             </View>
-            <Text style={{ fontFamily: fonts.uiBold, fontSize: 12.5, color: c.ink }}>Instant transfer</Text>
+            <Text style={{ fontFamily: fonts.uiBold, fontSize: 12.5, color: c.ink }}>Instant</Text>
           </Press>
         </Link>
       ) : null}

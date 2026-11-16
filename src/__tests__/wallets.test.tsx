@@ -2,7 +2,7 @@ import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/te
 
 // B59.33 — Wallets on the phone: what each account holds, by the workspace's kind of money (SPEC 3.3). Fiat only shows
 // the fiat side, Stablecoin and crypto only the stablecoin side, Hybrid both side by side; a side the kind does not have
-// is not rendered. Home's total opens it. Top up, Withdraw and, for Hybrid, Convert (the web's B59.53, with its words):
+// is not rendered. Home's total opens it. Add money (B61.80; was Top up), Withdraw and, for Hybrid, Convert (the web's B59.53, with its words):
 // each has a confirm step, nothing is sent before it, and Withdraw and Convert are signed with this phone's key over Lens's
 // challenge, under the same Idempotency-Key.
 
@@ -146,29 +146,29 @@ test("Home's total opens Wallets", async () => {
 })
 
 test.each([
-  ['fiat', ['Top up', 'Withdraw']],
-  ['stablecoin', ['Top up']],
-  ['hybrid', ['Top up', 'Withdraw', 'Convert']],
+  ['fiat', ['Add money', 'Withdraw']],
+  ['stablecoin', ['Add money']],
+  ['hybrid', ['Add money', 'Withdraw', 'Convert']],
 ] as const)('the actions by kind: %s has %j', async (kind, shown) => {
   phoneHoldsTheKey()
   mockBff(kind)
   await renderRouter('./src/app', { initialUrl: '/wallets' })
-  expect(await screen.findByRole('button', { name: 'Top up' })).toBeTruthy()
-  expect(['Top up', 'Withdraw', 'Convert'].filter((w) => screen.queryByRole('button', { name: w }) !== null)).toEqual(shown)
+  expect(await screen.findByRole('button', { name: 'Add money' })).toBeTruthy()
+  expect(['Add money', 'Withdraw', 'Convert'].filter((w) => screen.queryByRole('button', { name: w }) !== null)).toEqual(shown)
 })
 
-test('Top up: the confirm step first, then Face ID, then Sandbox money once under its key', async () => {
+test('Add money: the confirm step first, then Face ID, then Sandbox money once under its key', async () => {
   phoneHoldsTheKey()
   mockBff('fiat')
   await renderRouter('./src/app', { initialUrl: '/wallets' })
-  await fireEvent.press(await screen.findByRole('button', { name: 'Top up' }))
+  await fireEvent.press(await screen.findByRole('button', { name: 'Add money' }))
   await fireEvent.changeText(screen.getByLabelText('Amount'), '50')
   await fireEvent.press(screen.getByRole('button', { name: 'Continue' }))
   const confirm = within(await screen.findByTestId('top-up-confirm'))
   expect(confirm.getByText('$50.00')).toBeTruthy()
   expect(confirm.getByText('The company · USD')).toBeTruthy()
   expect(writes).toEqual([])
-  await fireEvent.press(screen.getByRole('button', { name: 'Top up with Face ID' }))
+  await fireEvent.press(screen.getByRole('button', { name: 'Add money with Face ID' }))
   await waitFor(() => expect(writes).toHaveLength(1))
   expect(writes[0]).toEqual({ call: 'POST /api/money/accounts/acc_usd/top-up', body: { amount_minor: 5000 }, key: expect.stringMatching(/.+/) })
   expect(mockSigned).toHaveLength(1)
@@ -224,10 +224,10 @@ test('Convert (Hybrid): quoted, confirmed with what you get, then signed over it
 test('without this phone\'s key the confirm step sends nothing and offers Approvals on this phone', async () => {
   mockBff('fiat')
   await renderRouter('./src/app', { initialUrl: '/wallets' })
-  await fireEvent.press(await screen.findByRole('button', { name: 'Top up' }))
+  await fireEvent.press(await screen.findByRole('button', { name: 'Add money' }))
   await fireEvent.changeText(screen.getByLabelText('Amount'), '50')
   await fireEvent.press(screen.getByRole('button', { name: 'Continue' }))
   expect(await screen.findByRole('button', { name: 'Approvals on this phone' })).toBeTruthy()
-  expect(screen.queryByRole('button', { name: 'Top up with Face ID' })).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Add money with Face ID' })).toBeNull()
   expect(writes).toEqual([])
 })

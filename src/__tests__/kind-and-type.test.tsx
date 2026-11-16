@@ -101,8 +101,8 @@ function hidden(type: Type, kind: Kind): RegExp[] {
   if (kind === 'stablecoin') out.push(/Saved payees/, /Acme Hosting/, /Payees are added/, /bank/i)
   // Wallet addresses, on-chain send and receive.
   if (kind === 'fiat') out.push(/on chain/i, /wallet address/i, /Stablecoin/)
-  // Convert between the two sides, and Instant transfer.
-  if (kind !== 'hybrid') out.push(/Convert/i, /Instant transfer/i)
+  // Convert between the two sides, and Instant transfer ("Instant" under Home's round action, B61.80).
+  if (kind !== 'hybrid') out.push(/Convert/i, /\bInstant\b/)
   // Team, roles, second approver and payout batches; company words.
   if (type === 'personal') out.push(/team/i, /company/i, /Members/, /second approver/i, /payout/i, /Business/)
   else out.push(/^Your agents$/m, /Your account/, /Personal/)
