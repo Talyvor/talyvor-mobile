@@ -1,0 +1,311 @@
+[
+  {
+    "route": "/agents",
+    "screen": "p-home",
+    "launchPack": "P5",
+    "account": "personal:fiat",
+    "answers": {
+      "/api/agents": {
+        "workspace_balance_ulxc": 0,
+        "allocated_ulxc": 0,
+        "unallocated_ulxc": 0,
+        "spent_ulxc": 0,
+        "agents": [
+          {
+            "id": "agt_research",
+            "name": "Scout",
+            "description": "Research",
+            "colour": "cobalt",
+            "face": "circle",
+            "balance_ulxc": 0,
+            "spent_ulxc": 0,
+            "created_at": "2026-09-14T09:00:00Z"
+          },
+          {
+            "id": "agt_sales",
+            "name": "Juno",
+            "description": "Travel",
+            "colour": "orchid",
+            "face": "squircle",
+            "balance_ulxc": 0,
+            "spent_ulxc": 0,
+            "created_at": "2026-10-05T09:00:00Z"
+          },
+          {
+            "id": "agt_ops",
+            "name": "Pixel",
+            "description": "Ads",
+            "colour": "lemon",
+            "face": "flower",
+            "balance_ulxc": 0,
+            "spent_ulxc": 0,
+            "created_at": "2026-10-09T09:00:00Z",
+            "paused_at": "2026-10-21T17:00:00Z"
+          }
+        ]
+      },
+      "/api/money/accounts": {
+        "accounts": [
+          {
+            "id": "a1",
+            "agent_id": "",
+            "currency": "USD",
+            "purpose": "company",
+            "status": "open",
+            "name": "",
+            "balance_minor": 240000
+          },
+          {
+            "id": "a2",
+            "agent_id": "agt_research",
+            "currency": "USD",
+            "purpose": "agent",
+            "status": "open",
+            "name": "",
+            "balance_minor": 40000
+          },
+          {
+            "id": "a3",
+            "agent_id": "agt_sales",
+            "currency": "EUR",
+            "purpose": "agent",
+            "status": "open",
+            "name": "",
+            "balance_minor": 60000
+          },
+          {
+            "id": "a4",
+            "agent_id": "agt_ops",
+            "currency": "GBP",
+            "purpose": "agent",
+            "status": "open",
+            "name": "",
+            "balance_minor": 25000
+          }
+        ]
+      },
+      "/api/agents/agt_research/rules": {
+        "max_per_request_ulxc": 0,
+        "daily_limit_ulxc": 0,
+        "monthly_limit_ulxc": 0,
+        "approval_above_ulxc": 0,
+        "allowed_models": null,
+        "allowed_providers": null,
+        "active_from": "",
+        "active_until": "",
+        "timezone": "Europe/London",
+        "currency": "USD",
+        "monthly_limit_minor": 100000
+      },
+      "/api/agents/agt_sales/rules": {
+        "max_per_request_ulxc": 0,
+        "daily_limit_ulxc": 0,
+        "monthly_limit_ulxc": 0,
+        "approval_above_ulxc": 0,
+        "allowed_models": null,
+        "allowed_providers": null,
+        "active_from": "",
+        "active_until": "",
+        "timezone": "Europe/London",
+        "currency": "EUR",
+        "monthly_limit_minor": 80000
+      },
+      "/api/agents/agt_ops/rules": {
+        "max_per_request_ulxc": 0,
+        "daily_limit_ulxc": 0,
+        "monthly_limit_ulxc": 0,
+        "approval_above_ulxc": 0,
+        "allowed_models": null,
+        "allowed_providers": null,
+        "active_from": "",
+        "active_until": "",
+        "timezone": "Europe/London",
+        "currency": "GBP",
+        "monthly_limit_minor": 40000
+      },
+      "/api/money/spending": {
+        "from": "",
+        "to": "",
+        "payments": [],
+        "totals": [
+          {
+            "agent_id": "agt_research",
+            "currency": "USD",
+            "total_minor": 21400,
+            "by_category": null
+          },
+          {
+            "agent_id": "agt_sales",
+            "currency": "EUR",
+            "total_minor": 18640,
+            "by_category": null
+          },
+          {
+            "agent_id": "agt_ops",
+            "currency": "GBP",
+            "total_minor": 8600,
+            "by_category": null
+          }
+        ]
+      }
+    },
+    "words": "report",
+    "why": "Pocket Live's phone view agents is the reference (texts.json 'ph agents'); the launch pack's P5 draws Home, not this tab",
+    "name": "agents"
+  },
+  {
+    "route": "/agents",
+    "screen": "p-home",
+    "launchPack": "P5",
+    "account": "personal:fiat",
+    "answers": {
+      "/api/agents": {
+        "workspace_balance_ulxc": 0,
+        "allocated_ulxc": 0,
+        "unallocated_ulxc": 0,
+        "spent_ulxc": 0,
+        "agents": [
+          {
+            "id": "agt_research",
+            "name": "Scout",
+            "description": "Research",
+            "colour": "cobalt",
+            "face": "circle",
+            "balance_ulxc": 0,
+            "spent_ulxc": 0,
+            "created_at": "2026-09-14T09:00:00Z"
+          },
+          {
+            "id": "agt_sales",
+            "name": "Juno",
+            "description": "Travel",
+            "colour": "orchid",
+            "face": "squircle",
+            "balance_ulxc": 0,
+            "spent_ulxc": 0,
+            "created_at": "2026-10-05T09:00:00Z"
+          },
+          {
+            "id": "agt_ops",
+            "name": "Pixel",
+            "description": "Ads",
+            "colour": "lemon",
+            "face": "flower",
+            "balance_ulxc": 0,
+            "spent_ulxc": 0,
+            "created_at": "2026-10-09T09:00:00Z",
+            "paused_at": "2026-10-21T17:00:00Z"
+          }
+        ]
+      },
+      "/api/money/accounts": {
+        "accounts": [
+          {
+            "id": "a1",
+            "agent_id": "",
+            "currency": "USD",
+            "purpose": "company",
+            "status": "open",
+            "name": "",
+            "balance_minor": 240000
+          },
+          {
+            "id": "a2",
+            "agent_id": "agt_research",
+            "currency": "USD",
+            "purpose": "agent",
+            "status": "open",
+            "name": "",
+            "balance_minor": 40000
+          },
+          {
+            "id": "a3",
+            "agent_id": "agt_sales",
+            "currency": "EUR",
+            "purpose": "agent",
+            "status": "open",
+            "name": "",
+            "balance_minor": 60000
+          },
+          {
+            "id": "a4",
+            "agent_id": "agt_ops",
+            "currency": "GBP",
+            "purpose": "agent",
+            "status": "open",
+            "name": "",
+            "balance_minor": 25000
+          }
+        ]
+      },
+      "/api/agents/agt_research/rules": {
+        "max_per_request_ulxc": 0,
+        "daily_limit_ulxc": 0,
+        "monthly_limit_ulxc": 0,
+        "approval_above_ulxc": 0,
+        "allowed_models": null,
+        "allowed_providers": null,
+        "active_from": "",
+        "active_until": "",
+        "timezone": "Europe/London",
+        "currency": "USD",
+        "monthly_limit_minor": 100000
+      },
+      "/api/agents/agt_sales/rules": {
+        "max_per_request_ulxc": 0,
+        "daily_limit_ulxc": 0,
+        "monthly_limit_ulxc": 0,
+        "approval_above_ulxc": 0,
+        "allowed_models": null,
+        "allowed_providers": null,
+        "active_from": "",
+        "active_until": "",
+        "timezone": "Europe/London",
+        "currency": "EUR",
+        "monthly_limit_minor": 80000
+      },
+      "/api/agents/agt_ops/rules": {
+        "max_per_request_ulxc": 0,
+        "daily_limit_ulxc": 0,
+        "monthly_limit_ulxc": 0,
+        "approval_above_ulxc": 0,
+        "allowed_models": null,
+        "allowed_providers": null,
+        "active_from": "",
+        "active_until": "",
+        "timezone": "Europe/London",
+        "currency": "GBP",
+        "monthly_limit_minor": 40000
+      },
+      "/api/money/spending": {
+        "from": "",
+        "to": "",
+        "payments": [],
+        "totals": [
+          {
+            "agent_id": "agt_research",
+            "currency": "USD",
+            "total_minor": 21400,
+            "by_category": null
+          },
+          {
+            "agent_id": "agt_sales",
+            "currency": "EUR",
+            "total_minor": 18640,
+            "by_category": null
+          },
+          {
+            "agent_id": "agt_ops",
+            "currency": "GBP",
+            "total_minor": 8600,
+            "by_category": null
+          }
+        ]
+      }
+    },
+    "words": "report",
+    "why": "Pocket Live's phone view agents is the reference (texts.json 'ph agents'); the launch pack's P5 draws Home, not this tab",
+    "name": "agents",
+    "dark": true
+  }
+]

@@ -1485,6 +1485,60 @@ describe('B61.54 the Agents tab', () => {
   })
 })
 
+describe('B57.176 the Agents tab as Pocket Live draws it', () => {
+  beforeEach(() => {
+    mockStore.clear()
+    mockStore.set('talyvor.session', JSON.stringify({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }))
+  })
+  const accounts = [
+    { id: 'acc_ag1_gbp', currency: 'GBP', purpose: 'agent', agent_id: 'ag_1', status: 'open', name: 'Researcher · GBP', balance_minor: 4_250 },
+    { id: 'acc_ag2_usdc', currency: 'USDC', purpose: 'agent', agent_id: 'ag_2', status: 'open', name: 'Buyer · USDC', balance_minor: 12_000_000 },
+  ]
+  // Each agent's rules in its own currency (B61.88) and this month's spending by agent (B53.9), which mockBff leaves out.
+  const withMonth = () => {
+    const inner = globalThis.fetch
+    const extra: Record<string, unknown> = {
+      '/api/agents/ag_1/rules': { max_per_request_ulxc: 0, daily_limit_ulxc: 0, monthly_limit_ulxc: 0, approval_above_ulxc: 0, allowed_models: null, allowed_providers: null, active_from: '', active_until: '', timezone: 'UTC', currency: 'GBP', monthly_limit_minor: 0 },
+      '/api/agents/ag_2/rules': { max_per_request_ulxc: 0, daily_limit_ulxc: 0, monthly_limit_ulxc: 0, approval_above_ulxc: 0, allowed_models: null, allowed_providers: null, active_from: '', active_until: '', timezone: 'UTC', currency: 'USDC', monthly_limit_minor: 50_000_000 },
+      '/api/money/spending': { from: '', to: '', payments: [], totals: [{ agent_id: 'ag_2', currency: 'USDC', total_minor: 8_000_000, by_category: null }, { agent_id: 'ag_2', currency: 'GBP', total_minor: 999, by_category: null }] },
+    }
+    globalThis.fetch = jest.fn(async (url: string, init?: RequestInit) => {
+      const path = url.replace('https://bff.test', '').split('?')[0]
+      return path in extra ? new Response(JSON.stringify(extra[path]), { status: 200 }) : inner(url, init)
+    }) as unknown as typeof fetch
+  }
+
+  test('each agent is a card with Running or Paused, and what it spent this month of its monthly limit in its own currency', async () => {
+    mockBff({ paused: true, accounts })
+    withMonth()
+    await renderRouter('./src/app', { initialUrl: '/agents' })
+    expect(await screen.findByText('Each agent has its own account, card and rules. You name it and set its limits.')).toBeTruthy()
+    const researcher = await screen.findByRole('link', { name: 'Researcher, paused' })
+    const buyer = screen.getByRole('link', { name: 'Buyer, running' })
+    expect(within(researcher).getByText('Paused')).toBeTruthy()
+    expect(within(buyer).getByText('Running')).toBeTruthy()
+    expect(await within(buyer).findByText('8.00 USDC of 50.00 USDC this month')).toBeTruthy()
+    expect(within(buyer).getByLabelText('Buyer: 8.00 USDC of 50.00 USDC this month').props.accessibilityValue.now).toBe(16)
+    // No monthly limit, no line: nothing is drawn against a limit the owner never set.
+    expect(within(researcher).queryByText(/this month/)).toBeNull()
+  })
+
+  test('the top right has Pause every agent and New agent, and Resume every agent once all are paused', async () => {
+    mockBff({ accounts })
+    withMonth()
+    await renderRouter('./src/app', { initialUrl: '/agents' })
+    expect(await screen.findByRole('link', { name: 'Pause every agent' })).toBeTruthy()
+    await fireEvent.press(screen.getByRole('link', { name: 'New agent' }))
+    expect(await screen.findByText('Which agent?')).toBeTruthy()
+
+    mockBff({ accounts, allPaused: true })
+    withMonth()
+    await renderRouter('./src/app', { initialUrl: '/agents' })
+    await fireEvent.press(await screen.findByRole('link', { name: 'Resume every agent' }))
+    expect(await screen.findByText('Every agent is paused')).toBeTruthy()
+  })
+})
+
 describe('B59.3 a hidden area is not there', () => {
   beforeEach(() => {
     mockStore.clear()
