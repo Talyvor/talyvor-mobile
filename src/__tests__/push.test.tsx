@@ -3,6 +3,7 @@ import { createHash, generateKeyPairSync, verify } from 'node:crypto'
 import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library'
 import { Alert } from 'react-native'
 
+import { totalsOf } from '../approve-batch'
 import { approvalHref } from '../push'
 
 // B40.14 DONE: a test notification opens the approval card for its request, and approving signs it with the device key
@@ -49,7 +50,7 @@ const signedBy = (challenge: string, signature: string) => verify('sha256', Buff
 
 /** Lens behind the BFF: one request prepared for approval, one agent's held payment, and dev_1 as this phone's key. */
 function mockLens() {
-  const lens = { pushTokens: {} as Record<string, string>, approvedStatement: '', approvalApproved: false }
+  const lens = { pushTokens: {} as Record<string, string>, approvedStatement: '', approvalApproved: false, refusal: '' }
   const items: { position: number; payee_id: string; payee_name: string; currency: string; amount_minor: number; reference: string; decision: string; reason: string; pay_status?: string }[] = [
     { position: 1, payee_id: 'py_1', payee_name: 'Acme Hosting', currency: 'GBP', amount_minor: 2500, reference: 'Oct', decision: 'needs_approval', reason: 'a new payee' },
     { position: 2, payee_id: 'py_2', payee_name: 'Bolt Couriers', currency: 'GBP', amount_minor: 900, reference: 'Run 4', decision: 'needs_approval', reason: 'above 5.00 GBP' },
@@ -94,6 +95,7 @@ function mockLens() {
       }
       case 'POST /api/money/payment-requests/preq_1/approve': {
         // Lens's ApprovePaymentRequest: the device key's signature over the statement's SHA-256.
+        if (lens.refusal) return json({ error: lens.refusal }, 403)
         const challenge = createHash('sha256').update(body.statement).digest('base64url')
         if (body.assertion?.device_id !== 'dev_1' || !signedBy(challenge, body.assertion.signature)) return json({ error: 'passkey: the assertion is not valid' }, 400)
         lens.approvedStatement = body.statement
@@ -136,7 +138,7 @@ test('a request notification opens its approval card; approving the ticked payme
   // Untick Bolt Couriers: the key signs a statement naming Acme Hosting alone.
   await fireEvent.press(screen.getByLabelText('Approve £9.00 to Bolt Couriers'))
   await fireEvent.press(await screen.findByText('Approve 1 payment with Face ID'))
-  expect(await screen.findByText('Approved. Each payment you approved is paid once.')).toBeTruthy()
+  expect(await screen.findByText('Approved.')).toBeTruthy()
   expect(JSON.parse(lens.approvedStatement).items.map((it: { position: number }) => it.position)).toEqual([1])
 })
 
@@ -188,7 +190,7 @@ test('approving on the card signs exactly the ticked payment, and a line for eac
   await renderRouter('./src/app', { initialUrl: '/approve/preq_1' })
   await fireEvent.press(await screen.findByLabelText('Approve £9.00 to Bolt Couriers'))
   await fireEvent.press(await screen.findByText('Approve 1 payment with Face ID'))
-  expect(await screen.findByText('Approved. Each payment you approved is paid once.')).toBeTruthy()
+  expect(await screen.findByText('Approved.')).toBeTruthy()
   expect(screen.getByText('Acme Hosting, £25.00: Paid.')).toBeTruthy()
   expect(screen.getByText('Bolt Couriers, £9.00: Not paid: you left it out.')).toBeTruthy()
   expect(JSON.parse(lens.approvedStatement).items).toEqual([{ position: 1, payee_id: 'py_1', currency: 'GBP', amount_minor: 2500, reference: 'Oct' }])
@@ -213,7 +215,7 @@ test("Approve with Face ID on a request's notification signs the hash of exactly
   tap({ type: 'payment_request', request_id: 'preq_1', workspace_id: 'ws_1', items: JSON.stringify(shownItems) }, 'approve')
   await renderRouter('./src/app', { initialUrl: '/approvals' })
 
-  expect(await screen.findByText('Approved. Each payment you approved is paid once.')).toBeTruthy()
+  expect(await screen.findByText('Approved.')).toBeTruthy()
   // mockLens approves only a device-key signature over the statement's SHA-256, the batch hash.
   expect(JSON.parse(lens.approvedStatement).items).toEqual(shownItems.map(({ payee_name: _, ...it }) => it))
   expect(mockReasons.at(-1)).toBe('Approve 2 payments, £34.00: Acme Hosting £25.00, Bolt Couriers £9.00')
@@ -230,18 +232,45 @@ test('on an iPhone, where the data Lens sends is the top of the APNs payload, Ap
   mockTapResponse = { actionIdentifier: 'approve', notification: { request: { content: { data: {}, categoryIdentifier: 'payment_request' }, trigger: { type: 'push', payload } } } }
   await renderRouter('./src/app', { initialUrl: '/approvals' })
 
-  expect(await screen.findByText('Approved. Each payment you approved is paid once.')).toBeTruthy()
+  expect(await screen.findByText('Approved.')).toBeTruthy()
   expect(JSON.parse(lens.approvedStatement).items).toEqual(shownItems.map(({ payee_name: _, ...it }) => it))
 })
 
 test('a notification whose items are not what Lens would have signed approves nothing', async () => {
   const lens = mockLens()
-  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined)
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined).mockClear()
   tap({ type: 'payment_request', request_id: 'preq_1', workspace_id: 'ws_1', items: JSON.stringify([{ ...shownItems[0], amount_minor: 25 }]) }, 'approve')
   await renderRouter('./src/app', { initialUrl: '/approvals' })
 
-  expect(await screen.findByText('Pay October suppliers')).toBeTruthy()
-  await waitFor(() => expect(alert).toHaveBeenCalledWith('Nothing was approved', 'what you were asked to sign is not what was shown, so nothing was signed'))
+  expect(await screen.findByText('Nothing was approved. What you were asked to sign is not what was shown, so nothing was signed.')).toBeTruthy()
+  expect(screen.getByText('Pay October suppliers')).toBeTruthy()
+  expect(alert).not.toHaveBeenCalled()
+  expect(lens.approvedStatement).toBe('')
+})
+
+// B57.93: Approve with Face ID on a prepared payment's notification lands on its card, which says what was paid in
+// B55.33's words; a refusal lands there too, as Nothing was approved with Lens's sentence, never an alert over it.
+test("Approve with Face ID on a prepared payment's notification lands on its card, which says what was paid", async () => {
+  mockLens()
+  tap({ type: 'payment_request', request_id: 'preq_1', workspace_id: 'ws_1', items: JSON.stringify(shownItems) }, 'approve')
+  await renderRouter('./src/app', { initialUrl: '/approvals' })
+
+  expect(await screen.findByText('Approved.')).toBeTruthy()
+  expect(screen.getByText('Acme Hosting, £25.00: Paid.')).toBeTruthy()
+  expect(screen.getByText('Bolt Couriers, £9.00: Paid.')).toBeTruthy()
+})
+
+test("a prepared payment Lens refuses from its notification lands on its card: Nothing was approved, in Lens's sentence", async () => {
+  const lens = mockLens()
+  lens.refusal = 'economy: this phone’s key was removed from the workspace'
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined).mockClear()
+  tap({ type: 'payment_request', request_id: 'preq_1', workspace_id: 'ws_1', items: JSON.stringify(shownItems) }, 'approve')
+  await renderRouter('./src/app', { initialUrl: '/approvals' })
+
+  expect(await screen.findByText('Nothing was approved. This phone’s key was removed from the workspace.')).toBeTruthy()
+  expect(screen.getByText('Approve 2 payments with Face ID')).toBeTruthy()
+  expect(screen.queryByText(/economy:/)).toBeNull()
+  expect(alert).not.toHaveBeenCalled()
   expect(lens.approvedStatement).toBe('')
 })
 
@@ -276,4 +305,9 @@ test.each([
   const sent = (globalThis.fetch as jest.Mock).mock.calls.map(([url, init]) => `${init?.method ?? 'GET'} ${url}`)
   expect(sent.filter((r: string) => /\/approvals\/apr_1\/(approve|challenge)/.test(r))).toEqual([])
   expect(lens.approvalApproved).toBeFalsy()
+})
+
+// B57.93: a total in more than one currency reads dollars first, on the card and in the Face ID prompt.
+test('a total in pounds and dollars reads dollars first', () => {
+  expect(totalsOf([{ currency: 'GBP', amount_minor: 2500 }, { currency: 'EUR', amount_minor: 300 }, { currency: 'USD', amount_minor: 18_000 }])).toBe('$180.00 + £25.00 + €3.00')
 })

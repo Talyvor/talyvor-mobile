@@ -1,0 +1,106 @@
+[
+  {
+    "route": "/approve/preq_north",
+    "screen": "p-approve-req",
+    "name": "approved",
+    "phoneKey": true,
+    "refState": {
+      "nw": "1"
+    },
+    "press": [
+      "Approve 1 payment with your fingerprint"
+    ],
+    "answers": {
+      "/api/money/payment-requests/preq_north": {
+        "id": "preq_north",
+        "status": "pending_approval",
+        "summary": "",
+        "client": "chat",
+        "totals": {
+          "USD": 18000
+        },
+        "items": [
+          {
+            "position": 1,
+            "payee_id": "py_north",
+            "payee_name": "Northwind Data",
+            "currency": "USD",
+            "amount_minor": 18000,
+            "reference": "Invoice 1042",
+            "decision": "needs_approval",
+            "reason": "no permission you signed covers it"
+          }
+        ],
+        "created_at": "2026-10-22T09:31:00Z"
+      },
+      "/api/money/payment-requests/preq_north/approval": {
+        "statement": "{\"request_id\":\"preq_north\",\"items\":[{\"position\":1,\"payee_id\":\"py_north\",\"currency\":\"USD\",\"amount_minor\":18000,\"reference\":\"Invoice 1042\"}],\"expires_at\":\"2026-10-23T09:31:00Z\"}",
+        "challenge": ""
+      },
+      "/api/money/payment-requests/preq_north/approve": {
+        "id": "preq_north",
+        "status": "approved",
+        "summary": "",
+        "client": "chat",
+        "totals": {
+          "USD": 18000
+        },
+        "items": [
+          {
+            "position": 1,
+            "payee_id": "py_north",
+            "payee_name": "Northwind Data",
+            "currency": "USD",
+            "amount_minor": 18000,
+            "reference": "Invoice 1042",
+            "decision": "needs_approval",
+            "reason": "no permission you signed covers it",
+            "pay_status": "completed"
+          }
+        ],
+        "created_at": "2026-10-22T09:31:00Z"
+      }
+    },
+    "words": "report",
+    "why": "the notification itself is the phone's own, in Lens's words (B41.134); the card's words after it are checked by src/__tests__/push.test.tsx (B57.93)"
+  },
+  {
+    "route": "/approve/preq_north",
+    "screen": "p-approve-req",
+    "name": "refused",
+    "phoneKey": true,
+    "press": [
+      "Approve 1 payment with your fingerprint"
+    ],
+    "answers": {
+      "/api/money/payment-requests/preq_north": {
+        "id": "preq_north",
+        "status": "pending_approval",
+        "summary": "",
+        "client": "chat",
+        "totals": {
+          "USD": 18000
+        },
+        "items": [
+          {
+            "position": 1,
+            "payee_id": "py_north",
+            "payee_name": "Northwind Data",
+            "currency": "USD",
+            "amount_minor": 18000,
+            "reference": "Invoice 1042",
+            "decision": "needs_approval",
+            "reason": "no permission you signed covers it"
+          }
+        ],
+        "created_at": "2026-10-22T09:31:00Z"
+      },
+      "/api/money/payment-requests/preq_north/approval": {
+        "statement": "{\"request_id\":\"preq_north\",\"items\":[{\"position\":1,\"payee_id\":\"py_north\",\"currency\":\"USD\",\"amount_minor\":18000,\"reference\":\"Invoice 1042\"}],\"expires_at\":\"2026-10-23T09:31:00Z\"}",
+        "challenge": ""
+      }
+    },
+    "words": "report",
+    "why": "the notification itself is the phone's own, in Lens's words (B41.134); the card's words after it are checked by src/__tests__/push.test.tsx (B57.93)"
+  }
+]

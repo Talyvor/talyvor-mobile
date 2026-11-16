@@ -4,7 +4,7 @@ import { router, type Href } from 'expo-router'
 import { useEffect, useRef } from 'react'
 import { Alert } from 'react-native'
 
-import { approveBatch, batchOf } from './approve-batch'
+import { approveBatch, batchOf, noteRefusal, notApproved } from './approve-batch'
 import { biometricName, phoneKey, signWithThisPhone } from './keys'
 import { syncLiveActivities } from './live-activity'
 
@@ -93,7 +93,11 @@ export function usePushApprovals(client: BffClient, signedIn: boolean) {
       const approving = data.type === 'agent_approval' ? approveAgentApproval(client, data) : approveBatch(client, String(data.request_id), batch!)
       approving
         .then(() => syncLiveActivities(client))
-        .catch((err: Error) => Alert.alert('Nothing was approved', err instanceof BffError ? refusalText(err) : err.message))
+        .catch((err: Error) =>
+          // B57.93: a prepared payment's card says it, where the person lands; an agent's approval sheet still alerts.
+          data.type === 'payment_request'
+            ? noteRefusal(String(data.request_id), notApproved(err))
+            : Alert.alert('Nothing was approved', err instanceof BffError ? refusalText(err) : err.message))
         .finally(() => router.push(href))
     } else if (spend && response.actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER) {
       approved.current = response
