@@ -5,6 +5,7 @@ import { Text, View } from 'react-native'
 import { accountChip, useAccount } from '@/account'
 import { COMPANY_ROW } from '@/company-words'
 import { HELP_ROW } from '@/help-words'
+import { PLAN_WORDS } from '@/plan-words'
 import { AccountSettings } from '@/components/account-settings'
 import { Icon, type IconName } from '@/components/icon'
 import { NoticeSettingsCard } from '@/components/notice-settings'
@@ -22,6 +23,7 @@ import { fonts, useTheme } from '@/theme'
 // B57.138 — the kind of money as launch-pack P11's choices and the Account type card (components/account-settings.tsx).
 // B61.39 — Help, first in its card, opens the Help chat (/help), as Pocket Live's Settings draws it.
 // B59.39 — Security keys, Team and roles (a Business's alone: not drawn at all for Personal), and each agent's Limits.
+// B61.60 — Plan, as the web's Settings lists it (suite B61.59): the plan Lens has the account on, by its name.
 
 const HELP_ROWS: readonly { to: '/help' | '/settings/help' | '/settings/data' | '/settings/close'; icon: IconName; title: string; line: string }[] = [
   { to: '/help', icon: 'chat', title: HELP_ROW.title, line: HELP_ROW.line },
@@ -39,6 +41,8 @@ export default function SettingsScreen() {
   }, [client])
   const { data, error, loading, reload } = useLoad(load)
   const { account } = useAccount(client)
+  const loadPlan = useCallback(() => client.plan().then((p) => p.name ?? null, () => null), [client])
+  const plan = useLoad(loadPlan).data
   const tile = { width: 36, height: 36, borderRadius: 18, alignItems: 'center' as const, justifyContent: 'center' as const, backgroundColor: c.cloud2 }
 
   return (
@@ -61,6 +65,17 @@ export default function SettingsScreen() {
               sub={account ? accountChip(account) : 'Account'}
             />
             <Row title={data.id} sub="Account ID" />
+            <Row
+              left={
+                <View style={tile}>
+                  <Icon name="billing" size={18} color={c.ink} />
+                </View>
+              }
+              title={PLAN_WORDS.title}
+              sub={plan ?? undefined}
+              right={<Icon name="chev" size={16} color={c.ink3} />}
+              onPress={() => router.push('/settings/plan')}
+            />
             {account?.account_type === 'business' ? (
               <Row
                 left={
