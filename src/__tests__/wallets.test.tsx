@@ -32,11 +32,11 @@ type Kind = 'fiat' | 'stablecoin' | 'hybrid'
 
 // The company's accounts and Research's, in both kinds of money: Lens keeps what a workspace held before its kind changed.
 const accounts = [
-  { id: 'acc_usd', currency: 'USD', purpose: 'company', status: 'open', name: 'The company · USD', balance_minor: 240_000 },
-  { id: 'acc_gbp', currency: 'GBP', purpose: 'company', status: 'open', name: 'The company · GBP', balance_minor: 156_000 },
-  { id: 'acc_usdc', currency: 'USDC', purpose: 'company', status: 'open', name: 'The company · USDC', balance_minor: 14_000_000_000 },
-  { id: 'acc_r_usd', agent_id: 'ag_1', currency: 'USD', purpose: 'agent', status: 'open', name: 'Research · USD', balance_minor: 40_000 },
-  { id: 'acc_r_usdc', agent_id: 'ag_1', currency: 'USDC', purpose: 'agent', status: 'open', name: 'Research · USDC', balance_minor: 1_500_000_000 },
+  { id: 'acc_usd', currency: 'USD', purpose: 'company', status: 'open', name: 'The company · USD', balance_minor: 240_000, test_minor: 0, live_minor: 240_000 },
+  { id: 'acc_gbp', currency: 'GBP', purpose: 'company', status: 'open', name: 'The company · GBP', balance_minor: 156_000, test_minor: 0, live_minor: 156_000 },
+  { id: 'acc_usdc', currency: 'USDC', purpose: 'company', status: 'open', name: 'The company · USDC', balance_minor: 14_000_000_000, test_minor: 0, live_minor: 14_000_000_000 },
+  { id: 'acc_r_usd', agent_id: 'ag_1', currency: 'USD', purpose: 'agent', status: 'open', name: 'Research · USD', balance_minor: 40_000, test_minor: 0, live_minor: 40_000 },
+  { id: 'acc_r_usdc', agent_id: 'ag_1', currency: 'USDC', purpose: 'agent', status: 'open', name: 'Research · USDC', balance_minor: 1_500_000_000, test_minor: 0, live_minor: 1_500_000_000 },
 ]
 
 const payees = [

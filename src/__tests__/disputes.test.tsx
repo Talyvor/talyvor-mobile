@@ -107,7 +107,7 @@ function mockBff() {
       case 'GET /api/agents/ag_1/card':
         return json({ card: { id: 'ic_1', agent_id: 'ag_1', last4: '4242', exp_month: 9, exp_year: 2028, currency: 'gbp', livemode: false, created_at: '2026-11-01T00:00:00Z' }, authorizations: [] })
       case 'GET /api/money/accounts':
-        return json({ accounts: [{ id: 'macc_1', agent_id: 'ag_1', currency: 'GBP', purpose: 'agent', status: 'active', name: 'Research pounds', balance_minor: 50_000 }] })
+        return json({ accounts: [{ id: 'macc_1', agent_id: 'ag_1', currency: 'GBP', purpose: 'agent', status: 'active', name: 'Research pounds', balance_minor: 50_000, test_minor: 0, live_minor: 50_000 }] })
       case 'GET /api/money/accounts/macc_1/statement':
         return json({
           account_id: 'macc_1',

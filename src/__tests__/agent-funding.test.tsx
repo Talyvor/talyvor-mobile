@@ -19,8 +19,8 @@ jest.mock('expo-crypto', () => ({ ...jest.requireActual('expo-crypto'), randomUU
 
 const research = { id: 'ag_1', name: 'Research', balance_ulxc: 0, spent_ulxc: 0, created_at: '2026-09-14T09:00:00Z' }
 const accounts = [
-  { id: 'acc_usd', currency: 'USD', purpose: 'company', status: 'open', name: 'The company · USD', balance_minor: 9_000 },
-  { id: 'acc_r_usd', agent_id: 'ag_1', currency: 'USD', purpose: 'agent', status: 'open', name: 'Research · USD', balance_minor: 1_000 },
+  { id: 'acc_usd', currency: 'USD', purpose: 'company', status: 'open', name: 'The company · USD', balance_minor: 9_000, test_minor: 0, live_minor: 9_000 },
+  { id: 'acc_r_usd', agent_id: 'ag_1', currency: 'USD', purpose: 'agent', status: 'open', name: 'Research · USD', balance_minor: 1_000, test_minor: 0, live_minor: 1_000 },
 ]
 
 /** Every write the screen sent: its method and path, its body and its Idempotency-Key. */

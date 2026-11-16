@@ -18,8 +18,8 @@ jest.mock('expo-router', () => ({
 
 const book: AgentBook = { workspace_balance_ulxc: 0, allocated_ulxc: 0, unallocated_ulxc: 0, spent_ulxc: 0, agents: [] }
 const accounts: CurrencyAccount[] = [
-  { id: 'a1', currency: 'USD', purpose: 'company', status: 'open', name: '', balance_minor: 3_158_000 },
-  { id: 'a3', currency: 'USDC', purpose: 'company', status: 'open', name: '', balance_minor: 16_700_000_000 },
+  { id: 'a1', currency: 'USD', purpose: 'company', status: 'open', name: '', balance_minor: 3_158_000, test_minor: 0, live_minor: 3_158_000 },
+  { id: 'a3', currency: 'USDC', purpose: 'company', status: 'open', name: '', balance_minor: 16_700_000_000, test_minor: 0, live_minor: 16_700_000_000 },
 ]
 
 async function home(money_kind: 'fiat' | 'hybrid', held: CurrencyAccount[]) {

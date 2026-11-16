@@ -32,9 +32,9 @@ const book: AgentBook = {
   ],
 }
 const accounts: CurrencyAccount[] = [
-  { id: 'a1', currency: 'USD', purpose: 'company', status: 'open', name: '', balance_minor: 3_158_000 },
-  { id: 'a2', agent_id: 'ag_research', currency: 'USD', purpose: 'agent', status: 'open', name: '', balance_minor: 620_000 },
-  { id: 'a3', currency: 'USDC', purpose: 'company', status: 'open', name: '', balance_minor: 16_700_000_000 },
+  { id: 'a1', currency: 'USD', purpose: 'company', status: 'open', name: '', balance_minor: 3_158_000, test_minor: 0, live_minor: 3_158_000 },
+  { id: 'a2', agent_id: 'ag_research', currency: 'USD', purpose: 'agent', status: 'open', name: '', balance_minor: 620_000, test_minor: 0, live_minor: 620_000 },
+  { id: 'a3', currency: 'USDC', purpose: 'company', status: 'open', name: '', balance_minor: 16_700_000_000, test_minor: 0, live_minor: 16_700_000_000 },
 ]
 const business = { account_type: 'business', money_kind: 'hybrid' } as const
 const preq = { id: 'preq_1', status: 'pending_approval', summary: '', client: 'chat', totals: { USD: 18_000 }, items: [], created_at: '2026-11-09T08:00:00Z' } as never

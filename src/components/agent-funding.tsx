@@ -98,8 +98,8 @@ function FundingSheet({ agent, direction, onClose, onDone }: { agent: { id: stri
     companyAccount === undefined
       ? `${Ours} has no ${accountWords(currency)}.`
       : toAgent
-        ? `From ${ours}. It holds ${formatMinor(companyAccount.balance_minor, currency)}.`
-        : `Into ${ours}. ${agent.name} holds ${formatMinor(agentAccount?.balance_minor ?? 0, currency)}.`
+        ? `From ${ours}. It holds ${formatMinor(companyAccount.live_minor, currency)}.`
+        : `Into ${ours}. ${agent.name} holds ${formatMinor(agentAccount?.live_minor ?? 0, currency)}.`
 
   return (
     <BottomSheet visible onClose={close} testID="agent-funding">

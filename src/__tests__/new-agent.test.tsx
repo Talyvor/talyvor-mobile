@@ -42,7 +42,7 @@ function mockBff({ looser = false, currency = 'GBP' } = {}) {
       case 'GET /api/agents/approvals':
         return json({ approvals: [] })
       case 'GET /api/money/accounts':
-        return json({ accounts: [{ id: 'ca_1', purpose: 'company', currency, status: 'open', balance_minor: 0 }] })
+        return json({ accounts: [{ id: 'ca_1', purpose: 'company', currency, status: 'open', balance_minor: 0, test_minor: 0, live_minor: 0 }] })
       case 'GET /api/workspace/account':
         return json({ workspace_id: 'ws_1', account_type: 'personal', money_kind: 'fiat' })
       case 'GET /api/workspace/name':
