@@ -4,7 +4,7 @@ import { useCallback, useState } from 'react'
 import { Modal, Pressable, Text, View } from 'react-native'
 
 import { onDay } from '@/activity'
-import { approveBatch, payWord, totalsOf } from '@/approve-batch'
+import { approveBatch, notApproved, payWord, takeRefusal, totalsOf } from '@/approve-batch'
 import { Icon } from '@/components/icon'
 import { MoneyHeader, paymentRequestCapabilities } from '@/components/money-label'
 import { Back, Body, Button, Card, Figure, Headline, LoadState, Screen, Sheet, useLoad } from '@/components/ui'
@@ -18,10 +18,11 @@ import { fonts, useTheme } from '@/theme'
 // push notification land: every item with its payee, amount, reference and the rule that asked; the person unticks what
 // they will not pay and approves the rest with Face ID or a fingerprint over the statement Lens writes for exactly those,
 // or declines the whole request (B55.11). B57.74: drawn as Pocket's p-approve-req, each payment its own card, Decline asking
-// in a sheet, and a line after each payment Lens tried saying what happened to it.
+// in a sheet, and a line after each payment Lens tried saying what happened to it. B57.93: where a notification's Approve
+// with Face ID lands, saying Approved. and what was paid, or Nothing was approved with Lens's sentence.
 
 const DECIDED: Record<string, string> = {
-  approved: 'Approved. Each payment you approved is paid once.',
+  approved: 'Approved.',
   cancelled: 'This request was cancelled. Nothing will be paid.',
   auto: 'Nothing here needs your approval: each payment is inside a permission you signed.',
   blocked: 'Nothing here can be paid: every payment was blocked.',
@@ -68,7 +69,8 @@ export default function ApproveScreen() {
   const [done, setDone] = useState<PaymentRequest | null>(null)
   const [unticked, setUnticked] = useState<Set<number>>(new Set())
   const [busy, setBusy] = useState(false)
-  const [refusal, setRefusal] = useState('')
+  // B57.93: what Lens refused when Approve was pressed on the notification that opened this card.
+  const [refusal, setRefusal] = useState(() => takeRefusal(id))
   const [declining, setDeclining] = useState(false)
   const [declined, setDeclined] = useState(false)
 
@@ -96,7 +98,7 @@ export default function ApproveScreen() {
       void syncLiveActivities(client)
     } catch (err) {
       if (err instanceof BffError) haptic('warning')
-      setRefusal(err instanceof BffError ? refusalText(err) : `Nothing was approved: ${(err as Error).message}`)
+      setRefusal(notApproved(err))
     } finally {
       setBusy(false)
     }

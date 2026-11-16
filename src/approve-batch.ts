@@ -1,4 +1,4 @@
-import { formatMinor, type ApprovalStatement, type BffClient, type PaymentRequest } from '@talyvor/bff-client'
+import { BffError, formatMinor, refusalText, type ApprovalStatement, type BffClient, type PaymentRequest } from '@talyvor/bff-client'
 
 import { signStatement } from './keys'
 
@@ -8,13 +8,30 @@ import { signStatement } from './keys'
 
 export type BatchItem = NonNullable<ApprovalStatement['items']>[number] & { payee_name?: string }
 
-/** Totals by currency, as one line. */
+/** Totals by currency, as one line, dollars first (B57.93). */
 export const totalsOf = (items: Pick<BatchItem, 'currency' | 'amount_minor'>[]) =>
   Object.entries(items.reduce<Record<string, number>>((t, it) => ({ ...t, [it.currency]: (t[it.currency] ?? 0) + it.amount_minor }), {}))
+    .sort(([a], [b]) => Number(b === 'USD') - Number(a === 'USD'))
     .map(([cur, minor]) => formatMinor(minor, cur))
     .join(' + ')
 
 export const payWord = (n: number) => (n === 1 ? '1 payment' : `${n} payments`)
+
+/** B57.93 — why an approval did not happen: Nothing was approved, then Lens's sentence where it gave one. */
+export function notApproved(err: unknown): string {
+  const why = err instanceof BffError ? refusalText(err).replace(/^Nothing changed\. /, '') : String((err as Error)?.message ?? err)
+  return `Nothing was approved. ${why.charAt(0).toUpperCase()}${why.slice(1)}${why.endsWith('.') ? '' : '.'}`
+}
+
+// A refusal from a notification's Approve button is said on the card the notification then opens, by request id.
+const refusedFromNotification = new Map<string, string>()
+export const noteRefusal = (requestId: string, text: string) => void refusedFromNotification.set(requestId, text)
+/** The refusal the notification left for this card, said once. */
+export function takeRefusal(requestId: string): string {
+  const text = refusedFromNotification.get(requestId) ?? ''
+  refusedFromNotification.delete(requestId)
+  return text
+}
 
 /** The statement Lens wrote is what the key signs: refuse to sign one that is not exactly the items shown. */
 function sameAsShown(statement: string, shown: BatchItem[]): boolean {

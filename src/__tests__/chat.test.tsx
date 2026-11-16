@@ -229,7 +229,7 @@ test('a payment said while holding the microphone is prepared, read back, and wa
   await waitFor(() => expect(mockFaceId.asked).toBe(1))
   expect(lens.approved).toBe(false)
   await act(async () => mockFaceId.pass())
-  expect(await screen.findByText('Approved. Each payment you approved is paid once.')).toBeTruthy()
+  expect(await screen.findByText('Approved.')).toBeTruthy()
   expect(lens.approved).toBe(true)
 })
 
