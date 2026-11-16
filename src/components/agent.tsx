@@ -1,29 +1,33 @@
 import { BffError, type AgentRules, type AgentSummary, formatLXC, refusalText, rulesInWords, rulesSave } from '@talyvor/bff-client'
 import { router } from 'expo-router'
 import { useState } from 'react'
-import { useWindowDimensions, View } from 'react-native'
+import { Pressable, Text, View } from 'react-native'
 
 import { useAccount } from '../account'
 import { WORDS as INSTANT_WORDS } from '../instant-transfer'
 import { biometricName, keyGone, keyGoneText, phoneKey, resumeWithThisPhone, signWithThisPhone } from '../keys'
 import { useSession } from '../session'
-import { useTheme } from '../theme'
+import { fonts, useTheme } from '../theme'
 import { setPinned, syncWidget } from '../widget-sync'
 import { PendingApprovals } from './approval-card'
-import { AgentCard } from './card'
-import { Icon } from './icon'
+import { AgentFundingSheet, type FundingDirection } from './agent-funding'
+import { Face } from './face'
+import { Icon, type IconName } from './icon'
 import { Money } from './money'
 import { AGENT_CREDIT, MoneyHeader } from './money-label'
 import { BottomSheet } from './pay-sheet'
 import { StartEveryAgentButton, StartEveryAgentSheet } from './start-every-agent'
 import { balancesByCurrency } from './home'
-import { Body, Button, Card, Chip, Eyebrow, Headline, Toggle } from './ui'
+import { Body, Button, Card, Chip, Eyebrow, Headline, Row, Toggle } from './ui'
 
 // B57.70 — an agent's screen as Pocket draws it (design/pocket p-agent-research and its sheet presume-research): this
 // month's spend from the agent's one read (Lens B57.12, BFF B57.20), what waits for it with Review, its balance and
 // state, Pause at once, Resume signed with this phone's key over its resume challenge (B55.5), the widget pin as a
 // switch, its rules in words and its statement. B61.15: its balance is what its currency accounts hold; its credit, and
 // Fund, which moved credit to it, are the parked gateway's and are not drawn.
+// B61.85 — as Pocket Live's agent page: its round actions are Add money, Take back, Pause (or Resume) and Rules, in that
+// order; Add money and Take back move money between the company's account and the agent's (agent-funding.tsx), Rules
+// opens its rules in words; its card is a row under this month's spend.
 
 export type AgentData = {
   summary: AgentSummary
@@ -36,7 +40,6 @@ export type AgentData = {
 export function AgentView({ data, onChanged }: { data: AgentData; onChanged: () => void }) {
   const { client, peg } = useSession()
   const { c } = useTheme()
-  const { width } = useWindowDimensions()
   const { summary, signs } = data
   const agent = summary.agent
   const paused = !!agent.paused_at
@@ -55,6 +58,9 @@ export function AgentView({ data, onChanged }: { data: AgentData; onChanged: () 
   const instant = shows?.instantTransfer === true
   const held = shows ? balancesByCurrency(summary.currency_accounts ?? [], shows) : []
   const [instantSaid, setInstantSaid] = useState('')
+  const [funding, setFunding] = useState<FundingDirection | null>(null)
+  const [moved, setMoved] = useState('')
+  const [rulesOpen, setRulesOpen] = useState(false)
 
   const changed = () => {
     onChanged()
@@ -120,10 +126,10 @@ export function AgentView({ data, onChanged }: { data: AgentData; onChanged: () 
 
   return (
     <>
-      {/* B57.126 and B57.134: its card first, in Pocket's panel as W4 draws it, then its name and Running or Paused. */}
+      {/* B61.85: its face, its name and Running or Paused; its card is a row under This month. */}
       <View testID="agent-head">
         <Card>
-          <AgentCard agent={agent} width={Math.min(428, width - 76)} />
+          <Face agent={agent} state={paused || allPaused ? 'asleep' : 'happy'} size={60} />
           <View
             style={{
               flexDirection: 'row',
@@ -147,7 +153,25 @@ export function AgentView({ data, onChanged }: { data: AgentData; onChanged: () 
           {agent.description ? <Body muted>{agent.description}</Body> : null}
         </Card>
       </View>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-around' }} testID="agent-actions">
+        <Round icon="plus" label="Add money" accessibilityLabel={`Add money to ${agent.name}`} onPress={() => setFunding('to_agent')} />
+        <Round icon="download" label="Take back" accessibilityLabel={`Take back from ${agent.name}`} onPress={() => setFunding('to_company')} />
+        {paused ? (
+          <Round icon={signs ? 'faceid' : 'arrow'} label={signs ? `Resume with ${biometricName}` : 'Resume'} disabled={busy} hint="Resuming…" onPress={() => (signs ? setAsking(true) : void resume())} />
+        ) : !allPaused ? (
+          <Round icon="pause" label="Pause" disabled={busy} hint="Pausing…" onPress={() => void pause()} />
+        ) : null}
+        <Round icon="settings" label="Rules" accessibilityLabel={`${agent.name}’s rules`} onPress={() => setRulesOpen(true)} />
+      </View>
+      {moved ? <Body>{moved}</Body> : null}
+      {allPaused ? <StartEveryAgentButton signs={signs} busy={busy} onPress={() => setStarting(true)} /> : null}
+      {note ? <Body>{note}</Body> : null}
+      {refusal ? <Body style={{ color: c.danger }}>{refusal}</Body> : null}
+
       <Body muted>Spent this month: {formatLXC(summary.month.spent_ulxc, peg)}</Body>
+      <Card white>
+        <Row first left={<Icon name="card" color={c.ink} />} title={`${agent.name}’s card`} sub="Freeze, details and limits" right={<Icon name="chev" color={c.ink3} />} onPress={() => router.push('/cards')} />
+      </Card>
 
       <PendingApprovals pending={pending} agents={[agent]} allPaused={allPaused} labels={false} onDecided={changed} />
 
@@ -160,28 +184,17 @@ export function AgentView({ data, onChanged }: { data: AgentData; onChanged: () 
         {summary.card.status === 'frozen' ? <Body style={{ color: c.caution }}>Its card is frozen: every purchase on it is refused.</Body> : null}
       </Card>
 
-      <View style={{ gap: 10, marginTop: 4 }}>
-        {paused ? (
-          <Button
-            primary
-            icon={signs ? 'faceid' : undefined}
-            label={signs ? `Resume with ${biometricName}` : 'Resume'}
-            disabled={busy}
-            hint="Resuming…"
-            onPress={() => (signs ? setAsking(true) : void resume())}
-          />
-        ) : null}
-        {allPaused ? <StartEveryAgentButton signs={signs} busy={busy} onPress={() => setStarting(true)} /> : null}
-        {!paused && !allPaused ? <Button variant="secondary" icon="pause" label="Pause" disabled={busy} hint="Pausing…" onPress={() => void pause()} /> : null}
-      </View>
-      {note ? <Body>{note}</Body> : null}
-      {refusal ? <Body style={{ color: c.danger }}>{refusal}</Body> : null}
 
       <Card tight>
         <Toggle label="Pinned to your home-screen widget" value={data.pinned} disabled={busy} onValueChange={(on) => void act(() => setPinned(agent.id, on))} />
       </Card>
 
-      <Card white>
+      <Button label="Statement" onPress={() => router.push({ pathname: '/activity', params: { agent: agent.id } })} />
+
+      <BottomSheet visible={rulesOpen} onClose={() => setRulesOpen(false)} testID="agent-rules">
+        <Headline>{`${agent.name}’s rules`}</Headline>
+        <Body muted>{`${agent.name} pays on its own inside these rules. Anything outside them waits for your yes.`}</Body>
+        <Card white>
         <Eyebrow>Rules</Eyebrow>
         {rulesInWords(data.rules, peg).map((r) => (
           <Body key={r}>{r}</Body>
@@ -195,8 +208,17 @@ export function AgentView({ data, onChanged }: { data: AgentData; onChanged: () 
             {instantSaid ? <Body>{instantSaid}</Body> : null}
           </View>
         ) : null}
-      </Card>
-      <Button label="Statement" onPress={() => router.push({ pathname: '/activity', params: { agent: agent.id } })} />
+        </Card>
+      </BottomSheet>
+      <AgentFundingSheet
+        agent={agent}
+        direction={funding}
+        onClose={() => setFunding(null)}
+        onDone={(said) => {
+          setMoved(said)
+          changed()
+        }}
+      />
 
       <BottomSheet visible={asking} onClose={busy ? undefined : closeSheet}>
         <Headline>{`Resume ${agent.name}?`}</Headline>
@@ -243,5 +265,25 @@ export function AgentView({ data, onChanged }: { data: AgentData; onChanged: () 
         }}
       />
     </>
+  )
+}
+
+/** One of the agent's round actions, as Home's quick actions draw them: a 48-wide circle over its word. */
+function Round({ icon, label, accessibilityLabel, disabled, hint, onPress }: { icon: IconName; label: string; accessibilityLabel?: string; disabled?: boolean; hint?: string; onPress: () => void }) {
+  const { c } = useTheme()
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? label}
+      accessibilityState={{ disabled }}
+      accessibilityHint={disabled ? hint : undefined}
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => [{ alignItems: 'center', gap: 6, minWidth: 72 }, (pressed || disabled) && { opacity: 0.6 }]}>
+      <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: c.cloud, alignItems: 'center', justifyContent: 'center' }}>
+        <Icon name={icon} color={c.ink} />
+      </View>
+      <Text style={{ fontFamily: fonts.uiBold, fontSize: 12.5, color: c.ink, maxWidth: 84, textAlign: 'center' }}>{label}</Text>
+    </Pressable>
   )
 }

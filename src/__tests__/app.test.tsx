@@ -232,8 +232,10 @@ test('signs in, shows the pending approval first on Home, and pauses an agent', 
   expect([...at].sort((a, b) => a - b)).toEqual(at)
 
   await fireEvent.press(screen.getByLabelText('Researcher, running'))
+  await fireEvent.press(await screen.findByRole('button', { name: 'Researcher’s rules' }))
   expect(await screen.findByText('Spends at most $0.10 on one request.')).toBeTruthy()
   expect(screen.getByText('Asks you first above $0.05.')).toBeTruthy()
+  await fireEvent.press(screen.getByRole('button', { name: 'Close' }))
   await fireEvent.press(screen.getByText('Pause'))
   await waitFor(() => expect(screen.getByText('Resume')).toBeTruthy())
   expect(calls.find((c) => c.method === 'POST' && c.path === '/api/agents/ag_1/pause')?.body).toBe(
@@ -241,7 +243,7 @@ test('signs in, shows the pending approval first on Home, and pauses an agent', 
   )
 })
 
-test("B57.126: Home's cards and an agent's own screen draw the agent's card, named as the agent", async () => {
+test("B57.126: Home's cards draw the agent's card, named as the agent, and open its screen, where its card is a row (B61.85)", async () => {
   mockStore.set('talyvor.session', JSON.stringify({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }))
   mockBff()
   await renderRouter('./src/app', { initialUrl: '/' })
@@ -249,16 +251,17 @@ test("B57.126: Home's cards and an agent's own screen draw the agent's card, nam
   expect(screen.getByRole('link', { name: "Buyer's agent card" })).toBeTruthy()
 
   await fireEvent.press(screen.getByRole('link', { name: "Researcher's agent card" }))
+  await fireEvent.press(await screen.findByRole('button', { name: 'Researcher’s rules' }))
   expect(await screen.findByText('Spends at most $0.10 on one request.')).toBeTruthy()
-  expect(screen.getByLabelText("Researcher's agent card")).toBeTruthy()
+  expect(screen.getByRole('button', { name: /Researcher’s card/ })).toBeTruthy()
 })
 
-test("B57.134: the agent's screen opens on its card in Pocket's panel, with its name and Running or Paused, as W4 draws it", async () => {
+test("B61.85: the agent's screen opens on its face, with its name and Running or Paused, as Pocket Live draws it", async () => {
   mockStore.set('talyvor.session', JSON.stringify({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }))
   mockBff()
   await renderRouter('./src/app', { initialUrl: '/agents/ag_1' })
   const head = await screen.findByTestId('agent-head')
-  expect(within(head).getByLabelText("Researcher's agent card")).toBeTruthy()
+  expect(within(head).getByLabelText('Researcher agent')).toBeTruthy()
   expect(within(head).getByRole('header', { name: 'Researcher' })).toBeTruthy()
   expect(within(head).getByText('Running')).toBeTruthy()
   expect(screen.queryByText('Active.')).toBeNull()

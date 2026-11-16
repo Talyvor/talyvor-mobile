@@ -14,6 +14,8 @@ const mockClient = {
   account: async () => ({ workspace_id: 'ws_1', account_type: 'business', money_kind: 'hybrid' }),
   rulesChallenge: async () => ({ looser: false, changes: [], allow_credentials: null }),
   setRules: async () => mockGo.said('rules saved'),
+  // B61.85: Add money and Take back read the accounts when their sheet opens.
+  moneyAccounts: async () => ({ accounts: [] }),
 }
 jest.mock('../session', () => ({
   useSession: () => ({ client: mockClient, peg: 0.1, signedIn: true }),
@@ -79,9 +81,9 @@ const rules = {
 }
 
 test.each([
-  ['running', false, true, 5],
-  ['paused, this phone signing', true, true, 5],
-  ['paused, this phone not signing', true, false, 5],
+  ['running', false, true, 8],
+  ['paused, this phone signing', true, true, 8],
+  ['paused, this phone not signing', true, false, 8],
 ])('an agent %s: every button and the switch does something', async (_, paused, signs, pressed) => {
   const data: AgentData = {
     summary: summary(paused),
@@ -94,6 +96,7 @@ test.each([
     return <AgentView data={data} onChanged={() => said('changed')} />
   })
   expect(report.dead).toEqual([])
-  // Review, Pause or Resume, the pin switch, Can use Instant transfer and Statement
+  // Review; Add money, Take back, Pause or Resume and Rules (B61.85); its card's row, the pin switch and Statement. Can
+  // use Instant transfer is in the Rules sheet now.
   expect(report.pressed).toBe(pressed)
 })
