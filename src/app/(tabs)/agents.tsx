@@ -1,4 +1,4 @@
-import { Link } from 'expo-router'
+import { Link, router } from 'expo-router'
 import { useCallback } from 'react'
 import { Pressable, Text, View } from 'react-native'
 
@@ -6,13 +6,13 @@ import { useAccount } from '@/account'
 import { AgentRow, HOME_MONEY } from '@/components/home'
 import { Icon } from '@/components/icon'
 import { MoneyLabel } from '@/components/money-label'
-import { Body, Headline, LoadState, Screen, useLoad } from '@/components/ui'
+import { Body, Button, Headline, LoadState, Screen, useLoad } from '@/components/ui'
 import { useSession } from '@/session'
 import { fonts, useTheme } from '@/theme'
 
 /** B61.54 — the Agents tab (launch pack design, choice 1): every agent with its picture, the name its owner gave it, what
  * it does, what it holds in its own currency and Paused when it is, each opening its page, and Pause every agent at the
- * top right. "New agent" stands under the headline once B61.37 builds the flow behind it. */
+ * top right. B61.37: "New agent" under the list opens the flow that makes one (agents/new). */
 export default function AgentsScreen() {
   const { client } = useSession()
   const { c } = useTheme()
@@ -67,6 +67,7 @@ export default function AgentsScreen() {
           </View>
         )
       ) : null}
+      {data && shows ? <Button label="New agent" icon="plus" onPress={() => router.push('/agents/new')} /> : null}
     </Screen>
   )
 }
