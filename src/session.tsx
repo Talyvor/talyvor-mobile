@@ -1,4 +1,4 @@
-import { createBffClient, type BffClient, type MobileSession, type SignupAnswers } from '@talyvor/bff-client'
+import { createBffClient, type AccountMove, type BffClient, type MobileSession, type OpenAccountAnswers, type SignupAnswers } from '@talyvor/bff-client'
 import * as SecureStore from 'expo-secure-store'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 
@@ -19,6 +19,10 @@ interface Session {
   /** Trades an ID token for a BFF session and keeps it in the phone's keychain; sign-up sends its answers with it. */
   signIn: (idToken: string, signup?: SignupAnswers) => Promise<void>
   signOut: () => Promise<void>
+  /** B61.10 — moves the session to another of the person's accounts; every screen then reads that account. */
+  switchAccount: (accountID: string) => Promise<void>
+  /** B61.10 — opens another account with sign-up's answers and moves the session to it. */
+  openAccount: (answers: OpenAccountAnswers) => Promise<void>
 }
 
 const SessionContext = createContext<Session | null>(null)
@@ -58,7 +62,22 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setToken(null)
   }, [])
 
-  const value = useMemo(() => ({ ready, signedIn: token !== null, client, peg, signIn, signOut }), [ready, token, client, peg, signIn, signOut])
+  // The BFF ended the old token and answered the new one (suite B61.8). The widget and the Live Activities drew the
+  // account left behind, so they go with it, as at sign-out.
+  const moveTo = useCallback(async (m: AccountMove) => {
+    if (!m.token) return
+    await SecureStore.setItemAsync(KEY, JSON.stringify({ token: m.token, expires_at: m.expires_at } satisfies MobileSession))
+    await clearWidget()
+    await endLiveActivities()
+    setToken(m.token)
+  }, [])
+  const switchAccount = useCallback(async (accountID: string) => moveTo(await client.switchAccount(accountID)), [client, moveTo])
+  const openAccount = useCallback(async (answers: OpenAccountAnswers) => moveTo(await client.openAccount(answers)), [client, moveTo])
+
+  const value = useMemo(
+    () => ({ ready, signedIn: token !== null, client, peg, signIn, signOut, switchAccount, openAccount }),
+    [ready, token, client, peg, signIn, signOut, switchAccount, openAccount],
+  )
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
 }
 

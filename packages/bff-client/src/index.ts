@@ -673,6 +673,31 @@ export interface SignupAnswers {
   name: string
 }
 
+/** B61.10 — one of the signed-in person's accounts, as the BFF's GET /api/accounts lists it (suite B61.8, over Lens
+ * B61.7): the first one opened first, the session's marked. A test session's one account says no type, kind or name. */
+export interface PersonAccount {
+  id: string
+  name: string
+  type: WorkspaceAccount['account_type'] | ''
+  kind: WorkspaceAccount['money_kind'] | ''
+  opened_at: string
+  current: boolean
+}
+
+/** B61.10 — sign-up's answers for another account (the BFF's parseSignupAccount). */
+export interface OpenAccountAnswers {
+  type: WorkspaceAccount['account_type']
+  kind: WorkspaceAccount['money_kind']
+  name: string
+  country: string
+  registration_number?: string
+}
+
+/** B61.10 — the session moved to another account: the phone sends the new token from then on, the old one is ended. */
+export interface AccountMove extends MobileSession {
+  account_id: string
+}
+
 export class BffError extends Error {
   constructor(
     readonly status: number,
@@ -853,6 +878,12 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     /** Trades the identity provider's ID token, got in the system browser with PKCE, for a BFF session; with sign-up's
      * answers when the person is signing up. */
     signIn: (idToken: string, signup?: SignupAnswers) => call<MobileSession>('POST', '/auth/mobile/session', { id_token: idToken, ...signup }),
+    /** B61.10 — the person's accounts, the session's marked current. */
+    accounts: async () => (await call<{ accounts: PersonAccount[] | null }>('GET', '/api/accounts')).accounts ?? [],
+    /** B61.10 — moves the session to another of the person's accounts; any other id is refused 404 and nothing moves. */
+    switchAccount: (accountID: string) => call<AccountMove>('POST', '/api/accounts/switch', { account_id: accountID }),
+    /** B61.10 — opens another account with sign-up's answers, and moves the session to it. */
+    openAccount: (answers: OpenAccountAnswers) => call<AccountMove>('POST', '/api/accounts', answers),
     /** B61.88 — the day's euro reference rates, which open rules held in another currency in the account's. */
     fx: () => call<FXRates>('GET', '/api/fx'),
     /** Whose workspace this session is in. */

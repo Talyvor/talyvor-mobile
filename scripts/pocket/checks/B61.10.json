@@ -1,0 +1,11 @@
+[
+  { "route": "/", "screen": "p-home", "launchPack": "P6", "words": "report", "why": "Your accounts, opened from Home's account pill, in Pocket Live's words (sheet accounts), which win over P6's note", "press": ["Switch account. Northwind Studio, Business · Hybrid"], "answers": { "/api/accounts": { "accounts": [
+    { "id": "ws_northwind", "name": "Northwind Studio", "type": "business", "kind": "hybrid", "opened_at": "2026-10-01T00:00:00Z", "current": true },
+    { "id": "ws_maya", "name": "Maya Lind", "type": "personal", "kind": "fiat", "opened_at": "2026-11-15T00:00:00Z", "current": false }
+  ] } } },
+  { "route": "/", "screen": "p-home", "launchPack": "P6", "dark": true, "words": "report", "why": "the same, with the phone set to dark", "press": ["Switch account. Northwind Studio, Business · Hybrid"], "answers": { "/api/accounts": { "accounts": [
+    { "id": "ws_northwind", "name": "Northwind Studio", "type": "business", "kind": "hybrid", "opened_at": "2026-10-01T00:00:00Z", "current": true },
+    { "id": "ws_maya", "name": "Maya Lind", "type": "personal", "kind": "fiat", "opened_at": "2026-11-15T00:00:00Z", "current": false }
+  ] } } },
+  { "route": "/sign-up?another=1", "screen": "p-home", "launchPack": "P1", "name": "another", "words": "report", "why": "Open another account: sign-up's step 1 for someone signed in, Step 1 of 3, with Back and no Sign in instead" }
+]

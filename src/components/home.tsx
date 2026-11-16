@@ -16,6 +16,7 @@ import { OwnerCard } from './owner-card'
 import { PreparedPaymentCard } from './prepared-payment-card'
 import { StartEveryAgentButton, StartEveryAgentSheet, useSigns } from './start-every-agent'
 import { Body, Button, Chip } from './ui'
+import { YourAccountsSheet } from './your-accounts'
 
 // B57.66 — the phone's Home as the launch pack draws it (design P3 to P5): the account and the Sandbox label, the total
 // in each currency the account's kind shows, Pay, the row that counts what waits for your yes with each request under
@@ -54,28 +55,36 @@ function SectionHead({ title, more }: { title: string; more?: { href: '/cards' |
   )
 }
 
-/** The account pill: its initial, its name, and "Business · Hybrid". */
+/** The account pill: its initial, its name, and "Business · Hybrid". B61.10 — pressing it opens Your accounts. */
 function AccountPill({ name, account }: { name: string | null; account: Account | null }) {
   const { c } = useTheme()
+  const [open, setOpen] = useState(false)
   if (!name && !account) return <View />
   const chip = account ? accountChip(account) : null
   return (
-    <View
-      accessible
-      accessibilityLabel={[name, chip].filter(Boolean).join(', ')}
-      style={{ flexDirection: 'row', alignItems: 'center', gap: 10, height: 48, paddingLeft: 6, paddingRight: 16, borderRadius: 999, backgroundColor: c.cloud, flexShrink: 1 }}>
-      <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: c.page, alignItems: 'center', justifyContent: 'center' }}>
-        <Text style={{ fontFamily: fonts.uiBold, fontSize: 15, color: c.ink }}>{(name ?? chip ?? '').trim().charAt(0).toUpperCase()}</Text>
-      </View>
-      <View style={{ flexShrink: 1 }}>
-        {name ? (
-          <Text numberOfLines={1} style={{ fontFamily: fonts.uiBold, fontSize: 14, color: c.ink }}>
-            {name}
-          </Text>
-        ) : null}
-        {chip ? <Text style={{ fontFamily: fonts.uiMedium, fontSize: 12, color: c.ink2 }}>{chip}</Text> : null}
-      </View>
-    </View>
+    <>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`Switch account. ${[name, chip].filter(Boolean).join(', ')}`}
+        onPress={() => setOpen(true)}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 10, height: 48, paddingLeft: 6, paddingRight: 12, borderRadius: 999, backgroundColor: c.cloud, flexShrink: 1 }}>
+        <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: c.page, alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{ fontFamily: fonts.uiBold, fontSize: 15, color: c.ink }}>{(name ?? chip ?? '').trim().charAt(0).toUpperCase()}</Text>
+        </View>
+        <View style={{ flexShrink: 1 }}>
+          {name ? (
+            <Text numberOfLines={1} style={{ fontFamily: fonts.uiBold, fontSize: 14, color: c.ink }}>
+              {name}
+            </Text>
+          ) : null}
+          {chip ? <Text style={{ fontFamily: fonts.uiMedium, fontSize: 12, color: c.ink2 }}>{chip}</Text> : null}
+        </View>
+        <View style={{ transform: [{ rotate: '90deg' }] }}>
+          <Icon name="chev" size={16} color={c.ink2} />
+        </View>
+      </Pressable>
+      <YourAccountsSheet visible={open} onClose={() => setOpen(false)} />
+    </>
   )
 }
 
