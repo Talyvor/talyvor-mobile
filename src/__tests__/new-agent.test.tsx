@@ -72,6 +72,14 @@ beforeEach(() => {
 
 const disabled = (label: string) => screen.getByRole('button', { name: label }).props.accessibilityState?.disabled === true
 
+/** A limit on the third step: its row opens its sheet, the amount is typed there and saved. */
+async function setRule(row: RegExp, field: string, value: string) {
+  await fireEvent.press(screen.getByRole('button', { name: row }))
+  await fireEvent.changeText(await screen.findByLabelText(field), value)
+  await fireEvent.press(screen.getByText('Save'))
+  await waitFor(() => expect(screen.queryByTestId('new-agent-rule')).toBeNull())
+}
+
 async function openNewAgent() {
   await renderRouter('./src/app', { initialUrl: '/agents' })
   await fireEvent.press(await screen.findByText('New agent'))
@@ -93,8 +101,8 @@ test('one of ours: named by what it does, the owner types the name, and its sugg
   await fireEvent.changeText(name, 'Trips')
   await fireEvent.press(screen.getByText('Continue'))
   expect(await screen.findByText('Set Trips’s limits')).toBeTruthy()
-  expect(screen.getByLabelText('Per payment, in pounds').props.value).toBe('1500')
-  await fireEvent.changeText(screen.getByLabelText('Per payment, in pounds'), '12.50')
+  expect(screen.getByRole('button', { name: 'Per payment, £1,500.00' })).toBeTruthy()
+  await setRule(/^Per payment,/, 'Per payment, in pounds', '12.50')
   expect(screen.queryByText(HELPERS)).toBeNull()
   await fireEvent.press(screen.getByText('Create agent'))
   await waitFor(() => expect(screen).toHavePathname('/agents/ag_new'))
@@ -117,11 +125,11 @@ test('your own: its name, what it does and its picture, and the four rules read 
   await fireEvent.press(screen.getByRole('radio', { name: 'Picture 4' }))
   await fireEvent.press(screen.getByText('Continue'))
   expect(await screen.findByText('Set Atlas’s limits')).toBeTruthy()
-  expect(screen.getByLabelText('Per day, in dollars').props.value).toBe('')
-  await fireEvent.changeText(screen.getByLabelText('Per payment, in dollars'), '50')
-  await fireEvent.changeText(screen.getByLabelText('Per day, in dollars'), '200')
-  await fireEvent.changeText(screen.getByLabelText('Per month, in dollars'), '1000')
-  await fireEvent.changeText(screen.getByLabelText('Ask me above, in dollars'), '20')
+  expect(screen.getByRole('button', { name: 'Per day, None' })).toBeTruthy()
+  await setRule(/^Per payment,/, 'Per payment, in dollars', '50')
+  await setRule(/^Per day,/, 'Per day, in dollars', '200')
+  await setRule(/^Per month,/, 'Per month, in dollars', '1000')
+  await setRule(/^Ask me above,/, 'Ask me above, in dollars', '20')
   await fireEvent.press(screen.getByText('Create agent'))
   await waitFor(() => expect(screen).toHavePathname('/agents/ag_new'))
   expect(bodies['POST /api/agents']).toEqual({ name: 'Atlas', colour: 'lemon', fiat_currency: 'USD' })
@@ -145,4 +153,43 @@ test('with no rule typed, the screen says every payment waits for your yes, and 
   expect(bodies['POST /api/agents']).toEqual({ name: 'Atlas', colour: 'cobalt', fiat_currency: 'GBP' })
   expect(bodies['PATCH /api/agents/ag_new']).toBeUndefined()
   expect(bodies['PUT /api/agents/ag_new/rules']).toMatchObject({ currency: 'GBP', max_per_payment_minor: 0, daily_limit_minor: 0, monthly_limit_minor: 0, approval_above_minor: 1 })
+})
+
+// B57.178 — New agent as Pocket Live draws it (`na` 0 to 2): the three step bars without words, the back arrow alone, and
+// the limits as a card of rows, each its amount in the account's currency and opening its own sheet to change it.
+test('B57.178 the limits are rows that each open a sheet, and the screen reads as Pocket Live draws it', async () => {
+  const bodies = mockBff()
+  await openNewAgent()
+  expect(screen.queryByText(/^Step \d of 3$/)).toBeNull()
+  expect(screen.getByLabelText('Step 1 of 3')).toBeTruthy()
+  expect(screen.queryByText('Back')).toBeNull()
+  expect(screen.getByRole('button', { name: 'Back' })).toBeTruthy()
+  await fireEvent.press(screen.getByRole('radio', { name: /^Travel\./ }))
+  await fireEvent.press(screen.getByText('Continue'))
+  await fireEvent.changeText(await screen.findByLabelText('Its name'), 'Trips')
+  await fireEvent.press(screen.getByText('Continue'))
+  expect(await screen.findByText('Set Trips’s limits')).toBeTruthy()
+  // Each rule a row with its amount, none a field on the screen itself.
+  expect(screen.queryByLabelText('Per payment, in pounds')).toBeNull()
+  expect(screen.getByRole('button', { name: 'Per payment, £1,500.00' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Per day, £3,000.00' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Per month, £6,000.00' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Ask me above, £500.00' })).toBeTruthy()
+  expect(screen.getByText('You can change these any time on the agent’s page.')).toBeTruthy()
+  // Per payment's sheet: its name, what it means, the amount in pounds and Save; a word that is not an amount is not saved.
+  await fireEvent.press(screen.getByRole('button', { name: 'Per payment, £1,500.00' }))
+  expect(await screen.findByText('The most it can pay per payment')).toBeTruthy()
+  await fireEvent.changeText(screen.getByLabelText('Per payment, in pounds'), 'lots')
+  expect(disabled('Save')).toBe(true)
+  await fireEvent.changeText(screen.getByLabelText('Per payment, in pounds'), '12.50')
+  await fireEvent.press(screen.getByText('Save'))
+  expect(await screen.findByRole('button', { name: 'Per payment, £12.50' })).toBeTruthy()
+  await fireEvent.press(screen.getByRole('button', { name: 'Ask me above, £500.00' }))
+  expect(await screen.findByText('A payment above this waits for your yes')).toBeTruthy()
+  await fireEvent.changeText(screen.getByLabelText('Ask me above, in pounds'), '')
+  await fireEvent.press(screen.getByText('Save'))
+  expect(await screen.findByRole('button', { name: 'Ask me above, None' })).toBeTruthy()
+  await fireEvent.press(screen.getByText('Create agent'))
+  await waitFor(() => expect(screen).toHavePathname('/agents/ag_new'))
+  expect(bodies['PUT /api/agents/ag_new/rules']).toMatchObject({ currency: 'GBP', max_per_payment_minor: 1_250, daily_limit_minor: 300_000, monthly_limit_minor: 600_000, approval_above_minor: 0 })
 })
