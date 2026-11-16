@@ -19,6 +19,9 @@ export interface Agent {
   /** B57.10: the colour and face Lens picked from the id (or the owner chose); the phone draws them. */
   colour?: string
   face?: string
+  /** B48.1 — fiat, crypto or both: the wallets it owns, and the currency its fiat wallet is in (B61.88: its rules' currency). */
+  wallet_kind?: 'fiat' | 'crypto' | 'both'
+  fiat_currency?: string
 }
 
 /** Lens economy.AgentBook: workspace = allocated + unallocated. */
@@ -49,6 +52,25 @@ export interface AgentRules {
   timezone: string
   /** B59.20 — "Can use Instant transfer" (Lens B59.15), off by default. A save without it keeps what Lens holds. */
   may_instant_transfer?: boolean
+  /** B61.88 — the currency the rules are held in, GBP, EUR, USD or USDC (Lens B61.12), and each amount limit in its minor
+   * units. The µLXC limits above are what these are worth for the parked gateway; a save names these and not those. */
+  currency?: string
+  max_per_payment_minor?: number
+  hourly_limit_minor?: number
+  daily_limit_minor?: number
+  weekly_limit_minor?: number
+  monthly_limit_minor?: number
+  approval_above_minor?: number
+}
+
+/** B61.88 — the rules as a save names them: the currency and its minor-unit limits, and no µLXC limit. */
+export type AgentRulesSave = Omit<AgentRules, 'max_per_request_ulxc' | 'hourly_limit_ulxc' | 'daily_limit_ulxc' | 'weekly_limit_ulxc' | 'monthly_limit_ulxc' | 'approval_above_ulxc'>
+
+/** The day's euro reference rates (the BFF's /api/fx, B28.22). */
+export interface FXRates {
+  rate_date: string
+  usd_per_eur: number
+  gbp_per_eur: number
 }
 
 /** Lens economy.AgentCard (B19.12): an agent's virtual card. The number stays with the issuer. */
@@ -831,6 +853,8 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     /** Trades the identity provider's ID token, got in the system browser with PKCE, for a BFF session; with sign-up's
      * answers when the person is signing up. */
     signIn: (idToken: string, signup?: SignupAnswers) => call<MobileSession>('POST', '/auth/mobile/session', { id_token: idToken, ...signup }),
+    /** B61.88 — the day's euro reference rates, which open rules held in another currency in the account's. */
+    fx: () => call<FXRates>('GET', '/api/fx'),
     /** Whose workspace this session is in. */
     me: () => call<{ workspace_id: string }>('GET', '/auth/me'),
     /** The workspace's name; Lens answers its id until it is named. */
@@ -859,9 +883,9 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     summary: (id: string) => call<AgentSummary>('GET', `/api/agents/${e(id)}/summary`),
     rules: (id: string) => call<AgentRules>('GET', `/api/agents/${e(id)}/rules`),
     /** B59.44 — what saving these rules would do, and the challenge a looser save is signed over; saves nothing. */
-    rulesChallenge: (id: string, rules: AgentRules) => call<RulesJudgement>('POST', `/api/agents/${e(id)}/rules-challenge`, { rules }),
+    rulesChallenge: (id: string, rules: AgentRulesSave) => call<RulesJudgement>('POST', `/api/agents/${e(id)}/rules-challenge`, { rules }),
     /** B59.44 — saves the agent's rules whole; a looser save carries the phone's signature over rulesChallenge's challenge. */
-    setRules: (id: string, rules: AgentRules, assertion?: DeviceAssertion) =>
+    setRules: (id: string, rules: AgentRulesSave, assertion?: DeviceAssertion) =>
       call<AgentRules>('PUT', `/api/agents/${e(id)}/rules`, assertion ? { rules, assertion } : rules),
     /** B59.20 — Instant transfer, for a Hybrid account (Lens B59.14 to B59.17, the BFF's instant_transfer.go): a quote
      * locked for 30 seconds, the send from an agent's account under a key a retry sends again, and the receipt. */
@@ -1155,20 +1179,127 @@ export function safeToSpend(book: AgentBook, approvals: AgentApproval[]): number
 /** The agent's rules as sentences a person reads; a zero limit or an empty list is no rule and says nothing. */
 export function rulesInWords(r: AgentRules, peg: number | null = null): string[] {
   const out: string[] = []
-  const limit = (micros: number | undefined, words: (amount: string) => string) => {
-    if (micros && micros > 0) out.push(words(formatLXC(micros, peg)))
+  // B61.88 — each limit in the rules' own currency, as Lens holds it; rules Lens gives no currency, in dollars at the peg.
+  const limit = (f: MinorLimit, words: (amount: string) => string) => {
+    const v = r.currency ? (r[f] ?? 0) : (r[ULXC_OF[f]] ?? 0)
+    if (v > 0) out.push(words(r.currency ? formatMinor(v, heldIn(r)) : formatLXC(v, peg)))
   }
-  limit(r.max_per_request_ulxc, (x) => `Spends at most ${x} on one request.`)
-  limit(r.hourly_limit_ulxc, (x) => `Spends at most ${x} an hour.`)
-  limit(r.daily_limit_ulxc, (x) => `Spends at most ${x} a day.`)
-  limit(r.weekly_limit_ulxc, (x) => `Spends at most ${x} a week.`)
-  limit(r.monthly_limit_ulxc, (x) => `Spends at most ${x} a month.`)
-  limit(r.approval_above_ulxc, (x) => `Asks you first above ${x}.`)
+  limit('max_per_payment_minor', (x) => `Spends at most ${x} on one request.`)
+  limit('hourly_limit_minor', (x) => `Spends at most ${x} an hour.`)
+  limit('daily_limit_minor', (x) => `Spends at most ${x} a day.`)
+  limit('weekly_limit_minor', (x) => `Spends at most ${x} a week.`)
+  limit('monthly_limit_minor', (x) => `Spends at most ${x} a month.`)
+  limit('approval_above_minor', (x) => `Asks you first above ${x}.`)
   // B61.15: the requests-a-minute, model and provider rules are the parked gateway's, and are not drawn.
   if (r.allowed_payees?.length) out.push(`Pays only ${r.allowed_payees.length} named payee${r.allowed_payees.length === 1 ? '' : 's'}.`)
   if (r.blocked_payees?.length) out.push(`Never pays ${r.blocked_payees.length} blocked payee${r.blocked_payees.length === 1 ? '' : 's'}.`)
   if (r.active_from && r.active_until) out.push(`Works only from ${r.active_from} to ${r.active_until} (${r.timezone || 'UTC'}).`)
   return out.length ? out : ['No limits: it can spend everything it holds.']
+}
+
+// B61.88 — an agent's rules in the account's own currency, as the web's are (talyvor-suite rulesCurrency.ts, B61.87):
+// Lens (B61.12) holds them in a currency, each amount limit in its minor units — pence, cents, and USDC to its six
+// decimals. A save names the currency and every minor-unit limit and no µLXC limit, which Lens refuses on rules held in
+// pounds or euros.
+
+/** The currencies an agent's rules are held in, and the decimals of each one's minor units. */
+export const RULES_DECIMALS: Readonly<Record<string, number>> = { GBP: 2, EUR: 2, USD: 2, USDC: 6 }
+
+/** A currency in a sentence: "pounds". */
+export const CURRENCY_WORDS: Readonly<Record<string, string>> = { GBP: 'pounds', EUR: 'euros', USD: 'dollars', USDC: 'USDC' }
+
+/** The limits Lens holds in the rules' currency, as AgentRules names them. */
+export type MinorLimit = 'max_per_payment_minor' | 'hourly_limit_minor' | 'daily_limit_minor' | 'weekly_limit_minor' | 'monthly_limit_minor' | 'approval_above_minor'
+
+/** Each limit's µLXC form, which rules Lens gives no currency name alone: dollars at the peg. */
+const ULXC_OF: Record<MinorLimit, 'max_per_request_ulxc' | 'hourly_limit_ulxc' | 'daily_limit_ulxc' | 'weekly_limit_ulxc' | 'monthly_limit_ulxc' | 'approval_above_ulxc'> = {
+  max_per_payment_minor: 'max_per_request_ulxc',
+  hourly_limit_minor: 'hourly_limit_ulxc',
+  daily_limit_minor: 'daily_limit_ulxc',
+  weekly_limit_minor: 'weekly_limit_ulxc',
+  monthly_limit_minor: 'monthly_limit_ulxc',
+  approval_above_minor: 'approval_above_ulxc',
+}
+
+/** The currency the rules are held in: dollars for rules Lens has not given one. */
+export const heldIn = (r: Pick<AgentRules, 'currency'>): string => (r.currency && RULES_DECIMALS[r.currency] !== undefined ? r.currency : 'USD')
+
+/** The currency of the agent's own account: USDC for a crypto agent, its fiat currency otherwise; null when Lens does not say. */
+export function agentCurrency(a: Pick<Agent, 'wallet_kind' | 'fiat_currency'>): string | null {
+  if (a.wallet_kind === 'crypto') return 'USDC'
+  return a.fiat_currency && RULES_DECIMALS[a.fiat_currency] !== undefined ? a.fiat_currency : null
+}
+
+/** A limit as the rules hold it, in their own currency's minor units: from the µLXC form, cents at the peg, when Lens
+ * names no currency, as Lens moves them (never below a cent for a limit there is). */
+export function heldMinor(r: AgentRules, f: MinorLimit, peg: number): number {
+  if (r.currency) return r[f] ?? 0
+  const ulxc = r[ULXC_OF[f]] ?? 0
+  return ulxc > 0 ? Math.max(Math.floor((ulxc * peg) / 10_000), 1) : 0
+}
+
+/** An amount typed in currency → its minor units, exact: `12.50` GBP → 1250, `0.000001` USDC → 1. Empty is 0 (no limit);
+ * null for anything that is not an amount, or has more decimals than the currency's minor units. A leading £, € or $
+ * and thousands commas are allowed. */
+export function parseRuleAmount(text: string, currency: string): number | null {
+  const places = RULES_DECIMALS[currency]
+  if (places === undefined) return null
+  const t = text.trim().replace(/^[£€$]/, '').replace(/,/g, '')
+  if (t === '') return 0
+  const m = /^(\d+)(?:\.(\d+))?$/.exec(t)
+  if (!m || (m[2] ?? '').length > places) return null
+  const minor = Number(m[1]) * 10 ** places + Number((m[2] ?? '').padEnd(places, '0') || '0')
+  return Number.isSafeInteger(minor) ? minor : null
+}
+
+/** Minor units → the text a field shows for them, `12.5`; empty for none. Every minor unit kept, so it reads back exact. */
+export function ruleAmountText(minor: number, currency: string): string {
+  const places = RULES_DECIMALS[currency] ?? 2
+  if (!(minor > 0)) return ''
+  const whole = Math.floor(minor / 10 ** places)
+  const part = String(minor % 10 ** places).padStart(places, '0').replace(/0+$/, '')
+  return part === '' ? String(whole) : `${whole}.${part}`
+}
+
+/** What one unit of each currency is worth in euros' terms: units per euro, from the day's rates. */
+function perEuro(currency: string, fx: FXRates): number | null {
+  if (currency === 'EUR') return 1
+  if (currency === 'GBP') return fx.gbp_per_eur
+  if (currency === 'USD' || currency === 'USDC') return fx.usd_per_eur
+  return null
+}
+
+/** Minor units of from in to's minor units, rounded down: dollars and USDC by their decimals with no rate, as Lens does;
+ * pounds and euros at the day's rate. Null while a rate it needs is unknown. */
+export function convertDown(minor: number, from: string, to: string, fx: FXRates | null): number | null {
+  const [df, dt] = [RULES_DECIMALS[from], RULES_DECIMALS[to]]
+  if (df === undefined || dt === undefined) return null
+  if (minor <= 0) return 0
+  const dollars = (c: string) => c === 'USD' || c === 'USDC'
+  if (from === to || (dollars(from) && dollars(to))) return dt >= df ? minor * 10 ** (dt - df) : Math.floor(minor / 10 ** (df - dt))
+  if (!fx) return null
+  const [pf, pt] = [perEuro(from, fx), perEuro(to, fx)]
+  if (!pf || !pt || !(pf > 0) || !(pt > 0)) return null
+  // A hair over the float's own error, so 1250 × an exact rate never lands one below its whole.
+  return Math.floor((minor / 10 ** df) * (pt / pf) * 10 ** dt + 1e-9)
+}
+
+/** The rules as a save names them: every rule as read, in currency with each limit in its minor units (limits; the
+ * held ones when none are given), and no µLXC limit. */
+export function rulesSave(r: AgentRules, peg: number, currency = heldIn(r), limits?: Record<MinorLimit, number>): AgentRulesSave {
+  const out: AgentRules = { ...r }
+  for (const f of Object.values(ULXC_OF)) delete (out as Partial<AgentRules>)[f]
+  const minor = (f: MinorLimit) => limits?.[f] ?? heldMinor(r, f, peg)
+  return {
+    ...out,
+    currency,
+    max_per_payment_minor: minor('max_per_payment_minor'),
+    hourly_limit_minor: minor('hourly_limit_minor'),
+    daily_limit_minor: minor('daily_limit_minor'),
+    weekly_limit_minor: minor('weekly_limit_minor'),
+    monthly_limit_minor: minor('monthly_limit_minor'),
+    approval_above_minor: minor('approval_above_minor'),
+  }
 }
 
 /** Each capability's label, by key, from the workspace's capabilities; one without a label is left out. */

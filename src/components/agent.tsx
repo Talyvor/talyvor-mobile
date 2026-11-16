@@ -1,4 +1,4 @@
-import { BffError, type AgentRules, type AgentSummary, formatLXC, refusalText, rulesInWords } from '@talyvor/bff-client'
+import { BffError, type AgentRules, type AgentSummary, formatLXC, refusalText, rulesInWords, rulesSave } from '@talyvor/bff-client'
 import { router } from 'expo-router'
 import { useState } from 'react'
 import { useWindowDimensions, View } from 'react-native'
@@ -94,10 +94,12 @@ export function AgentView({ data, onChanged }: { data: AgentData; onChanged: () 
   }
 
   // Turning it on loosens the rules, so Lens takes it only signed with this phone's key over the change's challenge.
+  // B61.88 — the rules go back in the currency Lens holds them in, each limit in its minor units, and no µLXC limit.
+  const countable = !!data.rules.currency || !!peg
   const setInstant = (on: boolean) =>
     act(async () => {
       setInstantSaid('')
-      const proposed = { ...data.rules, may_instant_transfer: on }
+      const proposed = { ...rulesSave(data.rules, peg ?? 0), may_instant_transfer: on }
       try {
         const [j, key] = await Promise.all([client.rulesChallenge(agent.id, proposed), phoneKey(client)])
         let assertion
@@ -186,7 +188,7 @@ export function AgentView({ data, onChanged }: { data: AgentData; onChanged: () 
         ))}
         {instant ? (
           <View testID="instant-rule" style={{ gap: 4 }}>
-            <Toggle label={INSTANT_WORDS.canUse} value={data.rules.may_instant_transfer ?? false} disabled={busy} onValueChange={(on) => void setInstant(on)} />
+            <Toggle label={INSTANT_WORDS.canUse} value={data.rules.may_instant_transfer ?? false} disabled={busy || !countable} onValueChange={(on) => void setInstant(on)} />
             <Body muted style={{ fontSize: 13 }}>
               {INSTANT_WORDS.canUseLine(agent.name)}
             </Body>
