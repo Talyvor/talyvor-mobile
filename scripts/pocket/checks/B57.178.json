@@ -1,0 +1,179 @@
+[
+  {
+    "route": "/agents/new",
+    "screen": "p-agent-research",
+    "account": "personal:fiat",
+    "words": "report",
+    "why": "Pocket Live's phone view na is the reference (texts.json 'ph na0' to 'ph na2'); the older reference draws no New agent on the phone",
+    "name": "na0"
+  },
+  {
+    "route": "/agents/new",
+    "screen": "p-agent-research",
+    "account": "personal:fiat",
+    "words": "report",
+    "why": "Pocket Live's phone view na is the reference (texts.json 'ph na0' to 'ph na2'); the older reference draws no New agent on the phone",
+    "name": "na1",
+    "steps": [
+      [
+        "press",
+        "Travel. Books and pays for trips"
+      ],
+      [
+        "press",
+        "Continue"
+      ]
+    ]
+  },
+  {
+    "route": "/agents/new",
+    "screen": "p-agent-research",
+    "account": "personal:fiat",
+    "words": "report",
+    "why": "Pocket Live's phone view na is the reference (texts.json 'ph na0' to 'ph na2'); the older reference draws no New agent on the phone",
+    "name": "na1own",
+    "steps": [
+      [
+        "press",
+        "Your own. You pick its name, its picture and what it does"
+      ],
+      [
+        "press",
+        "Continue"
+      ]
+    ]
+  },
+  {
+    "route": "/agents/new",
+    "screen": "p-agent-research",
+    "account": "personal:fiat",
+    "words": "report",
+    "why": "Pocket Live's phone view na is the reference (texts.json 'ph na0' to 'ph na2'); the older reference draws no New agent on the phone",
+    "name": "na2",
+    "steps": [
+      [
+        "press",
+        "Travel. Books and pays for trips"
+      ],
+      [
+        "press",
+        "Continue"
+      ],
+      [
+        "fill",
+        "Its name",
+        "Trips"
+      ],
+      [
+        "press",
+        "Continue"
+      ]
+    ]
+  },
+  {
+    "route": "/agents/new",
+    "screen": "p-agent-research",
+    "account": "personal:fiat",
+    "words": "report",
+    "why": "Pocket Live's phone view na is the reference (texts.json 'ph na0' to 'ph na2'); the older reference draws no New agent on the phone",
+    "name": "na0",
+    "dark": true
+  },
+  {
+    "route": "/agents/new",
+    "screen": "p-agent-research",
+    "account": "personal:fiat",
+    "words": "report",
+    "why": "Pocket Live's phone view na is the reference (texts.json 'ph na0' to 'ph na2'); the older reference draws no New agent on the phone",
+    "name": "na1",
+    "steps": [
+      [
+        "press",
+        "Travel. Books and pays for trips"
+      ],
+      [
+        "press",
+        "Continue"
+      ]
+    ],
+    "dark": true
+  },
+  {
+    "route": "/agents/new",
+    "screen": "p-agent-research",
+    "account": "personal:fiat",
+    "words": "report",
+    "why": "Pocket Live's phone view na is the reference (texts.json 'ph na0' to 'ph na2'); the older reference draws no New agent on the phone",
+    "name": "na1own",
+    "steps": [
+      [
+        "press",
+        "Your own. You pick its name, its picture and what it does"
+      ],
+      [
+        "press",
+        "Continue"
+      ]
+    ],
+    "dark": true
+  },
+  {
+    "route": "/agents/new",
+    "screen": "p-agent-research",
+    "account": "personal:fiat",
+    "words": "report",
+    "why": "Pocket Live's phone view na is the reference (texts.json 'ph na0' to 'ph na2'); the older reference draws no New agent on the phone",
+    "name": "na2",
+    "steps": [
+      [
+        "press",
+        "Travel. Books and pays for trips"
+      ],
+      [
+        "press",
+        "Continue"
+      ],
+      [
+        "fill",
+        "Its name",
+        "Trips"
+      ],
+      [
+        "press",
+        "Continue"
+      ]
+    ],
+    "dark": true
+  },
+  {
+    "route": "/agents/new",
+    "screen": "p-agent-research",
+    "account": "personal:fiat",
+    "words": "report",
+    "why": "Pocket Live's phone view na is the reference (texts.json 'ph na0' to 'ph na2'); the older reference draws no New agent on the phone; Per payment's sheet, as ruleEdit draws it",
+    "name": "na2-edit",
+    "steps": [
+      [
+        "press",
+        "Travel. Books and pays for trips"
+      ],
+      [
+        "press",
+        "Continue"
+      ],
+      [
+        "fill",
+        "Its name",
+        "Trips"
+      ],
+      [
+        "press",
+        "Continue"
+      ],
+      [
+        "press",
+        "Per payment, $1,500.00"
+      ]
+    ]
+  }
+]

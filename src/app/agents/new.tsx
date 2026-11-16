@@ -1,7 +1,7 @@
-import { type Agent, BffError, CURRENCY_WORDS, parseRuleAmount, refusalText } from '@talyvor/bff-client'
+import { type Agent, BffError, CURRENCY_WORDS, formatMinor, parseRuleAmount, refusalText } from '@talyvor/bff-client'
 import { router } from 'expo-router'
 import { type ReactNode, useCallback, useState } from 'react'
-import { Pressable, Text, View } from 'react-native'
+import { Pressable, Text, TextInput, View } from 'react-native'
 
 import { useAccount } from '@/account'
 import { AGENT_KINDS, type AgentKindChoice, newAgentRules, RULE_FIELDS, type RuleKey } from '@/agent-kinds'
@@ -9,7 +9,9 @@ import { Face, type FaceColour } from '@/components/face'
 import { HOME_MONEY } from '@/components/home'
 import { Icon } from '@/components/icon'
 import { MoneyLabel } from '@/components/money-label'
-import { Body, Button, Field, Headline, LoadState, Screen, useLoad } from '@/components/ui'
+import { BottomSheet } from '@/components/pay-sheet'
+import { Press } from '@/components/press'
+import { Body, Button, Card, Field, Headline, LoadState, Screen, useLoad } from '@/components/ui'
 import { biometricName, keyGone, keyGoneText, phoneKey, signWithThisPhone } from '@/keys'
 import { useSession } from '@/session'
 import { fonts, useTheme } from '@/theme'
@@ -19,6 +21,8 @@ import { fonts, useTheme } from '@/theme'
 // with the picture and what it does for your own; then the four rules in the account's currency, the six's suggested
 // amounts filled in and each changeable. Create makes the agent, saves what it does and its rules, and opens its page.
 // A save Lens judges looser is signed with this phone's key, as every rules save on the phone is (B59.44).
+// B57.178 — as Pocket Live draws it: the back arrow alone, three step bars without words, the pictures at 56, and the
+// limits as a card of rows, each its amount in the account's currency, opening its own sheet (ruleEdit) to change it.
 
 const FIAT_ORDER = ['USD', 'EUR', 'GBP']
 const STEPS = 3
@@ -44,15 +48,14 @@ function minorOf(typed: Typed, currency: string): Record<RuleKey, number> | null
   return out
 }
 
-/** A bar a step, tangerine when reached, then "Step n of 3", as sign-up's. */
+/** A bar a step across the width, tangerine when reached; "Step n of 3" is said, not shown (Pocket Live's .steps). */
 function Steps({ at }: { at: number }) {
   const { c } = useTheme()
   return (
-    <View accessible accessibilityLabel={`Step ${at} of ${STEPS}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+    <View accessible accessibilityRole="image" accessibilityLabel={`Step ${at} of ${STEPS}`} style={{ flexDirection: 'row', gap: 5, paddingTop: 6, paddingHorizontal: 2 }}>
       {Array.from({ length: STEPS }, (_, i) => (
-        <View key={i} style={{ width: 28, height: 6, borderRadius: 3, backgroundColor: i < at ? c.tangerine : c.cloud2 }} />
+        <View key={i} style={{ flex: 1, height: 5, borderRadius: 999, backgroundColor: i < at ? c.tangerine : c.cloud2 }} />
       ))}
-      <Text style={{ marginLeft: 6, fontFamily: fonts.uiMedium, fontSize: 13, color: c.ink2 }}>{`Step ${at} of ${STEPS}`}</Text>
     </View>
   )
 }
@@ -108,6 +111,7 @@ export default function NewAgentScreen() {
   const [busy, setBusy] = useState(false)
   const [said, setSaid] = useState('')
   const [made, setMade] = useState<{ agent: Agent; unsaved: string[] } | null>(null)
+  const [editing, setEditing] = useState<RuleKey | null>(null)
 
   const ours = start && start !== 'own' ? start : null
   const pick = (s: Start) => {
@@ -175,7 +179,7 @@ export default function NewAgentScreen() {
         <Body muted>Pick one of ours, or make your own.</Body>
         <View accessibilityRole="radiogroup" style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 10 }}>
           {AGENT_KINDS.map((k) => (
-            <Choice key={k.kind} picked={ours?.kind === k.kind} onPick={() => pick(k)} title={k.kind} line={k.line} left={picture(k.colour, k.kind, 40)} />
+            <Choice key={k.kind} picked={ours?.kind === k.kind} onPick={() => pick(k)} title={k.kind} line={k.line} left={picture(k.colour, k.kind, 56)} />
           ))}
           <Choice
             wide
@@ -184,7 +188,7 @@ export default function NewAgentScreen() {
             title="Your own"
             line="You pick its name, its picture and what it does"
             left={
-              <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: c.page }}>
+              <View style={{ width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', backgroundColor: c.page }}>
                 <Icon name="plus" size={20} color={c.ink2} />
               </View>
             }
@@ -232,27 +236,39 @@ export default function NewAgentScreen() {
         <Headline>{`Set ${trimmed}’s limits`}</Headline>
         <Body muted>{`${trimmed} pays on its own inside these. Anything outside waits for your yes.`}</Body>
         <LoadState loading={currency === null} error={accounts.error} />
-        {currency
-          ? RULE_FIELDS.map(([key, label]) => (
-              <Field
-                key={key}
-                label={`${label} (${currency})`}
-                accessibilityLabel={`${label}, in ${words}`}
-                value={typed[key]}
-                onChangeText={(v) => setTyped((t) => ({ ...t, [key]: v }))}
-                placeholder="None"
-                keyboardType="decimal-pad"
-              />
-            ))
-          : null}
+        {currency ? (
+          <Card>
+            {RULE_FIELDS.map(([key, label], i) => {
+              const amount = parseRuleAmount(typed[key], currency)
+              const shown = typed[key].trim() === '' ? 'None' : amount === null ? typed[key] : formatMinor(amount, currency)
+              return <RuleRow key={key} first={i === 0} label={label} amount={shown} onPress={() => setEditing(key)} />
+            })}
+          </Card>
+        ) : null}
         {nothingTyped ? (
           <View testID="new-agent-every-payment">
             <Body>With none of these set, every payment waits for your yes.</Body>
           </View>
         ) : null}
-        {currency && minor === null ? <Body style={{ color: c.danger }}>{`Type each amount in ${words}, like 50 or 12.50.`}</Body> : null}
-        <Body muted>You can change these any time on the agent’s page.</Body>
+        <View style={{ flexDirection: 'row', gap: 10, paddingVertical: 12, paddingHorizontal: 14, borderRadius: 14, backgroundColor: c.cloud }}>
+          <Icon name="sliders" size={20} color={c.ink2} />
+          <Text style={{ flex: 1, fontFamily: fonts.ui, fontSize: 13.5, lineHeight: 19, color: c.ink2 }}>You can change these any time on the agent’s page.</Text>
+        </View>
         {said ? <Body style={{ color: c.danger }}>{said}</Body> : null}
+        {currency && editing ? (
+          <RuleSheet
+            label={RULE_FIELDS.find(([key]) => key === editing)![1]}
+            asks={editing === 'askAbove'}
+            currency={currency}
+            words={words}
+            value={typed[editing]}
+            onClose={() => setEditing(null)}
+            onSave={(v) => {
+              setTyped((t) => ({ ...t, [editing]: v }))
+              setEditing(null)
+            }}
+          />
+        ) : null}
       </>
     )
     next = <Button primary label={busy ? 'Creating…' : 'Create agent'} disabled={busy || !minor || !trimmed} hint="Creating…" onPress={() => void create()} />
@@ -270,15 +286,62 @@ export default function NewAgentScreen() {
   )
 }
 
-/** Back a step, or off New agent from its first. */
+/** Back a step, or off New agent from its first: the arrow alone, as Pocket Live's nav draws it. */
 function BackStep({ onPress }: { onPress: () => void }) {
   const { c } = useTheme()
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel="Back" hitSlop={10} onPress={onPress} style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-      <View style={{ transform: [{ scaleX: -1 }] }}>
-        <Icon name="chev" size={16} color={c.ink2} />
+    <Press accessibilityRole="button" accessibilityLabel="Back" hitSlop={6} onPress={onPress} style={{ width: 44, height: 44, marginLeft: -12, alignItems: 'center', justifyContent: 'center' }}>
+      <Icon name="back" size={22} color={c.ink} />
+    </Press>
+  )
+}
+
+/** One limit on the third step: its name, its amount on the right and the way into its sheet. */
+function RuleRow({ label, amount, first, onPress }: { label: string; amount: string; first: boolean; onPress: () => void }) {
+  const { c } = useTheme()
+  return (
+    <Press
+      kind="row"
+      accessibilityRole="button"
+      accessibilityLabel={`${label}, ${amount}`}
+      onPress={onPress}
+      style={[{ flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 52 }, !first && { borderTopWidth: 1, borderTopColor: c.line }]}>
+      <Text style={{ flex: 1, fontFamily: fonts.uiMedium, fontSize: 15, color: c.ink }}>{label}</Text>
+      <Text style={{ fontFamily: fonts.uiBold, fontSize: 15, color: c.ink, fontVariant: ['tabular-nums'] }}>{amount}</Text>
+      <Icon name="chev" size={16} color={c.ink3} />
+    </Press>
+  )
+}
+
+/** A limit's sheet (Pocket Live's ruleEdit): its name and the Sandbox label, the amount in the account's currency, what it
+ * means, and Save. Empty is no limit; anything that is not an amount in the currency is not saved. */
+function RuleSheet({ label, asks, currency, words, value, onClose, onSave }: { label: string; asks: boolean; currency: string; words: string; value: string; onClose: () => void; onSave: (v: string) => void }) {
+  const { c } = useTheme()
+  const [draft, setDraft] = useState(value)
+  const ok = parseRuleAmount(draft, currency) !== null
+  return (
+    <BottomSheet visible onClose={onClose} testID="new-agent-rule">
+      <View style={{ gap: 12 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Headline>{label}</Headline>
+          <MoneyLabel capability={HOME_MONEY} />
+        </View>
+        <TextInput
+          accessibilityLabel={`${label}, in ${words}`}
+          value={draft}
+          onChangeText={setDraft}
+          placeholder="None"
+          placeholderTextColor={c.ink3}
+          keyboardType="decimal-pad"
+          autoFocus
+          style={{ fontFamily: fonts.display, fontSize: 46, color: c.ink, textAlign: 'center', paddingVertical: 6, fontVariant: ['tabular-nums'] }}
+        />
+        <Text style={{ fontFamily: fonts.ui, fontSize: 13, color: c.ink3, textAlign: 'center' }}>
+          {asks ? 'A payment above this waits for your yes' : `The most it can pay ${label.toLowerCase()}`}
+        </Text>
+        {ok ? null : <Body style={{ color: c.danger, textAlign: 'center' }}>{`Type the amount in ${words}, like 50 or 12.50.`}</Body>}
+        <Button primary label="Save" disabled={!ok} hint={`Type the amount in ${words}, like 50 or 12.50.`} onPress={() => onSave(draft.trim())} />
       </View>
-      <Text style={{ fontFamily: fonts.uiMedium, fontSize: 15, color: c.ink2 }}>Back</Text>
-    </Pressable>
+    </BottomSheet>
   )
 }

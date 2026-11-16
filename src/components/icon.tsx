@@ -104,6 +104,14 @@ const ICONS = {
   ),
   plus: <Path d="M12 5v14M5 12h14" />,
   chev: <Path d="M10 7l5 5-5 5" />,
+  back: <Path d="M15 5 8 12l7 7" />,
+  sliders: (
+    <>
+      <Path d="M4 7h9M17 7h3M4 17h3M11 17h9" />
+      <Circle cx="15" cy="7" r="2" />
+      <Circle cx="9" cy="17" r="2" />
+    </>
+  ),
   faceid: (
     <>
       <Path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2" />
