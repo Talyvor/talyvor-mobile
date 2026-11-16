@@ -545,6 +545,35 @@ export interface KeyRecovery {
   mine: boolean
 }
 
+/** B61.34 — Lens economy.FoundPerson (B61.32): a person on Talyvor as a lookup shows them, by their shown name only. */
+export interface FoundPerson {
+  shown_name: string
+}
+
+/** B61.34 — a payment to a person, exactly as it is asked a challenge for and then sent (BFF B61.33, Lens B61.32). */
+export interface PersonPaymentRequest {
+  /** the Talyvor name, phone number or email typed */
+  to: string
+  amount_minor: number
+  currency: string
+  /** the account's own account it leaves, in that currency */
+  account_id: string
+  note: string
+  idempotency_key: string
+}
+
+/** B61.34 — Lens economy.PersonPayment: one payment to a person, as the sender sees it. */
+export interface PersonPayment {
+  id: string
+  to_shown_name: string
+  from_account_id: string
+  amount_minor: number
+  currency: string
+  note?: string
+  idempotency_key: string
+  created_at: string
+}
+
 /** A payment to a saved payee, exactly as it is asked a challenge for and then sent. */
 export interface OutsidePaymentRequest {
   account_id: string
@@ -1076,6 +1105,13 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
      * pays it only with `assertion`, a signature over paymentChallenge's challenge for this same body. */
     pay: (body: OutsidePaymentRequest, assertion?: DeviceAssertion) =>
       call<OutsidePayment>('POST', '/api/money/payments', assertion ? { ...body, assertion } : body),
+    // B61.34 — Pay, to a person on Talyvor (BFF B61.33, Lens B61.32): find answers their shown name and nothing else, or
+    // Lens's one answer for nobody found (404); a payment is signed over its own challenge and paid once under its key.
+    findPerson: (to: string) => call<FoundPerson>('POST', '/api/money/people/find', { to }),
+    personPaymentChallenge: (body: PersonPaymentRequest) =>
+      call<{ challenge: string; allow_credentials: string[] | null }>('POST', '/api/money/people/pay/challenge', body),
+    payPerson: (body: PersonPaymentRequest, assertion?: DeviceAssertion) =>
+      call<PersonPayment>('POST', '/api/money/people/pay', assertion ? { ...body, assertion } : body),
     devices: () => call<{ devices: DeviceKey[] | null }>('GET', '/api/money/devices'),
     /** The single-use challenge a new device key signs and binds its attestation to. */
     deviceChallenge: () => call<{ challenge: string }>('POST', '/api/money/devices/challenge'),
