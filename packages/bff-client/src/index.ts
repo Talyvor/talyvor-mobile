@@ -392,6 +392,21 @@ export interface WithdrawalRequest {
 }
 
 /** B59.33 — Lens economy.Conversion between the company's two sides (B59.51): sell_minor leaves, the fee (margin) included. */
+/** B61.85 — which way Add money (to_agent) or Take back (to_company) moves money. */
+export type FundingDirection = 'to_agent' | 'to_company'
+
+/** B61.85 — Lens economy.AgentFunding: one move between the company's account and an agent's, and what each holds after. */
+export interface AgentFundingMove {
+  direction: FundingDirection
+  currency: string
+  amount_minor: number
+  company_account_id: string
+  agent_account_id: string
+  agent_id: string
+  company_balance_minor: number
+  agent_balance_minor: number
+}
+
 export interface SideConversion {
   id: string
   sell_minor: number
@@ -1022,6 +1037,10 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     // the last two signed over a challenge that names that key.
     walletTopUp: (accountId: string, amount_minor: number, key: string) =>
       call<unknown>('POST', `/api/money/accounts/${e(accountId)}/top-up`, { amount_minor }, { 'Idempotency-Key': key }),
+    // B61.85 — Add money and Take back (BFF B61.84, Lens B61.66): between the company's account and the agent's account
+    // accountId, in its currency, now, once under its key.
+    agentFunding: (accountId: string, direction: FundingDirection, amount_minor: number, key: string) =>
+      call<AgentFundingMove>('POST', `/api/money/accounts/${e(accountId)}/funding`, { direction, amount_minor }, { 'Idempotency-Key': key }),
     walletWithdrawChallenge: (accountId: string, body: WithdrawalRequest, key: string) =>
       call<{ challenge: string; allow_credentials: string[] | null }>('POST', `/api/money/accounts/${e(accountId)}/withdraw/challenge`, body, { 'Idempotency-Key': key }),
     walletWithdraw: (accountId: string, body: WithdrawalRequest, key: string, assertion?: DeviceAssertion) =>

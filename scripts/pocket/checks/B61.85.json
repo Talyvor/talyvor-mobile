@@ -1,0 +1,471 @@
+[
+ {
+  "route": "/agents/agt_research",
+  "screen": "p-agent-research",
+  "words": "report",
+  "why": "Pocket Live's phone agent page (design/pocket-live, ph agent): round actions Add money, Take back, Pause and Rules; its card a row under this month",
+  "answers": {
+   "/api/money/accounts": {
+    "accounts": [
+     {
+      "id": "acc_usd",
+      "currency": "USD",
+      "purpose": "company",
+      "status": "open",
+      "name": "",
+      "balance_minor": 320000
+     },
+     {
+      "id": "acc_r_usd",
+      "agent_id": "agt_research",
+      "currency": "USD",
+      "purpose": "agent",
+      "status": "open",
+      "name": "Research · USD",
+      "balance_minor": 16500
+     },
+     {
+      "id": "acc_s_usd",
+      "agent_id": "agt_sales",
+      "currency": "USD",
+      "purpose": "agent",
+      "status": "open",
+      "name": "Sales · USD",
+      "balance_minor": 12000
+     }
+    ]
+   }
+  }
+ },
+ {
+  "route": "/agents/agt_research",
+  "screen": "p-agent-research",
+  "name": "fund",
+  "words": "report",
+  "steps": [
+   [
+    "press",
+    "Add money to Research"
+   ],
+   [
+    "fill",
+    "Amount in USD",
+    "10"
+   ]
+  ],
+  "why": "Pocket Live's fund sheet: Add money to Research, from the company account and what it holds, the amount in its currency",
+  "answers": {
+   "/api/money/accounts": {
+    "accounts": [
+     {
+      "id": "acc_usd",
+      "currency": "USD",
+      "purpose": "company",
+      "status": "open",
+      "name": "",
+      "balance_minor": 320000
+     },
+     {
+      "id": "acc_r_usd",
+      "agent_id": "agt_research",
+      "currency": "USD",
+      "purpose": "agent",
+      "status": "open",
+      "name": "Research · USD",
+      "balance_minor": 16500
+     },
+     {
+      "id": "acc_s_usd",
+      "agent_id": "agt_sales",
+      "currency": "USD",
+      "purpose": "agent",
+      "status": "open",
+      "name": "Sales · USD",
+      "balance_minor": 12000
+     }
+    ]
+   }
+  }
+ },
+ {
+  "route": "/agents/agt_research",
+  "screen": "p-agent-research",
+  "name": "fund-review",
+  "words": "report",
+  "steps": [
+   [
+    "press",
+    "Add money to Research"
+   ],
+   [
+    "fill",
+    "Amount in USD",
+    "10"
+   ],
+   [
+    "press",
+    "Continue"
+   ]
+  ],
+  "why": "the fund sheet's one review line and Move",
+  "answers": {
+   "/api/money/accounts": {
+    "accounts": [
+     {
+      "id": "acc_usd",
+      "currency": "USD",
+      "purpose": "company",
+      "status": "open",
+      "name": "",
+      "balance_minor": 320000
+     },
+     {
+      "id": "acc_r_usd",
+      "agent_id": "agt_research",
+      "currency": "USD",
+      "purpose": "agent",
+      "status": "open",
+      "name": "Research · USD",
+      "balance_minor": 16500
+     },
+     {
+      "id": "acc_s_usd",
+      "agent_id": "agt_sales",
+      "currency": "USD",
+      "purpose": "agent",
+      "status": "open",
+      "name": "Sales · USD",
+      "balance_minor": 12000
+     }
+    ]
+   }
+  }
+ },
+ {
+  "route": "/agents/agt_research",
+  "screen": "p-agent-research",
+  "name": "take",
+  "words": "report",
+  "steps": [
+   [
+    "press",
+    "Take back from Research"
+   ],
+   [
+    "fill",
+    "Amount in USD",
+    "4"
+   ]
+  ],
+  "why": "Pocket Live's take sheet: Take back from Research, into the company account, and what Research holds",
+  "answers": {
+   "/api/money/accounts": {
+    "accounts": [
+     {
+      "id": "acc_usd",
+      "currency": "USD",
+      "purpose": "company",
+      "status": "open",
+      "name": "",
+      "balance_minor": 320000
+     },
+     {
+      "id": "acc_r_usd",
+      "agent_id": "agt_research",
+      "currency": "USD",
+      "purpose": "agent",
+      "status": "open",
+      "name": "Research · USD",
+      "balance_minor": 16500
+     },
+     {
+      "id": "acc_s_usd",
+      "agent_id": "agt_sales",
+      "currency": "USD",
+      "purpose": "agent",
+      "status": "open",
+      "name": "Sales · USD",
+      "balance_minor": 12000
+     }
+    ]
+   }
+  }
+ },
+ {
+  "route": "/wallets",
+  "screen": "p-agent-research",
+  "name": "wallets",
+  "words": "report",
+  "scroll": "Your team’s agents",
+  "why": "Pocket Live's phone Balances (ph wallets): Your team's agents, each with Add money and Take back",
+  "answers": {
+   "/api/money/accounts": {
+    "accounts": [
+     {
+      "id": "acc_usd",
+      "currency": "USD",
+      "purpose": "company",
+      "status": "open",
+      "name": "",
+      "balance_minor": 320000
+     },
+     {
+      "id": "acc_r_usd",
+      "agent_id": "agt_research",
+      "currency": "USD",
+      "purpose": "agent",
+      "status": "open",
+      "name": "Research · USD",
+      "balance_minor": 16500
+     },
+     {
+      "id": "acc_s_usd",
+      "agent_id": "agt_sales",
+      "currency": "USD",
+      "purpose": "agent",
+      "status": "open",
+      "name": "Sales · USD",
+      "balance_minor": 12000
+     }
+    ]
+   }
+  }
+ },
+ {
+  "route": "/agents/agt_research",
+  "screen": "p-agent-research",
+  "words": "report",
+  "why": "Pocket Live's phone agent page (design/pocket-live, ph agent): round actions Add money, Take back, Pause and Rules; its card a row under this month",
+  "answers": {
+   "/api/money/accounts": {
+    "accounts": [
+     {
+      "id": "acc_usd",
+      "currency": "USD",
+      "purpose": "company",
+      "status": "open",
+      "name": "",
+      "balance_minor": 320000
+     },
+     {
+      "id": "acc_r_usd",
+      "agent_id": "agt_research",
+      "currency": "USD",
+      "purpose": "agent",
+      "status": "open",
+      "name": "Research · USD",
+      "balance_minor": 16500
+     },
+     {
+      "id": "acc_s_usd",
+      "agent_id": "agt_sales",
+      "currency": "USD",
+      "purpose": "agent",
+      "status": "open",
+      "name": "Sales · USD",
+      "balance_minor": 12000
+     }
+    ]
+   }
+  },
+  "dark": true
+ },
+ {
+  "route": "/agents/agt_research",
+  "screen": "p-agent-research",
+  "name": "fund",
+  "words": "report",
+  "steps": [
+   [
+    "press",
+    "Add money to Research"
+   ],
+   [
+    "fill",
+    "Amount in USD",
+    "10"
+   ]
+  ],
+  "why": "Pocket Live's fund sheet: Add money to Research, from the company account and what it holds, the amount in its currency",
+  "answers": {
+   "/api/money/accounts": {
+    "accounts": [
+     {
+      "id": "acc_usd",
+      "currency": "USD",
+      "purpose": "company",
+      "status": "open",
+      "name": "",
+      "balance_minor": 320000
+     },
+     {
+      "id": "acc_r_usd",
+      "agent_id": "agt_research",
+      "currency": "USD",
+      "purpose": "agent",
+      "status": "open",
+      "name": "Research · USD",
+      "balance_minor": 16500
+     },
+     {
+      "id": "acc_s_usd",
+      "agent_id": "agt_sales",
+      "currency": "USD",
+      "purpose": "agent",
+      "status": "open",
+      "name": "Sales · USD",
+      "balance_minor": 12000
+     }
+    ]
+   }
+  },
+  "dark": true
+ },
+ {
+  "route": "/agents/agt_research",
+  "screen": "p-agent-research",
+  "name": "fund-review",
+  "words": "report",
+  "steps": [
+   [
+    "press",
+    "Add money to Research"
+   ],
+   [
+    "fill",
+    "Amount in USD",
+    "10"
+   ],
+   [
+    "press",
+    "Continue"
+   ]
+  ],
+  "why": "the fund sheet's one review line and Move",
+  "answers": {
+   "/api/money/accounts": {
+    "accounts": [
+     {
+      "id": "acc_usd",
+      "currency": "USD",
+      "purpose": "company",
+      "status": "open",
+      "name": "",
+      "balance_minor": 320000
+     },
+     {
+      "id": "acc_r_usd",
+      "agent_id": "agt_research",
+      "currency": "USD",
+      "purpose": "agent",
+      "status": "open",
+      "name": "Research · USD",
+      "balance_minor": 16500
+     },
+     {
+      "id": "acc_s_usd",
+      "agent_id": "agt_sales",
+      "currency": "USD",
+      "purpose": "agent",
+      "status": "open",
+      "name": "Sales · USD",
+      "balance_minor": 12000
+     }
+    ]
+   }
+  },
+  "dark": true
+ },
+ {
+  "route": "/agents/agt_research",
+  "screen": "p-agent-research",
+  "name": "take",
+  "words": "report",
+  "steps": [
+   [
+    "press",
+    "Take back from Research"
+   ],
+   [
+    "fill",
+    "Amount in USD",
+    "4"
+   ]
+  ],
+  "why": "Pocket Live's take sheet: Take back from Research, into the company account, and what Research holds",
+  "answers": {
+   "/api/money/accounts": {
+    "accounts": [
+     {
+      "id": "acc_usd",
+      "currency": "USD",
+      "purpose": "company",
+      "status": "open",
+      "name": "",
+      "balance_minor": 320000
+     },
+     {
+      "id": "acc_r_usd",
+      "agent_id": "agt_research",
+      "currency": "USD",
+      "purpose": "agent",
+      "status": "open",
+      "name": "Research · USD",
+      "balance_minor": 16500
+     },
+     {
+      "id": "acc_s_usd",
+      "agent_id": "agt_sales",
+      "currency": "USD",
+      "purpose": "agent",
+      "status": "open",
+      "name": "Sales · USD",
+      "balance_minor": 12000
+     }
+    ]
+   }
+  },
+  "dark": true
+ },
+ {
+  "route": "/wallets",
+  "screen": "p-agent-research",
+  "name": "wallets",
+  "words": "report",
+  "scroll": "Your team’s agents",
+  "why": "Pocket Live's phone Balances (ph wallets): Your team's agents, each with Add money and Take back",
+  "answers": {
+   "/api/money/accounts": {
+    "accounts": [
+     {
+      "id": "acc_usd",
+      "currency": "USD",
+      "purpose": "company",
+      "status": "open",
+      "name": "",
+      "balance_minor": 320000
+     },
+     {
+      "id": "acc_r_usd",
+      "agent_id": "agt_research",
+      "currency": "USD",
+      "purpose": "agent",
+      "status": "open",
+      "name": "Research · USD",
+      "balance_minor": 16500
+     },
+     {
+      "id": "acc_s_usd",
+      "agent_id": "agt_sales",
+      "currency": "USD",
+      "purpose": "agent",
+      "status": "open",
+      "name": "Sales · USD",
+      "balance_minor": 12000
+     }
+    ]
+   }
+  },
+  "dark": true
+ }
+]
