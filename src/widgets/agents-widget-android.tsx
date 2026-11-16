@@ -68,7 +68,7 @@ export const AgentsWidgetAndroid = (p: AgentsWidgetProps, env: WidgetEnvironment
               {/* Resume is a decision to let it spend again, so it opens the agent's resume sheet, not a home-screen tap. */}
               {tap(a.paused ? 'Resume' : 'Pause', a.paused ? a.resumeUrl : a.pauseUrl)}
               <Spacer modifiers={[width(6)]} />
-              {tap('Fund', a.fundUrl)}
+              {tap('Add money', a.fundUrl)}
             </Row>,
           )}
         </Column>

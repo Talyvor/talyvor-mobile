@@ -4,6 +4,8 @@ import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/te
 import * as compose from '@expo/ui/jetpack-compose'
 import * as Notifications from 'expo-notifications'
 import * as modifiers from '@expo/ui/jetpack-compose/modifiers'
+import * as swiftUI from '@expo/ui/swift-ui'
+import * as swiftModifiers from '@expo/ui/swift-ui/modifiers'
 import { isValidElement, type ReactNode } from 'react'
 import { Fragment, jsx, jsxs } from 'react/jsx-runtime'
 
@@ -32,7 +34,15 @@ jest.mock('expo-auth-session', () => ({
 let mockUuid = 0
 jest.mock('expo-crypto', () => ({ randomUUID: () => `uuid-${++mockUuid}` }))
 const mockSnapshots: { signedIn: boolean; total: string; agents: { id: string; paused: boolean; pauseUrl: string }[]; payees: { id: string; name: string; last: string; openUrl: string }[] }[] = []
-jest.mock('expo-widgets', () => ({ ...jest.requireActual('../../__mocks__/expo-widgets'), createWidget: () => ({ updateSnapshot: (p: never) => mockSnapshots.push(p) }) }))
+// Each widget layout, as the 'widget' directive hands it to createWidget: the iPhone's and Android's.
+jest.mock('expo-widgets', () => {
+  const layouts: unknown[] = []
+  return {
+    ...jest.requireActual('../../__mocks__/expo-widgets'),
+    layouts,
+    createWidget: (_name: string, layout: unknown) => (layouts.push(layout), { updateSnapshot: (p: never) => mockSnapshots.push(p) }),
+  }
+})
 jest.mock('../config', () => ({ config: { bffUrl: 'https://bff.test', oidcIssuer: 'https://idp', oidcClientId: 'mobile' } }))
 
 /** Face ID: `face` false is the person cancelling the check, so the key signs nothing. */
@@ -294,6 +304,25 @@ const draw = () => {
   return { buttons, texts }
 }
 
+// The iPhone's medium widget drawn from what the app pushed: each Link's destination is what a tap opens.
+const drawIos = () => {
+  const scope = { ...swiftUI, ...swiftModifiers, _jsx: jsx, _jsxs: jsxs, _Fragment: Fragment }
+  const source = (jest.requireMock('expo-widgets') as { layouts: unknown[] }).layouts.find((l) => String(l).includes('VStack'))
+  const layout = new Function(...Object.keys(scope), `return (${source})`)(...Object.values(scope))
+  const links: { label: string; destination: string }[] = []
+  const texts: string[] = []
+  const walk = (n: ReactNode): void => {
+    if (Array.isArray(n)) return n.forEach(walk)
+    if (typeof n === 'string') return void texts.push(n)
+    if (!isValidElement<{ children?: ReactNode; destination?: string }>(n)) return
+    const before = texts.length
+    walk(n.props.children)
+    if (n.props.destination) links.push({ label: texts.slice(before).join(''), destination: n.props.destination })
+  }
+  walk(layout(lastSnapshot(), { colorScheme: 'dark', widgetFamily: 'systemMedium' }))
+  return { links, texts }
+}
+
 describe('B55.8 expired approvals', () => {
   beforeEach(() => {
     mockStore.clear()
@@ -516,7 +545,18 @@ describe('B41.35 home-screen widget', () => {
     const { texts, buttons } = draw()
     expect(texts).toEqual(expect.arrayContaining(['YOUR COMPANY’S TOTAL', '£1,000.00']))
     expect(texts.join(' ')).not.toMatch(/\$|LXC/)
-    expect(buttons.map((b) => b.label)).toEqual(expect.arrayContaining(['Pause', 'Fund']))
+    expect(buttons.map((b) => b.label)).toEqual(expect.arrayContaining(['Pause', 'Add money']))
+    expect(buttons.map((b) => b.label)).not.toContain('Fund')
+  })
+
+  // B61.96 — the iPhone widget names the same action as the agent's page: Add money, never Fund.
+  test("the iPhone widget's Add money opens the agent's Add money sheet", async () => {
+    mockBff()
+    await renderRouter('./src/app', { initialUrl: '/' })
+    await waitFor(() => expect(lastSnapshot()?.agents.length).toBeGreaterThan(0))
+    const { links, texts } = drawIos()
+    expect(links.find((l) => l.label === 'Add money')?.destination).toBe('talyvor://agents/ag_1?open=fund')
+    expect(texts).not.toContain('Fund')
   })
 
   // B57.77 — as Pocket's p-widget: a paused agent's Resume opens its screen with the resume sheet, so Face ID decides.
@@ -534,12 +574,12 @@ describe('B41.35 home-screen widget', () => {
     expect(calls.some((c) => c.method === 'POST' && c.path.startsWith('/api/agents/ag_1/resume'))).toBe(false)
   })
 
-  // B57.77 — Fund opens the agent's Add money sheet; the sheet's own review moves the money, never the widget's tap.
-  test("the widget's Fund opens the agent's Add money sheet and moves nothing by itself", async () => {
+  // B57.77 — Add money opens the agent's Add money sheet; the sheet's own review moves the money, never the widget's tap.
+  test("the widget's Add money opens the agent's Add money sheet and moves nothing by itself", async () => {
     const calls = mockBff()
     await renderRouter('./src/app', { initialUrl: '/' })
     await waitFor(() => expect(lastSnapshot()?.agents.length).toBeGreaterThan(0))
-    const fund = draw().buttons.filter((b) => b.label === 'Fund')[0]
+    const fund = draw().buttons.filter((b) => b.label === 'Add money')[0]
     expect(fund.target).toBe('talyvor://agents/ag_1?open=fund')
 
     await renderRouter('./src/app', { initialUrl: fund.target.replace('talyvor://', '/') })
