@@ -29,7 +29,8 @@ async function home(money_kind: 'fiat' | 'hybrid', held: CurrencyAccount[]) {
 
 test('a Hybrid Home says Instant under the round quick action, not Instant transfer', async () => {
   await home('hybrid', accounts)
-  expect(screen.getByRole('link', { name: 'Instant' })).toBeTruthy()
+  // Read aloud it keeps the full name, which holds the word on the screen (WCAG 2.5.3).
+  expect(screen.getByRole('link', { name: 'Instant transfer' })).toBeTruthy()
   expect(screen.getByText('Instant')).toBeTruthy()
   expect(screen.queryByText(/Instant transfer/)).toBeNull()
 })

@@ -156,10 +156,10 @@ function Actions({ instant }: { instant: boolean }) {
           <Text style={{ fontFamily: fonts.uiBold, fontSize: 12.5, color: c.ink }}>Pay</Text>
         </Press>
       </Link>
-      {/* B59.20 — Instant transfer, for a Hybrid account; B61.80: "Instant" under the round action. */}
+      {/* B59.20 — Instant transfer, for a Hybrid account; B61.80: "Instant" under the round action, the full name read aloud. */}
       {instant ? (
         <Link href="/instant-transfer" asChild>
-          <Press kind="round" accessibilityRole="link" accessibilityLabel="Instant" style={{ alignItems: 'center', gap: 6, minWidth: 72 }}>
+          <Press kind="round" accessibilityRole="link" accessibilityLabel="Instant transfer" style={{ alignItems: 'center', gap: 6, minWidth: 72 }}>
             <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: c.cloud, alignItems: 'center', justifyContent: 'center' }}>
               <Icon name="send" color={c.ink} />
             </View>
