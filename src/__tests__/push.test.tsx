@@ -1,6 +1,6 @@
 /// <reference types="node" />
 import { createHash, generateKeyPairSync, verify } from 'node:crypto'
-import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library'
+import { fireEvent, renderRouter, screen, within } from 'expo-router/testing-library'
 import { Alert } from 'react-native'
 
 import { totalsOf } from '../approve-batch'
@@ -77,6 +77,7 @@ function mockLens() {
       case 'POST /api/agents/approvals/apr_1/approve': {
         const a = body.assertion
         if (a?.device_id !== 'dev_1' || a.challenge !== 'ch_apr_1' || !signedBy(a.challenge, a.signature)) return json({ error: 'economy: a passkey assertion is required' }, 403)
+        if (lens.refusal) return json({ error: lens.refusal }, 403)
         lens.approvalApproved = true
         return json({})
       }
@@ -283,7 +284,11 @@ test("Approve with Face ID on an agent's approval signs exactly that approval's 
   tap(agentPush, 'approve')
   await renderRouter('./src/app', { initialUrl: '/approvals' })
 
-  expect(await screen.findByText(/^Approved (\d{1,2} [A-Z][a-z]{2}|today at \d\d:\d\d)\. Nothing is waiting for you here\.$/)).toBeTruthy()
+  // B57.105: it lands on Pocket's Approved screen, p-approved-acme, as approving in the sheet does.
+  const result = await screen.findByTestId('approval-result')
+  expect(within(result).getByText('Approved')).toBeTruthy()
+  expect(within(result).getByText('Buyer’s use of GPU hour goes through the next time it sends it, once. Your approval lasts 24 hours.')).toBeTruthy()
+  expect(within(result).getByLabelText('Signed with: Face ID on this iPhone')).toBeTruthy()
   expect(lens.approvalApproved).toBe(true)
   expect(mockReasons.at(-1)).toBe('Approve $0.20 for Buyer')
   expect(mockCategories.agent_approval).toEqual([expect.objectContaining({ identifier: 'approve', buttonTitle: 'Approve with Face ID' })])
@@ -301,9 +306,30 @@ test.each([
   await renderRouter('./src/app', { initialUrl: '/approvals' })
 
   expect(await screen.findByText('Buyer is waiting for you')).toBeTruthy()
-  await waitFor(() => expect(alert).toHaveBeenCalledWith('Nothing was approved', 'what you were asked to sign is not what was shown, so nothing was signed'))
+  // B57.105: said on the approval sheet the notification opens, never in an alert over it.
+  const sheet = await screen.findByTestId('approval-sheet')
+  expect(within(sheet).getByText('Nothing was approved. What you were asked to sign is not what was shown, so nothing was signed.')).toBeTruthy()
+  expect(alert).not.toHaveBeenCalled()
   const sent = (globalThis.fetch as jest.Mock).mock.calls.map(([url, init]) => `${init?.method ?? 'GET'} ${url}`)
   expect(sent.filter((r: string) => /\/approvals\/apr_1\/(approve|challenge)/.test(r))).toEqual([])
+  expect(lens.approvalApproved).toBeFalsy()
+})
+
+// B57.105: an agent's approval Lens refuses from its notification lands on its sheet, which says Nothing was approved in
+// Lens's sentence and still offers Approve with Face ID.
+test("an agent's approval Lens refuses from its notification says Nothing was approved on its sheet, in Lens's sentence", async () => {
+  const lens = mockLens()
+  lens.refusal = 'economy: this phone’s key was removed from the workspace'
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined).mockClear()
+  tap(agentPush, 'approve')
+  await renderRouter('./src/app', { initialUrl: '/approvals' })
+
+  const sheet = await screen.findByTestId('approval-sheet')
+  expect(await within(sheet).findByText('Nothing was approved. This phone’s key was removed from the workspace.')).toBeTruthy()
+  expect(within(sheet).getByRole('button', { name: 'Approve with Face ID' })).toBeTruthy()
+  expect(screen.queryByText(/economy:/)).toBeNull()
+  expect(screen.queryByTestId('approval-result')).toBeNull()
+  expect(alert).not.toHaveBeenCalled()
   expect(lens.approvalApproved).toBeFalsy()
 })
 

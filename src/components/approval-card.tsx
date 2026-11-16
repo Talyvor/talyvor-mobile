@@ -5,6 +5,7 @@ import { Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { onDay } from '../activity'
+import { notApproved } from '../approve-batch'
 import { biometricName, phoneKey, signWithThisPhone } from '../keys'
 import { syncLiveActivities } from '../live-activity'
 import { haptic } from '../motion'
@@ -169,6 +170,7 @@ export function ApprovalSheet({
   agent,
   capability,
   paused,
+  refused = '',
   onDecided,
   onApprovals,
 }: {
@@ -176,13 +178,15 @@ export function ApprovalSheet({
   agent: Who
   capability: string
   paused: boolean
+  /** B57.105: what Lens refused when Approve was pressed on the notification that opened this sheet */
+  refused?: string
   onDecided: (approved: boolean, signed: boolean) => void
   onApprovals: () => void
 }) {
   const { client, peg } = useSession()
   const { c } = useTheme()
   const [busy, setBusy] = useState(false)
-  const [refusal, setRefusal] = useState('')
+  const [refusal, setRefusal] = useState(refused)
   const [declining, setDeclining] = useState(false)
   const [why, setWhy] = useState('')
   // Whether this phone signs for this workspace; undefined while it is read.
@@ -232,7 +236,8 @@ export function ApprovalSheet({
       onDecided(decision === 'approve', !!assertion)
     } catch (err) {
       if (decision === 'approve' && err instanceof BffError) haptic('warning')
-      setRefusal(err instanceof BffError ? refusalText(err) : `Nothing changed: ${(err as Error).message}`)
+      // B57.105: an approval that did not happen says so as the notification's Approve does: Nothing was approved.
+      setRefusal(decision === 'approve' ? notApproved(err) : err instanceof BffError ? refusalText(err) : `Nothing changed: ${(err as Error).message}`)
     } finally {
       setBusy(false)
     }
@@ -442,6 +447,39 @@ export function DecidedCard({ approval: a, agentName }: { approval: AgentApprova
   )
 }
 
+/** B57.105 — where an agent's approval notification's Approve with Face ID lands: Pocket's p-approved-acme, as approving
+ * in the sheet shows it, signed with this phone's key; Next goes on to the next request waiting. */
+export function ApprovedFromNotification({
+  approval: a,
+  agents,
+  allPaused,
+  pending,
+  onDone,
+}: {
+  approval: AgentApproval
+  agents: readonly Who[]
+  allPaused: boolean
+  pending: AgentApproval[]
+  onDone: () => void
+}) {
+  const agent = agentOf(agents, a.agent_id)
+  const next = pending.find((x) => x.id !== a.id)
+  const d: Decided = {
+    approval: a,
+    agent,
+    capability: approvalCapability(a, agents),
+    approved: true,
+    signed: true,
+    paused: allPaused || !!agent.paused_at,
+    next: next ? { id: next.id, title: approvalTitle(agentOf(agents, next.agent_id).name, next) } : null,
+  }
+  return (
+    <Modal visible transparent animationType="slide" onRequestClose={onDone}>
+      <ApprovalResult d={d} onDone={onDone} onNext={(id) => router.replace({ pathname: '/approvals/[id]', params: { id } })} />
+    </Modal>
+  )
+}
+
 /** The requests waiting for the owner, each a row with Review; Review opens the sheet over the screen, and deciding shows
  * the result screen in the same window, so one closing never races the other opening. `focus` shows only that request's
  * row and opens its sheet, for the screen a notification lands on. */
@@ -450,6 +488,7 @@ export function PendingApprovals({
   agents,
   allPaused,
   focus,
+  refused,
   labels = true,
   onDecided,
 }: {
@@ -457,6 +496,8 @@ export function PendingApprovals({
   agents: readonly Who[]
   allPaused: boolean
   focus?: string
+  /** B57.105: Lens's refusal of the focused request, from its notification's Approve, said on its sheet */
+  refused?: string
   /** each row's own Live or Sandbox; Approvals draws one for the screen instead (B57.68) */
   labels?: boolean
   onDecided: () => void
@@ -501,6 +542,7 @@ export function PendingApprovals({
                 agent={agentOf(agents, sheet.agent_id)}
                 capability={capabilityOf(sheet)}
                 paused={allPaused || !!agentOf(agents, sheet.agent_id).paused_at}
+                refused={sheet.id === focus ? refused : undefined}
                 onApprovals={() => {
                   close()
                   router.push('/approvals')

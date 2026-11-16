@@ -33,6 +33,12 @@ export function takeRefusal(requestId: string): string {
   return text
 }
 
+// B57.105: an agent's approval approved from its notification lands on Pocket's Approved screen, by approval id.
+const approvedFromNotification = new Set<string>()
+export const noteApproved = (approvalId: string) => void approvedFromNotification.add(approvalId)
+/** Whether the notification approved this approval, said once. */
+export const takeApproved = (approvalId: string) => approvedFromNotification.delete(approvalId)
+
 /** The statement Lens wrote is what the key signs: refuse to sign one that is not exactly the items shown. */
 function sameAsShown(statement: string, shown: BatchItem[]): boolean {
   const s = JSON.parse(statement) as ApprovalStatement
