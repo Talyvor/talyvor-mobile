@@ -21,7 +21,7 @@ export interface AgentsWidgetProps {
 }
 
 // Home-screen widget (iOS, B57.77 as Pocket's p-widget): the total, what waits for approval, pinned agents with what
-// they hold, Pause or Resume and Fund, and pinned payees with Pay.
+// they hold, Pause or Resume and Add money, and pinned payees with Pay.
 const AgentsWidget = (p: AgentsWidgetProps, env: WidgetEnvironment) => {
   'widget'
   const c = env.colorScheme === 'light' ? p.palette.light : p.palette.dark
@@ -85,7 +85,7 @@ const AgentsWidget = (p: AgentsWidgetProps, env: WidgetEnvironment) => {
             <Text modifiers={action}>{a.paused ? 'Resume' : 'Pause'}</Text>
           </Link>
           <Link destination={a.fundUrl}>
-            <Text modifiers={action}>Fund</Text>
+            <Text modifiers={action}>Add money</Text>
           </Link>
         </HStack>
       ))}
