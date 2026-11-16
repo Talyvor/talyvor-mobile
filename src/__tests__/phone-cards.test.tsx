@@ -42,6 +42,11 @@ const agents = [
   { id: 'ag_2', name: 'Sales', colour: 'mint', balance_ulxc: 2_000_000, spent_ulxc: 0, created_at: '2026-10-01T00:00:00Z' },
 ]
 const rules = { max_per_request_ulxc: 0, daily_limit_ulxc: 25_000_000, monthly_limit_ulxc: 300_000_000, approval_above_ulxc: 0, allowed_models: null, allowed_providers: null, active_from: '', active_until: '', timezone: '' }
+/** B61.88 — the rules as the phone saves them: in dollars, every limit in cents, and no µLXC limit. */
+const saved = (cents: Partial<Record<'daily_limit_minor' | 'monthly_limit_minor', number>>) => ({
+  allowed_models: null, allowed_providers: null, active_from: '', active_until: '', timezone: '', currency: 'USD',
+  max_per_payment_minor: 0, hourly_limit_minor: 0, daily_limit_minor: 250, weekly_limit_minor: 0, monthly_limit_minor: 3_000, approval_above_minor: 0, ...cents,
+})
 
 /** Lens behind the BFF: Research has a card with one purchase, Sales has none. `calls` is every request made. */
 function mockBff() {
@@ -92,8 +97,9 @@ function mockBff() {
       }
       case 'POST /api/agents/ag_1/rules-challenge': {
         // Lens judges a raise looser and asks for a signature; a cut is tighter and saved at once.
-        const daily = (bodies[route] as { rules: { daily_limit_ulxc: number } }).rules.daily_limit_ulxc
-        const looser = daily === 0 || daily > rules.daily_limit_ulxc
+        // B61.88: the save names its limits in the rules' currency, $2.50 a day as 250 cents.
+        const daily = (bodies[route] as { rules: { daily_limit_minor: number } }).rules.daily_limit_minor
+        const looser = daily === 0 || daily > 250
         return json(looser ? { looser, changes: ['Daily limit: $2.50 → $4.00'], challenge: 'ch_1', allow_credentials: [] } : { looser, changes: [], allow_credentials: [] })
       }
       case 'PUT /api/agents/ag_1/rules': {
@@ -250,9 +256,9 @@ test('B59.44: a raised limit is saved signed with Face ID, over the challenge Le
   expect(calls).not.toContain('PUT /api/agents/ag_1/rules')
   await fireEvent.press(screen.getByText('Save with Face ID'))
   expect(await screen.findByText('Saved. Lens applies these rules to the next request or payment.')).toBeTruthy()
-  const saved = calls.bodies['PUT /api/agents/ag_1/rules'] as { rules: typeof rules & { requests_per_minute?: number }; assertion: object }
-  expect(saved.rules).toEqual({ ...rules, daily_limit_ulxc: 40_000_000 })
-  expect(saved.assertion).toEqual({ device_id: 'dk_1', challenge: 'ch_1', signature: 'sig' })
+  const put = calls.bodies['PUT /api/agents/ag_1/rules'] as { rules: object; assertion: object }
+  expect(put.rules).toEqual(saved({ daily_limit_minor: 400 }))
+  expect(put.assertion).toEqual({ device_id: 'dk_1', challenge: 'ch_1', signature: 'sig' })
   expect(mockPhone.signed).toEqual(['talyvor-device-v1:ch_1'])
 })
 
@@ -262,14 +268,14 @@ test('B59.44: a lowered limit is saved at once, unsigned, and a limit that is no
   await fireEvent.press(within(await screen.findByTestId('card-limits-ag_1')).getByText('Change limits'))
   const monthly = screen.getByLabelText('Monthly limit for Research, in dollars')
   await fireEvent.changeText(monthly, 'lots')
-  expect(screen.getByText('A limit is an amount of dollars with at most two decimals, or empty.')).toBeTruthy()
+  expect(screen.getByText('A limit is an amount in dollars, or empty.')).toBeTruthy()
   await fireEvent.changeText(monthly, '')
-  // B61.15: dollars typed are sent as what they are worth at the peg, to the µLXC: $1.23 is 12.3 LXC.
+  // B61.88: dollars typed are sent in cents, as the rules' currency counts them.
   await fireEvent.changeText(screen.getByLabelText('Daily limit for Research, in dollars'), '1.23')
   await fireEvent.changeText(monthly, '30')
   await fireEvent.press(screen.getByText('Save rules'))
   expect(await screen.findByText('Saved. Lens applies these rules to the next request or payment.')).toBeTruthy()
-  expect(calls.bodies['PUT /api/agents/ag_1/rules']).toEqual({ ...rules, daily_limit_ulxc: 12_300_000 })
+  expect(calls.bodies['PUT /api/agents/ag_1/rules']).toEqual(saved({ daily_limit_minor: 123 }))
   expect(mockPhone.signed).toEqual([])
 })
 
@@ -313,12 +319,12 @@ describe('Cards’ forms in Pocket', () => {
     mockBff()
     await renderRouter('./src/app', { initialUrl: '/cards' })
     await fireEvent.press(within(await screen.findByTestId('card-limits-ag_1')).getByText('Change limits'))
-    const daily = within(screen.getByTestId('limit-row-daily_limit_ulxc'))
+    const daily = within(screen.getByTestId('limit-row-daily_limit_minor'))
     expect(daily.getByText('Daily limit')).toBeTruthy()
     expect(daily.getByText('$2.50')).toBeTruthy()
     expect(daily.getByLabelText('Daily limit for Research, in dollars').props.value).toBe('2.5')
     expect(screen.queryByText(/LXC/)).toBeNull()
-    expect(within(screen.getByTestId('limit-row-hourly_limit_ulxc')).getByText('No limit')).toBeTruthy()
+    expect(within(screen.getByTestId('limit-row-hourly_limit_minor')).getByText('No limit')).toBeTruthy()
   })
 
   test('a looser change is said in Pocket’s warning note before Save with Face ID', async () => {

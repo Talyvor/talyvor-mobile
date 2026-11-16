@@ -1,0 +1,15 @@
+[
+  { "route": "/cards", "screen": "p-agent-research", "name": "limits-gbp", "words": "report", "press": ["Change Research’s limits"], "scroll": "Limit per request",
+    "answers": {
+      "/api/agents": { "workspace_balance_ulxc": 0, "allocated_ulxc": 0, "unallocated_ulxc": 0, "spent_ulxc": 0, "agents": [{ "id": "agt_research", "name": "Research", "colour": "cobalt", "face": "circle", "balance_ulxc": 0, "spent_ulxc": 0, "created_at": "2026-09-14T09:00:00Z", "wallet_kind": "fiat", "fiat_currency": "GBP" }] },
+      "/api/agents/agt_research/rules": { "currency": "GBP", "max_per_request_ulxc": 0, "daily_limit_ulxc": 0, "monthly_limit_ulxc": 0, "approval_above_ulxc": 0, "max_per_payment_minor": 10000, "hourly_limit_minor": 0, "daily_limit_minor": 0, "weekly_limit_minor": 0, "monthly_limit_minor": 0, "approval_above_minor": 2500, "allowed_models": null, "allowed_providers": null, "active_from": "", "active_until": "", "timezone": "Europe/London" }
+    },
+    "why": "B61.88: on a pounds account Change limits types and shows each limit in pounds; the reference draws no phone Cards screen, the nearest is the agent's page" },
+  { "route": "/cards", "screen": "p-agent-research", "name": "limits-held-usd", "words": "report", "press": ["Change Research’s limits"], "scroll": "Limit per request",
+    "answers": {
+      "/api/agents": { "workspace_balance_ulxc": 0, "allocated_ulxc": 0, "unallocated_ulxc": 0, "spent_ulxc": 0, "agents": [{ "id": "agt_research", "name": "Research", "colour": "cobalt", "face": "circle", "balance_ulxc": 0, "spent_ulxc": 0, "created_at": "2026-09-14T09:00:00Z", "wallet_kind": "fiat", "fiat_currency": "GBP" }] },
+      "/api/agents/agt_research/rules": { "currency": "USD", "max_per_request_ulxc": 1000000000, "daily_limit_ulxc": 0, "monthly_limit_ulxc": 0, "approval_above_ulxc": 250000000, "max_per_payment_minor": 10000, "hourly_limit_minor": 0, "daily_limit_minor": 0, "weekly_limit_minor": 0, "monthly_limit_minor": 0, "approval_above_minor": 2500, "allowed_models": null, "allowed_providers": null, "active_from": "", "active_until": "", "timezone": "Europe/London" },
+      "/api/fx": { "rate_date": "2026-11-13", "usd_per_eur": 1.1, "gbp_per_eur": 0.85 }
+    },
+    "why": "B61.88: rules still held in dollars on a pounds account open in pounds at today's rate, rounded down, for the owner to confirm" }
+]

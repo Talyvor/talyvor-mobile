@@ -1,4 +1,23 @@
-import { BffError, dollarsText, formatLXC, parseDollars, refusalText, rulesInWords, type Agent, type AgentRules, type BffClient, type Cardholder } from '@talyvor/bff-client'
+import {
+  BffError,
+  CURRENCY_WORDS,
+  agentCurrency,
+  convertDown,
+  formatMinor,
+  heldIn,
+  heldMinor,
+  parseRuleAmount,
+  refusalText,
+  ruleAmountText,
+  rulesInWords,
+  rulesSave,
+  type Agent,
+  type AgentRules,
+  type BffClient,
+  type Cardholder,
+  type FXRates,
+  type MinorLimit,
+} from '@talyvor/bff-client'
 import { useState, type ReactNode } from 'react'
 import { Text, TextInput, View, type TextInputProps } from 'react-native'
 
@@ -64,45 +83,68 @@ function LoosensNote({ children }: { children: ReactNode }) {
 
 /** The limits the web's Rules form edits, by its labels. */
 const LIMITS = [
-  ['max_per_request_ulxc', 'Limit per request'],
-  ['hourly_limit_ulxc', 'Hourly limit'],
-  ['daily_limit_ulxc', 'Daily limit'],
-  ['weekly_limit_ulxc', 'Weekly limit'],
-  ['monthly_limit_ulxc', 'Monthly limit'],
-  ['approval_above_ulxc', 'Ask a person above'],
-] as const
+  ['max_per_payment_minor', 'Limit per request'],
+  ['hourly_limit_minor', 'Hourly limit'],
+  ['daily_limit_minor', 'Daily limit'],
+  ['weekly_limit_minor', 'Weekly limit'],
+  ['monthly_limit_minor', 'Monthly limit'],
+  ['approval_above_minor', 'Ask a person above'],
+] as const satisfies readonly (readonly [MinorLimit, string])[]
 
-type LimitField = (typeof LIMITS)[number][0]
+/** The form as opened: the currency its limits are typed in, each limit as text in it, and — when the rules are held
+ * in another currency — each limit as held there. */
+type Opened = { currency: string; typed: Record<MinorLimit, string>; converted: { from: string; minor: Record<MinorLimit, number> } | null }
 
-/** The rules as read with only the limits changed: every other rule, the ones the phone does not draw included, is sent
- * back as it was, since a save replaces the rules whole. B61.15: a limit is typed in dollars; one left as it was shown
- * keeps its exact amount, so a limit Lens holds between two cents never moves by being shown. */
-function withLimits(rules: AgentRules, typed: Record<LimitField, string>, peg: number | null): AgentRules {
-  const out: AgentRules = { ...rules }
+/** B61.88 — the form for rules in the account's currency: each limit converted at the day's rates, rounded down, when the
+ * rules are held in another (Lens B61.12); null while a rate it needs is unread. */
+function openIn(rules: AgentRules, peg: number, currency: string, fx: FXRates | null): Opened | null {
+  const from = heldIn(rules)
+  const held = Object.fromEntries(LIMITS.map(([f]) => [f, heldMinor(rules, f, peg)])) as Record<MinorLimit, number>
+  const typed = {} as Record<MinorLimit, string>
   for (const [f] of LIMITS) {
-    if (typed[f].trim() === dollarsText(rules[f], peg)) continue
-    const value = parseDollars(typed[f], peg) ?? 0
-    if (value !== (rules[f] ?? 0)) out[f] = value
+    const v = convertDown(held[f], from, currency, fx)
+    if (v === null) return null
+    typed[f] = ruleAmountText(v, currency)
   }
-  return out
+  return { currency, typed, converted: from === currency ? null : { from, minor: held } }
 }
 
-/** The card's limits as sentences, and Change limits: the web's six limits in dollars, saved as the web's Save rules is. */
+/** The card's limits as sentences, and Change limits: the web's six limits in the account's currency, saved as the web's
+ * Save rules is — the currency and every limit in its minor units, and no µLXC limit. */
 export function CardLimits({ client, agent, rules, peg, onSaved }: { client: BffClient; agent: Agent; rules: AgentRules; peg: number | null; onSaved: () => void }) {
-  const [typed, setTyped] = useState<Record<LimitField, string> | null>(null)
+  const [form, setForm] = useState<Opened | null>(null)
   // What Lens said the change last asked about loosens, while it is still the change on the form.
   const [judged, setJudged] = useState<{ change: string; changes: string[] } | null>(null)
   const [said, setSaid] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const currency = agentCurrency(agent) ?? heldIn(rules)
+  const words = CURRENCY_WORDS[currency] ?? currency
 
-  const open = () => {
-    setTyped(Object.fromEntries(LIMITS.map(([f]) => [f, dollarsText(rules[f], peg)])) as Record<LimitField, string>)
+  const open = async () => {
+    if (!peg) return
     setJudged(null)
     setSaid(null)
+    // The day's rates are read only when the rules are held in a currency a rate is needed from.
+    let fx: FXRates | null = null
+    if (convertDown(1, heldIn(rules), currency, null) === null) {
+      setBusy(true)
+      fx = await client.fx().catch(() => null)
+      setBusy(false)
+    }
+    const opened = openIn(rules, peg, currency, fx)
+    if (!opened) return setSaid(`${agent.name}’s rules are held in ${CURRENCY_WORDS[heldIn(rules)]}, and today’s rate to ${words} could not be read just now. Nothing changed.`)
+    setForm(opened)
   }
-  const bad = typed !== null && LIMITS.some(([f]) => typed[f].trim() !== '' && typed[f].trim() !== dollarsText(rules[f], peg) && parseDollars(typed[f], peg) === null)
-  const proposed = typed && !bad ? withLimits(rules, typed, peg) : null
+  const typed = form?.typed ?? null
+  const bad = typed !== null && LIMITS.some(([f]) => parseRuleAmount(typed[f], currency) === null)
+  const proposed =
+    form && !bad && peg ? rulesSave(rules, peg, currency, Object.fromEntries(LIMITS.map(([f]) => [f, parseRuleAmount(form.typed[f], currency) ?? 0])) as Record<MinorLimit, number>) : null
   const shown = proposed && judged?.change === JSON.stringify(proposed) ? judged : null
+  const held = (f: MinorLimit) => {
+    const v = peg ? heldMinor(rules, f, peg) : 0
+    if (!(v > 0)) return 'No limit'
+    return form?.converted ? `Held at ${formatMinor(v, form.converted.from)}, rounded down at today’s rate` : formatMinor(v, heldIn(rules))
+  }
 
   const save = async () => {
     if (!proposed) return
@@ -117,7 +159,7 @@ export function CardLimits({ client, agent, rules, peg, onSaved }: { client: Bff
         assertion = await signWithThisPhone(client, j.challenge, `Loosen ${agent.name}’s rules`)
       }
       await client.setRules(agent.id, proposed, assertion)
-      setTyped(null)
+      setForm(null)
       setJudged(null)
       setSaid('Saved. Lens applies these rules to the next request or payment.')
       onSaved()
@@ -135,7 +177,7 @@ export function CardLimits({ client, agent, rules, peg, onSaved }: { client: Bff
     <Card white>
       <Eyebrow>Limits</Eyebrow>
       <Body muted>Each purchase is paid from its wallet only if its rules allow it.</Body>
-      {typed === null ? (
+      {form === null || typed === null ? (
         <>
           {rulesInWords(rules, peg).map((r) => (
             <View key={r} style={{ flexDirection: 'row', gap: 8 }}>
@@ -143,12 +185,17 @@ export function CardLimits({ client, agent, rules, peg, onSaved }: { client: Bff
               <Body style={{ flex: 1 }}>{r}</Body>
             </View>
           ))}
-          {/* Until the peg is read, a typed dollar cannot be counted, so the limits are not opened. */}
-          <Button label="Change limits" accessibilityLabel={`Change ${agent.name}’s limits`} disabled={!peg} onPress={open} />
+          {/* Until the peg is read, a limit Lens holds without a currency cannot be counted, so the limits are not opened. */}
+          <Button label="Change limits" accessibilityLabel={`Change ${agent.name}’s limits`} disabled={!peg || busy} onPress={() => void open()} />
         </>
       ) : (
         <>
-          <Body muted>Dollars; empty for no limit</Body>
+          {form.converted ? (
+            <View testID="rules-currency">
+              <Body>{`${agent.name}’s rules are still held in ${CURRENCY_WORDS[form.converted.from]}. Each limit below is in ${words} at today’s rate, rounded down: check them, then save to hold the rules in ${words}.`}</Body>
+            </View>
+          ) : null}
+          <Body muted>{`${words.charAt(0).toUpperCase()}${words.slice(1)}; empty for no limit`}</Body>
           <View>
             {LIMITS.map(([f, label], i) => (
               <SettingRow
@@ -156,21 +203,21 @@ export function CardLimits({ client, agent, rules, peg, onSaved }: { client: Bff
                 testID={`limit-row-${f}`}
                 first={i === 0}
                 title={label}
-                sub={rules[f] && rules[f] > 0 ? formatLXC(rules[f], peg) : 'No limit'}
-                unit="USD"
+                sub={held(f)}
+                unit={currency}
                 inputWidth={112}
-                accessibilityLabel={`${label} for ${agent.name}, in dollars`}
+                accessibilityLabel={`${label} for ${agent.name}, in ${words}`}
                 inputMode="decimal"
                 placeholder="No limit"
                 value={typed[f]}
-                onChangeText={(t) => setTyped({ ...typed, [f]: t })}
+                onChangeText={(t) => setForm({ ...form, typed: { ...typed, [f]: t } })}
               />
             ))}
           </View>
-          {bad ? <Body>A limit is an amount of dollars with at most two decimals, or empty.</Body> : null}
+          {bad ? <Body>{`A limit is an amount in ${words}, or empty.`}</Body> : null}
           {shown ? <Loosens name={agent.name} changes={shown.changes} /> : null}
           <Button primary label={busy ? 'Saving…' : shown ? `Save with ${biometricName}` : 'Save rules'} disabled={bad || busy} onPress={() => void save()} />
-          <Button variant="ghost" label="Cancel" disabled={busy} onPress={() => setTyped(null)} />
+          <Button variant="ghost" label="Cancel" disabled={busy} onPress={() => setForm(null)} />
         </>
       )}
       {said ? (
