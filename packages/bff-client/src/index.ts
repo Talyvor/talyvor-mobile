@@ -750,6 +750,48 @@ export interface MobileSession {
   expires_at: string
 }
 
+/** B61.27 — what the BFF's door answers once the code is right (suite B61.25): a check that names Lens's one-use ticket,
+ * and whether a person holds the number. Nothing says so before the code is right. */
+export interface PhoneCheck {
+  check: string
+  has_person: boolean
+  expires_at: string
+}
+
+/** B61.27 — a session the door opened: the phone's token, and whether sign-up still has to choose its account. */
+export interface DoorSession extends MobileSession {
+  signed_in?: boolean
+  signup_unfinished?: boolean
+  account_id?: string
+}
+
+/** B61.27 — the person's sign-in key as Lens keeps it (talyvor-lens phonesignin.PersonKey). */
+export interface PersonKey {
+  id: string
+  kind: 'passkey' | 'device'
+  name: string
+  created_at: string
+}
+
+/** B61.27 — the phone's device key made over a register challenge, every byte string base64url. */
+export interface DeviceRegistration {
+  platform: string
+  public_key: string
+  challenge: string
+  signature: string
+  attestation: string
+}
+
+/** B61.27 — what GET /auth/me says beside the workspace: a Google sign-in still to take a number and a passcode, a
+ * sign-up still to choose its account, and whether Google sign-in is offered at all. */
+export interface AuthMe {
+  workspace_id: string
+  authenticated?: boolean
+  phone_needed?: boolean
+  signup_unfinished?: boolean
+  google_signin?: boolean
+}
+
 /** B59.9 — what sign-up asks before the identity provider (suite B59.8): the BFF sends them to Lens when it makes the
  * workspace, and refuses a set that lacks one. Signing in sends none. */
 export interface SignupAnswers {
@@ -793,6 +835,8 @@ export class BffError extends Error {
     readonly code = '',
     /** B59.20 — the field a refusal names, as Lens's may_instant_transfer: the screen picks its words from it */
     readonly field = '',
+    /** B61.27 — when a passcode may be tried again after too many wrong ones (Lens's retry_at, RFC 3339) */
+    readonly retryAt = '',
   ) {
     super(`${status} ${path}${sentence ? `: ${sentence}` : ''}`)
   }
@@ -928,13 +972,15 @@ export interface Member {
 
 const e = encodeURIComponent
 
-export function createBffClient(baseUrl: string, token: () => string | null, fetchImpl: typeof fetch = fetch) {
+/** B61.27 — `onLocked` hears every 423: the BFF has locked the phone's session (suite B61.25), and only unlocking opens it. */
+export function createBffClient(baseUrl: string, token: () => string | null, fetchImpl: typeof fetch = fetch, onLocked?: () => void) {
   async function send(method: string, path: string, body: string | FormData | undefined, headers: Record<string, string>): Promise<Response> {
     const t = token()
     if (t) headers.Authorization = `Bearer ${t}`
     const res = await fetchImpl(baseUrl + path, { method, headers, body })
+    if (res.status === 423) onLocked?.()
     if (!res.ok) {
-      let body: { error?: string; code?: string; field?: string; balances?: Record<string, number>; messages?: HelpMessage[] | null } = {}
+      let body: { error?: string; code?: string; reason?: string; retry_at?: string; field?: string; balances?: Record<string, number>; messages?: HelpMessage[] | null } = {}
       try {
         body = (await res.json()) as typeof body
       } catch {
@@ -942,7 +988,8 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
       }
       if (res.status === 409 && body.code === 'balances_not_empty' && body.balances) throw new BalancesHeldError(path, body.error ?? '', body.balances)
       if (res.status === 429 && path === '/api/help/ask') throw new HelpLimitError(path, body.error ?? '', body.messages ?? [])
-      throw new BffError(res.status, path, body.error ?? '', body.code ?? '', body.field ?? '')
+      // The door's refusals name their reason (suite B61.25); the rest name a code.
+      throw new BffError(res.status, path, body.error ?? '', body.code ?? body.reason ?? '', body.field ?? '', body.retry_at ?? '')
     }
     return res
   }
@@ -964,6 +1011,39 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     /** Trades the identity provider's ID token, got in the system browser with PKCE, for a BFF session; with sign-up's
      * answers when the person is signing up. */
     signIn: (idToken: string, signup?: SignupAnswers) => call<MobileSession>('POST', '/auth/mobile/session', { id_token: idToken, ...signup }),
+    /** B61.27 — the door (suite B61.25): a code texted to the number; in Sandbox the code itself, for the screen. */
+    phoneStart: (phone: string) => call<{ expires_at: string; sandbox: boolean; sandbox_code?: string }>('POST', '/auth/phone/start', { phone }),
+    /** The code: a check, and whether a person holds the number. */
+    phoneFinish: (phone: string, code: string) => call<PhoneCheck>('POST', '/auth/phone/finish', { phone, code }),
+    /** A known number and its passcode: a session. */
+    phoneSignIn: (check: string, passcode: string) => call<DoorSession>('POST', '/auth/phone/signin', { check, passcode }),
+    /** A new number and its new passcode: a sign-up session, which may only choose its account. */
+    phoneJoin: (check: string, passcode: string) => call<DoorSession>('POST', '/auth/phone/join', { check, passcode }),
+    /** The sign-up session's account, with sign-up's answers; the session it answers replaces the sign-up's. */
+    signupAccount: (answers: OpenAccountAnswers) =>
+      call<DoorSession & { created: boolean }>('POST', '/auth/signup/account', {
+        account_type: answers.type,
+        money_kind: answers.kind,
+        name: answers.name,
+        country: answers.country,
+        ...(answers.registration_number ? { registration_number: answers.registration_number } : {}),
+      }),
+    /** A Google sign-in takes a number and a passcode, once: from then the person signs in the new way. */
+    googleMove: (check: string, passcode: string) => call<MobileSession & { moved: boolean }>('POST', '/auth/google/move', { check, passcode }),
+    /** The challenge a new sign-in key is made over; `device` makes it the account's approval key's challenge too. */
+    keyRegisterChallenge: () => call<{ challenge: string }>('POST', '/auth/passkey/register/challenge', { kind: 'device' }),
+    /** Keeps this phone's key as the person's sign-in key; the passcode is the proof Lens asks for once one is set. */
+    registerSignInKey: (name: string, device: DeviceRegistration, passcode: string) =>
+      call<PersonKey>('POST', '/auth/passkey/register', { name, device, passcode }),
+    /** The phone app closed (the lock shuts now) or went away (it shuts after 2 minutes). */
+    lock: async (state: 'closed' | 'away') => void (await send('POST', '/auth/lock', JSON.stringify({ state }), { 'Content-Type': 'application/json' })),
+    /** A challenge for the phone's sign-in key, to unlock with Face ID. */
+    unlockChallenge: () => call<{ challenge: string }>('POST', '/auth/unlock/challenge', {}),
+    /** Opens the lock with the passcode, checked by Lens, or the sign-in key's signature over unlockChallenge's. */
+    unlock: async (proof: { passcode: string } | DeviceAssertion) =>
+      void (await send('POST', '/auth/unlock', JSON.stringify(proof), { 'Content-Type': 'application/json' })),
+    /** B61.27 — who is signed in, and what the door still asks of them; signed out, whether Google is offered. */
+    authMe: () => call<AuthMe>('GET', '/auth/me'),
     /** B61.10 — the person's accounts, the session's marked current. */
     accounts: async () => (await call<{ accounts: PersonAccount[] | null }>('GET', '/api/accounts')).accounts ?? [],
     /** B61.10 — moves the session to another of the person's accounts; any other id is refused 404 and nothing moves. */

@@ -1,8 +1,9 @@
-import { labelOf, workspaceLabels, type AgentApproval, type BffClient, type PaymentRequest } from '@talyvor/bff-client'
-import { useEffect, useState, type ReactNode } from 'react'
+import { createBffClient, labelOf, workspaceLabels, type AgentApproval, type BffClient, type PaymentRequest } from '@talyvor/bff-client'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Text, View } from 'react-native'
 import Svg, { Circle, Rect } from 'react-native-svg'
 
+import { config } from '../config'
 import { useSession } from '../session'
 import { fonts, useTheme } from '../theme'
 import { Eyebrow } from './ui'
@@ -72,19 +73,21 @@ export function useMoneyLabels(): Record<string, string> | undefined {
 
 /** Lens's labels, and whether the last read for this session failed. */
 function useMoneyRead(): { labels?: Record<string, string>; failed?: boolean } {
-  const { client, signedIn } = useSession()
+  const { client: session, signedIn, joining } = useSession()
+  // B61.27 — a sign-up session reaches only sign-up's own routes (suite B61.25), so it reads the public labels, unsigned.
+  const client = useMemo(() => (joining ? createBffClient(config.bffUrl, () => null) : session), [joining, session])
   // Kept with the session it was read for: a new session's screens draw nothing until Lens answers for it.
   const [answer, setAnswer] = useState<{ client: BffClient; labels?: Record<string, string>; failed?: boolean } | null>(null)
   useEffect(() => {
     let live = true
-    labelsFor(client, signedIn).then(
+    labelsFor(client, signedIn && !joining).then(
       (labels) => live && setAnswer({ client, labels }),
       () => live && setAnswer({ client, failed: true }),
     )
     return () => {
       live = false
     }
-  }, [client, signedIn])
+  }, [client, signedIn, joining])
   return answer?.client === client ? answer : {}
 }
 

@@ -172,7 +172,8 @@ describe('Settings', () => {
     await renderRouter('./src/app', { initialUrl: '/settings' })
     await fireEvent.press(await screen.findByText('Sign out'))
     await waitFor(() => expect(mockStore.has('talyvor.session')).toBe(false))
-    expect(await screen.findByText('Sign in')).toBeTruthy()
+    // B61.27 — signed out, the door asks for the phone number.
+    expect(await screen.findByText('What’s your phone number?')).toBeTruthy()
   })
 })
 

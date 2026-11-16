@@ -6,18 +6,40 @@ import { StatusBar } from 'expo-status-bar'
 
 import { useHideFromAppSwitcher } from '@/app-switcher'
 import { BackdropHues } from '@/components/backdrop'
+import { Door } from '@/components/door'
+import { Cover, LockScreen } from '@/components/lock-screen'
 import { useLiveActivities } from '@/live-activity'
 import { usePushApprovals } from '@/push'
 import { SessionProvider, useSession } from '@/session'
 import { fonts, useTheme } from '@/theme'
 
 function Navigator() {
-  const { ready, signedIn, client } = useSession()
+  const { ready, signedIn, client, locked, joining, phoneNeeded, covered } = useSession()
   const { c, dark } = useTheme()
-  usePushApprovals(client, ready && signedIn)
-  useLiveActivities(client, ready && signedIn)
+  // B61.27 — nothing reads the account while the app is locked or a sign-up has still to choose its account.
+  const open = ready && signedIn && !locked && !joining
+  usePushApprovals(client, open)
+  useLiveActivities(client, open)
   useHideFromAppSwitcher(ready && signedIn)
   if (!ready) return null
+  // B61.27 — the lock is drawn instead of the app, so nothing of the account is behind it.
+  if (signedIn && locked)
+    return (
+      <>
+        <StatusBar style={dark ? 'light' : 'dark'} />
+        <LockScreen />
+        {covered ? <Cover /> : null}
+      </>
+    )
+  // B61.27 — a Google sign-in takes a number and a passcode before anything else (the move, suite B61.25).
+  if (signedIn && phoneNeeded && !joining)
+    return (
+      <>
+        <StatusBar style={dark ? 'light' : 'dark'} />
+        <Door move />
+        {covered ? <Cover /> : null}
+      </>
+    )
   return (
     <>
       <StatusBar style={dark ? 'light' : 'dark'} />
@@ -30,7 +52,7 @@ function Navigator() {
           headerTintColor: c.ink,
           headerTitleStyle: { fontFamily: fonts.uiBold },
         }}>
-        <Stack.Protected guard={signedIn}>
+        <Stack.Protected guard={signedIn && !joining}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="agents/[id]" />
           <Stack.Screen name="agents/new" />
@@ -57,6 +79,8 @@ function Navigator() {
         {/* B59.9 — open either way: steps 1 and 2 come before the session, step 3 after it. */}
         <Stack.Screen name="sign-up" />
       </Stack>
+      {/* B61.27 — not in front, the app switcher's picture is the mark, never the screen. */}
+      {signedIn && covered ? <Cover /> : null}
     </>
   )
 }

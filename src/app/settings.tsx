@@ -9,6 +9,7 @@ import { PLAN_WORDS } from '@/plan-words'
 import { AccountSettings } from '@/components/account-settings'
 import { Icon, type IconName } from '@/components/icon'
 import { NoticeSettingsCard } from '@/components/notice-settings'
+import { UnlockSettings } from '@/components/unlock-settings'
 import { Limits, SecurityKeys, TeamAndRoles } from '@/components/settings-access'
 import { Back, Button, Card, Eyebrow, Headline, LoadState, Row, Screen, useLoad } from '@/components/ui'
 import { useSession } from '@/session'
@@ -93,6 +94,8 @@ export default function SettingsScreen() {
 
           {account ? <AccountSettings account={account} /> : null}
 
+          {/* B61.27 — Face ID on or off for opening the app. */}
+          <UnlockSettings />
           <SecurityKeys />
           {account?.account_type === 'business' ? <TeamAndRoles /> : null}
           <Limits />

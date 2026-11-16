@@ -219,10 +219,11 @@ test('signs in, shows the pending approval first on Home, and pauses an agent', 
   const calls = mockBff()
   await renderRouter('./src/app', { initialUrl: '/' })
 
-  await fireEvent.press(await screen.findByText('Sign in'))
+  await fireEvent.press(await screen.findByText('Continue with Google'))
   expect(await screen.findByText('1 payment waits for your yes')).toBeTruthy()
   expect(calls.find((c) => c.path === '/auth/mobile/session')?.body).toBe(JSON.stringify({ id_token: 'id-token-1' }))
-  expect(calls.filter((c) => c.path.startsWith('/api/')).every((c) => c.auth === 'Bearer session-1')).toBe(true)
+  // B61.27 — the door reads Lens's public Sandbox labels before anyone signs in; everything else carries the session.
+  expect(calls.filter((c) => c.path.startsWith('/api/') && c.path !== '/api/pricing').every((c) => c.auth === 'Bearer session-1')).toBe(true)
 
   // What waits first: the row that counts it, then the request, then the agents.
   const order = ['1 payment waits for your yes', 'Buyer wants to use GPU hour', 'Researcher']

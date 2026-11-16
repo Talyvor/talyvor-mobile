@@ -87,7 +87,7 @@ describe('storage', () => {
 
     mockBff()
     await renderRouter('./src/app', { initialUrl: '/' })
-    await fireEvent.press(await screen.findByText('Sign in'))
+    await fireEvent.press(await screen.findByText('Continue with Google'))
     await waitFor(() => expect(JSON.parse(mockStore.get('talyvor.session')!).token).toBe('session-1'))
   })
 
@@ -227,7 +227,7 @@ describe('the app switcher', () => {
   test('not signed in, nothing is hidden', async () => {
     mockBff()
     await renderRouter('./src/app', { initialUrl: '/' })
-    await screen.findByText('Sign in')
+    await screen.findByText('Continue with Google')
     expect(ScreenCapture.preventScreenCaptureAsync).not.toHaveBeenCalled()
   })
 })

@@ -27,7 +27,9 @@ const HuesContext = createContext<Hues>(ACCOUNT_HUES.personal)
 /** Reads the session's account type once per session and hands its colours to every screen's background. Signed out
  * (sign-in, sign-up's first steps) and until the read answers, the background is Personal's. */
 export function BackdropHues({ children }: { children: ReactNode }) {
-  const { client, signedIn } = useSession()
+  const { client, signedIn: session, locked, joining } = useSession()
+  // B61.27 — nothing of the account, its colours included, is read behind the lock or before sign-up chose it.
+  const signedIn = session && !locked && !joining
   // Kept with the session that read it, so a new sign-in or a switched account waits for its own read.
   const [read, setRead] = useState<{ client: typeof client; type: AccountType } | null>(null)
   useEffect(() => {
