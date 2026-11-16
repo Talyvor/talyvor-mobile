@@ -96,20 +96,21 @@ export function Eyebrow({ children }: { children: ReactNode }) {
   return <Text style={[styles.eyebrow, { color: c.ink3 }]}>{children}</Text>
 }
 
-/** A pushed screen's way back: to the screen behind it, or to `home` when it was opened from a link with nothing behind. */
-export function Back({ home }: { home: Href }) {
+/** A pushed screen's way back: to the screen behind it, or to `home` when it was opened from a link with nothing behind.
+ * `to` names where it goes, as a notice's "Spending" (B57.92), read as "Back to Spending". */
+export function Back({ home, to }: { home: Href; to?: string }) {
   const { c } = useTheme()
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel="Back"
+      accessibilityLabel={to ? `Back to ${to}` : 'Back'}
       hitSlop={10}
       onPress={() => (router.canGoBack() ? router.back() : router.replace(home))}
       style={{ flexDirection: 'row', alignItems: 'center', gap: 2, alignSelf: 'flex-start' }}>
       <View style={{ transform: [{ scaleX: -1 }] }}>
         <Icon name="chev" size={16} color={c.ink2} />
       </View>
-      <Text style={{ fontFamily: fonts.uiMedium, fontSize: 15, color: c.ink2 }}>Back</Text>
+      <Text style={{ fontFamily: fonts.uiMedium, fontSize: 15, color: c.ink2 }}>{to ?? 'Back'}</Text>
     </Pressable>
   )
 }
