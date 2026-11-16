@@ -226,6 +226,48 @@ export interface WorkspaceAccount {
   money_kind: 'fiat' | 'stablecoin' | 'hybrid'
 }
 
+/** B61.60 — the workspace's plan as Lens has it (the BFF's GET /api/plan, suite B61.59): its id and its name as people
+ * read it, the ladder it is chosen from, whether a contract sets it, its monthly price in minor units by currency (null
+ * on Custom, which a contract prices), the agents it takes (-1 is unlimited), the agents it has, and its people. */
+export interface WorkspacePlan {
+  plan: string
+  name?: string
+  account_type?: 'personal' | 'business'
+  on_contract?: boolean
+  price_minor?: Record<string, number> | null
+  agents: number
+  agents_used: number
+  seats: number
+}
+
+/** B61.60 — one plan of a ladder, as Lens's GET /v1/public/plans states it (Lens B61.57). -1 is unlimited. */
+export interface LadderPlan {
+  id: string
+  /** Solo, Crew, Fleet, Studio, Company, Group or Custom. */
+  name: string
+  /** The monthly price in minor units, by currency; null on Custom, which a contract prices. */
+  price_minor: Record<string, number> | null
+  by_contract?: boolean
+  agents: number
+  people: number
+}
+
+/** B61.60 — both ladders, each from the smallest plan up, and the currencies they are priced in. */
+export interface PlanLadders {
+  currencies: string[]
+  /** The currency a stablecoin account pays its plan in. */
+  stablecoin_priced_in: string
+  personal: LadderPlan[]
+  business: LadderPlan[]
+}
+
+/** B61.60 — the public pricing's ladders and each plan's exchange fee (basis points over the reference rate, by plan),
+ * each left out when Lens did not state it whole. */
+export interface PlanPricing {
+  ladders?: PlanLadders
+  fees?: { fx_margin_bps?: Record<string, number> }
+}
+
 /** Lens economy.CurrencyAccount:the company's or an agent's account in one currency, in minor units. */
 export interface CurrencyAccount {
   id: string
@@ -892,6 +934,15 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     workspaceName: () => call<{ id: string; name: string }>('GET', '/api/workspace/name'),
     /** B57.128 — the workspace's type and kind of money (Lens B59.6). */
     account: () => call<WorkspaceAccount>('GET', '/api/workspace/account'),
+    /** B61.60 — the plan Lens has the workspace on, what it takes and what it has (suite B61.59's GET /api/plan). */
+    plan: () => call<WorkspacePlan>('GET', '/api/plan'),
+    /** B61.60 — the owner moves the account to another plan of its own ladder; Lens decides, and refuses in its words. */
+    changePlan: (plan: string) => call<{ from: string; plan: string; name: string }>('PUT', '/api/plan', { plan }),
+    /** B61.60 — the ladders and their exchange fees, from the public pricing (Lens's GET /v1/public/plans and fees). */
+    planPricing: async (): Promise<PlanPricing> => {
+      const got = await call<PlanPricing>('GET', '/api/pricing')
+      return { ladders: got.ladders, fees: got.fees }
+    },
     /** B59.3 — the areas the operator switched on for this workspace (Lens B59.1); none until then. */
     areas: async () => (await call<{ areas: string[] | null }>('GET', '/api/workspace/areas')).areas ?? [],
     book: () => call<AgentBook>('GET', '/api/agents'),
