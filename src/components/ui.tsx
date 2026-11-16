@@ -1,5 +1,5 @@
 import { BffError } from '@talyvor/bff-client'
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { ActivityIndicator, Animated, KeyboardAvoidingView, Platform, Pressable, RefreshControl, StyleSheet, Text, TextInput, View, type TextInputProps, type TextStyle } from 'react-native'
 import { router, type Href } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -91,9 +91,14 @@ export function Screen({
   )
 }
 
+/** B61.99 — whether the text sits on a card: small text with no card under it sits on the background (DESIGN.md
+ * section 6), so it is ink-2, never ink-3. */
+const OnCard = createContext(false)
+
 export function Eyebrow({ children }: { children: ReactNode }) {
   const { c } = useTheme()
-  return <Text style={[styles.eyebrow, { color: c.ink3 }]}>{children}</Text>
+  const onCard = useContext(OnCard)
+  return <Text style={[styles.eyebrow, { color: onCard ? c.ink3 : c.ink2 }]}>{children}</Text>
 }
 
 /** A pushed screen's way back: to the screen behind it, or to `home` when it was opened from a link with nothing behind.
@@ -139,7 +144,11 @@ export function Figure({ children, size = 15, tone }: { children: ReactNode; siz
 /** Pocket's card: cloud, or white with a shadow where it sits on cloud; `tight` is .card.tight, a setting's row. */
 export function Card({ children, white, tight }: { children: ReactNode; white?: boolean; tight?: boolean }) {
   const { c } = useTheme()
-  return <View style={[styles.card, tight && styles.tight, white ? [{ backgroundColor: c.page }, styles.shadow] : { backgroundColor: c.cloud }]}>{children}</View>
+  return (
+    <OnCard.Provider value>
+      <View style={[styles.card, tight && styles.tight, white ? [{ backgroundColor: c.page }, styles.shadow] : { backgroundColor: c.cloud }]}>{children}</View>
+    </OnCard.Provider>
+  )
 }
 
 type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'danger' | 'ghost'

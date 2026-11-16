@@ -1,0 +1,6 @@
+[
+  { "route": "/", "screen": "p-home", "launchPack": "P5", "words": "report", "why": "B61.99 changes colours only; Home's words are B57.66's", "name": "home" },
+  { "route": "/", "screen": "p-home", "launchPack": "P5", "words": "report", "why": "B61.99 changes colours only; Home's words are B57.66's", "name": "home", "dark": true },
+  { "route": "/agents", "screen": "p-home", "launchPack": "P5", "words": "report", "why": "B61.99 changes colours only; the Agents tab's words are B57.176's", "name": "agents" },
+  { "route": "/agents", "screen": "p-home", "launchPack": "P5", "words": "report", "why": "B61.99 changes colours only; the Agents tab's words are B57.176's", "name": "agents", "dark": true }
+]

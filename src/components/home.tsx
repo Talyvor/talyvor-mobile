@@ -114,7 +114,8 @@ export function HomeHeader({ name, account }: { name: string | null; account: Ac
 function Total({ business, shows, accounts }: { business: boolean; shows: Shows; accounts: readonly CurrencyAccount[] }) {
   const { c } = useTheme()
   const held = balancesByCurrency(accounts, shows)
-  const label = { fontFamily: fonts.uiMedium, fontSize: 12, letterSpacing: 0.48, textTransform: 'uppercase', color: c.ink3 } as const
+  // On the background, so ink-2 (B61.99).
+  const label = { fontFamily: fonts.uiMedium, fontSize: 12, letterSpacing: 0.48, textTransform: 'uppercase', color: c.ink2 } as const
   return (
     <View style={{ gap: 8 }}>
       <Text style={label}>{business ? 'Your company’s total' : 'Your total'}</Text>
