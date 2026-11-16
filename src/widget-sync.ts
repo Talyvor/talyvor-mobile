@@ -84,7 +84,9 @@ export function widgetProps(
       balance: heldWords(money.accounts.filter((x) => x.agent_id === a.id), money.shows),
       paused: !!a.paused_at,
       pauseUrl: `talyvor://widget?${new URLSearchParams({ do: 'pause', agent: a.id, t: token })}`,
-      openUrl: `talyvor://agents/${encodeURIComponent(a.id)}`,
+      // B57.77: Resume and Fund open the agent's screen with its sheet; the sheet decides, never the widget's tap.
+      resumeUrl: `talyvor://agents/${encodeURIComponent(a.id)}?open=resume`,
+      fundUrl: `talyvor://agents/${encodeURIComponent(a.id)}?open=fund`,
     })),
     // A payee's tap only opens its payment screen: nothing is ever paid from the widget.
     payees: payees.pins.flatMap((id) => payees.saved.filter((p) => p.id === id)).map((p) => ({

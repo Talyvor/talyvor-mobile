@@ -504,7 +504,7 @@ describe('B41.35 home-screen widget', () => {
     expect(calls.filter((c) => c.method === 'POST' && c.path === '/api/agents/ag_1/pause')).toHaveLength(1)
     const after = draw()
     expect(after.texts).toContain('Paused')
-    expect(after.buttons.find((b) => b.label === 'Resume')?.target).toBe('talyvor://agents/ag_1')
+    expect(after.buttons.find((b) => b.label === 'Resume')?.target).toBe('talyvor://agents/ag_1?open=resume')
   })
 
   // B61.44 — the Android layout, drawn from what Home pushed: the company's £1,000.00 as Home's total, no agent credit, no Fund.
@@ -515,7 +515,35 @@ describe('B41.35 home-screen widget', () => {
     const { texts, buttons } = draw()
     expect(texts).toEqual(expect.arrayContaining(['YOUR COMPANY’S TOTAL', '£1,000.00']))
     expect(texts.join(' ')).not.toMatch(/\$|LXC/)
-    expect(buttons.map((b) => b.label)).not.toContain('Fund')
+    expect(buttons.map((b) => b.label)).toEqual(expect.arrayContaining(['Pause', 'Fund']))
+  })
+
+  // B57.77 — as Pocket's p-widget: a paused agent's Resume opens its screen with the resume sheet, so Face ID decides.
+  test("the widget's Resume opens the agent's screen with its resume sheet, and resumes nothing by itself", async () => {
+    const calls = mockBff({ paused: true })
+    await renderRouter('./src/app', { initialUrl: '/' })
+    await waitFor(() => expect(lastSnapshot()?.agents.find((a) => a.id === 'ag_1')?.paused).toBe(true))
+    const { texts, buttons } = draw()
+    expect(texts).toEqual(expect.arrayContaining(['Researcher', 'Paused', 'Buyer', 'Running']))
+    const resume = buttons.find((b) => b.label === 'Resume')!
+    expect(resume.target).toBe('talyvor://agents/ag_1?open=resume')
+
+    await renderRouter('./src/app', { initialUrl: resume.target.replace('talyvor://', '/') })
+    expect(await screen.findByText('Resume Researcher?')).toBeTruthy()
+    expect(calls.some((c) => c.method === 'POST' && c.path.startsWith('/api/agents/ag_1/resume'))).toBe(false)
+  })
+
+  // B57.77 — Fund opens the agent's Add money sheet; the sheet's own review moves the money, never the widget's tap.
+  test("the widget's Fund opens the agent's Add money sheet and moves nothing by itself", async () => {
+    const calls = mockBff()
+    await renderRouter('./src/app', { initialUrl: '/' })
+    await waitFor(() => expect(lastSnapshot()?.agents.length).toBeGreaterThan(0))
+    const fund = draw().buttons.filter((b) => b.label === 'Fund')[0]
+    expect(fund.target).toBe('talyvor://agents/ag_1?open=fund')
+
+    await renderRouter('./src/app', { initialUrl: fund.target.replace('talyvor://', '/') })
+    expect(await screen.findByText('Add money to Researcher')).toBeTruthy()
+    expect(calls.some((c) => c.method === 'POST' && /fund|transfer|move/.test(c.path))).toBe(false)
   })
 
   test('a pause link that did not come from the widget changes nothing', async () => {

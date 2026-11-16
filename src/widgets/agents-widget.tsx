@@ -12,14 +12,16 @@ export interface AgentsWidgetProps {
   /** Home's words for it: `Your total`, or a Business's `Your company’s total` */
   totalLabel: string
   pending: number
-  /** pinned agents first; `balance` is what its accounts hold, or '' for none; `pauseUrl` pauses it through the app, `openUrl` opens its screen (resume) */
-  agents: { id: string; name: string; balance: string; paused: boolean; pauseUrl: string; openUrl: string }[]
+  /** pinned agents first; `balance` is what its accounts hold, or '' for none; `pauseUrl` pauses it through the app,
+   * `resumeUrl` and `fundUrl` open its screen with the resume sheet or the Add money sheet */
+  agents: { id: string; name: string; balance: string; paused: boolean; pauseUrl: string; resumeUrl: string; fundUrl: string }[]
   /** pinned payees; `openUrl` opens the payment screen for it, and nothing is paid from the widget */
   payees: { id: string; name: string; last: string; openUrl: string }[]
   palette: { dark: Palette; light: Palette }
 }
 
-// Home-screen widget (iOS): the total, what waits for approval, and pinned agents with what they hold and Pause.
+// Home-screen widget (iOS, B57.77 as Pocket's p-widget): the total, what waits for approval, pinned agents with what
+// they hold, Pause or Resume and Fund, and pinned payees with Pay.
 const AgentsWidget = (p: AgentsWidgetProps, env: WidgetEnvironment) => {
   'widget'
   const c = env.colorScheme === 'light' ? p.palette.light : p.palette.dark
@@ -27,7 +29,7 @@ const AgentsWidget = (p: AgentsWidgetProps, env: WidgetEnvironment) => {
   const figure = (size: number, color: string) => [font({ size, weight: 'medium', design: 'monospaced' }), monospacedDigit(), foregroundStyle(color)]
   const body = (color: string) => [font({ size: 13 }), foregroundStyle(color)]
   const action = [font({ size: 13, weight: 'semibold' }), foregroundStyle(c.accent)]
-  const waiting = p.pending ? `${p.pending} waiting for you` : 'Nothing waiting for you'
+  const waiting = p.pending ? `${p.pending} waiting for you` : 'All caught up'
 
   if (!p.signedIn) {
     return (
@@ -74,13 +76,16 @@ const AgentsWidget = (p: AgentsWidgetProps, env: WidgetEnvironment) => {
         <HStack key={a.id} spacing={10}>
           <VStack alignment="leading" spacing={0}>
             <Text modifiers={body(c.ink)}>{a.name}</Text>
-            <Text modifiers={[font({ size: 11 }), foregroundStyle(a.paused ? c.caution : c.positive)]}>{a.paused ? 'Paused' : 'Active'}</Text>
+            <Text modifiers={[font({ size: 11 }), foregroundStyle(a.paused ? c.caution : c.positive)]}>{a.paused ? 'Paused' : 'Running'}</Text>
           </VStack>
           <Spacer />
           {a.balance ? <Text modifiers={figure(13, c.ink)}>{a.balance}</Text> : null}
-          {/* Resume is a decision to let it spend again, so it happens on the agent's screen, not from a home-screen tap. */}
-          <Link destination={a.paused ? a.openUrl : a.pauseUrl}>
+          {/* Resume is a decision to let it spend again, so it opens the agent's resume sheet, not a home-screen tap. */}
+          <Link destination={a.paused ? a.resumeUrl : a.pauseUrl}>
             <Text modifiers={action}>{a.paused ? 'Resume' : 'Pause'}</Text>
+          </Link>
+          <Link destination={a.fundUrl}>
+            <Text modifiers={action}>Fund</Text>
           </Link>
         </HStack>
       ))}

@@ -37,7 +37,8 @@ export type AgentData = {
 }
 
 /** One agent's screen; `onChanged` reads it again after a write. */
-export function AgentView({ data, onChanged }: { data: AgentData; onChanged: () => void }) {
+/** `opens` draws the screen with a sheet open, as the home-screen widget's Resume and Fund ask (B57.77). */
+export function AgentView({ data, onChanged, opens }: { data: AgentData; onChanged: () => void; opens?: 'resume' | 'fund' }) {
   const { client, peg } = useSession()
   const { c } = useTheme()
   const { summary, signs } = data
@@ -49,7 +50,7 @@ export function AgentView({ data, onChanged }: { data: AgentData; onChanged: () 
 
   const [busy, setBusy] = useState(false)
   const [refusal, setRefusal] = useState('')
-  const [asking, setAsking] = useState(false)
+  const [asking, setAsking] = useState(opens === 'resume' && paused)
   const [sheetSaid, setSheetSaid] = useState('')
   const [note, setNote] = useState('')
   const [starting, setStarting] = useState(false)
@@ -58,7 +59,7 @@ export function AgentView({ data, onChanged }: { data: AgentData; onChanged: () 
   const instant = shows?.instantTransfer === true
   const held = shows ? balancesByCurrency(summary.currency_accounts ?? [], shows) : []
   const [instantSaid, setInstantSaid] = useState('')
-  const [funding, setFunding] = useState<FundingDirection | null>(null)
+  const [funding, setFunding] = useState<FundingDirection | null>(opens === 'fund' ? 'to_agent' : null)
   const [moved, setMoved] = useState('')
   const [rulesOpen, setRulesOpen] = useState(false)
 
