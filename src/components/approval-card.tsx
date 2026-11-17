@@ -106,11 +106,20 @@ export function expiresWords(at: string, now = new Date()) {
 /** `Face ID on this iPhone`: what signed it. */
 const signedWith = `${biometricName === 'Face ID' ? 'Face ID' : 'Your fingerprint'} on this ${Platform.OS === 'ios' ? 'iPhone' : 'phone'}`
 
-type Fact = readonly [label: string, value: string, note?: string]
+export type Fact = readonly [label: string, value: string, note?: string]
+
+/** B62.4 — what the agent says a payment is for, as every screen shows it (suite B62.3's TaskSays): after these words and
+ * nothing else, never as a fact. Nothing when it gave none. */
+export function TaskSays({ task }: { task?: string }) {
+  if (!task) return null
+  return (
+    <Body muted>{`The agent says: “${task}”`}</Body>
+  )
+}
 
 /** The sheet's and the result's facts: a label on the left, its value on the right, a rule between; a row's note under its
  * value in 13 ink-3, as launch-pack P8 draws "this month" under Budget left after. */
-function Facts({ rows, testID }: { rows: (Fact | null)[]; testID?: string }) {
+export function Facts({ rows, testID }: { rows: (Fact | null)[]; testID?: string }) {
   const { c } = useTheme()
   const shown = rows.filter((r): r is Fact => r !== null)
   return (
@@ -156,6 +165,7 @@ export function ApprovalCard({ approval, agent, capability, label = true, onRevi
         </View>
         <Button primary small label="Review" accessibilityLabel={`Review: ${title}`} onPress={onReview} />
       </View>
+      <TaskSays task={approval.task} />
       {label ? <MoneyLabel capability={capability} /> : null}
     </Card>
   )
@@ -261,6 +271,7 @@ export function ApprovalSheet({
         <Text style={{ fontFamily: fonts.uiBold }}>{subject(a)}</Text>
       </Body>
       {a.memo && a.reason ? <Body muted>“{a.reason}”</Body> : null}
+      <TaskSays task={a.task} />
       <Facts
         testID="approval-facts"
         rows={[
