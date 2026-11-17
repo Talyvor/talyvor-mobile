@@ -165,6 +165,8 @@ export interface AgentApproval {
   budget_left_after_ulxc?: number | null
   /** B59.22 — 'card_challenge' for a 3-D Secure check on the agent's card, decided only signed; absent for the agent's own */
   kind?: 'card_challenge'
+  /** B62.4 — what the agent says the payment is for, in its own words (Lens B62.2); "" when it gave none. Never a fact. */
+  task?: string
 }
 
 /** Lens economy.PaidFrom (B57.11): what pays an approval, named in words, its amount in that currency and its balance now. */
@@ -689,6 +691,34 @@ export interface SpendPayment {
   currency: string
   category: string
   created_at: string
+}
+
+/** B62.4 — one side of a payment's proof, as the owner was shown it or as it was sent (Lens economy.ProofShown, ProofSent). */
+export interface ProofPayment {
+  agent_id: string
+  payee: { kind: string; id: string; name: string }
+  amount_minor: number
+  /** LXC for a payment of the agent's LXC, its amount then in µLXC */
+  currency: string
+}
+
+/** B62.4 — the proof of one payment the rules let through (Lens B62.1 economy.PaymentProof). */
+export interface PaymentProof {
+  id: string
+  /** approval_above | prepared | within_rules | always_allow | mandate | no_rules */
+  rule: string
+  rules_version: number | null
+  approval_id?: string
+  shown: ProofPayment & { agent_name: string }
+  /** passkey | device | approver_agent; none when the rules passed it without asking */
+  key_kind?: string
+  key_id?: string
+  signed_at?: string
+  /** account | card | lxc | marketplace_bill */
+  sent: ProofPayment & { rail: string; reference: string; memo?: string; task?: string }
+  created_at: string
+  /** the signature is by its key, over exactly what was shown */
+  verified: boolean
 }
 
 /** Lens economy.Spending: the payments in [from, to), newest first, and each wallet's totals per currency. */
@@ -1302,6 +1332,15 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     // B53.9 — the web's Spending screen's reads (B53.8), every number from Lens.
     /** The payments in [from, to), RFC 3339, with each wallet's totals by category. */
     spending: (from: string, to: string) => call<Spending>('GET', `/api/money/spending?${new URLSearchParams({ from, to })}`),
+    /** B62.4 — a payment's proof, by its money entry (Lens B62.1, suite B62.3's relay); null for a payment the rules never judged. */
+    paymentProof: async (entry: string): Promise<PaymentProof | null> => {
+      try {
+        return await call<PaymentProof>('GET', `/api/payment-proofs/${e(entry)}`)
+      } catch (err) {
+        if (err instanceof BffError && err.status === 404) return null
+        throw err
+      }
+    },
     unusual: (from: string, to: string) =>
       call<{ findings: SpendFinding[] | null }>('GET', `/api/money/spending/unusual?${new URLSearchParams({ from, to })}`),
     budgets: () => call<{ budgets: SpendBudget[] | null }>('GET', '/api/money/budgets'),

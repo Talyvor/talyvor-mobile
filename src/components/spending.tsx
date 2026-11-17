@@ -6,6 +6,7 @@ import { byCategory, byCurrency, categoryName, day, noticeMore, RULES } from '..
 import { fonts, useTheme } from '../theme'
 import { Money } from './money'
 import { NoticeSettingsCard } from './notice-settings'
+import { PaymentProofSection } from './payment-proof'
 import { Back, Bar, Body, Card, Eyebrow, Figure, Headline, Row } from './ui'
 
 // B57.92 — Spending and a payment's notice in Pocket's cards (design/pocket p-spending and p-notice, in the order Pocket
@@ -136,6 +137,7 @@ export function SpendingView({ data }: { data: SpendingData }) {
               title={p.merchant || 'A payment'}
               sub={`${categoryName(p.category)} · ${day(p.created_at)} · ${whose(p.agent_id)}`}
               right={<Figure>{formatMinor(p.amount_minor, p.currency)}</Figure>}
+              onPress={() => router.push({ pathname: '/payments/[entry]', params: { entry: p.entry_id, at: p.created_at } })}
             />
           ))}
         </Card>
@@ -176,7 +178,22 @@ export interface NoticeData {
   agents: { id: string; name: string }[]
 }
 
-/** Where a spending notice lands: the payment it is about, and what the notice says beyond its category. */
+/** B62.4 — a payment as its notice and its own screen draw it: the amount, its category, when and whose. */
+export function PaymentCard({ payment: p, agents }: { payment: SpendPayment; agents: SpendingData['agents'] }) {
+  return (
+    <Card>
+      <Money minor={p.amount_minor} currency={p.currency} size={34} />
+      <View style={{ gap: 2 }}>
+        <Body style={{ fontFamily: fonts.uiMedium }}>{categoryName(p.category)}</Body>
+        <Body muted>
+          {`${day(p.created_at)} · ${new Date(p.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} · ${whoseOf(agents)(p.agent_id)}`}
+        </Body>
+      </View>
+    </Card>
+  )
+}
+
+/** Where a spending notice lands: the payment it is about, its proof (B62.4), and what the notice says beyond its category. */
 export function NoticeView({ data }: { data: NoticeData | null }) {
   const { c } = useTheme()
   const n = data?.notice
@@ -189,18 +206,9 @@ export function NoticeView({ data }: { data: NoticeData | null }) {
       <Eyebrow>{n?.title ?? 'Payment'}</Eyebrow>
       <Headline>{p ? p.merchant || 'A payment' : (n?.title ?? 'Payment')}</Headline>
       {data && !n ? <Body muted>There is no notice at this address. It may belong to another workspace.</Body> : null}
-      {p ? (
-        <Card>
-          <Money minor={p.amount_minor} currency={p.currency} size={34} />
-          <View style={{ gap: 2 }}>
-            <Body style={{ fontFamily: fonts.uiMedium }}>{categoryName(p.category)}</Body>
-            <Body muted>
-              {`${day(p.created_at)} · ${new Date(p.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} · ${whoseOf(data.agents)(p.agent_id)}`}
-            </Body>
-          </View>
-        </Card>
-      ) : null}
+      {p ? <PaymentCard payment={p} agents={data.agents} /> : null}
       {more ? <Body muted>{more}</Body> : null}
+      {p ? <PaymentProofSection entry={p.entry_id} /> : null}
       {n ? (
         <Pressable accessibilityRole="link" onPress={() => router.navigate('/spending')} style={{ minHeight: 48, justifyContent: 'center', alignSelf: 'flex-start' }}>
           <Body style={{ color: c.tangerineInk }}>See all your spending</Body>
