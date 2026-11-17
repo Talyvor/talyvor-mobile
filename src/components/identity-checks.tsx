@@ -273,8 +273,8 @@ export function IdentityChecks({ head, done, wayIn = false }: { head: ReactNode;
           <Button primary label={running ? IDENTITY_WORDS.running : IDENTITY_WORDS.run} disabled={running !== null} onPress={() => void run()} />
           {wayInSaid ? (
             <View testID="identity-way-in" accessibilityLiveRegion="polite" style={{ gap: 8 }}>
-              <Body muted>{wayInSaid}</Body>
               {done}
+              <Body muted>{wayInSaid}</Body>
             </View>
           ) : null}
         </>

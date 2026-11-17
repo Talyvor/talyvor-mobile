@@ -1,0 +1,284 @@
+[
+ {
+  "route": "/sign-up?another=1",
+  "screen": "p-pause-all",
+  "account": "personal:hybrid",
+  "name": "waiting",
+  "answers": {
+   "/api/verification": {
+    "level": "L1",
+    "meaning": "",
+    "live_level": "L0",
+    "live_meaning": "",
+    "checks": [
+     {
+      "level": "L2",
+      "subject": "person",
+      "method": "test",
+      "test": true,
+      "status": "pending",
+      "evidence_ref": "ev_2"
+     },
+     {
+      "level": "L1",
+      "subject": "contact",
+      "method": "test",
+      "test": true,
+      "status": "completed",
+      "evidence_ref": "ev_1"
+     }
+    ]
+   },
+   "/api/accounts": {
+    "token": "sample-session",
+    "expires_at": "2099-01-01T00:00:00Z",
+    "account_id": "ws_new"
+   }
+  },
+  "steps": [
+   [
+    "press",
+    "Personal. For you and your own agents."
+   ],
+   [
+    "fill",
+    "Your name",
+    "Maya Lind"
+   ],
+   [
+    "press",
+    "Country"
+   ],
+   [
+    "press",
+    "United Kingdom"
+   ],
+   [
+    "press",
+    "Continue"
+   ],
+   [
+    "press",
+    "Hybrid. Both side by side, under one set of rules."
+   ],
+   [
+    "press",
+    "Continue"
+   ]
+  ],
+  "words": "report",
+  "why": "B61.118: the identity step's foot with the way into the app while the person check waits for the checker"
+ },
+ {
+  "route": "/sign-up?another=1",
+  "screen": "p-pause-all",
+  "account": "personal:hybrid",
+  "name": "waiting",
+  "answers": {
+   "/api/verification": {
+    "level": "L1",
+    "meaning": "",
+    "live_level": "L0",
+    "live_meaning": "",
+    "checks": [
+     {
+      "level": "L2",
+      "subject": "person",
+      "method": "test",
+      "test": true,
+      "status": "pending",
+      "evidence_ref": "ev_2"
+     },
+     {
+      "level": "L1",
+      "subject": "contact",
+      "method": "test",
+      "test": true,
+      "status": "completed",
+      "evidence_ref": "ev_1"
+     }
+    ]
+   },
+   "/api/accounts": {
+    "token": "sample-session",
+    "expires_at": "2099-01-01T00:00:00Z",
+    "account_id": "ws_new"
+   }
+  },
+  "steps": [
+   [
+    "press",
+    "Personal. For you and your own agents."
+   ],
+   [
+    "fill",
+    "Your name",
+    "Maya Lind"
+   ],
+   [
+    "press",
+    "Country"
+   ],
+   [
+    "press",
+    "United Kingdom"
+   ],
+   [
+    "press",
+    "Continue"
+   ],
+   [
+    "press",
+    "Hybrid. Both side by side, under one set of rules."
+   ],
+   [
+    "press",
+    "Continue"
+   ]
+  ],
+  "words": "report",
+  "why": "B61.118: the identity step's foot with the way into the app while the person check waits for the checker",
+  "dark": true
+ },
+ {
+  "route": "/sign-up?another=1",
+  "screen": "p-pause-all",
+  "account": "personal:hybrid",
+  "name": "not-passed",
+  "answers": {
+   "/api/verification": {
+    "level": "L1",
+    "meaning": "",
+    "live_level": "L0",
+    "live_meaning": "",
+    "checks": [
+     {
+      "level": "L2",
+      "subject": "person",
+      "method": "test",
+      "test": true,
+      "status": "failed",
+      "evidence_ref": "ev_2"
+     },
+     {
+      "level": "L1",
+      "subject": "contact",
+      "method": "test",
+      "test": true,
+      "status": "completed",
+      "evidence_ref": "ev_1"
+     }
+    ]
+   },
+   "/api/accounts": {
+    "token": "sample-session",
+    "expires_at": "2099-01-01T00:00:00Z",
+    "account_id": "ws_new"
+   }
+  },
+  "steps": [
+   [
+    "press",
+    "Personal. For you and your own agents."
+   ],
+   [
+    "fill",
+    "Your name",
+    "Maya Lind"
+   ],
+   [
+    "press",
+    "Country"
+   ],
+   [
+    "press",
+    "United Kingdom"
+   ],
+   [
+    "press",
+    "Continue"
+   ],
+   [
+    "press",
+    "Hybrid. Both side by side, under one set of rules."
+   ],
+   [
+    "press",
+    "Continue"
+   ]
+  ],
+  "words": "report",
+  "why": "B61.118: the identity step's foot with the way into the app while the person check did not pass"
+ },
+ {
+  "route": "/sign-up?another=1",
+  "screen": "p-pause-all",
+  "account": "personal:hybrid",
+  "name": "not-passed",
+  "answers": {
+   "/api/verification": {
+    "level": "L1",
+    "meaning": "",
+    "live_level": "L0",
+    "live_meaning": "",
+    "checks": [
+     {
+      "level": "L2",
+      "subject": "person",
+      "method": "test",
+      "test": true,
+      "status": "failed",
+      "evidence_ref": "ev_2"
+     },
+     {
+      "level": "L1",
+      "subject": "contact",
+      "method": "test",
+      "test": true,
+      "status": "completed",
+      "evidence_ref": "ev_1"
+     }
+    ]
+   },
+   "/api/accounts": {
+    "token": "sample-session",
+    "expires_at": "2099-01-01T00:00:00Z",
+    "account_id": "ws_new"
+   }
+  },
+  "steps": [
+   [
+    "press",
+    "Personal. For you and your own agents."
+   ],
+   [
+    "fill",
+    "Your name",
+    "Maya Lind"
+   ],
+   [
+    "press",
+    "Country"
+   ],
+   [
+    "press",
+    "United Kingdom"
+   ],
+   [
+    "press",
+    "Continue"
+   ],
+   [
+    "press",
+    "Hybrid. Both side by side, under one set of rules."
+   ],
+   [
+    "press",
+    "Continue"
+   ]
+  ],
+  "words": "report",
+  "why": "B61.118: the identity step's foot with the way into the app while the person check did not pass",
+  "dark": true
+ }
+]
