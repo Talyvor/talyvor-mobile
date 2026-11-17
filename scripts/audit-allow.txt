@@ -1,0 +1,7 @@
+# B66.2 — the advisories `node scripts/check-audit.js` lets through, one GHSA per line. Each is an advisory with no fix
+# to take. Drop the line when its condition stops holding. Nothing else is allowed.
+
+# B61.118 — picomatch <=4.0.7, ReDoS in extglob patterns (via expo's and metro's file watchers, jest, tinyglobby and fdir,
+# build and test time only, on the repo's own globs): no patched picomatch release exists (4.0.7 is the latest, 17 Nov
+# 2026). Drop this line and refresh the lockfile once a release >=4.0.8 is past the minimum release age.
+GHSA-fc5q-39xc-vjpf
