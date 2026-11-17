@@ -1080,6 +1080,42 @@ describe('B57.72 Pay and a payee', () => {
     expect(screen.queryByRole('button', { name: /^Pay/ })).toBeNull()
     expect(posted(calls)).toHaveLength(0)
   })
+
+  // B61.116 — a payment out says its fee before it is sent: Lens's local allowance this month, through GET /api/plan.
+  const withPlan = (left: number) =>
+    answer((url) =>
+      url.endsWith('/api/plan')
+        ? new Response(JSON.stringify({ plan: 'business_studio', name: 'Studio', agents: 3, agents_used: 1, seats: 1,
+            allowances: [{ allowance: 'local', free: 10, used: left < 0 ? 0 : 10 - left, left, fee_minor: { GBP: 20, EUR: 20, USD: 20 } }] }))
+        : undefined,
+    )
+
+  test('while the plan has free payments left, the line under the amount says how many', async () => {
+    mockBff()
+    withPlan(3)
+    await renderRouter('./src/app', { initialUrl: '/payees/py_1' })
+    await fireEvent.changeText(await screen.findByLabelText('Amount in GBP'), '20')
+    expect(await screen.findByText('Free. You have 3 free payments left this month.')).toBeTruthy()
+    expect(screen.queryByText(/Total/)).toBeNull()
+  })
+
+  test('once they are used, it says Lens’s fee in the payment’s currency and the total with it', async () => {
+    mockBff()
+    withPlan(0)
+    await renderRouter('./src/app', { initialUrl: '/payees/py_1' })
+    await fireEvent.changeText(await screen.findByLabelText('Amount in GBP'), '20')
+    expect(await screen.findByText('Fee £0.20 · Total £20.20')).toBeTruthy()
+  })
+
+  test('on a plan with no limit, it says nothing about a fee', async () => {
+    const calls = mockBff()
+    withPlan(-1)
+    await renderRouter('./src/app', { initialUrl: '/payees/py_1' })
+    await fireEvent.changeText(await screen.findByLabelText('Amount in GBP'), '20')
+    expect(await screen.findByRole('button', { name: 'Pay £20.00' })).toBeTruthy()
+    expect(calls.some((c) => c.path === '/api/plan')).toBe(true)
+    expect(screen.queryByText(/Fee|free payment/)).toBeNull()
+  })
 })
 
 describe('B55.11 prepared payments on Home and Approvals', () => {

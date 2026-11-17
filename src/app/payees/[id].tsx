@@ -1,6 +1,7 @@
 import {
   BffError,
   formatMinor,
+  localPaymentFee,
   parseMinor,
   refusalText,
   type BffClient,
@@ -65,13 +66,15 @@ export default function PayeeScreen() {
   const { client } = useSession()
   const { c } = useTheme()
   const load = useCallback(async () => {
-    const [payees, payments, accounts, pins, key, prepared] = await Promise.all([
+    const [payees, payments, accounts, pins, key, prepared, plan] = await Promise.all([
       client.payees(),
       client.payments(),
       client.moneyAccounts(),
       pinnedPayees(),
       phoneKey(client).catch(() => null),
       pendingPrepared(client),
+      // B61.116 — the plan's local payments this month, for the fee line; unread, the line says nothing.
+      client.plan().catch(() => null),
     ])
     const waiting = prepared.find((r) => r.items.some((it) => it.payee_id === id)) ?? null
     return {
@@ -82,6 +85,7 @@ export default function PayeeScreen() {
       hasKey: !!key?.here && keysAvailable(),
       waiting,
       approved: await preparedToday(client, id, waiting),
+      plan,
     }
   }, [client, id])
   const { data, error, loading, reload } = useLoad(load)
@@ -136,6 +140,14 @@ export default function PayeeScreen() {
     }
   }
   const total = account && minor !== null ? formatMinor(minor, account.currency) : ''
+  // B61.116 — Lens takes a local payment's fee once the plan's free ones this month are used (B61.58), so it is said first.
+  const fee = account ? localPaymentFee(data?.plan, account.currency) : undefined
+  const feeLine =
+    !fee || (fee.free && fee.left < 0)
+      ? ''
+      : fee.free
+        ? `Free. You have ${fee.left} free ${fee.left === 1 ? 'payment' : 'payments'} left this month.`
+        : `Fee ${formatMinor(fee.fee_minor, account!.currency)}${minor !== null ? ` · Total ${formatMinor(minor + fee.fee_minor, account!.currency)}` : ''}`
   const first = !!payee && !data?.payments.some((p) => p.payee_id === payee.id)
   const open = () => {
     setRefusal('')
@@ -222,6 +234,7 @@ export default function PayeeScreen() {
             )}
           </View>
           <Field label={`Amount in ${account?.currency ?? 'the account currency'}`} keyboardType="decimal-pad" value={amount} onChangeText={typed(setAmount)} />
+          {feeLine ? <Body muted>{feeLine}</Body> : null}
           <Field label="Reference" value={reference} onChangeText={typed(setReference)} />
           {data.waiting ? (
             <Card>
