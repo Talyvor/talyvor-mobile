@@ -1,12 +1,12 @@
 import { BffError, formatMinor, type LadderPlan, type WorkspacePlan } from '@talyvor/bff-client'
 import { useCallback, useState } from 'react'
-import { Modal, Pressable, Text, View } from 'react-native'
+import { Text, View } from 'react-native'
 
 import { useAccount } from '@/account'
-import { Icon } from '@/components/icon'
 import { Money } from '@/components/money'
 import { MoneyLabel, useMoneyLabels } from '@/components/money-label'
-import { Back, Body, Button, Card, Chip, Eyebrow, Headline, Row, Screen, Sheet, useLoad } from '@/components/ui'
+import { BottomSheet } from '@/components/pay-sheet'
+import { Back, Body, Button, Card, Chip, Eyebrow, Headline, Row, Screen, useLoad } from '@/components/ui'
 import { openHelpMail } from '@/help-words'
 import { PLAN_CAPABILITY, PLAN_WORDS as W, agentsOf, agentsUsed, exchangeFee, peopleOf, planCurrency, priceIn } from '@/plan-words'
 import { useSession } from '@/session'
@@ -20,6 +20,11 @@ import { fonts, useTheme } from '@/theme'
 // ⚠ EVERY FIGURE IS LENS'S. The plan, its price and its agents come from GET /api/plan; the ladders and the exchange fee
 // from GET /api/pricing (Lens's GET /v1/public/plans and fees). A plan Lens did not state is not drawn. Changing plan is
 // PUT /api/plan after one confirmation, and Lens decides it: its refusal is said in its own words.
+//
+// B57.180 — drawn in Pocket, as Pocket Live's Settings sub-pages (sub:plan, sub:security) and the app's Wallets draw
+// theirs: the Sandbox label beside the headline, Your plan in a cloud card, the plan's facts with the label on the left
+// and the figure on the right, the ladder under Pocket Live's section head as one card with a rule between plans, and the
+// change as Pocket's sheet with the label beside its question.
 
 const signedOut = (err: unknown) => err instanceof BffError && err.status === 401
 
@@ -29,50 +34,84 @@ function MonthlyPrice({ minor, currency, size = 17 }: { minor: number | null; cu
   return (
     <View style={{ flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', columnGap: 6 }}>
       <Money minor={minor} currency={currency} size={size} />
-      <Text style={{ fontFamily: fonts.uiBold, fontSize: 15, color: c.ink3 }}>{W.aMonth}</Text>
+      <Text style={{ fontFamily: fonts.uiMedium, fontSize: 14, color: c.ink2 }}>{W.aMonth}</Text>
     </View>
   )
 }
 
-/** One plan of the ladder: its name, price, agents, people and exchange fee; Your plan or Change plan. */
-function LadderCard({
+/** Pocket Live's section head (.sec-h h3): the display face at 18, ink, over the card it names. */
+function SectionHead({ children }: { children: string }) {
+  const { c } = useTheme()
+  return (
+    <Text accessibilityRole="header" style={{ fontFamily: fonts.display, fontSize: 18, lineHeight: 21.5, color: c.ink, marginTop: 8 }}>
+      {children}
+    </Text>
+  )
+}
+
+/** Pocket Live's facts: the label on the left in ink-2, the figure on the right, a rule between. */
+function Fact({ label, value, first }: { label: string; value: string; first?: boolean }) {
+  const { c } = useTheme()
+  return (
+    <View
+      accessible
+      accessibilityLabel={`${label}: ${value}`}
+      style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12, paddingVertical: 11, borderTopWidth: first ? 0 : 1, borderTopColor: c.line }}>
+      <Body muted>{label}</Body>
+      <Body style={{ flexShrink: 1, textAlign: 'right', fontFamily: fonts.uiMedium }}>{value}</Body>
+    </View>
+  )
+}
+
+/** One plan of the ladder, a row of its card: its name, with Your plan on the account's own; its agents, people and
+ * exchange fee under it; its monthly price on the right; Change plan, or Custom's way to talk to us, under the row. */
+function LadderPlanRow({
   plan,
   current,
   currency,
   fx,
+  first,
+  last,
   onChange,
 }: {
   plan: LadderPlan
   current: boolean
   currency: string
   fx: Record<string, number> | undefined
+  first: boolean
+  last: boolean
   onChange: (() => void) | null
 }) {
   const { c } = useTheme()
   const fee = exchangeFee(fx, plan.id)
+  const sub = { fontFamily: fonts.ui, fontSize: 13.5, lineHeight: 19, color: c.ink3 }
   return (
-    <View
-      testID={`ladder-${plan.id}`}
-      style={{ gap: 10, borderRadius: 20, padding: 18, backgroundColor: current ? c.page : c.cloud, borderWidth: current ? 2 : 0, borderColor: c.ink }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-        <Text accessibilityRole="header" style={{ fontFamily: fonts.display, fontSize: 20, color: c.ink }}>
-          {plan.name}
-        </Text>
-        {current ? <Chip tone="good">{W.yourPlan}</Chip> : null}
-      </View>
-      <MonthlyPrice minor={priceIn(plan.price_minor, currency)} currency={currency} />
-      <View style={{ gap: 2 }}>
-        <Body muted>{agentsOf(plan.agents)}</Body>
-        <Body muted>{peopleOf(plan.people)}</Body>
-        {fee && !plan.by_contract ? <Body muted>{fee}</Body> : null}
+    <View testID={`ladder-${plan.id}`} style={{ gap: 12, paddingTop: first ? 0 : 14, paddingBottom: last ? 0 : 4, borderTopWidth: first ? 0 : 1, borderTopColor: c.line }}>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+        <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+            <Text accessibilityRole="header" style={{ fontFamily: fonts.display, fontSize: 18, lineHeight: 22, color: c.ink }}>
+              {plan.name}
+            </Text>
+            {current ? <Chip tone="good">{W.yourPlan}</Chip> : null}
+          </View>
+          <View>
+            <Text style={sub}>{agentsOf(plan.agents)}</Text>
+            <Text style={sub}>{peopleOf(plan.people)}</Text>
+            {fee && !plan.by_contract ? <Text style={sub}>{fee}</Text> : null}
+          </View>
+        </View>
+        <View style={{ alignItems: 'flex-end' }}>
+          <MonthlyPrice minor={priceIn(plan.price_minor, currency)} currency={currency} size={16} />
+        </View>
       </View>
       {plan.by_contract ? (
         <View style={{ flexDirection: 'row' }}>
-          <Button small variant="outline" label={W.custom} onPress={() => void openHelpMail('')} />
+          <Button small variant="secondary" label={W.custom} onPress={() => void openHelpMail('')} />
         </View>
       ) : onChange ? (
         <View style={{ flexDirection: 'row' }}>
-          <Button small variant="outline" label={W.change} accessibilityLabel={`${W.change}: ${plan.name}`} onPress={onChange} />
+          <Button small variant="secondary" label={W.change} accessibilityLabel={`${W.change}: ${plan.name}`} onPress={onChange} />
         </View>
       ) : null}
     </View>
@@ -128,39 +167,31 @@ function ChangePlanSheet({
       setBusy(false)
     }
   }
-  const close = () => {
-    if (!busy) onClose()
-  }
   return (
-    <Modal visible transparent animationType="slide" onRequestClose={close}>
-      <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: c.scrim }}>
-        <Pressable accessible={false} style={{ flex: 1 }} onPress={close} />
-        <Sheet>
-          <View testID="plan-change-sheet" style={{ gap: 14 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <Text accessibilityRole="header" style={{ flex: 1, fontFamily: fonts.display, fontSize: 22, lineHeight: 28, color: c.ink }}>
-                {W.changeToAsk(to.name)}
-              </Text>
-              <Pressable accessibilityRole="button" accessibilityLabel="Close" hitSlop={10} onPress={close}>
-                <Icon name="x" color={c.ink2} />
-              </Pressable>
-            </View>
-            <View testID="plan-change-lines" style={{ gap: 4 }}>
-              {whatChanges(from, to, currency, served).map((line) => (
-                <Body key={line}>{line}</Body>
-              ))}
-            </View>
-            {refusal ? (
-              <View accessibilityRole="alert" testID="plan-change-refusal">
-                <Body style={{ color: c.danger }}>{refusal}</Body>
-              </View>
-            ) : null}
-            <Button variant="primary" label={busy ? W.changing : W.changeTo(to.name)} disabled={busy} onPress={() => void change()} />
-            <Button variant="secondary" label={W.cancel} disabled={busy} onPress={close} />
+    <BottomSheet visible testID="plan-change-sheet" onClose={busy ? undefined : onClose}>
+      <View style={{ gap: 14 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+          <Text accessibilityRole="header" style={{ flex: 1, fontFamily: fonts.display, fontSize: 22, lineHeight: 28, color: c.ink }}>
+            {W.changeToAsk(to.name)}
+          </Text>
+          <MoneyLabel capability={PLAN_CAPABILITY} />
+        </View>
+        <View testID="plan-change-lines" style={{ gap: 4 }}>
+          {whatChanges(from, to, currency, served).map((line) => (
+            <Body key={line} muted>
+              {line}
+            </Body>
+          ))}
+        </View>
+        {refusal ? (
+          <View accessibilityRole="alert" testID="plan-change-refusal">
+            <Body style={{ color: c.danger }}>{refusal}</Body>
           </View>
-        </Sheet>
+        ) : null}
+        <Button variant="primary" label={busy ? W.changing : W.changeTo(to.name)} disabled={busy} onPress={() => void change()} />
+        <Button variant="ghost" label={W.cancel} disabled={busy} onPress={onClose} />
       </View>
-    </Modal>
+    </BottomSheet>
   )
 }
 
@@ -200,7 +231,10 @@ export default function PlanScreen() {
       }}
       refreshing={(plan.loading && !!served) || (pricing.loading && !!pricing.data)}>
       <Back home="/settings" />
-      <Headline>{W.title}</Headline>
+      <View testID="plan-head" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+        <Headline>{W.title}</Headline>
+        <MoneyLabel capability={PLAN_CAPABILITY} />
+      </View>
       {reading ? (
         <Body muted>{W.reading}</Body>
       ) : !served || !type ? (
@@ -215,44 +249,43 @@ export default function PlanScreen() {
             </View>
           ) : null}
           <View testID="plan-current" style={{ gap: 14 }}>
-            <Card white>
-              <View style={{ gap: 12 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-                  <View style={{ flex: 1, gap: 6 }}>
-                    <Eyebrow>{W.yourPlan}</Eyebrow>
-                    <PlanName>{W.youAreOn(served.name ?? mine?.name ?? served.plan)}</PlanName>
-                    {currency ? <MonthlyPrice minor={priceIn(served.price_minor, currency)} currency={currency} size={24} /> : null}
-                  </View>
-                  <MoneyLabel capability={PLAN_CAPABILITY} />
-                </View>
+            <Card>
+              <View style={{ gap: 6 }}>
+                <Eyebrow>{W.yourPlan}</Eyebrow>
+                <PlanName>{W.youAreOn(served.name ?? mine?.name ?? served.plan)}</PlanName>
+                {currency ? <MonthlyPrice minor={priceIn(served.price_minor, currency)} currency={currency} size={24} /> : null}
                 {sandbox ? (
-                  <View testID="plan-sandbox-line">
+                  <View testID="plan-sandbox-line" style={{ marginTop: 4 }}>
                     <Body muted>{W.sandbox}</Body>
                   </View>
                 ) : null}
               </View>
             </Card>
-            <Card>
-              <Row first title={agentsUsed(served.agents_used, served.agents)} sub={W.agents} />
-              <Row title={peopleOf(served.seats)} sub={W.people} />
-              {fee ? <Row title={fee} sub={W.exchange} /> : null}
+            <Card tight>
+              <Fact first label={W.agents} value={agentsUsed(served.agents_used, served.agents)} />
+              <Fact label={W.people} value={peopleOf(served.seats)} />
+              {fee ? <Fact label={W.exchange} value={fee} /> : null}
             </Card>
             {served.on_contract ? <Body muted>{W.onContract}</Body> : null}
           </View>
 
-          <Eyebrow>{type === 'personal' ? W.forPerson : W.forCompany}</Eyebrow>
+          <SectionHead>{type === 'personal' ? W.forPerson : W.forCompany}</SectionHead>
           {ladder && currency ? (
-            <View testID="plan-ladder" style={{ gap: 12 }}>
-              {ladder.map((p) => (
-                <LadderCard
-                  key={p.id}
-                  plan={p}
-                  current={p.id === served.plan}
-                  currency={currency}
-                  fx={fx}
-                  onChange={p.id === served.plan || served.on_contract ? null : () => setChanging(p)}
-                />
-              ))}
+            <View testID="plan-ladder">
+              <Card>
+                {ladder.map((p, i) => (
+                  <LadderPlanRow
+                    key={p.id}
+                    plan={p}
+                    first={i === 0}
+                    last={i === ladder.length - 1}
+                    current={p.id === served.plan}
+                    currency={currency}
+                    fx={fx}
+                    onChange={p.id === served.plan || served.on_contract ? null : () => setChanging(p)}
+                  />
+                ))}
+              </Card>
             </View>
           ) : (
             <Body muted>{W.laddersFailed}</Body>

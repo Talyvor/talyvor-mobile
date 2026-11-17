@@ -107,7 +107,7 @@ test('a Personal account opens Plan from Settings and sees exactly Solo, Crew an
   expect(current.getByText('5 of 11')).toBeTruthy()
   expect(current.getByText('0.45% on exchange')).toBeTruthy()
   expect(await current.findByText(WEB.sandbox)).toBeTruthy()
-  expect(current.getByTestId('money-label-sandbox')).toBeTruthy()
+  expect(within(screen.getByTestId('plan-head')).getByTestId('money-label-sandbox')).toBeTruthy()
 
   const fleet = within(screen.getByTestId('ladder-personal_fleet'))
   expect(fleet.getByLabelText('£8.12')).toBeTruthy()
@@ -167,4 +167,26 @@ test('a change Lens takes closes the sheet and says the account is on its new pl
   expect(done.getByText('Your plan changed now.')).toBeTruthy()
   expect(screen.queryByTestId('plan-change-sheet')).toBeNull()
   expect(puts).toEqual([{ plan: 'personal_fleet' }])
+})
+
+// B57.180 — Plan drawn in Pocket, as Pocket Live's Settings sub-pages and the app's Wallets draw theirs: the Sandbox label
+// beside the headline rather than inside the card, the plan's facts with their label on the left and the figure on the
+// right, the ladder under its section head, and the change sheet as Pocket's sheet with the label beside its question.
+test('Plan is drawn in Pocket: the label beside the headline, label-left facts, the section head, and the sheet with its label', async () => {
+  mockBff(PERSONAL)
+  await renderRouter('./src/app', { initialUrl: '/settings/plan' })
+  const head = within(await screen.findByTestId('plan-head'))
+  expect(head.getByText('Plan')).toBeTruthy()
+  expect(await head.findByTestId('money-label-sandbox')).toBeTruthy()
+  expect(within(screen.getByTestId('plan-current')).queryByTestId('money-label-sandbox')).toBeNull()
+
+  expect(screen.getByLabelText('Agents: 5 of 11')).toBeTruthy()
+  expect(screen.getByLabelText('People: 1 person')).toBeTruthy()
+  expect(screen.getByLabelText('Exchange: 0.45% on exchange')).toBeTruthy()
+  expect(screen.getByRole('header', { name: WEB.forPerson })).toBeTruthy()
+
+  await fireEvent.press(await screen.findByRole('button', { name: 'Change plan: Fleet' }))
+  const sheet = within(await screen.findByTestId('plan-change-sheet'))
+  expect(await sheet.findByTestId('money-label-sandbox')).toBeTruthy()
+  expect(sheet.getByRole('button', { name: 'Close' })).toBeTruthy()
 })
