@@ -5,7 +5,7 @@ import { Text, View } from 'react-native'
 
 import { useAccount } from '@/account'
 import { CompanyDetailsSection } from '@/components/company-details'
-import { CountryField, FieldError } from '@/components/country-field'
+import { CountryField, FieldError, countryRefusal } from '@/components/country-field'
 import { Icon } from '@/components/icon'
 import { MoneyLabel, useMoneyLabels } from '@/components/money-label'
 import { Body, Button, Card, Chip, Field } from '@/components/ui'
@@ -161,6 +161,8 @@ export function IdentityChecks({ done }: { done?: ReactNode }) {
   const { v, setV, failed } = useVerification(client)
   const [running, setRunning] = useState<Subject | null>(null)
   const [said, setSaid] = useState<string | null>(null)
+  // B61.111 — the country Lens refused (country_not_served) and its sentence, said on the country until another is picked.
+  const [refused, setRefused] = useState<{ country: string; sentence: string } | null>(null)
   const [tried, setTried] = useState(false)
   const [d, setD] = useState<Draft>({ email: '', phone: '', name: '', dob: '', country: '' })
   if (failed && !v) return <Body muted>Your checks could not be read just now.</Body>
@@ -194,7 +196,9 @@ export function IdentityChecks({ done }: { done?: ReactNode }) {
           break
         }
       } catch (err) {
-        setSaid(refusedText(err, s.subject))
+        const sentence = countryRefusal(err)
+        if (sentence) setRefused({ country: d.country, sentence })
+        else setSaid(refusedText(err, s.subject))
         break
       }
     }
@@ -255,7 +259,7 @@ export function IdentityChecks({ done }: { done?: ReactNode }) {
                 : null}
               {field('name', <Field label={IDENTITY_WORDS.legalName} value={d.name} onChangeText={set('name')} maxLength={200} autoComplete="name" autoCapitalize="words" />, IDENTITY_WORDS.legalNameHint)}
               {field('dob', <Field label={IDENTITY_WORDS.dateOfBirth} value={d.dob} onChangeText={set('dob')} placeholder="YYYY-MM-DD" keyboardType="numbers-and-punctuation" autoComplete="birthdate-full" autoCorrect={false} />)}
-              {field('country', <CountryField label={IDENTITY_WORDS.country} value={d.country} onChange={set('country')} />)}
+              {field('country', <CountryField label={IDENTITY_WORDS.country} value={d.country} onChange={set('country')} error={refused?.country === d.country && !errors.country ? refused.sentence : undefined} />)}
             </Card>
           ) : null}
           {type === 'business' ? <CompanyDetailsSection titled /> : null}

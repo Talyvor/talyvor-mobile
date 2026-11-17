@@ -9,7 +9,7 @@ import { Card } from '@/components/card'
 import { Icon } from '@/components/icon'
 import { MoneyLabel, useMoneyLabels } from '@/components/money-label'
 import { PasscodePad } from '@/components/passcode-pad'
-import { CountryField, FieldError } from '@/components/country-field'
+import { CountryField, FieldError, countryRefusal } from '@/components/country-field'
 import { IdentityChecks } from '@/components/identity-checks'
 import { Body, Button, Field, Headline, Screen } from '@/components/ui'
 import { DOOR_WORDS, doorRefusal } from '@/door-words'
@@ -70,6 +70,12 @@ interface Profile {
   companyName: string
   registrationNumber: string
   country: string
+}
+
+/** B61.111 — a country Lens refused (country_not_served), and Lens's sentence for it. */
+interface Refused {
+  country: string
+  sentence: string
 }
 
 const EMPTY: Profile = { name: '', companyName: '', registrationNumber: '', country: '' }
@@ -172,7 +178,7 @@ function Note({ children }: { children: string }) {
 }
 
 /** Step 1 (P1): who the account is for, and the profile for that type. */
-function StepWho({ type, setType, profile, setProfile, onContinue, another }: {
+function StepWho({ type, setType, profile, setProfile, onContinue, another, refused }: {
   type: AccountType | null
   setType: (t: AccountType) => void
   profile: Profile
@@ -180,9 +186,12 @@ function StepWho({ type, setType, profile, setProfile, onContinue, another }: {
   onContinue: () => void
   /** B61.10 — a person signed in, opening another account: Back leaves, and there is no signing in instead. */
   another: boolean
+  /** B61.111 — the country Lens refused and its sentence, said on Country until another is picked. */
+  refused: Refused | null
 }) {
   const [tried, setTried] = useState(false)
   const errors = type && tried ? missing(type, profile) : {}
+  const countryRefused = refused && refused.country === profile.country ? refused.sentence : null
   const set = (field: keyof Profile) => (v: string) => setProfile({ ...profile, [field]: v })
   const field = (f: 'name' | 'companyName' | 'registrationNumber') => (
     <View key={f} style={{ gap: 6 }}>
@@ -209,7 +218,7 @@ function StepWho({ type, setType, profile, setProfile, onContinue, another }: {
             onPress={() => {
               if (!type) return
               setTried(true)
-              if (!Object.keys(missing(type, profile)).length) onContinue()
+              if (!Object.keys(missing(type, profile)).length && !countryRefused) onContinue()
             }}
           />
         </>
@@ -225,10 +234,7 @@ function StepWho({ type, setType, profile, setProfile, onContinue, another }: {
       {type ? (
         <View style={{ gap: 14 }}>
           {type === 'personal' ? field('name') : [field('companyName'), field('registrationNumber')]}
-          <View style={{ gap: 6 }}>
-            <CountryField value={profile.country} onChange={set('country')} />
-            {errors.country ? <FieldError>{errors.country}</FieldError> : null}
-          </View>
+          <CountryField value={profile.country} onChange={set('country')} error={errors.country ?? countryRefused ?? undefined} />
         </View>
       ) : null}
       <Note>{TYPE_NOTE}</Note>
@@ -366,6 +372,7 @@ export default function SignUp() {
   const [kind, setKind] = useState<MoneyKind | null>(null)
   const [busy, setBusy] = useState(false)
   const [failed, setFailed] = useState<string | null>(null)
+  const [refused, setRefused] = useState<Refused | null>(null)
   // Someone already signed in has an account: this screen is for opening one, so Home shows instead. Once this sign-up has
   // started, the session it makes is its own and steps 3 and 4 follow.
   const [started, setStarted] = useState(false)
@@ -376,6 +383,15 @@ export default function SignUp() {
 
   const name = (type === 'personal' ? profile.name : profile.companyName).trim()
 
+  // B61.111 — Lens does not serve the country: step 1 again, its sentence on Country.
+  const backToCountry = (err: unknown) => {
+    const sentence = countryRefusal(err)
+    if (!sentence) return false
+    setRefused({ country: profile.country, sentence })
+    setStep(1)
+    return true
+  }
+
   const open = async () => {
     if (!type || !kind) return
     setBusy(true)
@@ -384,6 +400,7 @@ export default function SignUp() {
       await openAccount({ type, kind, name, country: profile.country, ...(type === 'business' ? { registration_number: profile.registrationNumber.trim() } : {}) })
       setStep(4)
     } catch (err) {
+      if (backToCountry(err)) return
       setFailed(openFailure(err))
     } finally {
       setBusy(false)
@@ -398,8 +415,9 @@ export default function SignUp() {
       setStarted(true)
       await finishSignup({ type, kind, name, country: profile.country, ...(type === 'business' ? { registration_number: profile.registrationNumber.trim() } : {}) })
       setStep(3)
-    } catch {
+    } catch (err) {
       setStarted(false)
+      if (backToCountry(err)) return
       setFailed(SAVE_FAILED)
     } finally {
       setBusy(false)
@@ -413,6 +431,6 @@ export default function SignUp() {
   ) : step === 2 && type ? (
     <StepKind type={type} name={name} kind={kind} setKind={setKind} busy={busy} failed={failed} onContinue={() => void (another ? open() : finish())} onBack={() => setStep(1)} another={another} />
   ) : (
-    <StepWho type={type} setType={setType} profile={profile} setProfile={setProfile} onContinue={() => setStep(2)} another={another} />
+    <StepWho type={type} setType={setType} profile={profile} setProfile={setProfile} onContinue={() => setStep(2)} another={another} refused={refused} />
   )
 }

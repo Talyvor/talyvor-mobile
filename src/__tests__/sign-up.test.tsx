@@ -56,6 +56,9 @@ const WEB = {
   },
 }
 
+/** B61.111 — talyvor-lens B61.53's refusal of a country Talyvor does not serve, as the BFF relays it (suite B61.110). */
+const COUNTRY_NOT_SERVED = { code: 'country_not_served', error: 'Talyvor is not available in that country yet.', field: 'country' }
+
 const mockStore = new Map<string, string>()
 jest.mock('expo-secure-store', () => ({
   getItemAsync: async (k: string) => mockStore.get(k) ?? null,
@@ -90,7 +93,7 @@ jest.mock('../../modules/talyvor-keys', () => ({
 }))
 
 /** The BFF: a new workspace with no key yet, and the sign-up's session once the answers are in. */
-function mockBff(refuseSession = false, { failPerson = false, level = 'L0' } = {}) {
+function mockBff(refuseSession = false, { failPerson = false, level = 'L0', countries = undefined as string[] | undefined, refuseCountry = '' } = {}) {
   const sessions: Record<string, unknown>[] = []
   const devices: unknown[] = []
   const signInKeys: { name: string; device: { challenge: string; public_key: string }; passcode: string }[] = []
@@ -102,12 +105,13 @@ function mockBff(refuseSession = false, { failPerson = false, level = 'L0' } = {
   globalThis.fetch = jest.fn(async (url: string, init: RequestInit = {}) => {
     const route = `${init.method ?? 'GET'} ${url.replace('https://bff.test', '')}`
     const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status })
-    if (route === 'GET /api/pricing') return json({ labels: { payments_out: 'sandbox' } })
+    if (route === 'GET /api/pricing') return json({ labels: { payments_out: 'sandbox' }, ...(countries ? { countries } : {}) })
     const auth = (init.headers as Record<string, string>).Authorization
     // B61.27 — the sign-up session chooses its account, and the BFF answers the account's session in its place.
     if (route === 'POST /auth/signup/account' && auth === 'Bearer signup-1') {
       sessions.push(JSON.parse(init.body as string))
       if (refuseSession) return json({ error: 'sign-up needs who the account is for' }, 400)
+      if (refuseCountry && JSON.parse(init.body as string).country === refuseCountry) return json(COUNTRY_NOT_SERVED, 400)
       return json({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z', account_id: 'ws_new', created: true })
     }
     if (auth !== 'Bearer session-1') return json({}, 401)
@@ -130,6 +134,7 @@ function mockBff(refuseSession = false, { failPerson = false, level = 'L0' } = {
     const verify = /^POST \/api\/verification\/(contact|identity|company)$/.exec(route)
     if (verify) {
       const kind = verify[1]
+      if (refuseCountry && JSON.parse(init.body as string).country === refuseCountry) return json(COUNTRY_NOT_SERVED, 400)
       verified.push({ kind, ...JSON.parse(init.body as string) })
       const next = { contact: 'L1', identity: 'L2', company: 'L3' }[kind]!
       const failed = kind === 'identity' && failPerson
@@ -418,4 +423,73 @@ test('B61.21: Home says the account cannot move money until the check is finishe
   await fireEvent.press(screen.getByRole('button', { name: WEB.identity.finish }))
   await waitFor(() => expect(screen).toHavePathname('/settings/verification'))
   expect(await screen.findByText(WEB.steps[3])).toBeTruthy()
+})
+
+// B61.111 — the phone's side of suite B61.110: the pickers offer exactly the countries Lens serves (talyvor-lens B61.53's
+// GET /v1/public/countries, carried on the BFF's /api/pricing as `countries`), and Lens's refusal of any other is said on
+// the country field.
+describe('the countries Lens serves (B61.111)', () => {
+  test('sign-up and the identity check offer only the countries Lens serves, by the app’s own names', async () => {
+    mockBff(false, { countries: ['FR', 'GB', 'US', 'XK'] })
+    await renderRouter('./src/app', { initialUrl: '/sign-up' })
+    await fireEvent.press(await screen.findByRole('radio', { name: /^Personal/ }))
+    await fireEvent.press(screen.getByRole('button', { name: WEB.labels.country }))
+    // Spain is on the app's own list; Lens does not serve it, so it is not offered. A code the app has no name for is
+    // shown by its code.
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Spain' })).toBeNull())
+    for (const name of ['France', 'United Kingdom', 'United States', 'XK']) expect(screen.getByRole('button', { name })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Germany' })).toBeNull()
+
+    await fireEvent.press(screen.getByRole('button', { name: WEB.labels.country }))
+    await fireEvent.changeText(screen.getByLabelText(WEB.labels.name), 'Maya Lind')
+    await fireEvent.press(screen.getByRole('button', { name: WEB.labels.country }))
+    await fireEvent.press(screen.getByRole('button', { name: 'United Kingdom' }))
+    await fireEvent.press(screen.getByRole('button', { name: 'Continue' }))
+    await fireEvent.press(await screen.findByRole('radio', { name: /^Hybrid\./ }))
+    await fireEvent.press(screen.getByRole('button', { name: 'Continue' }))
+    await fireEvent.press(await screen.findByRole('button', { name: 'Not now' }))
+    await fireEvent.press(await screen.findByRole('button', { name: WEB.identity.labels.country }))
+    expect(screen.getByRole('button', { name: 'France' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Spain' })).toBeNull()
+  })
+
+  test('a country Lens refuses at sign-up goes back to step 1 with Lens’s sentence on the country field', async () => {
+    const bff = mockBff(false, { refuseCountry: 'GB' })
+    await renderRouter('./src/app', { initialUrl: '/sign-up' })
+    await stepOne('Personal', 'Maya Lind')
+    await fireEvent.press(await screen.findByRole('radio', { name: /^Fiat only\./ }))
+    await fireEvent.press(screen.getByRole('button', { name: 'Continue' }))
+    const field = await screen.findByTestId('country-field')
+    expect(within(field).getByText(COUNTRY_NOT_SERVED.error)).toBeTruthy()
+    expect(screen.getByText(WEB.steps[0])).toBeTruthy()
+    // Continue waits for another country.
+    await fireEvent.press(screen.getByRole('button', { name: 'Continue' }))
+    expect(screen.queryByText(WEB.steps[1])).toBeNull()
+    await fireEvent.press(screen.getByRole('button', { name: WEB.labels.country }))
+    await fireEvent.press(screen.getByRole('button', { name: 'France' }))
+    expect(screen.queryByText(COUNTRY_NOT_SERVED.error)).toBeNull()
+    await fireEvent.press(screen.getByRole('button', { name: 'Continue' }))
+    expect(await screen.findByText(WEB.steps[1])).toBeTruthy()
+    expect(bff.sessions.map((s) => s.country)).toEqual(['GB'])
+  })
+
+  test('a country Lens refuses at the identity check puts Lens’s sentence on the country field', async () => {
+    const bff = mockBff(false, { refuseCountry: 'GB' })
+    await renderRouter('./src/app', { initialUrl: '/sign-up' })
+    // Sign-up's own country is France here, so only the identity check sends the refused one.
+    await fireEvent.press(await screen.findByRole('radio', { name: /^Personal/ }))
+    await fireEvent.changeText(screen.getByLabelText(WEB.labels.name), 'Maya Lind')
+    await fireEvent.press(screen.getByRole('button', { name: WEB.labels.country }))
+    await fireEvent.press(screen.getByRole('button', { name: 'France' }))
+    await fireEvent.press(screen.getByRole('button', { name: 'Continue' }))
+    await fireEvent.press(await screen.findByRole('radio', { name: /^Hybrid\./ }))
+    await fireEvent.press(screen.getByRole('button', { name: 'Continue' }))
+    await fireEvent.press(await screen.findByRole('button', { name: 'Not now' }))
+    await fillYou()
+    await fireEvent.press(screen.getByRole('button', { name: WEB.identity.run }))
+    const field = await screen.findByTestId('country-field')
+    expect(within(field).getByText(COUNTRY_NOT_SERVED.error)).toBeTruthy()
+    expect(screen.queryByText(WEB.identity.personFailed)).toBeNull()
+    expect(bff.verified.map((v) => v.kind)).toEqual(['contact'])
+  })
 })

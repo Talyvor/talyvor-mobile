@@ -1288,6 +1288,9 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     capabilities: () => call<{ capabilities: WalletCapability[] | null }>('GET', '/api/wallets/capabilities'),
     /** The public pricing; its labels are Lens's public answer per capability, left out when Lens did not say. */
     pricingLabels: async () => (await call<{ labels?: Record<string, string> }>('GET', '/api/pricing')).labels,
+    /** B61.111 — the countries Talyvor serves, as ISO codes (talyvor-lens B61.53's GET /v1/public/countries, which the
+     * public pricing carries, suite B61.110); left out when Lens did not say. */
+    servedCountries: async () => (await call<{ countries?: string[] }>('GET', '/api/pricing')).countries,
     /** B59.29 — the workspace's requests, newest first: all of them for the owner, the ones they sent for anyone else. */
     requests: async () => (await call<{ requests: AccountRequest[] | null }>('GET', '/api/workspace/requests')).requests ?? [],
     /** Sends one request; a closure refused while the account holds money throws BalancesHeldError. */

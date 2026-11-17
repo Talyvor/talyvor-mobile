@@ -1,0 +1,4 @@
+[
+  { "route": "/sign-up?another=1", "launchPack": "P1", "name": "served", "words": "report", "why": "B61.111: the country picker open, offering only the countries Lens serves (here AE, DE, FR, GB and US)", "answers": { "/api/pricing": { "labels": { "payments_out": "sandbox" }, "countries": ["AE", "DE", "FR", "GB", "US"] } }, "steps": [["press", "Personal. For you and your own agents."], ["fill", "Your name", "Maya Lind"], ["press", "Country"]] },
+  { "route": "/sign-up?another=1", "launchPack": "P1", "dark": true, "name": "served", "words": "report", "why": "the same, with the phone set to dark", "answers": { "/api/pricing": { "labels": { "payments_out": "sandbox" }, "countries": ["AE", "DE", "FR", "GB", "US"] } }, "steps": [["press", "Personal. For you and your own agents."], ["fill", "Your name", "Maya Lind"], ["press", "Country"]] }
+]
