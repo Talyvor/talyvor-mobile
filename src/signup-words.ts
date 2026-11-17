@@ -85,23 +85,20 @@ export function servedCountries(served: readonly string[] | undefined): readonly
 
 // B61.21 — step 4, "Confirm who you are", word for word from the web's B61.20 (talyvor-suite PR #1120 at 99205a0,
 // apps/web/src/areas/auth/signupWords.ts): the identity check, run against Lens's levels. Settings, Verification shows the
-// same parts with the same words.
+// same parts with the same words. B57.174: what Pocket Live draws (design/pocket-live texts.json 'ph su5', 15 Nov) takes
+// its words: the line, Full name and the Sandbox note in place of the ID document's card.
 export const IDENTITY_WORDS = {
-  intro: {
-    personal: 'Talyvor checks who you are before your account can move money. It takes a minute.',
-    business: 'Talyvor checks who you are and your company before the account can move money. It takes a minute.',
-  },
+  line: 'The law asks us to check. It takes a minute.',
   checks: 'The checks',
   contact: 'Email and phone',
   person: 'Who you are',
   company: 'Your company',
-  you: 'You',
   email: 'Email',
   phone: 'Phone number',
   phoneHint: 'With the country code, like +447700900123.',
-  legalName: 'Legal name',
-  legalNameHint: 'As it is written on your ID.',
+  legalName: 'Full name',
   dateOfBirth: 'Date of birth',
+  // Not su5's "Country": a Business's company details on the same screen have a Country of their own.
   country: 'Country you live in',
   run: 'Confirm who I am',
   running: 'Checking…',
@@ -111,8 +108,7 @@ export const IDENTITY_WORDS = {
   waiting: 'Waiting for the checker',
   notPassed: 'Not passed',
   notYet: 'Not checked yet',
-  documentTitle: 'Your ID document',
-  documentLine: 'When our identity partner is live, its own screen opens here to photograph your ID. In Sandbox nothing is asked for and nothing is kept.',
+  sandboxNote: 'In Sandbox we check these details only. No document or photo is uploaded.',
   done: 'You’re confirmed. Your account is open.',
   open: 'Open the app',
   gate: 'Your account can look around but can’t move money until you confirm who you are.',
@@ -122,14 +118,14 @@ export const IDENTITY_WORDS = {
 export const IDENTITY_ERRORS = {
   email: 'Add your email address.',
   phone: 'Add your phone number with its country code, like +447700900123.',
-  legalName: 'Add your legal name.',
+  legalName: 'Add your full name.',
   dateOfBirth: 'Add your date of birth.',
   country: 'Pick the country you live in.',
   companyFirst: 'Save the company details, with at least one director, first.',
   named: (name: string) => `Add ${name} to the people with control, and save.`,
   failed: {
     contact: 'We couldn’t confirm your email and phone. Check them and try again.',
-    person: 'We couldn’t confirm who you are. Check your legal name, date of birth and country, and try again.',
+    person: 'We couldn’t confirm who you are. Check your full name, date of birth and country, and try again.',
     company: 'We couldn’t confirm your company. Check the company details and the people with control, and try again.',
   },
   expired: 'Your identity check expired. Start it again.',

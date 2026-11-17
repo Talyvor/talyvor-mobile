@@ -34,26 +34,30 @@ const WEB = {
   // B61.4 (suite PR #1116): the type and the kind are fixed once the account is open; another of either is another account.
   typeNote: 'The type can’t be changed later. To use another type, open another account.',
   kindNote: 'The kind of money can’t be changed later. To use another kind, open another account.',
-  // B61.20 (suite PR #1120 at 99205a0): step 4, the identity check.
+  // B61.20 (suite PR #1120 at 99205a0): step 4, the identity check. B57.174: Pocket Live's su5 names the legal name Full
+  // name, and its words (LIVE below) replaced the web's line and the ID document's card.
   identity: {
-    intro: {
-      personal: 'Talyvor checks who you are before your account can move money. It takes a minute.',
-      business: 'Talyvor checks who you are and your company before the account can move money. It takes a minute.',
-    },
     checks: ['Email and phone', 'Who you are', 'Your company'],
-    labels: { email: 'Email', phone: 'Phone number', legalName: 'Legal name', dateOfBirth: 'Date of birth', country: 'Country you live in' },
+    labels: { email: 'Email', phone: 'Phone number', legalName: 'Full name', dateOfBirth: 'Date of birth', country: 'Country you live in' },
     run: 'Confirm who I am',
     passedSandbox: 'Passed in Sandbox',
     notPassed: 'Not passed',
     documentTitle: 'Your ID document',
-    documentLine: 'When our identity partner is live, its own screen opens here to photograph your ID. In Sandbox nothing is asked for and nothing is kept.',
     done: 'You’re confirmed. Your account is open.',
     open: 'Open the app',
     gate: 'Your account can look around but can’t move money until you confirm who you are.',
     finish: 'Finish confirming who you are',
     companyFirst: 'Save the company details, with at least one director, first.',
-    personFailed: 'We couldn’t confirm who you are. Check your legal name, date of birth and country, and try again.',
+    personFailed: 'We couldn’t confirm who you are. Check your full name, date of birth and country, and try again.',
   },
+}
+
+/** B57.174 — the identity step's words as Pocket Live draws them (design/pocket-live texts.json 'ph su5', 15 Nov). */
+const LIVE = {
+  line: 'The law asks us to check. It takes a minute.',
+  fullName: 'Full name',
+  dateOfBirth: 'Date of birth',
+  note: 'In Sandbox we check these details only. No document or photo is uploaded.',
 }
 
 /** B61.111 — talyvor-lens B61.53's refusal of a country Talyvor does not serve, as the BFF relays it (suite B61.110). */
@@ -187,7 +191,7 @@ async function toStepFour(type: 'Personal' | 'Business', name: string) {
   expect(await screen.findByText(WEB.steps[3])).toBeTruthy()
 }
 
-/** "You" for the identity check: email and phone, legal name, date of birth and the country lived in. */
+/** The identity check's fields: email and phone, full name, date of birth and the country lived in. */
 async function fillYou() {
   const L = WEB.identity.labels
   await fireEvent.changeText(await screen.findByLabelText(L.email), 'maya@example.test')
@@ -353,15 +357,14 @@ test('B61.21: a Personal sign-up ends on the identity step and reaches Home only
   await renderRouter('./src/app', { initialUrl: '/sign-up' })
   await toStepFour('Personal', 'Maya Lind')
   expect(screen.getByText('Step 4 of 4')).toBeTruthy()
-  expect(await screen.findByText(WEB.identity.intro.personal)).toBeTruthy()
+  expect(await screen.findByText(LIVE.line)).toBeTruthy()
   expect(screen.getByText(WEB.identity.checks[0])).toBeTruthy()
   expect(screen.getByText(WEB.identity.checks[1])).toBeTruthy()
   expect(screen.queryByText(WEB.identity.checks[2])).toBeNull()
   expect(screen.queryByText('Company details')).toBeNull()
-  // The document step is where the partner's own screen will open: in Sandbox it collects nothing.
-  expect(screen.getByText(WEB.identity.documentTitle)).toBeTruthy()
-  expect(screen.getByText(WEB.identity.documentLine)).toBeTruthy()
-  expect(texts().some((t) => /upload|choose a file|take a photo/i.test(t))).toBe(false)
+  // In Sandbox the details are checked alone: the note says so, and nothing asks for a file or a photo.
+  expect(screen.getByText(LIVE.note)).toBeTruthy()
+  expect(texts().filter((t) => t !== LIVE.note).some((t) => /upload|choose a file|take a photo/i.test(t))).toBe(false)
   // No way on to Home until the checks pass.
   expect(screen.queryByRole('button', { name: WEB.identity.open })).toBeNull()
   expect(screen.queryByRole('button', { name: 'Not now' })).toBeNull()
@@ -378,11 +381,29 @@ test('B61.21: a Personal sign-up ends on the identity step and reaches Home only
   await waitFor(() => expect(screen).toHavePathname('/'))
 })
 
+test("B57.174: the identity step is drawn as Pocket Live's su5, its one main button at the foot", async () => {
+  mockBff()
+  await renderRouter('./src/app', { initialUrl: '/sign-up' })
+  await toStepFour('Personal', 'Maya Lind')
+  expect(await screen.findByText(LIVE.line)).toBeTruthy()
+  for (const label of [LIVE.fullName, LIVE.dateOfBirth]) expect(screen.getByLabelText(label)).toBeTruthy()
+  expect(screen.getByRole('button', { name: WEB.identity.labels.country })).toBeTruthy()
+  expect(screen.getByText(LIVE.note)).toBeTruthy()
+  // The note says what the document step did: nothing is uploaded, so there is no card for it.
+  expect(screen.queryByText(WEB.identity.documentTitle)).toBeNull()
+  // The decision sits at the foot, out of the scroll, as every other step's does.
+  const foot = within(screen.getByTestId('screen-footer'))
+  expect(foot.getByRole('button', { name: WEB.identity.run })).toBeTruthy()
+  // The order the drawing reads in: the line, the fields, then the note. (An empty Country also says its label inside.)
+  const order = texts().filter((t) => [LIVE.line, LIVE.fullName, LIVE.dateOfBirth, WEB.identity.labels.country, LIVE.note].includes(t))
+  expect([...new Set(order)]).toEqual([LIVE.line, LIVE.fullName, LIVE.dateOfBirth, WEB.identity.labels.country, LIVE.note])
+})
+
 test('B61.21: a Business sign-up asks for its company, and opens once the company check passes too', async () => {
   const bff = mockBff()
   await renderRouter('./src/app', { initialUrl: '/sign-up' })
   await toStepFour('Business', 'Northwind Studio')
-  expect(await screen.findByText(WEB.identity.intro.business)).toBeTruthy()
+  expect(await screen.findByText(LIVE.line)).toBeTruthy()
   expect(screen.getByText(WEB.identity.checks[2])).toBeTruthy()
   await fillYou()
   await fireEvent.press(screen.getByRole('button', { name: WEB.identity.run }))
