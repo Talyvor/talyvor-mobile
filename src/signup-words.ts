@@ -72,6 +72,17 @@ export const COUNTRIES: readonly (readonly [string, string])[] = [
   ['CH', 'Switzerland'], ['AE', 'United Arab Emirates'], ['GB', 'United Kingdom'], ['US', 'United States'],
 ]
 
+/** B61.111 — Lens's code for a country Talyvor does not serve (talyvor-lens B61.53). Its sentence is Lens's own. */
+export const COUNTRY_NOT_SERVED = 'country_not_served'
+
+/** B61.111 — the countries a picker offers: exactly the codes Lens serves, each by the app's own name, or by its code
+ * where the app has none, in name order. Until Lens has said, the app's own list; Lens still refuses one it does not serve. */
+export function servedCountries(served: readonly string[] | undefined): readonly (readonly [string, string])[] {
+  if (!served) return COUNTRIES
+  const names = new Map(COUNTRIES)
+  return served.map((code) => [code, names.get(code) ?? code] as const).sort((a, b) => a[1].localeCompare(b[1], 'en'))
+}
+
 // B61.21 — step 4, "Confirm who you are", word for word from the web's B61.20 (talyvor-suite PR #1120 at 99205a0,
 // apps/web/src/areas/auth/signupWords.ts): the identity check, run against Lens's levels. Settings, Verification shows the
 // same parts with the same words.
