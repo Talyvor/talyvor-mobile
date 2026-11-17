@@ -4,7 +4,9 @@ import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/te
 // the fiat side, Stablecoin and crypto only the stablecoin side, Hybrid both side by side; a side the kind does not have
 // is not rendered. Home's total opens it. Add money (B61.80; was Top up), Withdraw and, for Hybrid, Convert (the web's B59.53, with its words):
 // each has a confirm step, nothing is sent before it, and Withdraw and Convert are signed with this phone's key over Lens's
-// challenge, under the same Idempotency-Key.
+// challenge, under the same Idempotency-Key. B57.156 — drawn as Pocket Live's Balances: a row per currency with what the
+// agents hold of it (each agent's own figure is under Your agents), the round actions with Pay and, for Hybrid, Instant,
+// and the note naming the account's kind.
 
 jest.setTimeout(60_000)
 
@@ -106,14 +108,13 @@ function phoneHoldsTheKey() {
   mockStore.set('talyvor.device-workspace', 'ws_1')
 }
 
-test('Fiat only: the fiat side, each account in it, and no stablecoin', async () => {
+test('Fiat only: the fiat side, a row per currency with what the agents hold of it, and no stablecoin', async () => {
   mockBff('fiat')
   await renderRouter('./src/app', { initialUrl: '/wallets' })
   expect(await screen.findByText('Fiat')).toBeTruthy()
-  expect(screen.getByLabelText('US dollar, $2,800.00')).toBeTruthy()
-  expect(screen.getByLabelText('British pound, £1,560.00')).toBeTruthy()
-  expect(screen.getByLabelText('The company · USD, $2,400.00')).toBeTruthy()
-  expect(screen.getByLabelText('Research · USD, $400.00')).toBeTruthy()
+  expect(screen.getByLabelText('US dollar, $2,800.00, Agents hold $400.00')).toBeTruthy()
+  expect(screen.getByLabelText('British pound, £1,560.00, All yours')).toBeTruthy()
+  expect(screen.getByText('This is a Fiat only account. Another kind of money is another account, opened and checked on its own.')).toBeTruthy()
   expect(screen.queryByText('Stablecoin')).toBeNull()
   expect(screen.queryByText(/USDC/)).toBeNull()
 })
@@ -122,8 +123,8 @@ test('Stablecoin and crypto only: the stablecoin side, and no fiat', async () =>
   mockBff('stablecoin')
   await renderRouter('./src/app', { initialUrl: '/wallets' })
   expect(await screen.findByText('Stablecoin')).toBeTruthy()
-  expect(screen.getByLabelText('USDC, 15,500.00 USDC')).toBeTruthy()
-  expect(screen.getByLabelText('Research · USDC, 1,500.00 USDC')).toBeTruthy()
+  expect(screen.getByLabelText('USDC, 15,500.00 USDC, Agents hold 1,500.00 USDC')).toBeTruthy()
+  expect(screen.getByText(/^This is a Stablecoin and crypto only account\./)).toBeTruthy()
   expect(screen.queryByText('Fiat')).toBeNull()
   expect(screen.queryByText(/\$|£/)).toBeNull()
 })
@@ -133,8 +134,9 @@ test('Hybrid: both sides, fiat first', async () => {
   await renderRouter('./src/app', { initialUrl: '/wallets' })
   expect(await screen.findByText('Fiat')).toBeTruthy()
   expect(screen.getByText('Stablecoin')).toBeTruthy()
-  expect(screen.getByLabelText('US dollar, $2,800.00')).toBeTruthy()
-  expect(screen.getByLabelText('USDC, 15,500.00 USDC')).toBeTruthy()
+  expect(screen.getByLabelText('US dollar, $2,800.00, Agents hold $400.00')).toBeTruthy()
+  expect(screen.getByLabelText('USDC, 15,500.00 USDC, Agents hold 1,500.00 USDC')).toBeTruthy()
+  expect(screen.getByText(/^This is a Hybrid account\./)).toBeTruthy()
   expect(screen.getAllByText(/^(Fiat|Stablecoin)$/).map((t) => t.props.children)).toEqual(['Fiat', 'Stablecoin'])
 })
 
@@ -142,7 +144,19 @@ test("Home's total opens Wallets", async () => {
   mockBff('hybrid')
   await renderRouter('./src/app', { initialUrl: '/' })
   await fireEvent.press(await screen.findByRole('link', { name: 'See all in Wallets' }))
-  expect(await screen.findByLabelText('The company · USD, $2,400.00')).toBeTruthy()
+  expect(await screen.findByLabelText('US dollar, $2,800.00, Agents hold $400.00')).toBeTruthy()
+})
+
+test.each([
+  ['fiat', ['Pay']],
+  ['hybrid', ['Pay', 'Instant transfer']],
+] as const)('the round actions open Pay and, for Hybrid, Instant transfer: %s has %j', async (kind, links) => {
+  mockBff(kind)
+  await renderRouter('./src/app', { initialUrl: '/wallets' })
+  expect(await screen.findByRole('link', { name: 'Pay' })).toBeTruthy()
+  expect(['Pay', 'Instant transfer'].filter((w) => screen.queryByRole('link', { name: w }) !== null)).toEqual(links)
+  await fireEvent.press(screen.getByRole('link', { name: 'Pay' }))
+  expect(screen).toHavePathname('/pay')
 })
 
 test.each([

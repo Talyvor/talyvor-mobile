@@ -1,0 +1,177 @@
+[
+  {
+    "route": "/wallets",
+    "screen": "p-home",
+    "live": "await P.unlock(); P.S.acct = 'north'; await P.push('wallets', []);",
+    "words": "report",
+    "why": "B57.156 draws Pocket Live's wallets (design/pocket-live texts.json 'ph wallets@north', a Business Hybrid account as the sample's); the title Wallets and the Fiat and Stablecoin sides are B59.33's words, kept, and listed under Words to confirm. The sample's accounts predate live_minor (FOUND), so the check answers its own",
+    "name": "wallets",
+    "answers": {
+      "/api/money/accounts": {
+        "accounts": [
+          {
+            "id": "acc_usd",
+            "currency": "USD",
+            "purpose": "company",
+            "status": "open",
+            "name": "",
+            "balance_minor": 1840000,
+            "test_minor": 0,
+            "live_minor": 1840000
+          },
+          {
+            "id": "acc_eur",
+            "currency": "EUR",
+            "purpose": "company",
+            "status": "open",
+            "name": "",
+            "balance_minor": 510000,
+            "test_minor": 0,
+            "live_minor": 510000
+          },
+          {
+            "id": "acc_gbp",
+            "currency": "GBP",
+            "purpose": "company",
+            "status": "open",
+            "name": "",
+            "balance_minor": 400000,
+            "test_minor": 0,
+            "live_minor": 400000
+          },
+          {
+            "id": "acc_usdc",
+            "currency": "USDC",
+            "purpose": "company",
+            "status": "open",
+            "name": "",
+            "balance_minor": 11000000000,
+            "test_minor": 0,
+            "live_minor": 11000000000
+          },
+          {
+            "id": "acc_r_usd",
+            "currency": "USD",
+            "purpose": "agent",
+            "status": "open",
+            "name": "Research \u00b7 USD",
+            "balance_minor": 620000,
+            "test_minor": 0,
+            "live_minor": 620000,
+            "agent_id": "agt_research"
+          },
+          {
+            "id": "acc_s_eur",
+            "currency": "EUR",
+            "purpose": "agent",
+            "status": "open",
+            "name": "Sales \u00b7 EUR",
+            "balance_minor": 240000,
+            "test_minor": 0,
+            "live_minor": 240000,
+            "agent_id": "agt_sales"
+          },
+          {
+            "id": "acc_o_usdc",
+            "currency": "USDC",
+            "purpose": "agent",
+            "status": "open",
+            "name": "Ops \u00b7 USDC",
+            "balance_minor": 3000000000,
+            "test_minor": 0,
+            "live_minor": 3000000000,
+            "agent_id": "agt_ops"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "route": "/wallets",
+    "screen": "p-home",
+    "live": "await P.unlock(); P.S.acct = 'north'; await P.push('wallets', []);",
+    "words": "report",
+    "why": "B57.156 draws Pocket Live's wallets (design/pocket-live texts.json 'ph wallets@north', a Business Hybrid account as the sample's); the title Wallets and the Fiat and Stablecoin sides are B59.33's words, kept, and listed under Words to confirm. The sample's accounts predate live_minor (FOUND), so the check answers its own",
+    "name": "wallets",
+    "dark": true,
+    "answers": {
+      "/api/money/accounts": {
+        "accounts": [
+          {
+            "id": "acc_usd",
+            "currency": "USD",
+            "purpose": "company",
+            "status": "open",
+            "name": "",
+            "balance_minor": 1840000,
+            "test_minor": 0,
+            "live_minor": 1840000
+          },
+          {
+            "id": "acc_eur",
+            "currency": "EUR",
+            "purpose": "company",
+            "status": "open",
+            "name": "",
+            "balance_minor": 510000,
+            "test_minor": 0,
+            "live_minor": 510000
+          },
+          {
+            "id": "acc_gbp",
+            "currency": "GBP",
+            "purpose": "company",
+            "status": "open",
+            "name": "",
+            "balance_minor": 400000,
+            "test_minor": 0,
+            "live_minor": 400000
+          },
+          {
+            "id": "acc_usdc",
+            "currency": "USDC",
+            "purpose": "company",
+            "status": "open",
+            "name": "",
+            "balance_minor": 11000000000,
+            "test_minor": 0,
+            "live_minor": 11000000000
+          },
+          {
+            "id": "acc_r_usd",
+            "currency": "USD",
+            "purpose": "agent",
+            "status": "open",
+            "name": "Research \u00b7 USD",
+            "balance_minor": 620000,
+            "test_minor": 0,
+            "live_minor": 620000,
+            "agent_id": "agt_research"
+          },
+          {
+            "id": "acc_s_eur",
+            "currency": "EUR",
+            "purpose": "agent",
+            "status": "open",
+            "name": "Sales \u00b7 EUR",
+            "balance_minor": 240000,
+            "test_minor": 0,
+            "live_minor": 240000,
+            "agent_id": "agt_sales"
+          },
+          {
+            "id": "acc_o_usdc",
+            "currency": "USDC",
+            "purpose": "agent",
+            "status": "open",
+            "name": "Ops \u00b7 USDC",
+            "balance_minor": 3000000000,
+            "test_minor": 0,
+            "live_minor": 3000000000,
+            "agent_id": "agt_ops"
+          }
+        ]
+      }
+    }
+  }
+]

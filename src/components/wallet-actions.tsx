@@ -10,16 +10,18 @@ import {
   type SideConversion,
 } from '@talyvor/bff-client'
 import * as Crypto from 'expo-crypto'
-import { router } from 'expo-router'
+import { Link, router } from 'expo-router'
 import { useEffect, useState, type ReactNode } from 'react'
-import { ScrollView, useWindowDimensions, View } from 'react-native'
+import { ScrollView, Text, useWindowDimensions, View } from 'react-native'
 
 import type { Shows } from '../account'
 import { biometricName, checkItsYou, forgetThisPhone, keyGone, keyGoneText, signWithThisPhone } from '../keys'
 import { rateText } from '../instant-transfer'
-import { useTheme } from '../theme'
+import { fonts, useTheme } from '../theme'
 import { CURRENCY_NAME, isStablecoin } from './home'
+import { Icon, type IconName } from './icon'
 import { AccountChoice, BottomSheet } from './pay-sheet'
+import { Press } from './press'
 import { Body, Button, Card, Eyebrow, Field, Figure, Headline } from './ui'
 
 // B59.33 — Wallets' Top up, Withdraw and Convert on the phone, the web's B59.53 (talyvor-suite Wallets.tsx) with its words.
@@ -39,13 +41,40 @@ export function walletActions(shows: Pick<Shows, 'bankTransfers' | 'convert'>): 
   return ['top-up', ...(shows.bankTransfers ? (['withdraw'] as const) : []), ...(shows.convert ? (['convert'] as const) : [])]
 }
 
-/** Add money, Withdraw and Convert, as the kind has them. */
-export function WalletButtons({ shows, onPress }: { shows: Shows; onPress: (a: WalletAction) => void }) {
+// The drawing's marks: Pay's plane, Convert's two arrows (the set's payments mark), Instant's arrow.
+const ICON: Record<WalletAction, IconName> = { 'top-up': 'plus', withdraw: 'arrowUp', convert: 'payments' }
+
+/** One round action, as Pocket Live's .qa draws it: a 56-wide circle over its word, the first one filled. */
+function Round({ icon, label, primary, onPress, link }: { icon: IconName; label: string; primary?: boolean; onPress?: () => void; link?: string }) {
+  const { c } = useTheme()
   return (
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-      {walletActions(shows).map((a) => (
-        <Button key={a} small primary={a === 'top-up'} icon={a === 'top-up' ? 'plus' : undefined} label={TITLE[a]} onPress={() => onPress(a)} />
+    <Press kind="round" accessibilityRole={link ? 'link' : 'button'} accessibilityLabel={link ?? label} onPress={onPress} style={{ flex: 1, maxWidth: 84, alignItems: 'center', gap: 7 }}>
+      <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: primary ? c.primary : c.cloud, alignItems: 'center', justifyContent: 'center' }}>
+        <Icon name={icon} color={primary ? c.onPrimary : c.ink} />
+      </View>
+      <Text style={{ fontFamily: fonts.uiBold, fontSize: 12.5, color: c.ink, textAlign: 'center' }}>{label}</Text>
+    </Press>
+  )
+}
+
+/** B57.156 — the round actions under the balances, in Pocket Live's order: Add money, Pay, then Withdraw and Convert as
+ * the kind has them, and Instant for Hybrid. Pay and Instant open their own screens. */
+export function WalletButtons({ shows, onPress }: { shows: Shows; onPress: (a: WalletAction) => void }) {
+  const [first, ...rest] = walletActions(shows)
+  return (
+    <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
+      <Round primary icon={ICON[first]} label={TITLE[first]} onPress={() => onPress(first)} />
+      <Link href="/pay" asChild>
+        <Round icon="send" label="Pay" link="Pay" />
+      </Link>
+      {rest.map((a) => (
+        <Round key={a} icon={ICON[a]} label={TITLE[a]} onPress={() => onPress(a)} />
       ))}
+      {shows.instantTransfer ? (
+        <Link href="/instant-transfer" asChild>
+          <Round icon="arrow" label="Instant" link="Instant transfer" />
+        </Link>
+      ) : null}
     </View>
   )
 }
