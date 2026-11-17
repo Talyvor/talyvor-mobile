@@ -240,6 +240,32 @@ export interface WorkspacePlan {
   agents: number
   agents_used: number
   seats: number
+  /** B61.116 — its allowances this month (Lens B61.58, through suite B61.116's GET /api/plan); absent when Lens's are not counts. */
+  allowances?: PlanAllowance[]
+}
+
+/** B61.116 — one of the plan's allowances this month: fx per currency sold, or local or international payments, with
+ * what is free, used and left (-1 is no limit) and, for payments, the fee above it in minor units by currency. */
+export interface PlanAllowance {
+  allowance: string
+  currency?: string
+  free: number
+  used: number
+  left: number
+  fee_bps?: number
+  fee_minor?: Record<string, number>
+}
+
+/** B61.116 — what a payment out in currency costs before it is sent, as Lens prices it (B61.58): free while the plan's
+ * local payments this month last (left, or -1 for no limit), then fee_minor in that currency. undefined when Lens has not
+ * said: no allowance read, or no fee set for that currency (Lens refuses that payment in its own words). */
+export type PaymentFee = { free: true; left: number } | { free: false; fee_minor: number }
+export function localPaymentFee(plan: WorkspacePlan | null | undefined, currency: string): PaymentFee | undefined {
+  const local = plan?.allowances?.find((a) => a.allowance === 'local')
+  if (!local || currency === 'USDC') return undefined
+  if (local.left !== 0) return { free: true, left: local.left }
+  const fee = local.fee_minor?.[currency]
+  return fee === undefined ? undefined : { free: false, fee_minor: fee }
 }
 
 /** B61.60 — one plan of a ladder, as Lens's GET /v1/public/plans states it (Lens B61.57). -1 is unlimited. */
