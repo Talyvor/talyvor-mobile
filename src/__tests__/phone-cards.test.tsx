@@ -381,3 +381,18 @@ test('B59.55: a spend still waiting for the owner says so and opens Approvals', 
   await fireEvent.press(screen.getByText('Open Approvals'))
   await waitFor(() => expect(screen).toHavePathname('/approvals'))
 })
+
+// B57.169 — in Pocket: each one-time or standing card is a row of Pocket Live's Cards panel, with its kind's round picture
+// before its words, and one still waiting is the drawing's tangerine waiting row, its count beside Open Approvals.
+test('B57.169: each spend row has its kind’s round picture, and the waiting one is the tangerine waiting row', async () => {
+  mockBff()
+  await renderRouter('./src/app', { initialUrl: '/cards' })
+  expect(within(await screen.findByTestId('card-spend-cs_1')).getByTestId('card-spend-kind-one-time')).toBeTruthy()
+  expect(within(screen.getByTestId('card-spend-cs_2')).getByTestId('card-spend-kind-standing')).toBeTruthy()
+  const row = screen.getByTestId('card-spends-approvals')
+  expect(row.props.accessibilityRole).toBe('link')
+  expect(row.props.accessibilityLabel).toBe('Open Approvals, 1 waiting')
+  expect(within(row).getByTestId('card-spends-waiting-count')).toHaveTextContent('1')
+  await fireEvent.press(row)
+  await waitFor(() => expect(screen).toHavePathname('/approvals'))
+})
