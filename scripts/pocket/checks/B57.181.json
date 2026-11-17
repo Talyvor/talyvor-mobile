@@ -1,0 +1,394 @@
+[
+ {
+  "route": "/agents/agt_research",
+  "screen": "p-agent-research",
+  "account": "personal:fiat",
+  "words": "report",
+  "why": "B57.181: the agent's page as Pocket Live's ph agent: Add money, Take back (arrow down), Pause and Rules (sliders), its card a row under This month",
+  "answers": {
+   "/api/money/accounts": {
+    "accounts": [
+     {
+      "id": "acc_usd",
+      "currency": "USD",
+      "purpose": "company",
+      "status": "open",
+      "name": "",
+      "balance_minor": 200000,
+      "live_minor": 200000,
+      "test_minor": 0
+     },
+     {
+      "id": "acc_r_usd",
+      "agent_id": "agt_research",
+      "currency": "USD",
+      "purpose": "agent",
+      "status": "open",
+      "name": "Research · USD",
+      "balance_minor": 40000,
+      "live_minor": 40000,
+      "test_minor": 0
+     },
+     {
+      "id": "acc_s_usd",
+      "agent_id": "agt_sales",
+      "currency": "USD",
+      "purpose": "agent",
+      "status": "open",
+      "name": "Sales · USD",
+      "balance_minor": 12000,
+      "live_minor": 12000,
+      "test_minor": 0
+     }
+    ]
+   }
+  },
+  "live": "await P.unlock(); await P.goTab('agents'); await P.push('agent', ['scout']);"
+ },
+ {
+  "route": "/agents/agt_research",
+  "screen": "p-agent-research",
+  "account": "personal:fiat",
+  "words": "report",
+  "why": "B57.181: Pocket Live's sheet fund: the title with Sandbox, From your account and what it holds, $50, $100 and $200 with $100 chosen, Move $100.00",
+  "answers": {
+   "/api/money/accounts": {
+    "accounts": [
+     {
+      "id": "acc_usd",
+      "currency": "USD",
+      "purpose": "company",
+      "status": "open",
+      "name": "",
+      "balance_minor": 200000,
+      "live_minor": 200000,
+      "test_minor": 0
+     },
+     {
+      "id": "acc_r_usd",
+      "agent_id": "agt_research",
+      "currency": "USD",
+      "purpose": "agent",
+      "status": "open",
+      "name": "Research · USD",
+      "balance_minor": 40000,
+      "live_minor": 40000,
+      "test_minor": 0
+     },
+     {
+      "id": "acc_s_usd",
+      "agent_id": "agt_sales",
+      "currency": "USD",
+      "purpose": "agent",
+      "status": "open",
+      "name": "Sales · USD",
+      "balance_minor": 12000,
+      "live_minor": 12000,
+      "test_minor": 0
+     }
+    ]
+   }
+  },
+  "live": "await P.unlock(); await P.goTab('agents'); await P.push('agent', ['scout']); await P.openSheet('fund', ['scout']);",
+  "name": "fund",
+  "press": [
+   "Add money to Research"
+  ]
+ },
+ {
+  "route": "/agents/agt_research",
+  "screen": "p-agent-research",
+  "account": "personal:fiat",
+  "words": "report",
+  "why": "B57.181: Pocket Live's sheet take: Into your account and what Research holds, the three amounts, Take back $100.00",
+  "answers": {
+   "/api/money/accounts": {
+    "accounts": [
+     {
+      "id": "acc_usd",
+      "currency": "USD",
+      "purpose": "company",
+      "status": "open",
+      "name": "",
+      "balance_minor": 200000,
+      "live_minor": 200000,
+      "test_minor": 0
+     },
+     {
+      "id": "acc_r_usd",
+      "agent_id": "agt_research",
+      "currency": "USD",
+      "purpose": "agent",
+      "status": "open",
+      "name": "Research · USD",
+      "balance_minor": 40000,
+      "live_minor": 40000,
+      "test_minor": 0
+     },
+     {
+      "id": "acc_s_usd",
+      "agent_id": "agt_sales",
+      "currency": "USD",
+      "purpose": "agent",
+      "status": "open",
+      "name": "Sales · USD",
+      "balance_minor": 12000,
+      "live_minor": 12000,
+      "test_minor": 0
+     }
+    ]
+   }
+  },
+  "live": "await P.unlock(); await P.goTab('agents'); await P.push('agent', ['scout']); await P.openSheet('take', ['scout']);",
+  "name": "take",
+  "press": [
+   "Take back from Research"
+  ]
+ },
+ {
+  "route": "/wallets",
+  "screen": "p-agent-research",
+  "account": "personal:fiat",
+  "words": "report",
+  "why": "B57.181: Pocket Live's Balances: Your agents, each with Add money and Take back side by side",
+  "answers": {
+   "/api/money/accounts": {
+    "accounts": [
+     {
+      "id": "acc_usd",
+      "currency": "USD",
+      "purpose": "company",
+      "status": "open",
+      "name": "",
+      "balance_minor": 200000,
+      "live_minor": 200000,
+      "test_minor": 0
+     },
+     {
+      "id": "acc_r_usd",
+      "agent_id": "agt_research",
+      "currency": "USD",
+      "purpose": "agent",
+      "status": "open",
+      "name": "Research · USD",
+      "balance_minor": 40000,
+      "live_minor": 40000,
+      "test_minor": 0
+     },
+     {
+      "id": "acc_s_usd",
+      "agent_id": "agt_sales",
+      "currency": "USD",
+      "purpose": "agent",
+      "status": "open",
+      "name": "Sales · USD",
+      "balance_minor": 12000,
+      "live_minor": 12000,
+      "test_minor": 0
+     }
+    ]
+   }
+  },
+  "live": "await P.unlock(); await P.push('wallets', []);",
+  "name": "wallets",
+  "scroll": "Your agents"
+ },
+ {
+  "route": "/agents/agt_research",
+  "screen": "p-agent-research",
+  "account": "personal:fiat",
+  "words": "report",
+  "why": "B57.181: the agent's page as Pocket Live's ph agent: Add money, Take back (arrow down), Pause and Rules (sliders), its card a row under This month",
+  "answers": {
+   "/api/money/accounts": {
+    "accounts": [
+     {
+      "id": "acc_usd",
+      "currency": "USD",
+      "purpose": "company",
+      "status": "open",
+      "name": "",
+      "balance_minor": 200000,
+      "live_minor": 200000,
+      "test_minor": 0
+     },
+     {
+      "id": "acc_r_usd",
+      "agent_id": "agt_research",
+      "currency": "USD",
+      "purpose": "agent",
+      "status": "open",
+      "name": "Research · USD",
+      "balance_minor": 40000,
+      "live_minor": 40000,
+      "test_minor": 0
+     },
+     {
+      "id": "acc_s_usd",
+      "agent_id": "agt_sales",
+      "currency": "USD",
+      "purpose": "agent",
+      "status": "open",
+      "name": "Sales · USD",
+      "balance_minor": 12000,
+      "live_minor": 12000,
+      "test_minor": 0
+     }
+    ]
+   }
+  },
+  "live": "await P.unlock(); await P.goTab('agents'); await P.push('agent', ['scout']);",
+  "dark": true
+ },
+ {
+  "route": "/agents/agt_research",
+  "screen": "p-agent-research",
+  "account": "personal:fiat",
+  "words": "report",
+  "why": "B57.181: Pocket Live's sheet fund: the title with Sandbox, From your account and what it holds, $50, $100 and $200 with $100 chosen, Move $100.00",
+  "answers": {
+   "/api/money/accounts": {
+    "accounts": [
+     {
+      "id": "acc_usd",
+      "currency": "USD",
+      "purpose": "company",
+      "status": "open",
+      "name": "",
+      "balance_minor": 200000,
+      "live_minor": 200000,
+      "test_minor": 0
+     },
+     {
+      "id": "acc_r_usd",
+      "agent_id": "agt_research",
+      "currency": "USD",
+      "purpose": "agent",
+      "status": "open",
+      "name": "Research · USD",
+      "balance_minor": 40000,
+      "live_minor": 40000,
+      "test_minor": 0
+     },
+     {
+      "id": "acc_s_usd",
+      "agent_id": "agt_sales",
+      "currency": "USD",
+      "purpose": "agent",
+      "status": "open",
+      "name": "Sales · USD",
+      "balance_minor": 12000,
+      "live_minor": 12000,
+      "test_minor": 0
+     }
+    ]
+   }
+  },
+  "live": "await P.unlock(); await P.goTab('agents'); await P.push('agent', ['scout']); await P.openSheet('fund', ['scout']);",
+  "name": "fund",
+  "press": [
+   "Add money to Research"
+  ],
+  "dark": true
+ },
+ {
+  "route": "/agents/agt_research",
+  "screen": "p-agent-research",
+  "account": "personal:fiat",
+  "words": "report",
+  "why": "B57.181: Pocket Live's sheet take: Into your account and what Research holds, the three amounts, Take back $100.00",
+  "answers": {
+   "/api/money/accounts": {
+    "accounts": [
+     {
+      "id": "acc_usd",
+      "currency": "USD",
+      "purpose": "company",
+      "status": "open",
+      "name": "",
+      "balance_minor": 200000,
+      "live_minor": 200000,
+      "test_minor": 0
+     },
+     {
+      "id": "acc_r_usd",
+      "agent_id": "agt_research",
+      "currency": "USD",
+      "purpose": "agent",
+      "status": "open",
+      "name": "Research · USD",
+      "balance_minor": 40000,
+      "live_minor": 40000,
+      "test_minor": 0
+     },
+     {
+      "id": "acc_s_usd",
+      "agent_id": "agt_sales",
+      "currency": "USD",
+      "purpose": "agent",
+      "status": "open",
+      "name": "Sales · USD",
+      "balance_minor": 12000,
+      "live_minor": 12000,
+      "test_minor": 0
+     }
+    ]
+   }
+  },
+  "live": "await P.unlock(); await P.goTab('agents'); await P.push('agent', ['scout']); await P.openSheet('take', ['scout']);",
+  "name": "take",
+  "press": [
+   "Take back from Research"
+  ],
+  "dark": true
+ },
+ {
+  "route": "/wallets",
+  "screen": "p-agent-research",
+  "account": "personal:fiat",
+  "words": "report",
+  "why": "B57.181: Pocket Live's Balances: Your agents, each with Add money and Take back side by side",
+  "answers": {
+   "/api/money/accounts": {
+    "accounts": [
+     {
+      "id": "acc_usd",
+      "currency": "USD",
+      "purpose": "company",
+      "status": "open",
+      "name": "",
+      "balance_minor": 200000,
+      "live_minor": 200000,
+      "test_minor": 0
+     },
+     {
+      "id": "acc_r_usd",
+      "agent_id": "agt_research",
+      "currency": "USD",
+      "purpose": "agent",
+      "status": "open",
+      "name": "Research · USD",
+      "balance_minor": 40000,
+      "live_minor": 40000,
+      "test_minor": 0
+     },
+     {
+      "id": "acc_s_usd",
+      "agent_id": "agt_sales",
+      "currency": "USD",
+      "purpose": "agent",
+      "status": "open",
+      "name": "Sales · USD",
+      "balance_minor": 12000,
+      "live_minor": 12000,
+      "test_minor": 0
+     }
+    ]
+   }
+  },
+  "live": "await P.unlock(); await P.push('wallets', []);",
+  "name": "wallets",
+  "scroll": "Your agents",
+  "dark": true
+ }
+]

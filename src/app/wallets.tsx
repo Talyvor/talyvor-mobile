@@ -1,21 +1,25 @@
 import type { Agent } from '@talyvor/bff-client'
 import { useCallback, useState } from 'react'
-import { View } from 'react-native'
+import { Text, View } from 'react-native'
 
 import { KIND_LABEL, useAccount } from '@/account'
 import { AgentFundingSheet, type FundingDirection } from '@/components/agent-funding'
 import { AgentRow, HOME_MONEY } from '@/components/home'
+import { Icon, type IconName } from '@/components/icon'
 import { MoneyLabel } from '@/components/money-label'
-import { Back, Body, Button, Card, Eyebrow, Headline, LoadState, Note, Screen, useLoad } from '@/components/ui'
+import { Press } from '@/components/press'
+import { Back, Body, Card, Eyebrow, Headline, LoadState, Note, Screen, useLoad } from '@/components/ui'
 import { WalletButtons, WalletSheet, type WalletAction } from '@/components/wallet-actions'
 import { walletSides, WalletSide } from '@/components/wallets'
 import { keysAvailable, phoneKey } from '@/keys'
 import { useSession } from '@/session'
+import { fonts, useTheme } from '@/theme'
 
 /** Wallets (B59.33), from Home's total: each side of money the account's kind has, and what each account holds in it;
  * Top up, Withdraw and, for Hybrid, Convert. B61.85: then Your agents, each with Add money and Take back, as Pocket Live's
  * Balances draws them. B57.156 — the rest as Pocket Live's Balances too: Sandbox at the top, a row per currency, the round
- * actions under them, and the note that names the account's kind. */
+ * actions under them, and the note that names the account's kind. B57.181 — each agent's two buttons side by side in
+ * halves, as Pocket Live's Balances draws them, Take back with the arrow down. */
 export default function WalletsScreen() {
   const { client } = useSession()
   const load = useCallback(async () => {
@@ -50,9 +54,9 @@ export default function WalletsScreen() {
                 {data.agents.map((g, i) => (
                   <View key={g.id}>
                     <AgentRow agent={g} accounts={data.accounts} shows={shows} waiting={false} first={i === 0} />
-                    <View style={{ flexDirection: 'row', gap: 8, paddingBottom: 10 }}>
-                      <Button small variant="secondary" icon="plus" label="Add money" accessibilityLabel={`Add money to ${g.name}`} onPress={() => setFunding({ agent: g, direction: 'to_agent' })} />
-                      <Button small variant="secondary" icon="download" label="Take back" accessibilityLabel={`Take back from ${g.name}`} onPress={() => setFunding({ agent: g, direction: 'to_company' })} />
+                    <View style={{ flexDirection: 'row', gap: 8, paddingBottom: 14 }}>
+                      <Half icon="plus" label="Add money" accessibilityLabel={`Add money to ${g.name}`} onPress={() => setFunding({ agent: g, direction: 'to_agent' })} />
+                      <Half icon="arrowDown" label="Take back" accessibilityLabel={`Take back from ${g.name}`} onPress={() => setFunding({ agent: g, direction: 'to_company' })} />
                     </View>
                   </View>
                 ))}
@@ -75,5 +79,23 @@ export default function WalletsScreen() {
         </>
       ) : null}
     </Screen>
+  )
+}
+
+/** One of an agent's two buttons on Balances, in half the row: Pocket Live's .agmove .two .btn, 44 tall with its words at 15. */
+function Half({ icon, label, accessibilityLabel, onPress }: { icon: IconName; label: string; accessibilityLabel: string; onPress: () => void }) {
+  const { c } = useTheme()
+  return (
+    <Press
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      onPress={onPress}
+      style={({ pressed }) => [
+        { flex: 1, height: 44, paddingHorizontal: 12, borderRadius: 999, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: c.cloud2 },
+        pressed && { opacity: 0.6 },
+      ]}>
+      <Icon name={icon} color={c.ink} />
+      <Text style={{ fontFamily: fonts.uiBold, fontSize: 15, color: c.ink }}>{label}</Text>
+    </Press>
   )
 }
