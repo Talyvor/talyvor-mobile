@@ -232,7 +232,7 @@ export function TopLine() {
   )
 }
 
-/** For tests: nothing said. */
+/** Nothing said: for tests, and when the app is covered. */
 export function forgetTopLine() {
   if (hide) clearTimeout(hide)
   hide = null
