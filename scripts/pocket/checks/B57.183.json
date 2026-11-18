@@ -1,0 +1,546 @@
+[
+  {
+    "route": "/pay",
+    "screen": "p-pay",
+    "account": "personal:fiat",
+    "name": "pay",
+    "live": "await P.unlock(); await P.goTab('pay'); ",
+    "words": "report",
+    "why": "B57.183 draws Pocket Live's phone ph pay: words B61.34 listed under Words to confirm (On Talyvor in place of a handle, To a person, Find, Note, the saved payees and Bills due in their own cards) are reported, not failed",
+    "answers": {
+      "/api/money/accounts": {
+        "accounts": [
+          {
+            "id": "acc_usd",
+            "currency": "USD",
+            "purpose": "company",
+            "status": "open",
+            "name": "",
+            "balance_minor": 200000,
+            "test_minor": 0,
+            "live_minor": 200000
+          }
+        ]
+      },
+      "/api/money/people/find": {
+        "shown_name": "Dana Reyes"
+      },
+      "/api/money/people/pay/challenge": {
+        "challenge": "ch-1",
+        "allow_credentials": [
+          "dk_1"
+        ]
+      },
+      "/api/money/people/pay": {
+        "id": "pp_1",
+        "to_shown_name": "Dana Reyes",
+        "from_account_id": "acc_usd",
+        "amount_minor": 4200,
+        "currency": "USD",
+        "note": "",
+        "idempotency_key": "k",
+        "created_at": "2026-11-16T10:00:00Z"
+      }
+    },
+    "steps": [
+      [
+        "fill",
+        "Name, phone number or email",
+        "dana"
+      ],
+      [
+        "press",
+        "Find"
+      ]
+    ]
+  },
+  {
+    "route": "/pay",
+    "screen": "p-pay",
+    "account": "personal:fiat",
+    "name": "payAmount",
+    "live": "await P.unlock(); await P.goTab('pay'); await P.push('payAmount', ['dana']); P.top().st.v = '42'; P.refresh();",
+    "words": "report",
+    "why": "B57.183 draws Pocket Live's phone ph payAmount+typed: words B61.34 listed under Words to confirm (On Talyvor in place of a handle, To a person, Find, Note, the saved payees and Bills due in their own cards) are reported, not failed",
+    "answers": {
+      "/api/money/accounts": {
+        "accounts": [
+          {
+            "id": "acc_usd",
+            "currency": "USD",
+            "purpose": "company",
+            "status": "open",
+            "name": "",
+            "balance_minor": 200000,
+            "test_minor": 0,
+            "live_minor": 200000
+          }
+        ]
+      },
+      "/api/money/people/find": {
+        "shown_name": "Dana Reyes"
+      },
+      "/api/money/people/pay/challenge": {
+        "challenge": "ch-1",
+        "allow_credentials": [
+          "dk_1"
+        ]
+      },
+      "/api/money/people/pay": {
+        "id": "pp_1",
+        "to_shown_name": "Dana Reyes",
+        "from_account_id": "acc_usd",
+        "amount_minor": 4200,
+        "currency": "USD",
+        "note": "",
+        "idempotency_key": "k",
+        "created_at": "2026-11-16T10:00:00Z"
+      }
+    },
+    "steps": [
+      [
+        "fill",
+        "Name, phone number or email",
+        "dana"
+      ],
+      [
+        "press",
+        "Find"
+      ],
+      [
+        "press",
+        "Pay Dana Reyes"
+      ],
+      [
+        "press",
+        "4"
+      ],
+      [
+        "press",
+        "2"
+      ]
+    ]
+  },
+  {
+    "route": "/pay",
+    "screen": "p-pay",
+    "account": "personal:fiat",
+    "name": "review",
+    "live": "await P.unlock(); await P.goTab('pay'); await P.push('payAmount', ['dana']); P.top().st.v = '42'; await P.openSheet('review');",
+    "words": "report",
+    "why": "B57.183 draws Pocket Live's phone ph sheet:review: words B61.34 listed under Words to confirm (On Talyvor in place of a handle, To a person, Find, Note, the saved payees and Bills due in their own cards) are reported, not failed",
+    "answers": {
+      "/api/money/accounts": {
+        "accounts": [
+          {
+            "id": "acc_usd",
+            "currency": "USD",
+            "purpose": "company",
+            "status": "open",
+            "name": "",
+            "balance_minor": 200000,
+            "test_minor": 0,
+            "live_minor": 200000
+          }
+        ]
+      },
+      "/api/money/people/find": {
+        "shown_name": "Dana Reyes"
+      },
+      "/api/money/people/pay/challenge": {
+        "challenge": "ch-1",
+        "allow_credentials": [
+          "dk_1"
+        ]
+      },
+      "/api/money/people/pay": {
+        "id": "pp_1",
+        "to_shown_name": "Dana Reyes",
+        "from_account_id": "acc_usd",
+        "amount_minor": 4200,
+        "currency": "USD",
+        "note": "",
+        "idempotency_key": "k",
+        "created_at": "2026-11-16T10:00:00Z"
+      }
+    },
+    "steps": [
+      [
+        "fill",
+        "Name, phone number or email",
+        "dana"
+      ],
+      [
+        "press",
+        "Find"
+      ],
+      [
+        "press",
+        "Pay Dana Reyes"
+      ],
+      [
+        "press",
+        "4"
+      ],
+      [
+        "press",
+        "2"
+      ],
+      [
+        "press",
+        "Review"
+      ]
+    ],
+    "phoneKey": true
+  },
+  {
+    "route": "/pay",
+    "screen": "p-pay",
+    "account": "personal:fiat",
+    "name": "done",
+    "live": "await P.unlock(); await P.push('done', ['Sent', encodeURIComponent('$42.00 to Dana Reyes. It is there now.')]);",
+    "words": "report",
+    "why": "B57.183 draws Pocket Live's phone ph done: words B61.34 listed under Words to confirm (On Talyvor in place of a handle, To a person, Find, Note, the saved payees and Bills due in their own cards) are reported, not failed",
+    "answers": {
+      "/api/money/accounts": {
+        "accounts": [
+          {
+            "id": "acc_usd",
+            "currency": "USD",
+            "purpose": "company",
+            "status": "open",
+            "name": "",
+            "balance_minor": 200000,
+            "test_minor": 0,
+            "live_minor": 200000
+          }
+        ]
+      },
+      "/api/money/people/find": {
+        "shown_name": "Dana Reyes"
+      },
+      "/api/money/people/pay/challenge": {
+        "challenge": "ch-1",
+        "allow_credentials": [
+          "dk_1"
+        ]
+      },
+      "/api/money/people/pay": {
+        "id": "pp_1",
+        "to_shown_name": "Dana Reyes",
+        "from_account_id": "acc_usd",
+        "amount_minor": 4200,
+        "currency": "USD",
+        "note": "",
+        "idempotency_key": "k",
+        "created_at": "2026-11-16T10:00:00Z"
+      }
+    },
+    "steps": [
+      [
+        "fill",
+        "Name, phone number or email",
+        "dana"
+      ],
+      [
+        "press",
+        "Find"
+      ],
+      [
+        "press",
+        "Pay Dana Reyes"
+      ],
+      [
+        "press",
+        "4"
+      ],
+      [
+        "press",
+        "2"
+      ],
+      [
+        "press",
+        "Review"
+      ],
+      [
+        "press",
+        "Send with your fingerprint"
+      ]
+    ],
+    "phoneKey": true
+  },
+  {
+    "route": "/pay",
+    "screen": "p-pay",
+    "account": "personal:fiat",
+    "name": "pay",
+    "live": "await P.unlock(); await P.goTab('pay'); ",
+    "words": "report",
+    "why": "B57.183 draws Pocket Live's phone ph pay: words B61.34 listed under Words to confirm (On Talyvor in place of a handle, To a person, Find, Note, the saved payees and Bills due in their own cards) are reported, not failed",
+    "answers": {
+      "/api/money/accounts": {
+        "accounts": [
+          {
+            "id": "acc_usd",
+            "currency": "USD",
+            "purpose": "company",
+            "status": "open",
+            "name": "",
+            "balance_minor": 200000,
+            "test_minor": 0,
+            "live_minor": 200000
+          }
+        ]
+      },
+      "/api/money/people/find": {
+        "shown_name": "Dana Reyes"
+      },
+      "/api/money/people/pay/challenge": {
+        "challenge": "ch-1",
+        "allow_credentials": [
+          "dk_1"
+        ]
+      },
+      "/api/money/people/pay": {
+        "id": "pp_1",
+        "to_shown_name": "Dana Reyes",
+        "from_account_id": "acc_usd",
+        "amount_minor": 4200,
+        "currency": "USD",
+        "note": "",
+        "idempotency_key": "k",
+        "created_at": "2026-11-16T10:00:00Z"
+      }
+    },
+    "steps": [
+      [
+        "fill",
+        "Name, phone number or email",
+        "dana"
+      ],
+      [
+        "press",
+        "Find"
+      ]
+    ],
+    "dark": true
+  },
+  {
+    "route": "/pay",
+    "screen": "p-pay",
+    "account": "personal:fiat",
+    "name": "payAmount",
+    "live": "await P.unlock(); await P.goTab('pay'); await P.push('payAmount', ['dana']); P.top().st.v = '42'; P.refresh();",
+    "words": "report",
+    "why": "B57.183 draws Pocket Live's phone ph payAmount+typed: words B61.34 listed under Words to confirm (On Talyvor in place of a handle, To a person, Find, Note, the saved payees and Bills due in their own cards) are reported, not failed",
+    "answers": {
+      "/api/money/accounts": {
+        "accounts": [
+          {
+            "id": "acc_usd",
+            "currency": "USD",
+            "purpose": "company",
+            "status": "open",
+            "name": "",
+            "balance_minor": 200000,
+            "test_minor": 0,
+            "live_minor": 200000
+          }
+        ]
+      },
+      "/api/money/people/find": {
+        "shown_name": "Dana Reyes"
+      },
+      "/api/money/people/pay/challenge": {
+        "challenge": "ch-1",
+        "allow_credentials": [
+          "dk_1"
+        ]
+      },
+      "/api/money/people/pay": {
+        "id": "pp_1",
+        "to_shown_name": "Dana Reyes",
+        "from_account_id": "acc_usd",
+        "amount_minor": 4200,
+        "currency": "USD",
+        "note": "",
+        "idempotency_key": "k",
+        "created_at": "2026-11-16T10:00:00Z"
+      }
+    },
+    "steps": [
+      [
+        "fill",
+        "Name, phone number or email",
+        "dana"
+      ],
+      [
+        "press",
+        "Find"
+      ],
+      [
+        "press",
+        "Pay Dana Reyes"
+      ],
+      [
+        "press",
+        "4"
+      ],
+      [
+        "press",
+        "2"
+      ]
+    ],
+    "dark": true
+  },
+  {
+    "route": "/pay",
+    "screen": "p-pay",
+    "account": "personal:fiat",
+    "name": "review",
+    "live": "await P.unlock(); await P.goTab('pay'); await P.push('payAmount', ['dana']); P.top().st.v = '42'; await P.openSheet('review');",
+    "words": "report",
+    "why": "B57.183 draws Pocket Live's phone ph sheet:review: words B61.34 listed under Words to confirm (On Talyvor in place of a handle, To a person, Find, Note, the saved payees and Bills due in their own cards) are reported, not failed",
+    "answers": {
+      "/api/money/accounts": {
+        "accounts": [
+          {
+            "id": "acc_usd",
+            "currency": "USD",
+            "purpose": "company",
+            "status": "open",
+            "name": "",
+            "balance_minor": 200000,
+            "test_minor": 0,
+            "live_minor": 200000
+          }
+        ]
+      },
+      "/api/money/people/find": {
+        "shown_name": "Dana Reyes"
+      },
+      "/api/money/people/pay/challenge": {
+        "challenge": "ch-1",
+        "allow_credentials": [
+          "dk_1"
+        ]
+      },
+      "/api/money/people/pay": {
+        "id": "pp_1",
+        "to_shown_name": "Dana Reyes",
+        "from_account_id": "acc_usd",
+        "amount_minor": 4200,
+        "currency": "USD",
+        "note": "",
+        "idempotency_key": "k",
+        "created_at": "2026-11-16T10:00:00Z"
+      }
+    },
+    "steps": [
+      [
+        "fill",
+        "Name, phone number or email",
+        "dana"
+      ],
+      [
+        "press",
+        "Find"
+      ],
+      [
+        "press",
+        "Pay Dana Reyes"
+      ],
+      [
+        "press",
+        "4"
+      ],
+      [
+        "press",
+        "2"
+      ],
+      [
+        "press",
+        "Review"
+      ]
+    ],
+    "phoneKey": true,
+    "dark": true
+  },
+  {
+    "route": "/pay",
+    "screen": "p-pay",
+    "account": "personal:fiat",
+    "name": "done",
+    "live": "await P.unlock(); await P.push('done', ['Sent', encodeURIComponent('$42.00 to Dana Reyes. It is there now.')]);",
+    "words": "report",
+    "why": "B57.183 draws Pocket Live's phone ph done: words B61.34 listed under Words to confirm (On Talyvor in place of a handle, To a person, Find, Note, the saved payees and Bills due in their own cards) are reported, not failed",
+    "answers": {
+      "/api/money/accounts": {
+        "accounts": [
+          {
+            "id": "acc_usd",
+            "currency": "USD",
+            "purpose": "company",
+            "status": "open",
+            "name": "",
+            "balance_minor": 200000,
+            "test_minor": 0,
+            "live_minor": 200000
+          }
+        ]
+      },
+      "/api/money/people/find": {
+        "shown_name": "Dana Reyes"
+      },
+      "/api/money/people/pay/challenge": {
+        "challenge": "ch-1",
+        "allow_credentials": [
+          "dk_1"
+        ]
+      },
+      "/api/money/people/pay": {
+        "id": "pp_1",
+        "to_shown_name": "Dana Reyes",
+        "from_account_id": "acc_usd",
+        "amount_minor": 4200,
+        "currency": "USD",
+        "note": "",
+        "idempotency_key": "k",
+        "created_at": "2026-11-16T10:00:00Z"
+      }
+    },
+    "steps": [
+      [
+        "fill",
+        "Name, phone number or email",
+        "dana"
+      ],
+      [
+        "press",
+        "Find"
+      ],
+      [
+        "press",
+        "Pay Dana Reyes"
+      ],
+      [
+        "press",
+        "4"
+      ],
+      [
+        "press",
+        "2"
+      ],
+      [
+        "press",
+        "Review"
+      ],
+      [
+        "press",
+        "Send with your fingerprint"
+      ]
+    ],
+    "phoneKey": true,
+    "dark": true
+  }
+]

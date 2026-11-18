@@ -5,6 +5,7 @@ import { useCallback, useState, type ReactNode } from 'react'
 import { Pressable, Text, View } from 'react-native'
 
 import { accountName, useAccount } from '@/account'
+import { AmountPad, shownAmount } from '@/components/amount-pad'
 import { Icon } from '@/components/icon'
 import { foundName, Initials, NOBODY_FOUND, rememberPaid } from '@/components/pay-a-person'
 import { AccountChoice, BottomSheet } from '@/components/pay-sheet'
@@ -19,17 +20,24 @@ import { fonts, useTheme } from '@/theme'
 // payment goes once under one key, renewed only after it is paid or when the payment changes, so a retry pays once.
 // Lens decides everything else: the account it arrives in, the first payment's key, screening and freezes, each refusal
 // in its own words.
+// B57.183 — drawn as Pocket Live draws them: the person's initials and name over the amount, 60 in the display face, typed
+// on the keypad at the foot with Review under it; more than the account holds is said there and opens no review. Sent is
+// the tick and its line, with Done and See it in Activity at the foot.
 
 /** "$42.00 to Dana R. It is there now.": a shown name ends with its initial's full stop, so none is added after it. */
 const sentLine = (amount: string, who: string) => `${amount} to ${who}${who.endsWith('.') ? '' : '.'} It is there now.`
 
+/** The review's facts as Pocket Live's sheet `review` draws them: label left, the value bold on the right, a rule between. */
 function Facts({ facts }: { facts: [string, ReactNode][] }) {
+  const { c } = useTheme()
   return (
-    <Card>
-      {facts.map(([label, value]) => (
-        <View key={label} style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12 }}>
+    <Card tight>
+      {facts.map(([label, value], i) => (
+        <View
+          key={label}
+          style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12, paddingTop: i ? 12 : 0, paddingBottom: i < facts.length - 1 ? 12 : 0, borderTopWidth: i ? 1 : 0, borderTopColor: c.line }}>
           <Body muted>{label}</Body>
-          {typeof value === 'string' ? <Body style={{ flexShrink: 1, textAlign: 'right' }}>{value}</Body> : value}
+          {typeof value === 'string' ? <Body style={{ flexShrink: 1, textAlign: 'right', fontFamily: fonts.uiBold }}>{value}</Body> : value}
         </View>
       ))}
     </Card>
@@ -63,6 +71,7 @@ export default function PayPersonScreen() {
   const [reviewing, setReviewing] = useState(false)
   const [busy, setBusy] = useState(false)
   const [refusal, setRefusal] = useState('')
+  const [over, setOver] = useState(false)
   const [sent, setSent] = useState<PersonPayment | null>(null)
   const account: CurrencyAccount | undefined = data?.accounts.find((a) => a.id === accountID) ?? data?.accounts[0]
   const currency = account?.currency ?? ''
@@ -115,22 +124,54 @@ export default function PayPersonScreen() {
 
   if (sent) {
     return (
-      <Screen>
-        <View testID="pay-a-person-sent" style={{ alignItems: 'center', gap: 10, paddingTop: 80 }}>
-          <View style={{ width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', backgroundColor: c.success50 }}>
-            <Icon name="check" size={30} color={c.success} />
+      <Screen
+        fill
+        footer={
+          <>
+            <Button primary label="Done" onPress={() => (router.canGoBack() ? router.back() : router.replace('/pay'))} />
+            <Button variant="ghost" label="See it in Activity" onPress={() => router.replace('/activity')} />
+          </>
+        }>
+        <View testID="pay-a-person-sent" style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+          <View style={{ width: 84, height: 84, borderRadius: 42, alignItems: 'center', justifyContent: 'center', backgroundColor: c.success50 }}>
+            <Icon name="check" size={38} color={c.success} />
           </View>
-          <Headline>Sent</Headline>
+          <Text accessibilityRole="header" style={{ fontFamily: fonts.display, fontSize: 30, lineHeight: 36, marginTop: 8, color: c.ink }}>
+            Sent
+          </Text>
           <Body muted style={{ textAlign: 'center', maxWidth: 280 }}>{sentLine(formatMinor(sent.amount_minor, sent.currency), sent.to_shown_name || name)}</Body>
         </View>
-        <Button primary label="Done" onPress={() => (router.canGoBack() ? router.back() : router.replace('/pay'))} />
-        <Button variant="ghost" label="See it in Activity" onPress={() => router.replace('/activity')} />
       </Screen>
     )
   }
 
+  const paying = !!(data && name && account)
+  const review = () => {
+    setRefusal('')
+    if (account && minor !== null && minor > account.live_minor) return setOver(true)
+    setReviewing(true)
+  }
+
   return (
-    <Screen onRefresh={reload} refreshing={loading && !!data}>
+    <Screen
+      onRefresh={reload}
+      refreshing={loading && !!data}
+      fill={paying}
+      footer={
+        paying ? (
+          <View style={{ gap: 10 }}>
+            <AmountPad
+              typed={amount}
+              currency={currency}
+              onType={(next) => {
+                setOver(false)
+                setAmount(next)
+              }}
+            />
+            <Button primary label="Review" disabled={minor === null || minor <= 0} hint="Add an amount first." onPress={review} />
+          </View>
+        ) : undefined
+      }>
       <Back home="/pay" />
       <LoadState loading={loading && !data} error={error} />
       {data && !name ? <Body>{data.shown instanceof BffError && data.shown.status === 404 ? data.shown.sentence || NOBODY_FOUND : refusalText(data.shown)}</Body> : null}
@@ -140,14 +181,27 @@ export default function PayPersonScreen() {
           <View style={{ alignItems: 'center', gap: 4 }}>
             <Initials name={name} size={56} />
             <Text style={{ fontFamily: fonts.uiBold, fontSize: 17, color: c.ink }}>{name}</Text>
-            <Body muted>On Talyvor</Body>
+            <Text style={{ fontFamily: fonts.ui, fontSize: 13, color: c.ink3 }}>On Talyvor</Text>
           </View>
         </>
       ) : null}
       {data && name && !account ? <Body muted>You have no open account to pay from.</Body> : null}
       {data && name && account ? (
         <>
-          <Field label={`Amount in ${currency}`} placeholder="0.00" keyboardType="decimal-pad" value={amount} onChangeText={setAmount} />
+          <Text
+            accessibilityLabel={`Amount in ${currency}`}
+            accessibilityLiveRegion="polite"
+            adjustsFontSizeToFit
+            numberOfLines={1}
+            style={{ fontFamily: fonts.display, fontSize: 60, lineHeight: 70, textAlign: 'center', paddingTop: 12, color: amount ? c.ink : c.ink3, fontVariant: ['tabular-nums'] }}>
+            {shownAmount(amount, currency)}
+          </Text>
+          {over ? (
+            <View accessibilityRole="alert" style={{ flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center' }}>
+              <Icon name="x" size={16} color={c.danger} />
+              <Body style={{ color: c.danger }}>That is more than this account holds</Body>
+            </View>
+          ) : null}
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={`From ${owner} · ${formatMinor(account.live_minor, currency)}`}
@@ -159,16 +213,6 @@ export default function PayPersonScreen() {
             </View>
           </Pressable>
           <Field label="Note" placeholder={`What ${first} sees`} maxLength={140} value={note} onChangeText={setNote} />
-          <Button
-            primary
-            label="Review"
-            disabled={minor === null || minor <= 0}
-            hint="Add an amount first."
-            onPress={() => {
-              setRefusal('')
-              setReviewing(true)
-            }}
-          />
           <BottomSheet visible={choosing} onClose={() => setChoosing(false)}>
             <View testID="pay-a-person-from" style={{ gap: 10 }}>
               <Headline>Pay from</Headline>
@@ -179,6 +223,7 @@ export default function PayPersonScreen() {
                   balance={formatMinor(a.live_minor, a.currency)}
                   chosen={a.id === account.id}
                   onPress={() => {
+                    setOver(false)
                     setAccountID(a.id)
                     setChoosing(false)
                   }}
@@ -189,9 +234,12 @@ export default function PayPersonScreen() {
           <BottomSheet visible={reviewing && minor !== null} onClose={busy ? undefined : () => setReviewing(false)}>
             <View testID="pay-a-person-review" style={{ gap: 12 }}>
               <Headline>Check and send</Headline>
-              <View style={{ alignItems: 'center', gap: 2 }}>
-                <Figure size={34}>{total}</Figure>
-                <Body muted>{`to ${name}`}</Body>
+              <View style={{ gap: 2 }}>
+                <Figure size={46}>{total}</Figure>
+                <Text style={{ fontFamily: fonts.ui, fontSize: 15, color: c.ink }}>
+                  {'to '}
+                  <Text style={{ fontFamily: fonts.uiBold }}>{name}</Text>
+                </Text>
               </View>
               <Facts
                 facts={[
@@ -203,7 +251,7 @@ export default function PayPersonScreen() {
                 ]}
               />
               {data.hasKey ? (
-                <Button primary label={busy ? 'Sending…' : `Send with ${biometricName}`} disabled={busy} hint="Sending…" onPress={() => void send()} />
+                <Button primary icon="faceid" label={busy ? 'Sending…' : `Send with ${biometricName}`} disabled={busy} hint="Sending…" onPress={() => void send()} />
               ) : (
                 <>
                   <Body muted>{`Turn on Approve with ${biometricName} on this phone first: Talyvor asks for ${biometricName} before each payment from this phone.`}</Body>
