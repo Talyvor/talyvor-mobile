@@ -1,6 +1,8 @@
 /// <reference types="node" />
 import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library'
 
+import { palettes } from '@/theme'
+
 // B59.9 — sign-up on the phone shows the web's words (talyvor-suite B59.8, apps/web/src/areas/auth/signupWords.ts at
 // a8240e4), asks who the account is for and the kind of money before the identity provider, sends both with the name to
 // the BFF's /auth/mobile/session, and its step 3 makes this phone's key with Face ID. B61.21: step 4 is the identity
@@ -461,6 +463,36 @@ test('B61.118: while the person check waits for the checker, the step lets the p
   expect(foot.getByText(WEB.identity.openWaiting)).toBeTruthy()
   await fireEvent.press(foot.getByRole('button', { name: WEB.identity.open }))
   await waitFor(() => expect(screen).toHavePathname('/'))
+})
+
+/** A pressable's own style, its arrays and pressed-state function flattened. */
+const lookOf = (el: { props: { style?: unknown } }) => {
+  const s = el.props.style
+  return Object.assign({}, ...[typeof s === 'function' ? s({ pressed: false }) : s].flat(Infinity).filter(Boolean)) as Record<string, unknown>
+}
+
+test.each([
+  ['waits for the checker', { pendingPerson: true }, WEB.identity.openWaiting],
+  ['did not pass', { failPerson: true }, WEB.identity.openNotPassed],
+] as const)("B57.193: while the person check %s, the way in is Pocket's foot: its line in a note, Confirm who I am the one main button, Open the app the quiet one under it", async (_, opts, line) => {
+  mockBff(false, opts)
+  await renderRouter('./src/app', { initialUrl: '/sign-up' })
+  await toStepFour('Personal', 'Maya Lind')
+  await fillYou()
+  await fireEvent.press(screen.getByRole('button', { name: WEB.identity.run }))
+  const wayIn = within(await screen.findByTestId('identity-way-in'))
+  // The line is a note, as su5 draws its Sandbox line, not loose grey text.
+  expect(within(wayIn.getByTestId('note')).getByText(line)).toBeTruthy()
+  const foot = within(screen.getByTestId('screen-footer'))
+  const main = foot.getAllByRole('button').filter((b) => lookOf(b).backgroundColor === palettes.light.primary)
+  expect(main.map((b) => within(b).getByText(/./).props.children)).toEqual([WEB.identity.run])
+  // Open the app is su6's "Not now": the ghost button, no fill and no rule round it.
+  const open = lookOf(foot.getByRole('button', { name: WEB.identity.open }))
+  expect(open.backgroundColor).toBeUndefined()
+  expect(open.borderWidth).toBeUndefined()
+  // The order su6's dock reads in: the line, the main button, then the quiet one.
+  const order = texts().filter((t) => [line, WEB.identity.run, WEB.identity.open].includes(t))
+  expect(order).toEqual([line, WEB.identity.run, WEB.identity.open])
 })
 
 test('B61.21: Home says the account cannot move money until the check is finished, and leads back to it', async () => {
