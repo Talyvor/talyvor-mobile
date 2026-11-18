@@ -7,9 +7,11 @@ import * as modifiers from '@expo/ui/jetpack-compose/modifiers'
 import * as swiftUI from '@expo/ui/swift-ui'
 import * as swiftModifiers from '@expo/ui/swift-ui/modifiers'
 import { isValidElement, type ReactNode } from 'react'
+import { AccessibilityInfo, ScrollView, StyleSheet } from 'react-native'
 import { Fragment, jsx, jsxs } from 'react/jsx-runtime'
 
 import { MoneyLabel } from '../components/money-label'
+import { forgetReduceMotion } from '../motion'
 import { SessionProvider } from '../session'
 import { AgentsWidgetAndroid } from '../widgets/agents-widget-android'
 
@@ -1504,6 +1506,56 @@ describe('B57.65 the tab bar', () => {
     __receive({ type: 'agent_approval', approval_id: 'apr_9' })
     await waitFor(() => expect(badges()).toEqual([]))
     expect(screen.getByLabelText('Approvals')).toBeTruthy()
+  })
+})
+
+describe('B61.76 the floating tab bar', () => {
+  beforeEach(() => {
+    mockStore.clear()
+    mockStore.set('talyvor.session', JSON.stringify({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }))
+    forgetReduceMotion()
+  })
+  afterEach(() => {
+    jest.restoreAllMocks()
+    forgetReduceMotion()
+  })
+
+  test('the bar floats 12 from the sides and 22 above the inset, 66 high and round, and every tab is at least 48 high', async () => {
+    mockBff()
+    await renderRouter('./src/app', { initialUrl: '/' })
+    await screen.findByText('1 payment waits for your yes')
+    const bar = StyleSheet.flatten(screen.getByTestId('tabbar-marker-track').parent!.parent!.props.style)
+    expect(bar).toMatchObject({ position: 'absolute', start: 12, end: 12, bottom: 22, height: 66, borderRadius: 33 })
+    const tabs = screen.getAllByTestId(/^tab-/)
+    expect(tabs).toHaveLength(5)
+    for (const tab of tabs) {
+      const { height, minHeight } = StyleSheet.flatten(tab.props.style)
+      expect(Math.max(Number(height ?? 0), Number(minHeight ?? 0))).toBeGreaterThanOrEqual(48)
+    }
+  })
+
+  test('the marker moves to the tab you press', async () => {
+    jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(true)
+    mockBff()
+    await renderRouter('./src/app', { initialUrl: '/' })
+    await screen.findByText('1 payment waits for your yes')
+    fireEvent(screen.getByTestId('tabbar-marker-track'), 'layout', { nativeEvent: { layout: { x: 0, y: 0, width: 365, height: 66 } } })
+    const at = () => StyleSheet.flatten(screen.getByTestId('tabbar-marker').props.style).transform?.[0]
+    await waitFor(() => expect(at()).toEqual({ translateX: 0 }))
+    await fireEvent.press(screen.getByRole('button', { name: 'Cards' }))
+    await waitFor(() => expect(at()).toEqual({ translateX: 146 }))
+  })
+
+  test('pressing the tab you are on scrolls it to the top, and its content clears the bar', async () => {
+    const scrollTo = jest.spyOn(ScrollView.prototype, 'scrollTo')
+    mockBff()
+    await renderRouter('./src/app', { initialUrl: '/' })
+    // Home's content ends 32 past the bar's top: 22 above the inset, 66 of bar, then 32.
+    let node = (await screen.findByText('1 payment waits for your yes')).parent
+    while (node && node.type !== 'RCTScrollView') node = node.parent
+    expect(StyleSheet.flatten(node!.props.contentContainerStyle)).toMatchObject({ paddingBottom: 120 })
+    await fireEvent.press(screen.getByRole('button', { name: 'Home' }))
+    await waitFor(() => expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ y: 0 })))
   })
 })
 
