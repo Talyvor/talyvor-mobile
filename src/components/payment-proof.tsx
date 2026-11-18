@@ -1,19 +1,23 @@
-import { formatLXC, formatMinor, type ApprovalKey, type PaymentProof, type ProofPayment } from '@talyvor/bff-client'
+import { formatLXC, formatMinor, type ApprovalKey, type PaymentProof, type ProofPayment, type SpendPayment } from '@talyvor/bff-client'
 import * as Clipboard from 'expo-clipboard'
 import { useCallback, useState } from 'react'
 import { Text, View } from 'react-native'
 
 import { when } from '../activity'
 import { useSession } from '../session'
+import { categoryName } from '../spending'
 import { fonts, useTheme } from '../theme'
 import { Facts, TaskSays, type Fact } from './approval-card'
-import { moneyParts } from './money'
-import { Body, Button, useLoad } from './ui'
+import { Icon } from './icon'
+import { Money, moneyParts } from './money'
+import { Body, Button, Card, Chip, useLoad } from './ui'
 
 // B62.4 — a payment's proof on the phone, the web's B62.3 in the phone's own layout, from Lens B62.1's record: what the
 // owner approved (the payee and the amount), when, with which key, the rule that asked them or let it pass, and what was
 // sent. The agent's task sits above it in its own words, always after "The agent says:" (Lens B62.2), never as a fact.
 // One button copies the proof as text, for a dispute.
+// B57.191 — drawn in Pocket as the web's B57.190: the payment as the P10 receipt, the task under who it was paid to, the
+// Proof a cloud section of its own with the verdict's mark.
 
 /** The rule that sent a payment to the owner, or let it pass, in words: the web's PROOF_RULE. */
 export const PROOF_RULE: Record<string, string> = {
@@ -79,41 +83,110 @@ export function proofText(p: PaymentProof, facts: readonly Fact[], task?: string
   ].join('\n')
 }
 
-/**
- * The proof of one payment, by its money entry, drawn, with the agent's task above it (`task`, the screen's; else the
- * record's); nothing but the task for a payment the rules never judged.
- */
-export function PaymentProofSection({ entry, task }: { entry: string; task?: string }) {
-  const { client, peg } = useSession()
-  const { c } = useTheme()
-  const [copied, setCopied] = useState<string | null>(null)
+/** A payment's notice's proof (B62.4): the agent's task, then the Proof section, under the notice's own card (p-notice). */
+export function PaymentProofSection({ entry }: { entry: string }) {
+  const read = usePaymentProof(entry)
+  const task = read.data?.proof?.sent.task
+  return (
+    <View style={{ gap: 10 }}>
+      <TaskSays task={task} />
+      <ProofSection read={read} task={task} />
+    </View>
+  )
+}
+
+/** The read of a payment's proof by its money entry, with the key that signed it: its receipt starts it, so the task it
+ * recorded can sit under who it was paid to while the proof is drawn below. */
+export function usePaymentProof(entry: string) {
+  const { client } = useSession()
   const load = useCallback(async () => {
     const proof = await client.paymentProof(entry)
     // The key's name only when one signed: a phone's or a passkey's, as Settings lists them.
     const keys = proof?.key_kind === 'device' || proof?.key_kind === 'passkey' ? await client.approvalKeys().catch(() => []) : []
     return { proof, keys }
   }, [client, entry])
-  const { data, error } = useLoad(load)
+  return useLoad(load)
+}
+
+type ProofRead = ReturnType<typeof usePaymentProof>
+
+/**
+ * B57.191 — a payment drawn as the launch pack's P10 receipt, as the web's B57.190 draws its page: its state, the amount
+ * large, who it was paid to with the agent's task under it, its facts, then its Proof. `whose` is the wallet it was paid
+ * from, in words.
+ */
+export function PaymentReceipt({ payment: p, whose }: { payment: SpendPayment; whose: string }) {
+  const read = usePaymentProof(p.entry_id)
+  return (
+    <Card white>
+      <View testID="payment-receipt" style={{ gap: 14 }}>
+        {p.kind === 'pay' ? (
+          <View style={{ flexDirection: 'row' }}>
+            <Chip>Paid</Chip>
+          </View>
+        ) : null}
+        <View style={{ gap: 4 }}>
+          <Money minor={p.amount_minor} currency={p.currency} size={44} />
+          <Body>
+            <Text testID="payment-to">
+              {'to '}
+              <Text style={{ fontFamily: fonts.uiBold }}>{p.merchant || 'the payee'}</Text>
+            </Text>
+          </Body>
+          <TaskSays task={read.data?.proof?.sent.task} />
+        </View>
+        <Facts
+          testID="payment-facts"
+          rows={[
+            ['What', categoryName(p.category)],
+            ['Account', whose],
+            ['When', when(p.created_at)],
+          ]}
+        />
+        <ProofSection read={read} task={read.data?.proof?.sent.task} />
+      </View>
+    </Card>
+  )
+}
+
+/**
+ * The proof of one payment, drawn as the P10 receipt draws a section of its own: a cloud plane with its heading inside,
+ * the facts on the page plane, and the signature's verdict with its mark (a tick when it checks out, a cross when not).
+ * Its copy starts with the agent's task (`task`). Nothing for a payment the rules never judged.
+ */
+function ProofSection({ read, task }: { read: ProofRead; task?: string }) {
+  const { peg } = useSession()
+  const { c } = useTheme()
+  const [copied, setCopied] = useState<string | null>(null)
+  const { data, error } = read
   if (error) return <Body muted>We couldn’t read this payment’s proof. Try again in a moment.</Body>
-  if (!data) return null
-  const p = data.proof
-  const says = task || p?.sent.task
-  if (!p) return <TaskSays task={says} />
+  const p = data?.proof
+  if (!data || !p) return null
   const facts = proofFacts(p, data.keys, peg)
   const copy = () =>
-    void Clipboard.setStringAsync(proofText(p, facts, says)).then(
+    void Clipboard.setStringAsync(proofText(p, facts, task)).then(
       () => setCopied('Proof copied'),
       () => setCopied('We couldn’t copy it. Try again in a moment.'),
     )
   return (
-    <View testID="payment-proof" style={{ gap: 10 }}>
-      <TaskSays task={says} />
-      <Text accessibilityRole="header" style={{ fontFamily: fonts.display, fontSize: 18, color: c.ink }}>
+    <View testID="payment-proof" style={{ gap: 12, padding: 16, borderRadius: 16, backgroundColor: c.cloud }}>
+      <Text accessibilityRole="header" style={{ fontFamily: fonts.display, fontSize: 20, color: c.ink }}>
         Proof
       </Text>
-      <Facts testID="proof-facts" rows={facts} />
-      {p.key_kind ? <Text style={{ fontFamily: fonts.ui, fontSize: 13, lineHeight: 18, color: c.ink3 }}>{p.verified ? SIGNATURE_CHECKS : SIGNATURE_FAILS}</Text> : null}
-      <Button variant="secondary" icon="copy" label="Copy the proof" onPress={copy} />
+      <Facts testID="proof-facts" on="cloud" rows={facts} />
+      {p.key_kind ? (
+        <View testID="proof-verdict" style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+          <View style={{ marginTop: 1 }}>
+            <Icon name={p.verified ? 'check' : 'x'} size={18} color={p.verified ? c.success : c.danger} />
+          </View>
+          <Text style={{ flex: 1, fontFamily: fonts.ui, fontSize: 15, lineHeight: 21, color: p.verified ? c.ink2 : c.danger }}>
+            {p.verified ? SIGNATURE_CHECKS : SIGNATURE_FAILS}
+          </Text>
+        </View>
+      ) : null}
+      <View style={{ flexDirection: 'row' }}>
+        <Button small variant="secondary" icon="copy" label="Copy the proof" onPress={copy} />
+      </View>
       {copied ? <Body muted>{copied}</Body> : null}
     </View>
   )

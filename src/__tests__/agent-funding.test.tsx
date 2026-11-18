@@ -3,6 +3,8 @@ import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/te
 // B61.85 — Add money and Take back on the phone (the web's B61.84): on an agent's screen, whose round actions are Add
 // money, Take back, Pause and Rules in that order, and on Wallets beside each of Your agents. The amount is typed in the
 // account's currency, one review line, one move under one key, what moved said back; Lens's refusal in its words.
+// B57.181 — the sheets as Pocket Live's fund and take draw them: the line, $50, $100 and $200 with $100 chosen, and
+// Move $100.00 or Take back $100.00 that moves at once; an amount of its own can still be typed.
 
 jest.setTimeout(60_000)
 
@@ -91,19 +93,23 @@ test("the agent's screen: Add money, Take back, Pause and Rules, and Add money m
 
   await fireEvent.press(round.getByRole('button', { name: 'Add money to Research' }))
   expect(await screen.findByText('From the company account. It holds $90.00.')).toBeTruthy()
-  await fireEvent.changeText(screen.getByLabelText('Amount in USD'), '10')
-  await fireEvent.press(screen.getByRole('button', { name: 'Continue' }))
-  const review = within(await screen.findByTestId('agent-funding-review'))
-  expect(review.getByText('From the company account to Research’s US dollar account, now.')).toBeTruthy()
+  const amounts = within(screen.getByTestId('agent-funding-amounts'))
+  expect(amounts.getAllByRole('radio').map((r) => [r.props.accessibilityLabel, r.props.accessibilityState.checked])).toEqual([
+    ['$50', false],
+    ['$100', true],
+    ['$200', false],
+  ])
+  expect(screen.getByRole('button', { name: 'Move $100.00' })).toBeTruthy()
+  await fireEvent.press(amounts.getByRole('radio', { name: '$50' }))
   expect(fundings()).toEqual([])
 
   // The first answer is dropped: the second press goes under the same key, so Lens moves the money once.
-  await fireEvent.press(screen.getByRole('button', { name: 'Move $10.00' }))
+  await fireEvent.press(screen.getByRole('button', { name: 'Move $50.00' }))
   expect(await screen.findByText('Nothing changed. You can try again.')).toBeTruthy()
-  await fireEvent.press(screen.getByRole('button', { name: 'Move $10.00' }))
-  expect(await screen.findByText('$10.00 moved to Research.')).toBeTruthy()
+  await fireEvent.press(screen.getByRole('button', { name: 'Move $50.00' }))
+  expect(await screen.findByText('$50.00 moved to Research.')).toBeTruthy()
   expect(fundings()).toHaveLength(2)
-  expect(fundings()[0]).toEqual({ call: 'POST /api/money/accounts/acc_r_usd/funding', body: { direction: 'to_agent', amount_minor: 1000 }, key: expect.stringMatching(/^key-/) })
+  expect(fundings()[0]).toEqual({ call: 'POST /api/money/accounts/acc_r_usd/funding', body: { direction: 'to_agent', amount_minor: 5000 }, key: expect.stringMatching(/^key-/) })
   expect(fundings()[1].key).toBe(fundings()[0].key)
   await waitFor(() => expect(screen.queryByTestId('agent-funding')).toBeNull())
 })
@@ -117,8 +123,9 @@ test('Wallets: each of Your agents has Add money and Take back, and Take back mo
   await fireEvent.press(agents.getByRole('button', { name: 'Take back from Research' }))
   expect(await screen.findByText('Into the company account. Research holds $10.00.')).toBeTruthy()
   await fireEvent.changeText(screen.getByLabelText('Amount in USD'), '4')
-  await fireEvent.press(screen.getByRole('button', { name: 'Continue' }))
-  await fireEvent.press(await screen.findByRole('button', { name: 'Take back $4.00' }))
+  // A typed amount of its own: no preset is chosen, and the button says what it moves.
+  expect(within(screen.getByTestId('agent-funding-amounts')).getAllByRole('radio').map((r) => r.props.accessibilityState.checked)).toEqual([false, false, false])
+  await fireEvent.press(screen.getByRole('button', { name: 'Take back $4.00' }))
   expect(await screen.findByText('$4.00 back from Research.')).toBeTruthy()
   expect(fundings()).toEqual([{ call: 'POST /api/money/accounts/acc_r_usd/funding', body: { direction: 'to_company', amount_minor: 400 }, key: expect.stringMatching(/^key-/) }])
 })
@@ -127,10 +134,8 @@ test("Lens's refusal is said in Lens's words, and nothing is said to have moved"
   mockBff([{ status: 403, error: 'only the owner or an admin may move money' }])
   await renderRouter('./src/app', { initialUrl: '/agents/ag_1' })
   await fireEvent.press(await screen.findByRole('button', { name: 'Add money to Research' }))
-  await fireEvent.changeText(await screen.findByLabelText('Amount in USD'), '10')
-  await fireEvent.press(screen.getByRole('button', { name: 'Continue' }))
-  await fireEvent.press(await screen.findByRole('button', { name: 'Move $10.00' }))
+  await fireEvent.press(await screen.findByRole('button', { name: 'Move $100.00' }))
   expect(await screen.findByText('Only the owner or an admin may move money.')).toBeTruthy()
-  expect(screen.queryByText('$10.00 moved to Research.')).toBeNull()
+  expect(screen.queryByText('$100.00 moved to Research.')).toBeNull()
   expect(fundings()).toHaveLength(1)
 })

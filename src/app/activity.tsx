@@ -8,6 +8,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native'
 import { MoneyLinks } from '@/components/home'
 import { AGENT_CREDIT, MoneyLabel } from '@/components/money-label'
 import { moneyParts } from '@/components/money'
+import { Landed, useLanded } from '@/components/live'
 import { Back, Body, Button, Card, Eyebrow, Field, Headline, LoadState, Row, Screen, useLoad } from '@/components/ui'
 import { ACTIVITY_KINDS, day, filterLines, monthName, monthPeriod, when } from '@/activity'
 import { useSession } from '@/session'
@@ -86,6 +87,12 @@ export default function ActivityScreen() {
   const accountName = (account: string) =>
     account.startsWith('agent:') ? (agents.find((a) => `agent:${a.id}` === account)?.name ?? account.slice(6)) : account
   const lines = filterLines(data?.lines ?? [], { agent, kinds: ACTIVITY_KINDS[kindAt].kinds, q })
+  // B61.78 — a movement that arrives after the first read drops into the list with a tint that fades.
+  const landed = useLanded(
+    (data?.lines ?? []).map((l) => l.posting_id),
+    !!data && !loading && !error,
+    period.from,
+  )
 
   const download = async () => {
     setPreparing(true)
@@ -127,13 +134,14 @@ export default function ActivityScreen() {
       {lines.length > 0 ? (
         <Card>
           {lines.map((l, i) => (
-            <Row
-              key={l.posting_id}
-              first={i === 0}
-              title={l.label || l.memo || `${l.kind} · ${l.counterparty}`}
-              sub={`${accountName(l.account)} · ${when(l.at)}`}
-              right={<Amount micros={l.amount_ulxc} peg={peg} />}
-            />
+            <Landed key={l.posting_id} landed={landed(l.posting_id)}>
+              <Row
+                first={i === 0}
+                title={l.label || l.memo || `${l.kind} · ${l.counterparty}`}
+                sub={`${accountName(l.account)} · ${when(l.at)}`}
+                right={<Amount micros={l.amount_ulxc} peg={peg} />}
+              />
+            </Landed>
           ))}
         </Card>
       ) : null}

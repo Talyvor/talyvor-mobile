@@ -23,6 +23,10 @@
  * B57.185: `live` stands Pocket Live's phone (design/pocket-live) beside the app in place of the Pocket screen `screen`
  * names: its value is the script that takes Pocket Live's phone, `P`, to the view, as "await P.flow('su')" (an empty
  * string is the lock it opens on).
+ * B61.78: `reduce` opens the app with the phone's Reduce Motion on, so a move that runs on the clock (which the shots
+ * hold still) is drawn at its end: the tick drawn, the top line shown.
+ * B61.79: a press also finds a link by its name (a list's row), and `move` moves the held clock on by that many
+ * milliseconds after the presses, so a move that runs on the clock is shot part of the way through.
  *
  * It exports the app for the web once (npx expo export --platform web) with the sample session in the keychain
  * (metro.config.js, POCKET_SHOTS=1), serves it, answers every BFF request from scripts/pocket/sample.mjs, and shoots
@@ -200,7 +204,7 @@ async function launchPackReference(c) {
 }
 
 async function app(c) {
-  const ctx = await browser.newContext({ viewport: SIZE, deviceScaleFactor: 2, timezoneId: SAMPLE_TIME_ZONE, colorScheme: c.dark ? 'dark' : 'light' })
+  const ctx = await browser.newContext({ viewport: SIZE, deviceScaleFactor: 2, timezoneId: SAMPLE_TIME_ZONE, colorScheme: c.dark ? 'dark' : 'light', reducedMotion: c.reduce ? 'reduce' : 'no-preference' })
   // The keychain shim reads this before the app starts: an empty keychain, so the app opens signed out.
   if (c.signedOut) await ctx.addInitScript(() => (globalThis.__POCKET_SHOTS_SIGNED_OUT = true))
   if (c.phoneKey) await ctx.addInitScript(() => (globalThis.__POCKET_SHOTS_PHONE_KEY = true))
@@ -219,7 +223,7 @@ async function app(c) {
   await page.waitForLoadState('networkidle')
   await page.waitForTimeout(500)
   const press = async (name) => {
-    await page.getByRole('button', { name, exact: true }).or(page.getByRole('radio', { name, exact: true })).click()
+    await page.getByRole('button', { name, exact: true }).or(page.getByRole('radio', { name, exact: true })).or(page.getByRole('link', { name, exact: true })).click()
     await page.waitForTimeout(500)
   }
   for (const [what, name, value] of c.steps ?? []) {
@@ -228,6 +232,12 @@ async function app(c) {
   }
   for (const [label, value] of Object.entries(c.fill ?? {})) await page.getByLabel(label, { exact: true }).fill(value)
   for (const name of c.press ?? []) await press(name)
+  if (c.move !== undefined) {
+    // The move sets off once its screen is drawn, at the held time; then the clock moves on.
+    await page.waitForTimeout(1000)
+    await page.clock.setFixedTime(new Date(new Date(SAMPLE_NOW).getTime() + c.move))
+    await page.waitForTimeout(200)
+  }
   if (c.scroll) await page.getByText(c.scroll, { exact: true }).first().scrollIntoViewIfNeeded()
   return { ctx, page }
 }

@@ -16,6 +16,8 @@ export const durations = {
   tab: 240,
   /** a page arriving */
   page: 420,
+  /** B61.76 — the tab marker sliding to its tab, and the tab's icon popping once */
+  marker: 420,
   /** a phone sheet rising from the bottom, and going */
   sheetIn: 460,
   sheetOut: 320,

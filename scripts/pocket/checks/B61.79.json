@@ -1,0 +1,7 @@
+[
+  { "route": "/agents", "screen": "p-agent-research", "name": "0ms", "press": ["Research, running"], "move": 0, "words": "report", "why": "B61.79: Research's face, pressed in Agents, lifts off where it was in the list as its page arrives (Pocket Live DESIGN.md section 5)" },
+  { "route": "/agents", "screen": "p-agent-research", "name": "140ms", "press": ["Research, running"], "move": 140, "words": "report", "why": "B61.79: 140 ms into the 420 ms, growing toward the top of its page" },
+  { "route": "/agents", "screen": "p-agent-research", "name": "280ms", "press": ["Research, running"], "move": 280, "words": "report", "why": "B61.79: 280 ms in" },
+  { "route": "/agents", "screen": "p-agent-research", "name": "420ms", "press": ["Research, running"], "move": 420, "words": "report", "why": "B61.79: landed, the page's own face" },
+  { "route": "/agents", "screen": "p-agent-research", "name": "140ms", "dark": true, "press": ["Research, running"], "move": 140, "words": "report", "why": "the same, with the phone set to dark" }
+]

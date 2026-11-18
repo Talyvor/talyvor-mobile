@@ -9,7 +9,9 @@ import { fonts, palettes, useTheme } from '../theme'
 import { PendingApprovals } from './approval-card'
 import { AgentCard, agentCardLabel } from './card'
 import { Face } from './face'
+import { FlightSource, useTakeOff } from './picture-flight'
 import { Icon } from './icon'
+import { Shapes } from './live'
 import { Money } from './money'
 import { AGENT_CREDIT, MoneyLabel, PAY_OUT } from './money-label'
 import { OwnerCard } from './owner-card'
@@ -204,13 +206,17 @@ export function AgentRow({ agent, accounts, shows, waiting, first, paused, chip 
   const coins = held.filter((h) => isStablecoin(h.currency))
   const asleep = paused ?? !!agent.paused_at
   const state = asleep ? 'Paused' : 'Running'
+  const { ref, takeOff, flying } = useTakeOff(agent, asleep ? 'asleep' : 'happy')
   return (
     <Link href={{ pathname: '/agents/[id]', params: { id: agent.id } }} asChild>
       <Pressable
         accessibilityRole="link"
+        onPress={takeOff}
         accessibilityLabel={`${agent.name}, ${state.toLowerCase()}`}
         style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 58, paddingVertical: 10, borderTopWidth: first ? 0 : 1, borderTopColor: c.line }}>
-        <Face agent={agent} state={asleep ? 'asleep' : 'happy'} waiting={waiting} size={40} />
+        <FlightSource face={ref} flying={flying}>
+          <Face agent={agent} state={asleep ? 'asleep' : 'happy'} waiting={waiting} size={40} />
+        </FlightSource>
         <View style={{ flex: 1, minWidth: 0, gap: chip ? 4 : 0 }}>
           <Text style={{ fontFamily: fonts.uiMedium, fontSize: 15, color: c.ink }}>{agent.name}</Text>
           {chip ? (
@@ -379,18 +385,7 @@ export function MoneyLinks() {
 
 /** Home while it reads: grey blocks in the shape of the total, the balances and three rows; never a figure. */
 export function HomeLoading() {
-  const { c } = useTheme()
-  const block = (height: number, width: number | `${number}%` = '100%', radius = 14) => ({ height, width, borderRadius: radius, backgroundColor: c.cloud2 })
-  return (
-    <View accessible accessibilityLabel="Reading…" testID="home-loading" style={{ gap: 14 }}>
-      <View style={block(48, 200, 999)} />
-      <View style={block(44, 220)} />
-      <View style={block(72, '100%', 24)} />
-      {[0, 1, 2].map((i) => (
-        <View key={i} style={block(58)} />
-      ))}
-    </View>
-  )
+  return <Shapes figure rows={3} testID="home-loading" />
 }
 
 /** Home's failed read: what failed, that nothing changed, and one button. */

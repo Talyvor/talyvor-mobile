@@ -1,13 +1,14 @@
 import { amountMinor, formatMinor, refusalText, type CurrencyAccount, type FundingDirection } from '@talyvor/bff-client'
 import * as Crypto from 'expo-crypto'
 import { useEffect, useState } from 'react'
-import { ScrollView, useWindowDimensions, View } from 'react-native'
+import { Pressable, ScrollView, Text, useWindowDimensions, View } from 'react-native'
 
 import { useAccount } from '../account'
 import { useSession } from '../session'
-import { useTheme } from '../theme'
+import { fonts, useTheme } from '../theme'
+import { AGENT_CREDIT, MoneyLabel } from './money-label'
 import { BottomSheet } from './pay-sheet'
-import { Body, Button, Field, Figure, Headline } from './ui'
+import { Body, Button, Field, Headline } from './ui'
 
 // B61.85 — Add money and Take back on the phone, the web's B61.84 (talyvor-suite AgentFunding.tsx) with its words, as
 // Pocket Live's fund and take sheets draw them. The owner or an admin gives an agent money from the company's account in
@@ -15,12 +16,22 @@ import { Body, Button, Field, Figure, Headline } from './ui'
 // currency on the keypad; the sheet names the company's account it comes from or goes to and what that holds; one review
 // line; one move under one key, so a second press moves nothing twice; then the screen says what moved and reads both
 // balances again. Lens decides who may and how much: every refusal is its own sentence.
+// B57.181 — in Pocket, as Pocket Live's sheets fund and take draw them: the title with the Sandbox label beside it, the
+// line, then $50, $100 and $200 with $100 chosen, and one button that says what it moves and moves it, so the sheet is
+// its own review. An amount of its own can still be typed in the account's currency; typing one unchooses the three.
 
 export type { FundingDirection }
 
 /** An account's currency in words, as the web's agent page names it: "US dollar account". */
 const ACCOUNT_WORDS: Record<string, string> = { USD: 'US dollar account', GBP: 'Pound account', EUR: 'Euro account', USDC: 'USDC account' }
 const accountWords = (currency: string) => ACCOUNT_WORDS[currency] ?? `${currency} account`
+
+/** Pocket Live's three amounts for the fund and take sheets, in whole units of the account's currency; the middle one is chosen. */
+const PRESETS = ['50', '100', '200']
+const presetWords = (whole: string, currency: string) => {
+  const minor = amountMinor(whole, currency)
+  return minor === null ? whole : formatMinor(minor, currency).replace(/\.00(?=\D*$)/, '')
+}
 
 /** Add money and Take back for one agent: the sheet, drawn while `direction` is set; `onDone` is given what moved. */
 export function AgentFundingSheet({
@@ -46,8 +57,8 @@ function FundingSheet({ agent, direction, onClose, onDone }: { agent: { id: stri
   const [accounts, setAccounts] = useState<CurrencyAccount[] | null>(null)
   const [read, setRead] = useState('')
   const [chosen, setChosen] = useState('')
-  const [amount, setAmount] = useState('')
-  const [reviewing, setReviewing] = useState(false)
+  const [amount, setAmount] = useState(PRESETS[1])
+  const [typed, setTyped] = useState(false)
   const [key, setKey] = useState(() => Crypto.randomUUID())
   const [busy, setBusy] = useState(false)
   const [refusal, setRefusal] = useState('')
@@ -75,7 +86,7 @@ function FundingSheet({ agent, direction, onClose, onDone }: { agent: { id: stri
   // The reference's words: "your account" for a person's own, "the company account" for a business.
   const ours = shows?.owner === 'Your account' ? 'your account' : 'the company account'
   const Ours = `${ours.charAt(0).toUpperCase()}${ours.slice(1)}`
-  const ready = agentAccount !== undefined && companyAccount !== undefined && minor !== null
+  const ready = agentAccount !== undefined && companyAccount !== undefined && minor !== null && minor > 0
   const close = busy ? undefined : onClose
 
   const move = async () => {
@@ -104,25 +115,18 @@ function FundingSheet({ agent, direction, onClose, onDone }: { agent: { id: stri
   return (
     <BottomSheet visible onClose={close} testID="agent-funding">
       <ScrollView style={{ maxHeight: height * 0.75 }} contentContainerStyle={{ gap: 10 }} keyboardShouldPersistTaps="handled">
-        <Headline>{toAgent ? `Add money to ${agent.name}` : `Take back from ${agent.name}`}</Headline>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <View style={{ flex: 1 }}>
+            <Headline>{toAgent ? `Add money to ${agent.name}` : `Take back from ${agent.name}`}</Headline>
+          </View>
+          <MoneyLabel capability={AGENT_CREDIT} />
+        </View>
         {read ? (
           <Body style={{ color: c.danger }}>{read}</Body>
         ) : accounts === null ? (
           <Body muted>Reading…</Body>
         ) : its.length === 0 ? (
           <Body muted>{`${agent.name} has no account yet. Open one in Talyvor on the web first.`}</Body>
-        ) : reviewing && ready ? (
-          <View style={{ gap: 12 }} testID="agent-funding-review">
-            <Figure size={28}>{total}</Figure>
-            <Body muted>
-              {toAgent
-                ? `From ${ours} to ${agent.name}’s ${accountWords(currency)}, now.`
-                : `From ${agent.name}’s ${accountWords(currency)} back to ${ours}, now.`}
-            </Body>
-            <Button primary label={busy ? 'Moving…' : `${toAgent ? 'Move' : 'Take back'} ${total}`} disabled={busy} hint="Moving…" onPress={() => void move()} />
-            <Button variant="secondary" label="Back" disabled={busy} hint="Moving…" onPress={() => setReviewing(false)} />
-            {refusal ? <Body style={{ color: c.danger }}>{refusal}</Body> : null}
-          </View>
         ) : (
           <>
             <Body muted>{line}</Body>
@@ -150,15 +154,45 @@ function FundingSheet({ agent, direction, onClose, onDone }: { agent: { id: stri
                 ))}
               </View>
             ) : null}
-            <Field label={`Amount in ${currency}`} keyboardType="decimal-pad" value={amount} onChangeText={setAmount} />
+            <View accessibilityRole="radiogroup" accessibilityLabel="Amount" testID="agent-funding-amounts" style={{ flexDirection: 'row', gap: 6, padding: 2 }}>
+              {PRESETS.map((whole) => {
+                const on = !typed && amount === whole
+                const words = presetWords(whole, currency)
+                return (
+                  <Pressable
+                    key={whole}
+                    accessibilityRole="radio"
+                    accessibilityLabel={words}
+                    accessibilityState={{ checked: on }}
+                    disabled={busy}
+                    onPress={() => {
+                      setTyped(false)
+                      setAmount(whole)
+                    }}
+                    style={{ flex: 1, height: 48, borderRadius: 999, alignItems: 'center', justifyContent: 'center', backgroundColor: on ? c.ink : c.cloud }}>
+                    <Text style={{ fontFamily: fonts.uiBold, fontSize: 16, color: on ? c.page : c.ink2 }}>{words}</Text>
+                  </Pressable>
+                )
+              })}
+            </View>
+            <Field
+              label={`Amount in ${currency}`}
+              keyboardType="decimal-pad"
+              value={typed ? amount : ''}
+              editable={!busy}
+              onChangeText={(v) => {
+                setTyped(v !== '')
+                setAmount(v === '' ? PRESETS[1] : v)
+              }}
+            />
             <Button
               primary
-              label="Continue"
-              disabled={!ready}
-              hint={agentAccount === undefined ? `${agent.name} has no ${accountWords(currency)}.` : companyAccount === undefined ? line : 'Add an amount first.'}
-              onPress={() => setReviewing(true)}
+              label={busy ? 'Moving…' : `${toAgent ? 'Move' : 'Take back'}${total ? ` ${total}` : ''}`}
+              disabled={!ready || busy}
+              hint={busy ? 'Moving…' : agentAccount === undefined ? `${agent.name} has no ${accountWords(currency)}.` : companyAccount === undefined ? line : 'Add an amount first.'}
+              onPress={() => void move()}
             />
-            <Button variant="secondary" label="Cancel" onPress={onClose} />
+            {refusal ? <Body style={{ color: c.danger }}>{refusal}</Body> : null}
           </>
         )}
       </ScrollView>

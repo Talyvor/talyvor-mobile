@@ -3,11 +3,14 @@ import { Figtree_400Regular, Figtree_600SemiBold, Figtree_700Bold, Figtree_800Ex
 import { useFonts } from 'expo-font'
 import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
+import { useEffect } from 'react'
 
 import { useHideFromAppSwitcher } from '@/app-switcher'
 import { BackdropHues } from '@/components/backdrop'
 import { Door } from '@/components/door'
+import { forgetTopLine, TopLine } from '@/components/live'
 import { Cover, LockScreen } from '@/components/lock-screen'
+import { PictureFlight } from '@/components/picture-flight'
 import { useLiveActivities } from '@/live-activity'
 import { usePushApprovals } from '@/push'
 import { SessionProvider, useSession } from '@/session'
@@ -21,6 +24,10 @@ function Navigator() {
   usePushApprovals(client, open)
   useLiveActivities(client, open)
   useHideFromAppSwitcher(ready && signedIn)
+  // B61.78 — a line said at the top is forgotten when the app is covered, so the app switcher never shows it.
+  useEffect(() => {
+    if (covered) forgetTopLine()
+  }, [covered])
   if (!ready) return null
   // B61.27 — the lock is drawn instead of the app, so nothing of the account is behind it.
   if (signedIn && locked)
@@ -79,6 +86,10 @@ function Navigator() {
         {/* B59.9 — open either way: steps 1 and 2 come before the session, step 3 after it. */}
         <Stack.Screen name="sign-up" />
       </Stack>
+      {/* B61.79 — an agent's face carried from the list to the top of its page, above both screens. */}
+      <PictureFlight />
+      {/* B61.78 — one line at the top of the app for 2.3 s, saying what happened; never over the app switcher's cover. */}
+      {covered ? null : <TopLine />}
       {/* B61.27 — not in front, the app switcher's picture is the mark, never the screen. */}
       {signedIn && covered ? <Cover /> : null}
     </>

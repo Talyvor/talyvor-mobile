@@ -14,6 +14,7 @@ import { AgentFundingSheet, type FundingDirection } from './agent-funding'
 import { Face } from './face'
 import { Icon, type IconName } from './icon'
 import { Money } from './money'
+import { FlightTarget } from './picture-flight'
 import { AGENT_CREDIT, MoneyHeader } from './money-label'
 import { BottomSheet } from './pay-sheet'
 import { StartEveryAgentButton, StartEveryAgentSheet } from './start-every-agent'
@@ -130,7 +131,9 @@ export function AgentView({ data, onChanged, opens }: { data: AgentData; onChang
       {/* B61.85: its face, its name and Running or Paused; its card is a row under This month. */}
       <View testID="agent-head">
         <Card>
-          <Face agent={agent} state={paused || allPaused ? 'asleep' : 'happy'} size={60} />
+          <FlightTarget agentId={agent.id}>
+            <Face agent={agent} state={paused || allPaused ? 'asleep' : 'happy'} size={60} />
+          </FlightTarget>
           <View
             style={{
               flexDirection: 'row',
@@ -156,13 +159,13 @@ export function AgentView({ data, onChanged, opens }: { data: AgentData; onChang
       </View>
       <View style={{ flexDirection: 'row', justifyContent: 'space-around' }} testID="agent-actions">
         <Round icon="plus" label="Add money" accessibilityLabel={`Add money to ${agent.name}`} onPress={() => setFunding('to_agent')} />
-        <Round icon="download" label="Take back" accessibilityLabel={`Take back from ${agent.name}`} onPress={() => setFunding('to_company')} />
+        <Round icon="arrowDown" label="Take back" accessibilityLabel={`Take back from ${agent.name}`} onPress={() => setFunding('to_company')} />
         {paused ? (
           <Round icon={signs ? 'faceid' : 'arrow'} label={signs ? `Resume with ${biometricName}` : 'Resume'} disabled={busy} hint="Resuming…" onPress={() => (signs ? setAsking(true) : void resume())} />
         ) : !allPaused ? (
           <Round icon="pause" label="Pause" disabled={busy} hint="Pausing…" onPress={() => void pause()} />
         ) : null}
-        <Round icon="settings" label="Rules" accessibilityLabel={`${agent.name}’s rules`} onPress={() => setRulesOpen(true)} />
+        <Round icon="sliders" label="Rules" accessibilityLabel={`${agent.name}’s rules`} onPress={() => setRulesOpen(true)} />
       </View>
       {moved ? <Body>{moved}</Body> : null}
       {allPaused ? <StartEveryAgentButton signs={signs} busy={busy} onPress={() => setStarting(true)} /> : null}

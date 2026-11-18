@@ -1,0 +1,126 @@
+[
+  {
+    "route": "/",
+    "screen": "p-approved-acme",
+    "name": "approved",
+    "phoneKey": true,
+    "press": [
+      "Review: Research wants to pay Acme Hosting",
+      "Approve with your fingerprint"
+    ],
+    "answers": {
+      "/api/agents/agt_research/rules": {
+        "max_per_request_ulxc": 0,
+        "daily_limit_ulxc": 0,
+        "monthly_limit_ulxc": 20000000000,
+        "approval_above_ulxc": 0,
+        "allowed_models": null,
+        "allowed_providers": null,
+        "active_from": "",
+        "active_until": "",
+        "timezone": "Europe/London"
+      },
+      "/api/agents/agt_sales/rules": {
+        "max_per_request_ulxc": 0,
+        "daily_limit_ulxc": 0,
+        "monthly_limit_ulxc": 15000000000,
+        "approval_above_ulxc": 0,
+        "allowed_models": null,
+        "allowed_providers": null,
+        "active_from": "",
+        "active_until": "",
+        "timezone": "Europe/London"
+      }
+    },
+    "live": "await P.unlock();",
+    "words": "report",
+    "why": "B61.78: the tick that draws itself and the one line at the top after Face ID (Pocket Live, approve from the top); the result's other words are B57.67's",
+    "reduce": true
+  },
+  {
+    "route": "/",
+    "screen": "p-approved-acme",
+    "name": "approved",
+    "dark": true,
+    "phoneKey": true,
+    "press": [
+      "Review: Research wants to pay Acme Hosting",
+      "Approve with your fingerprint"
+    ],
+    "answers": {
+      "/api/agents/agt_research/rules": {
+        "max_per_request_ulxc": 0,
+        "daily_limit_ulxc": 0,
+        "monthly_limit_ulxc": 20000000000,
+        "approval_above_ulxc": 0,
+        "allowed_models": null,
+        "allowed_providers": null,
+        "active_from": "",
+        "active_until": "",
+        "timezone": "Europe/London"
+      },
+      "/api/agents/agt_sales/rules": {
+        "max_per_request_ulxc": 0,
+        "daily_limit_ulxc": 0,
+        "monthly_limit_ulxc": 15000000000,
+        "approval_above_ulxc": 0,
+        "allowed_models": null,
+        "allowed_providers": null,
+        "active_from": "",
+        "active_until": "",
+        "timezone": "Europe/London"
+      }
+    },
+    "live": "await P.unlock();",
+    "words": "report",
+    "why": "B61.78: the tick that draws itself and the one line at the top after Face ID (Pocket Live, approve from the top); the result's other words are B57.67's, dark",
+    "reduce": true
+  },
+  {
+    "route": "/",
+    "screen": "p-declined-acme",
+    "name": "declined",
+    "phoneKey": true,
+    "press": [
+      "Review: Research wants to pay Acme Hosting",
+      "Decline",
+      "Decline"
+    ],
+    "answers": {
+      "/api/agents/agt_research/rules": {
+        "max_per_request_ulxc": 0,
+        "daily_limit_ulxc": 0,
+        "monthly_limit_ulxc": 20000000000,
+        "approval_above_ulxc": 0,
+        "allowed_models": null,
+        "allowed_providers": null,
+        "active_from": "",
+        "active_until": "",
+        "timezone": "Europe/London"
+      },
+      "/api/agents/agt_sales/rules": {
+        "max_per_request_ulxc": 0,
+        "daily_limit_ulxc": 0,
+        "monthly_limit_ulxc": 15000000000,
+        "approval_above_ulxc": 0,
+        "allowed_models": null,
+        "allowed_providers": null,
+        "active_from": "",
+        "active_until": "",
+        "timezone": "Europe/London"
+      }
+    },
+    "live": "await P.unlock();",
+    "words": "report",
+    "why": "B61.78: the line at the top after a decline",
+    "reduce": true
+  },
+  {
+    "route": "/activity",
+    "screen": "p-home",
+    "name": "activity",
+    "live": "await P.unlock(); P.push('activity');",
+    "words": "report",
+    "why": "B61.78: Activity, whose new rows land; its words are its own item's"
+  }
+]

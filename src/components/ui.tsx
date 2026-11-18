@@ -1,14 +1,20 @@
 import { BffError } from '@talyvor/bff-client'
 import { type ComponentRef, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { ActivityIndicator, Animated, KeyboardAvoidingView, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, type TextInputProps, type TextStyle } from 'react-native'
+import { Animated, KeyboardAvoidingView, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, type TextInputProps, type TextStyle } from 'react-native'
 import { router, type Href } from 'expo-router'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { BottomTabBarHeightContext } from 'expo-router/build/react-navigation/bottom-tabs/index'
+import { NavigationContext } from 'expo-router/build/react-navigation/core/index'
+import { SafeAreaInsetsContext, SafeAreaView } from 'react-native-safe-area-context'
+
+import { useReduceMotion } from '../motion'
 
 import { useSession } from '../session'
 import { fonts, useTheme } from '../theme'
 import { Backdrop, type BackdropStrength, type Hues } from './backdrop'
 import { Icon, type IconName } from './icon'
+import { Shapes } from './live'
 import { Press } from './press'
+import { tabBarClearance } from './tab-bar'
 
 /** Loads once and on reload (pull-to-refresh, or after a change); a 401 means the session ended, so it signs out. */
 export function useLoad<T>(load: () => Promise<T>) {
@@ -44,7 +50,8 @@ export function useLoad<T>(load: () => Promise<T>) {
  * every screen draws Talyvor's background behind its top, Calm unless `backdrop` is "full" (Home, an agent's page);
  * `hues` is an agent's own colour on its page, otherwise the account's two. B57.177: `toEnd` keeps a chat's latest line
  * in view, scrolling to the end each time what is in it grows. B57.185: `fill` lets the screen's words grow to its height,
- * so a number pad can sit at its foot as Pocket Live's lock and sign-up steps draw it. */
+ * so a number pad can sit at its foot as Pocket Live's lock and sign-up steps draw it. B61.76: on a tab, the content
+ * scrolls under the floating tab bar and clears it at the end, and pressing the tab you are on scrolls it to the top. */
 export function Screen({
   children,
   onRefresh,
@@ -70,10 +77,13 @@ export function Screen({
   const scroller = useRef<ComponentRef<typeof ScrollView>>(null)
   const [scrollY] = useState(() => new Animated.Value(0))
   const onScroll = useMemo(() => Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true }), [scrollY])
+  const onTab = useContext(BottomTabBarHeightContext) !== undefined
+  const bottom = useContext(SafeAreaInsetsContext)?.bottom ?? 0
+  useTabToTop(onTab, scroller)
   const body = (
     <Animated.ScrollView
       ref={scroller}
-      contentContainerStyle={[styles.screen, fill && { flexGrow: 1 }]}
+      contentContainerStyle={[styles.screen, fill && { flexGrow: 1 }, onTab && !footer && { paddingBottom: tabBarClearance(bottom) }]}
       onContentSizeChange={toEnd ? () => scroller.current?.scrollToEnd({ animated: true }) : undefined}
       onScroll={onScroll}
       scrollEventThrottle={16}
@@ -98,6 +108,18 @@ export function Screen({
       </SafeAreaView>
     </View>
   )
+}
+
+/** B61.76 — pressing the tab you are on scrolls its screen to the top; a screen that is not a tab's has no tab to press. */
+function useTabToTop(onTab: boolean, scroller: { current: { scrollTo: (to: { y: number; animated: boolean }) => void } | null }) {
+  const navigation = useContext(NavigationContext)
+  const reduce = useReduceMotion()
+  useEffect(() => {
+    if (!onTab || !navigation) return
+    return navigation.addListener('tabPress' as never, () => {
+      if (navigation.isFocused()) scroller.current?.scrollTo({ y: 0, animated: !reduce })
+    })
+  }, [onTab, navigation, reduce, scroller])
 }
 
 /** B61.99 — whether the text sits on a card: small text with no card under it sits on the background (DESIGN.md
@@ -293,7 +315,7 @@ export function Field({ label, ...input }: { label: string } & Omit<TextInputPro
 export function Note({ icon, children }: { icon: IconName; children: string }) {
   const { c } = useTheme()
   return (
-    <View style={{ flexDirection: 'row', gap: 10, paddingVertical: 12, paddingHorizontal: 14, borderRadius: 14, backgroundColor: c.cloud }}>
+    <View testID="note" style={{ flexDirection: 'row', gap: 10, paddingVertical: 12, paddingHorizontal: 14, borderRadius: 14, backgroundColor: c.cloud }}>
       <Icon name={icon} size={20} color={c.ink2} />
       <Text style={{ flex: 1, fontFamily: fonts.ui, fontSize: 13.5, lineHeight: 19, color: c.ink2 }}>{children}</Text>
     </View>
@@ -350,11 +372,11 @@ export function Sheet({ children }: { children: ReactNode }) {
   )
 }
 
-/** Loading, a failure in words, or nothing. */
+/** Loading as grey shapes (B61.78), a failure in words, or nothing. */
 export function LoadState({ loading, error }: { loading: boolean; error: unknown }) {
   const { c } = useTheme()
   if (error) return <Body style={{ color: c.danger }}>Could not load this. Pull down to try again.</Body>
-  if (loading) return <ActivityIndicator color={c.ink} style={{ marginVertical: 16 }} />
+  if (loading) return <Shapes />
   return null
 }
 

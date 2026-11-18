@@ -14,6 +14,7 @@ import { fonts, useTheme } from '../theme'
 import { AgentCard } from './card'
 import { Face } from './face'
 import { Icon } from './icon'
+import { say, Tick, TopLine } from './live'
 import { moneyParts } from './money'
 import { MoneyLabel, approvalCapability } from './money-label'
 import { preparedBy, preparedPayee, preparedTotal } from './prepared-payment-card'
@@ -118,12 +119,13 @@ export function TaskSays({ task }: { task?: string }) {
 }
 
 /** The sheet's and the result's facts: a label on the left, its value on the right, a rule between; a row's note under its
- * value in 13 ink-3, as launch-pack P8 draws "this month" under Budget left after. */
-export function Facts({ rows, testID }: { rows: (Fact | null)[]; testID?: string }) {
+ * value in 13 ink-3, as launch-pack P8 draws "this month" under Budget left after. `on="cloud"` draws them on the page
+ * plane, for facts inside a cloud section (B57.191, a payment's Proof). */
+export function Facts({ rows, testID, on }: { rows: (Fact | null)[]; testID?: string; on?: 'cloud' }) {
   const { c } = useTheme()
   const shown = rows.filter((r): r is Fact => r !== null)
   return (
-    <View testID={testID} style={{ backgroundColor: c.cloud, borderRadius: 16, paddingHorizontal: 14 }}>
+    <View testID={testID} style={{ backgroundColor: on === 'cloud' ? c.page : c.cloud, borderRadius: 16, paddingHorizontal: 14 }}>
       {shown.map(([label, value, note], i) => (
         <View key={label} style={{ paddingVertical: 12, gap: 2, borderTopWidth: i ? 1 : 0, borderTopColor: c.line }}>
           <View accessible accessibilityLabel={`${label}: ${value}`} style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12 }}>
@@ -315,19 +317,34 @@ export function ApprovalSheet({
 
 /** After deciding: the check or the x, what happens next, the payee and the amount, what signed it, what pays it and the
  * budget left; Done, and Next when another request waits. */
+/** B61.78 — the one line at the top after a decision: the reference's "Approved. $64.00 to Acme" and "Declined. Nothing was sent". */
+export function decidedLine(d: Pick<Decided, 'approval' | 'agent' | 'approved'>, amount: string) {
+  if (!d.approved) return 'Declined. Nothing was sent'
+  return d.approval.payee ? `Approved. ${amount} to ${subject(d.approval)}` : `Approved. ${amount} for ${d.agent.name}`
+}
+
 export function ApprovalResult({ d, onDone, onNext }: { d: Decided; onDone: () => void; onNext: (id: string) => void }) {
   const { peg } = useSession()
   const { c } = useTheme()
   const a = d.approval
   const { large, small } = amountParts(a, peg)
   const left = a.budget_left_after_ulxc
+  // B61.78 — Face ID, then the tick that draws itself, then one line at the top for 2.3 s; said once, as it lands.
+  const line = decidedLine(d, large)
+  useEffect(() => {
+    say(line, d.approved ? 'check' : 'x')
+  }, [line, d.approved])
   return (
     <SafeAreaView testID="approval-result" style={{ flex: 1, backgroundColor: c.page }}>
       <ScrollView contentContainerStyle={{ padding: 20, gap: 16 }}>
         <View style={{ alignItems: 'center', gap: 12, paddingTop: 32 }}>
-          <View style={{ width: 84, height: 84, borderRadius: 42, alignItems: 'center', justifyContent: 'center', backgroundColor: d.approved ? c.success50 : c.danger50 }}>
-            <Icon name={d.approved ? 'check' : 'x'} size={36} color={d.approved ? c.success : c.danger} />
-          </View>
+          {d.approved ? (
+            <Tick />
+          ) : (
+            <View style={{ width: 84, height: 84, borderRadius: 42, alignItems: 'center', justifyContent: 'center', backgroundColor: c.danger50 }}>
+              <Icon name="x" size={36} color={c.danger} />
+            </View>
+          )}
           <Headline>{d.approved ? 'Approved' : 'Declined'}</Headline>
           <Body muted style={{ textAlign: 'center' }}>
             {d.approved ? approvedText(d.agent.name, a, d.paused) : declinedText(d.agent.name, a)}
@@ -355,6 +372,7 @@ export function ApprovalResult({ d, onDone, onNext }: { d: Decided; onDone: () =
         <Button primary label="Done" onPress={onDone} />
         {d.next ? <Button variant="secondary" label={`Next: ${d.next.title}`} onPress={() => onNext(d.next!.id)} /> : null}
       </ScrollView>
+      <TopLine />
     </SafeAreaView>
   )
 }

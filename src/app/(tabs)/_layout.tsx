@@ -1,10 +1,11 @@
 import { Tabs } from 'expo-router'
 import { PlatformPressable } from 'expo-router/build/react-navigation/elements/index'
-import { Text, View } from 'react-native'
+import { StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { useAreas, type Area } from '@/areas'
 import { Icon, type IconName } from '@/components/icon'
+import { floatingBar, FloatingTabBar, PopIcon, TabMarker } from '@/components/tab-bar'
 import { haptic } from '@/motion'
 import { useSession } from '@/session'
 import { fonts, palettes, useTheme } from '@/theme'
@@ -15,6 +16,8 @@ import { useWaiting } from '@/waiting'
 // B59.3 — a tab in an area the workspace does not have is not there, and a link to it opens Home.
 // B61.54 — the launch pack's five (design/launch-pack/design/DESIGN.md, choice 1): Home, Agents, Cards, Pay, Approvals.
 // Spending and Statement open from Home and from Activity, and Settings from the top right of Home.
+// B61.76 — Pocket Live's bar floats over the content (components/tab-bar.tsx), the tangerine marker slides to the tab you
+// are on and its icon pops once.
 const TABS: { name: string; title: string; icon: IconName; area?: Area }[] = [
   { name: 'index', title: 'Home', icon: 'home' },
   { name: 'agents', title: 'Agents', icon: 'agents' },
@@ -33,17 +36,33 @@ export default function TabsLayout() {
   if (!areas) return null
   return (
     <Tabs
+      tabBar={(props) => <FloatingTabBar {...props} />}
       // B61.73 — a light haptic when the tab changes.
       screenListeners={({ navigation }) => ({ tabPress: () => !navigation.isFocused() && haptic('light') })}
       screenOptions={{
         headerShown: false,
-        // The reference's 84: 8 above, the icon and its word, and the home indicator's space below.
-        tabBarStyle: { backgroundColor: c.page, borderTopColor: c.line, height: 58 + bottom, paddingTop: 8, paddingBottom: bottom },
+        tabBarStyle: {
+          position: 'absolute',
+          start: floatingBar.side,
+          end: floatingBar.side,
+          bottom: floatingBar.above + bottom,
+          height: floatingBar.height,
+          borderRadius: floatingBar.radius,
+          paddingTop: 0,
+          paddingBottom: 0,
+          backgroundColor: c.page,
+          borderWidth: StyleSheet.hairlineWidth,
+          borderTopWidth: StyleSheet.hairlineWidth,
+          borderColor: c.line,
+          boxShadow: '0 10px 30px rgba(17, 18, 22, 0.12)',
+        },
+        tabBarBackground: () => <TabMarker />,
         tabBarActiveTintColor: c.ink,
         tabBarInactiveTintColor: c.ink3,
         tabBarItemStyle: { justifyContent: 'center' },
-        // The tab's own 5-point side padding would cut "Approvals" short on a narrow phone.
-        tabBarButton: ({ style, ...props }) => <PlatformPressable {...props} style={[style, { paddingHorizontal: 0 }]} />,
+        // The tab's own 5-point side padding would cut "Approvals" short on a narrow phone. Each tab is the bar's full
+        // height, never under the 48 a finger needs.
+        tabBarButton: ({ style, ...props }) => <PlatformPressable {...props} style={[style, { paddingHorizontal: 0, minHeight: 48 }]} />,
         tabBarLabelPosition: 'below-icon',
       }}>
       {TABS.map((t) => {
@@ -61,8 +80,11 @@ export default function TabsLayout() {
                 ),
                 tabBarIcon: ({ focused }) => (
                   <View>
-                    <View style={{ paddingVertical: 2, paddingHorizontal: 10, borderRadius: 999, backgroundColor: focused ? c.tangerine50 : 'transparent' }}>
-                      <Icon name={t.icon} color={focused ? c.tangerineInk : c.ink3} />
+                    {/* The tangerine pill under the icon is the bar's marker now, which slides from tab to tab. */}
+                    <View style={{ paddingVertical: 2, paddingHorizontal: 10 }}>
+                      <PopIcon focused={focused}>
+                        <Icon name={t.icon} color={focused ? c.tangerineInk : c.ink3} />
+                      </PopIcon>
                     </View>
                     {badge ? (
                       <View testID="approvals-badge" style={{ position: 'absolute', top: -4, left: 26, minWidth: 18, height: 18, paddingHorizontal: 5, borderRadius: 999, backgroundColor: c.tangerine, alignItems: 'center', justifyContent: 'center' }}>
