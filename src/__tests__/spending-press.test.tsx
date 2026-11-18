@@ -6,8 +6,10 @@ import { pressEverything } from '../testing/press-everything'
 jest.setTimeout(30_000)
 
 const mockGo = { said: (_: string) => undefined as void }
+// One client for every render: the notice's proof (B62.4) is read once per client.
+const mockClient = { setNoticeSettings: async (s: unknown) => (mockGo.said('saved'), s), paymentProof: async () => null }
 jest.mock('../session', () => ({
-  useSession: () => ({ client: { setNoticeSettings: async (s: unknown) => (mockGo.said('saved'), s) }, peg: 0.1, signedIn: true }),
+  useSession: () => ({ client: mockClient, peg: 0.1, signedIn: true }),
 }))
 jest.mock('expo-router', () => ({
   router: {
@@ -39,8 +41,8 @@ test('Spending: every switch, the save and each notice does something', async ()
     return <SpendingView data={data} />
   })
   expect(report.dead).toEqual([])
-  // The six notice switches, Save notice settings and the notice.
-  expect(report.pressed).toBe(8)
+  // The payment (B62.4: it opens its screen), the six notice switches, Save notice settings and the notice.
+  expect(report.pressed).toBe(9)
 })
 
 test('a payment’s notice: Back to Spending and See all your spending do something', async () => {
