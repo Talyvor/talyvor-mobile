@@ -315,7 +315,7 @@ export function Field({ label, ...input }: { label: string } & Omit<TextInputPro
 export function Note({ icon, children }: { icon: IconName; children: string }) {
   const { c } = useTheme()
   return (
-    <View style={{ flexDirection: 'row', gap: 10, paddingVertical: 12, paddingHorizontal: 14, borderRadius: 14, backgroundColor: c.cloud }}>
+    <View testID="note" style={{ flexDirection: 'row', gap: 10, paddingVertical: 12, paddingHorizontal: 14, borderRadius: 14, backgroundColor: c.cloud }}>
       <Icon name={icon} size={20} color={c.ink2} />
       <Text style={{ flex: 1, fontFamily: fonts.ui, fontSize: 13.5, lineHeight: 19, color: c.ink2 }}>{children}</Text>
     </View>

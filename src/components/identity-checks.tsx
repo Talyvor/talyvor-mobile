@@ -149,8 +149,9 @@ function wayInLine(v: WorkspaceVerification): string | null {
 
 /**
  * The screen under `head`: the fields the next checks need, the company details for a Business, the Sandbox note and
- * the checks for this account. `done` takes the foot once they pass; with `wayIn` (sign-up's last step, B61.118) it is
- * also at the foot while a check waits or after one did not pass, with a line that says so.
+ * the checks for this account. `done` takes the foot once they pass; with `wayIn` (sign-up's last step, B61.118) the foot
+ * also has Open the app while a check waits or after one did not pass, with a note that says so (B57.193: the note, the
+ * main button, then Open the app as the quiet one under it).
  */
 export function IdentityChecks({ head, done, wayIn = false }: { head: ReactNode; done?: ReactNode; wayIn?: boolean }) {
   const { client } = useSession()
@@ -270,13 +271,14 @@ export function IdentityChecks({ head, done, wayIn = false }: { head: ReactNode;
               <FieldError>{said}</FieldError>
             </View>
           ) : null}
-          <Button primary label={running ? IDENTITY_WORDS.running : IDENTITY_WORDS.run} disabled={running !== null} onPress={() => void run()} />
           {wayInSaid ? (
-            <View testID="identity-way-in" accessibilityLiveRegion="polite" style={{ gap: 8 }}>
-              {done}
-              <Body muted>{wayInSaid}</Body>
+            <View testID="identity-way-in" accessibilityLiveRegion="polite">
+              <Note icon={wayInSaid === IDENTITY_WORDS.openWaiting ? 'clock' : 'shield'}>{wayInSaid}</Note>
             </View>
           ) : null}
+          <Button primary label={running ? IDENTITY_WORDS.running : IDENTITY_WORDS.run} disabled={running !== null} onPress={() => void run()} />
+          {/* B57.193 — drawn as Pocket Live's su6 dock draws a way on past the main button ("Not now"): the ghost one. */}
+          {wayInSaid ? <Button variant="ghost" label={IDENTITY_WORDS.open} onPress={() => router.replace('/')} /> : null}
         </>
       }>
       {head}
