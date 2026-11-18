@@ -172,11 +172,36 @@ test('a signature that does not check out says so, and a passkey with no name is
   expect(proof.getByText('The signature does not check out against what you approved.')).toBeTruthy()
 })
 
-test('the agent’s task sits above the proof, after The agent says', async () => {
+test('the agent’s task sits under who it was paid to, after The agent says', async () => {
+  // B57.191 — as the web's B57.190 and the approval sheet draw what a payment is for: in the receipt, under its "to" line,
+  // before its facts and its proof.
   mockBff()
   await openPayment(0)
-  const proof = within(await screen.findByTestId('payment-proof'))
-  expect(proof.getByText(`The agent says: “${TASK}”`)).toBeTruthy()
+  const receipt = within(await screen.findByTestId('payment-receipt'))
+  const says = await receipt.findByText(`The agent says: “${TASK}”`)
+  expect(receipt.getByTestId('payment-to')).toHaveTextContent('to Acme Hosting')
+  expect(receipt.getByLabelText('What: software')).toBeTruthy()
+  expect(within(await screen.findByTestId('payment-proof')).queryByText(`The agent says: “${TASK}”`)).toBeNull()
+  expect(says).toBeTruthy()
+})
+
+test('the proof is its own section in the receipt, and its verdict carries a tick or a cross', async () => {
+  // B57.191 — drawn as the P10 receipt draws a section of its own: a cloud plane with Proof inside, the facts on the page.
+  mockBff()
+  await openPayment(0)
+  const receipt = within(await screen.findByTestId('payment-receipt'))
+  const ok = within(await receipt.findByTestId('proof-verdict'))
+  expect(ok.getByText('The signature checks out: it is by this key, over exactly what you approved.')).toBeTruthy()
+  expect(ok.getByTestId('icon-check', { includeHiddenElements: true })).toBeTruthy()
+  expect(ok.queryByTestId('icon-x', { includeHiddenElements: true })).toBeNull()
+  expect(receipt.getByRole('header', { name: 'Proof' })).toBeTruthy()
+
+  await fireEvent.press(screen.getByText('Spending'))
+  await screen.findByText('This month’s payments')
+  await fireEvent.press(screen.getAllByText('Acme Hosting')[1])
+  const bad = within(await screen.findByTestId('proof-verdict'))
+  expect(bad.getByText('The signature does not check out against what you approved.')).toBeTruthy()
+  expect(bad.getByTestId('icon-x', { includeHiddenElements: true })).toBeTruthy()
 })
 
 test('a payment the rules never judged shows no proof', async () => {

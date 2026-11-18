@@ -119,12 +119,13 @@ export function TaskSays({ task }: { task?: string }) {
 }
 
 /** The sheet's and the result's facts: a label on the left, its value on the right, a rule between; a row's note under its
- * value in 13 ink-3, as launch-pack P8 draws "this month" under Budget left after. */
-export function Facts({ rows, testID }: { rows: (Fact | null)[]; testID?: string }) {
+ * value in 13 ink-3, as launch-pack P8 draws "this month" under Budget left after. `on="cloud"` draws them on the page
+ * plane, for facts inside a cloud section (B57.191, a payment's Proof). */
+export function Facts({ rows, testID, on }: { rows: (Fact | null)[]; testID?: string; on?: 'cloud' }) {
   const { c } = useTheme()
   const shown = rows.filter((r): r is Fact => r !== null)
   return (
-    <View testID={testID} style={{ backgroundColor: c.cloud, borderRadius: 16, paddingHorizontal: 14 }}>
+    <View testID={testID} style={{ backgroundColor: on === 'cloud' ? c.page : c.cloud, borderRadius: 16, paddingHorizontal: 14 }}>
       {shown.map(([label, value, note], i) => (
         <View key={label} style={{ paddingVertical: 12, gap: 2, borderTopWidth: i ? 1 : 0, borderTopColor: c.line }}>
           <View accessible accessibilityLabel={`${label}: ${value}`} style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12 }}>

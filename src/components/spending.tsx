@@ -27,7 +27,7 @@ export interface SpendingData {
 const IN_WORDS: Record<string, string> = { USD: 'US dollars', EUR: 'euros', GBP: 'British pounds' }
 
 /** Whose a payment, budget or finding is: "" the owner's own wallet, "all" every wallet, else the agent's name. */
-const whoseOf = (agents: SpendingData['agents']) => (id: string | undefined) =>
+export const whoseOf = (agents: SpendingData['agents']) => (id: string | undefined) =>
   !id ? 'Your own wallet' : id === 'all' ? 'Every wallet' : (agents.find((a) => a.id === id)?.name ?? 'An agent')
 
 /** Words for an empty list, in a card as the reference draws them. */
