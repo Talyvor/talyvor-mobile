@@ -185,6 +185,24 @@ test('the pay sheet: amount, account and note, one review, Send with Face ID, pa
   expect(chips.getByRole('button', { name: 'Pay Dana R. again' })).toBeTruthy()
 })
 
+// B61.77 — Check and send is a sheet over the amount; Close returns to it with nothing sent.
+test('Check and send opens as a sheet, and Close returns to the amount with nothing sent', async () => {
+  mockBff(['ok'])
+  await renderRouter('./src/app', { initialUrl: '/pay' })
+  const card = within(await screen.findByTestId('pay-a-person'))
+  await fireEvent.changeText(card.getByLabelText('Name, phone number or email'), 'dana')
+  await fireEvent.press(card.getByRole('button', { name: 'Find' }))
+  await fireEvent.press(await screen.findByRole('button', { name: 'Pay Dana R.' }))
+  await screen.findByLabelText('Amount in USD')
+  await typeOnPad('42')
+  await fireEvent.press(screen.getByRole('button', { name: 'Review' }))
+  expect(await screen.findByTestId('pay-a-person-review')).toBeTruthy()
+  await fireEvent.press(screen.getByRole('button', { name: 'Close' }))
+  await waitFor(() => expect(screen.queryByTestId('pay-a-person-review')).toBeNull())
+  expect(screen.getByLabelText('Amount in USD')).toBeTruthy()
+  expect(pays()).toEqual([])
+})
+
 test("a refusal is said in Lens's words, and nothing is said to be sent", async () => {
   mockBff([{ status: 409, error: 'economy: Dana R. holds no account in EUR, so nothing was sent' }])
   await renderRouter('./src/app', { initialUrl: '/pay-person?to=dana' })

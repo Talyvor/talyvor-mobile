@@ -1,12 +1,12 @@
 import { BffError } from '@talyvor/bff-client'
 import { type ComponentRef, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Animated, KeyboardAvoidingView, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, type TextInputProps, type TextStyle } from 'react-native'
+import { AccessibilityInfo, Animated, KeyboardAvoidingView, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, type TextInputProps, type TextStyle } from 'react-native'
 import { router, type Href } from 'expo-router'
 import { BottomTabBarHeightContext } from 'expo-router/build/react-navigation/bottom-tabs/index'
 import { NavigationContext } from 'expo-router/build/react-navigation/core/index'
 import { SafeAreaInsetsContext, SafeAreaView } from 'react-native-safe-area-context'
 
-import { useReduceMotion } from '../motion'
+import { durations, sheetDragClose, spring, useReduceMotion } from '../motion'
 
 import { useSession } from '../session'
 import { fonts, useTheme } from '../theme'
@@ -361,13 +361,69 @@ export function Bar({ value, label, thin }: { value: number; label: string; thin
 }
 
 /** The bottom sheet's frame: the tangerine band, the grab handle, rounded at the top. */
-export function Sheet({ children }: { children: ReactNode }) {
+/** B61.77 — moves a screen reader's focus to `target` once the sheet holding it has risen. */
+function useFocusOnOpen(target: { current: ComponentRef<typeof Pressable> | null }) {
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (target.current) AccessibilityInfo.sendAccessibilityEvent(target.current, 'focus')
+    }, durations.sheetIn)
+    return () => clearTimeout(t)
+  }, [target])
+}
+
+/** B61.77 — a sheet's Close: it puts the sheet away, and focus moves to it when the sheet opens. */
+function SheetClose({ onClose }: { onClose: () => void }) {
+  const { c } = useTheme()
+  const ref = useRef<ComponentRef<typeof Pressable>>(null)
+  useFocusOnOpen(ref)
+  return (
+    <Pressable ref={ref} accessibilityRole="button" accessibilityLabel="Close" hitSlop={10} onPress={onClose} style={{ alignSelf: 'flex-end' }}>
+      <Icon name="x" color={c.ink2} />
+    </Pressable>
+  )
+}
+
+/** A sheet rising over the screen. With `onClose` it has Close at the top, focus moves to it, and dragging the grab bar
+ * down more than 110 points closes it (B61.77, pocket-live DESIGN.md section 5, move 3); a shorter drag springs back. The
+ * drag is a shortcut: Close does the same for anyone who cannot drag. */
+export function Sheet({ children, onClose }: { children: ReactNode; onClose?: () => void }) {
+  const { c } = useTheme()
+  const reduce = useReduceMotion()
+  const [drag] = useState(() => new Animated.Value(0))
+  const from = useRef(0)
+  const back = () => (reduce ? drag.setValue(0) : Animated.spring(drag, { toValue: 0, ...spring, useNativeDriver: false }).start())
+  return (
+    <Animated.View accessibilityViewIsModal style={[styles.sheet, styles.shadow, { backgroundColor: c.page, transform: [{ translateY: drag }] }]}>
+      <View style={[styles.band, { backgroundColor: c.tangerine }]} />
+      <View
+        testID="sheet-grab"
+        accessible={false}
+        style={styles.grabZone}
+        onStartShouldSetResponder={() => !!onClose}
+        onMoveShouldSetResponder={() => !!onClose}
+        onResponderGrant={(e) => {
+          from.current = e.nativeEvent.pageY
+        }}
+        onResponderMove={(e) => drag.setValue(Math.max(0, e.nativeEvent.pageY - from.current))}
+        onResponderRelease={(e) => (e.nativeEvent.pageY - from.current > sheetDragClose ? onClose?.() : back())}
+        onResponderTerminate={back}>
+        <View style={[styles.grab, { backgroundColor: c.cloud2 }]} />
+      </View>
+      {onClose ? <SheetClose onClose={onClose} /> : null}
+      {children}
+    </Animated.View>
+  )
+}
+
+/** B61.77 — the top of a screen that opens as the phone's own sheet (`presentation: 'formSheet'`): the phone drags it down
+ * itself, iOS draws its grab bar and Android gets this one, and Close puts it away to the screen under it, or to `home`
+ * when it was opened from a link with nothing under it. */
+export function SheetTop({ home }: { home: Href }) {
   const { c } = useTheme()
   return (
-    <View style={[styles.sheet, styles.shadow, { backgroundColor: c.page }]}>
-      <View style={[styles.band, { backgroundColor: c.tangerine }]} />
-      <View style={[styles.grab, { backgroundColor: c.cloud2 }]} />
-      {children}
+    <View style={{ gap: 4 }}>
+      {Platform.OS === 'android' ? <View style={[styles.grab, { position: 'relative', top: 0, backgroundColor: c.cloud2 }]} /> : null}
+      <SheetClose onClose={() => (router.canGoBack() ? router.back() : router.replace(home))} />
     </View>
   )
 }
@@ -404,5 +460,6 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11 },
   sheet: { borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingTop: 26, paddingHorizontal: 24, paddingBottom: 34, gap: 10, overflow: 'hidden' },
   band: { position: 'absolute', top: 0, left: 0, right: 0, height: 7 },
+  grabZone: { position: 'absolute', top: 0, left: 0, right: 0, height: 26, alignItems: 'center' },
   grab: { position: 'absolute', top: 12, alignSelf: 'center', width: 40, height: 5, borderRadius: 99 },
 })

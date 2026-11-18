@@ -230,7 +230,7 @@ export default function PayPersonScreen() {
               ))}
             </View>
           </BottomSheet>
-          <BottomSheet visible={reviewing && minor !== null} onClose={busy ? undefined : () => setReviewing(false)}>
+          <BottomSheet visible={reviewing && minor !== null} onClose={() => !busy && setReviewing(false)}>
             <View testID="pay-a-person-review" style={{ gap: 12 }}>
               <Headline>Check and send</Headline>
               <View style={{ gap: 2 }}>

@@ -38,6 +38,9 @@ export const easings = {
   roll: Easing.out(Easing.poly(4)),
 } as const
 
+/** B61.77 — how far a sheet's grab bar is dragged down, in points, before the sheet closes. */
+export const sheetDragClose = 110
+
 /** The phone's spring with the pop's feel, for a control springing back. */
 export const spring = { damping: 18, stiffness: 220, mass: 1 } as const
 

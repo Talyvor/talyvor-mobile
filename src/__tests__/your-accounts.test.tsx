@@ -125,6 +125,15 @@ describe('Your accounts', () => {
     expect(after.every((c) => c.token === 'session-2')).toBe(true)
   })
 
+  test('B61.77: Your accounts opens as a sheet over Home, and Close returns to Home', async () => {
+    mockBff([NORTHWIND, MAYA])
+    await renderRouter('./src/app', { initialUrl: '/' })
+    const sheet = await openSheet()
+    await fireEvent.press(sheet.getByRole('button', { name: 'Close' }))
+    await waitFor(() => expect(screen.queryByTestId('your-accounts')).toBeNull())
+    expect(screen.getByText('Your company’s total')).toBeTruthy()
+  })
+
   test('Settings: the sentence’s "open another account" opens Your accounts', async () => {
     mockBff([NORTHWIND, MAYA])
     await renderRouter('./src/app', { initialUrl: '/settings' })

@@ -158,6 +158,19 @@ test('the card details stay hidden until Face ID passes', async () => {
   expect(screen.queryByText(/4242/)).toBeNull()
 })
 
+// B61.77 — the details open in a sheet over the card once Face ID passes, and Close hides them again.
+test('the card details open as a sheet over Cards, and Close returns to Cards with them hidden', async () => {
+  mockBff()
+  await renderRouter('./src/app', { initialUrl: '/cards' })
+  await fireEvent.press(await screen.findByText('Show card details'))
+  const sheet = within(await screen.findByTestId('card-details-sheet'))
+  expect(sheet.getByText('•••• 4242')).toBeTruthy()
+  await fireEvent.press(sheet.getByRole('button', { name: 'Close' }))
+  await waitFor(() => expect(screen.queryByTestId('card-details-sheet')).toBeNull())
+  expect(screen.queryByText(/4242/)).toBeNull()
+  expect(screen.getByText('Show card details')).toBeTruthy()
+})
+
 test('a phone with no key shows no details and says where to turn approving on', async () => {
   mockBff()
   mockStore.delete('talyvor.device-key')

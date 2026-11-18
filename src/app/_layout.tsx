@@ -2,6 +2,7 @@ import { BricolageGrotesque_700Bold, BricolageGrotesque_800ExtraBold } from '@ex
 import { Figtree_400Regular, Figtree_600SemiBold, Figtree_700Bold, Figtree_800ExtraBold } from '@expo-google-fonts/figtree'
 import { useFonts } from 'expo-font'
 import { Stack } from 'expo-router'
+import type { NativeStackNavigationOptions } from 'expo-router/build/react-navigation/native-stack/index'
 import { StatusBar } from 'expo-status-bar'
 import { useEffect } from 'react'
 
@@ -15,6 +16,10 @@ import { useLiveActivities } from '@/live-activity'
 import { usePushApprovals } from '@/push'
 import { SessionProvider, useSession } from '@/session'
 import { fonts, useTheme } from '@/theme'
+
+/** B61.77 — a decision that is its own screen opens as the phone's own sheet: it rises over the screen it came from, the
+ * app steps back behind it, and it drags down to close. */
+const SHEET: NativeStackNavigationOptions = { presentation: 'formSheet', sheetGrabberVisible: true, sheetCornerRadius: 28, sheetAllowedDetents: [1] }
 
 function Navigator() {
   const { ready, signedIn, client, locked, joining, phoneNeeded, covered } = useSession()
@@ -67,12 +72,12 @@ function Navigator() {
           <Stack.Screen name="pay-person" />
           <Stack.Screen name="instant-transfer/index" />
           <Stack.Screen name="instant-transfer/[id]" />
-          <Stack.Screen name="approve/[id]" options={{ headerShown: true, title: 'Approve' }} />
+          <Stack.Screen name="approve/[id]" options={SHEET} />
           <Stack.Screen name="approvals/[id]" />
           <Stack.Screen name="notices/[id]" />
           <Stack.Screen name="bills" />
           <Stack.Screen name="disputes" />
-          <Stack.Screen name="pause-all" />
+          <Stack.Screen name="pause-all" options={SHEET} />
           <Stack.Screen name="settings" />
           <Stack.Screen name="help" />
           <Stack.Screen name="activity" />
