@@ -48,7 +48,7 @@ const WEB = {
     gate: 'Your account can look around but can’t move money until you confirm who you are.',
     finish: 'Finish confirming who you are',
     // B61.118 (suite PR, apps/web/src/areas/auth/signupWords.ts): the way into the app while a check waits or did not pass
-    openWaiting: 'We’ll finish checking your identity in the background. Live money waits for it; everything in Sandbox works now.',
+    openWaiting: 'You can look around now. Once your identity check passes, you can move money.',
     openNotPassed: 'You can try the check again from Settings, Verification.',
     waiting: 'Waiting for the checker',
     companyFirst: 'Save the company details, with at least one director, first.',
