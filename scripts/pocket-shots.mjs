@@ -23,6 +23,8 @@
  * B57.185: `live` stands Pocket Live's phone (design/pocket-live) beside the app in place of the Pocket screen `screen`
  * names: its value is the script that takes Pocket Live's phone, `P`, to the view, as "await P.flow('su')" (an empty
  * string is the lock it opens on).
+ * B61.78: `reduce` opens the app with the phone's Reduce Motion on, so a move that runs on the clock (which the shots
+ * hold still) is drawn at its end: the tick drawn, the top line shown.
  *
  * It exports the app for the web once (npx expo export --platform web) with the sample session in the keychain
  * (metro.config.js, POCKET_SHOTS=1), serves it, answers every BFF request from scripts/pocket/sample.mjs, and shoots
@@ -200,7 +202,7 @@ async function launchPackReference(c) {
 }
 
 async function app(c) {
-  const ctx = await browser.newContext({ viewport: SIZE, deviceScaleFactor: 2, timezoneId: SAMPLE_TIME_ZONE, colorScheme: c.dark ? 'dark' : 'light' })
+  const ctx = await browser.newContext({ viewport: SIZE, deviceScaleFactor: 2, timezoneId: SAMPLE_TIME_ZONE, colorScheme: c.dark ? 'dark' : 'light', reducedMotion: c.reduce ? 'reduce' : 'no-preference' })
   // The keychain shim reads this before the app starts: an empty keychain, so the app opens signed out.
   if (c.signedOut) await ctx.addInitScript(() => (globalThis.__POCKET_SHOTS_SIGNED_OUT = true))
   if (c.phoneKey) await ctx.addInitScript(() => (globalThis.__POCKET_SHOTS_PHONE_KEY = true))
