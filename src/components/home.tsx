@@ -9,6 +9,7 @@ import { fonts, palettes, useTheme } from '../theme'
 import { PendingApprovals } from './approval-card'
 import { AgentCard, agentCardLabel } from './card'
 import { Face } from './face'
+import { FlightSource, useTakeOff } from './picture-flight'
 import { Icon } from './icon'
 import { Shapes } from './live'
 import { Money } from './money'
@@ -205,13 +206,17 @@ export function AgentRow({ agent, accounts, shows, waiting, first, paused, chip 
   const coins = held.filter((h) => isStablecoin(h.currency))
   const asleep = paused ?? !!agent.paused_at
   const state = asleep ? 'Paused' : 'Running'
+  const { ref, takeOff, flying } = useTakeOff(agent, asleep ? 'asleep' : 'happy')
   return (
     <Link href={{ pathname: '/agents/[id]', params: { id: agent.id } }} asChild>
       <Pressable
         accessibilityRole="link"
+        onPress={takeOff}
         accessibilityLabel={`${agent.name}, ${state.toLowerCase()}`}
         style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 58, paddingVertical: 10, borderTopWidth: first ? 0 : 1, borderTopColor: c.line }}>
-        <Face agent={agent} state={asleep ? 'asleep' : 'happy'} waiting={waiting} size={40} />
+        <FlightSource face={ref} flying={flying}>
+          <Face agent={agent} state={asleep ? 'asleep' : 'happy'} waiting={waiting} size={40} />
+        </FlightSource>
         <View style={{ flex: 1, minWidth: 0, gap: chip ? 4 : 0 }}>
           <Text style={{ fontFamily: fonts.uiMedium, fontSize: 15, color: c.ink }}>{agent.name}</Text>
           {chip ? (

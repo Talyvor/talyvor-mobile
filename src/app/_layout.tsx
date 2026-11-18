@@ -10,6 +10,7 @@ import { BackdropHues } from '@/components/backdrop'
 import { Door } from '@/components/door'
 import { forgetTopLine, TopLine } from '@/components/live'
 import { Cover, LockScreen } from '@/components/lock-screen'
+import { PictureFlight } from '@/components/picture-flight'
 import { useLiveActivities } from '@/live-activity'
 import { usePushApprovals } from '@/push'
 import { SessionProvider, useSession } from '@/session'
@@ -85,6 +86,8 @@ function Navigator() {
         {/* B59.9 — open either way: steps 1 and 2 come before the session, step 3 after it. */}
         <Stack.Screen name="sign-up" />
       </Stack>
+      {/* B61.79 — an agent's face carried from the list to the top of its page, above both screens. */}
+      <PictureFlight />
       {/* B61.78 — one line at the top of the app for 2.3 s, saying what happened; never over the app switcher's cover. */}
       {covered ? null : <TopLine />}
       {/* B61.27 — not in front, the app switcher's picture is the mark, never the screen. */}

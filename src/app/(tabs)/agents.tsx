@@ -7,6 +7,7 @@ import { useAccount, type Shows } from '@/account'
 import { balancesByCurrency, isStablecoin } from '@/balances'
 import { HOME_MONEY } from '@/components/home'
 import { Face } from '@/components/face'
+import { FlightSource, useTakeOff } from '@/components/picture-flight'
 import { Icon, type IconName } from '@/components/icon'
 import { MoneyLabel } from '@/components/money-label'
 import { Bar, Body, Button, Card, Chip, Headline, LoadState, Screen, useLoad } from '@/components/ui'
@@ -136,12 +137,16 @@ function AgentCard({
   const fiat = held.filter((h) => !isStablecoin(h.currency))
   const coins = held.filter((h) => isStablecoin(h.currency))
   const month = monthOf(agent, rules, spending)
+  const state = paused ? 'asleep' : 'happy'
+  const { ref, takeOff, flying } = useTakeOff(agent, state)
   return (
     <Link href={{ pathname: '/agents/[id]', params: { id: agent.id } }} asChild>
-      <Pressable accessibilityRole="link" accessibilityLabel={`${agent.name}, ${paused ? 'paused' : 'running'}`}>
+      <Pressable accessibilityRole="link" onPress={takeOff} accessibilityLabel={`${agent.name}, ${paused ? 'paused' : 'running'}`}>
         <Card>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <Face agent={agent} state={paused ? 'asleep' : 'happy'} waiting={waiting} size={44} />
+            <FlightSource face={ref} flying={flying}>
+              <Face agent={agent} state={state} waiting={waiting} size={44} />
+            </FlightSource>
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={{ fontFamily: fonts.uiBold, fontSize: 17, color: c.ink }}>{agent.name}</Text>
               {agent.description ? <Text style={{ fontFamily: fonts.ui, fontSize: 13, color: c.ink3 }}>{agent.description}</Text> : null}

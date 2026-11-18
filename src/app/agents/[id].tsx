@@ -4,6 +4,7 @@ import { useCallback } from 'react'
 
 import { AgentView } from '@/components/agent'
 import { faceOf } from '@/components/face'
+import { usePageArrival } from '@/components/picture-flight'
 import { Back, Body, LoadState, Screen, useLoad } from '@/components/ui'
 import { phoneKey } from '@/keys'
 import { useSession } from '@/session'
@@ -16,6 +17,8 @@ export default function AgentScreen() {
   // B57.77: the home-screen widget's Resume and Fund land here with the sheet they open.
   const { id, open } = useLocalSearchParams<{ id: string; open?: string }>()
   const { client } = useSession()
+  // B61.79 — the face pressed in the list grows into this page's face once the page has slid in.
+  usePageArrival(id)
   const load = useCallback(async () => {
     // Lens answers 404 for an agent that is not in this workspace.
     const gone = (err: unknown) => {
