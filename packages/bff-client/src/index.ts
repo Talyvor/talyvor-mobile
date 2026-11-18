@@ -1014,10 +1014,18 @@ export interface VerificationAnswer {
   verification: WorkspaceVerification
 }
 
+/** Lens economy.HomeAddress (B61.45): a person's home address for an identity check, sent whole or not at all. */
+export interface HomeAddress {
+  lines: string[]
+  town: string
+  postcode: string
+  country: string
+}
+
 /** What each level's check is asked to confirm (Lens economy.VerificationRequest). */
 export type VerificationBody =
   | { kind: 'contact'; email: string; phone: string }
-  | { kind: 'identity'; name: string; country: string; date_of_birth: string; return_to?: CheckReturn }
+  | { kind: 'identity'; name: string; country: string; date_of_birth: string; address?: HomeAddress; return_to?: CheckReturn }
   | { kind: 'company'; name: string; country: string; company_number: string; directors: string[]; people_with_significant_control: string[] }
 
 const VERIFY_PATH: Record<VerificationBody['kind'], string> = {
