@@ -1,6 +1,6 @@
 import { BffError } from '@talyvor/bff-client'
 import { type ComponentRef, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { ActivityIndicator, Animated, KeyboardAvoidingView, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, type TextInputProps, type TextStyle } from 'react-native'
+import { Animated, KeyboardAvoidingView, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, type TextInputProps, type TextStyle } from 'react-native'
 import { router, type Href } from 'expo-router'
 import { BottomTabBarHeightContext } from 'expo-router/build/react-navigation/bottom-tabs/index'
 import { NavigationContext } from 'expo-router/build/react-navigation/core/index'
@@ -12,6 +12,7 @@ import { useSession } from '../session'
 import { fonts, useTheme } from '../theme'
 import { Backdrop, type BackdropStrength, type Hues } from './backdrop'
 import { Icon, type IconName } from './icon'
+import { Shapes } from './live'
 import { Press } from './press'
 import { tabBarClearance } from './tab-bar'
 
@@ -371,11 +372,11 @@ export function Sheet({ children }: { children: ReactNode }) {
   )
 }
 
-/** Loading, a failure in words, or nothing. */
+/** Loading as grey shapes (B61.78), a failure in words, or nothing. */
 export function LoadState({ loading, error }: { loading: boolean; error: unknown }) {
   const { c } = useTheme()
   if (error) return <Body style={{ color: c.danger }}>Could not load this. Pull down to try again.</Body>
-  if (loading) return <ActivityIndicator color={c.ink} style={{ marginVertical: 16 }} />
+  if (loading) return <Shapes />
   return null
 }
 

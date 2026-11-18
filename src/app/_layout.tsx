@@ -7,6 +7,7 @@ import { StatusBar } from 'expo-status-bar'
 import { useHideFromAppSwitcher } from '@/app-switcher'
 import { BackdropHues } from '@/components/backdrop'
 import { Door } from '@/components/door'
+import { TopLine } from '@/components/live'
 import { Cover, LockScreen } from '@/components/lock-screen'
 import { useLiveActivities } from '@/live-activity'
 import { usePushApprovals } from '@/push'
@@ -79,6 +80,8 @@ function Navigator() {
         {/* B59.9 — open either way: steps 1 and 2 come before the session, step 3 after it. */}
         <Stack.Screen name="sign-up" />
       </Stack>
+      {/* B61.78 — one line at the top of the app for 2.3 s, saying what happened. */}
+      <TopLine />
       {/* B61.27 — not in front, the app switcher's picture is the mark, never the screen. */}
       {signedIn && covered ? <Cover /> : null}
     </>

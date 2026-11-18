@@ -1,6 +1,8 @@
 import { formatBalance, formatLXC, formatMinor } from '@talyvor/bff-client'
+import { useEffect, useRef, useState } from 'react'
 import { Text, View } from 'react-native'
 
+import { durations, useReduceMotion } from '../motion'
 import { fonts, useTheme } from '../theme'
 
 // B57.64 — money as Pocket draws it: the first figure large in the display face, the one beside it small. B61.15: a
@@ -12,15 +14,50 @@ export function moneyParts(written: string): { large: string; small: string | nu
   return m ? { large: m[1], small: m[2] } : { large: written, small: null }
 }
 
+/**
+ * B61.78 — Pocket Live's roll (DESIGN.md section 4, `roll`), as the web's B61.75: once a figure is on the screen, a new
+ * value rolls from the one drawn to the new one over 700 ms, easing out on the fourth power, in whole units. The first
+ * value, a change of unit and Reduce Motion draw at once. Returns the value to draw now; the roll ends on the value itself.
+ */
+export function useRolled(amount: number, unit: string): number {
+  const reduce = useReduceMotion()
+  const [drawn, setDrawn] = useState(amount)
+  const at = useRef({ drawn: amount, unit })
+  useEffect(() => {
+    const from = at.current.drawn
+    const sameUnit = at.current.unit === unit
+    at.current.unit = unit
+    const land = (v: number) => {
+      at.current.drawn = v
+      setDrawn(v)
+    }
+    if (from === amount || !sameUnit || reduce) return land(amount)
+    const start = Date.now()
+    let frame = 0
+    const step = () => {
+      const p = Math.min(1, (Date.now() - start) / durations.roll)
+      land(p >= 1 ? amount : Math.round(from + (amount - from) * (1 - Math.pow(1 - p, 4))))
+      if (p < 1) frame = requestAnimationFrame(step)
+    }
+    frame = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(frame)
+  }, [amount, unit, reduce])
+  return reduce ? amount : drawn
+}
+
 // `balance` marks a figure the owner holds, which rounds down to the cent (B59.36); an amount to approve or a charge does not.
 type Amount = { micros: number; peg: number | null; balance?: boolean } | { minor: number; currency: string }
 
-/** An amount: µLXC in dollars at the peg, or minor units of a currency ($450.00, £24.00, 400.00 USDC). */
+/** An amount: µLXC in dollars at the peg, or minor units of a currency ($450.00, £24.00, 400.00 USDC). B61.78: a new
+ * value rolls in, and a screen reader hears the new value once, never a figure in between. */
 export function Money({ size = 32, tone, ...amount }: Amount & { size?: number; tone?: string }) {
   const { c } = useTheme()
-  const written =
-    'micros' in amount ? (amount.balance ? formatBalance : formatLXC)(amount.micros, amount.peg) : formatMinor(amount.minor, amount.currency)
-  const { large, small } = moneyParts(written)
+  const micros = 'micros' in amount
+  const value = micros ? amount.micros : amount.minor
+  const drawn = useRolled(value, micros ? `micros:${amount.peg}` : amount.currency)
+  const writtenOf = (v: number) => (micros ? (amount.balance ? formatBalance : formatLXC)(v, amount.peg) : formatMinor(v, amount.currency))
+  const written = writtenOf(value)
+  const { large, small } = moneyParts(drawn === value ? written : writtenOf(drawn))
   return (
     <View accessible accessibilityLabel={written} style={{ flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', columnGap: 6 }}>
       <Text style={{ fontFamily: fonts.display, fontSize: size, letterSpacing: size >= 24 ? -0.03 * size : 0, color: tone ?? c.ink, fontVariant: ['tabular-nums'] }}>

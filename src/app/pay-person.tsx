@@ -6,6 +6,7 @@ import { Pressable, Text, View } from 'react-native'
 
 import { accountName, useAccount } from '@/account'
 import { Icon } from '@/components/icon'
+import { Tick } from '@/components/live'
 import { foundName, Initials, NOBODY_FOUND, rememberPaid } from '@/components/pay-a-person'
 import { AccountChoice, BottomSheet } from '@/components/pay-sheet'
 import { Back, Body, Button, Card, Field, Figure, Headline, LoadState, Screen, useLoad } from '@/components/ui'
@@ -117,9 +118,7 @@ export default function PayPersonScreen() {
     return (
       <Screen>
         <View testID="pay-a-person-sent" style={{ alignItems: 'center', gap: 10, paddingTop: 80 }}>
-          <View style={{ width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', backgroundColor: c.success50 }}>
-            <Icon name="check" size={30} color={c.success} />
-          </View>
+          <Tick size={64} />
           <Headline>Sent</Headline>
           <Body muted style={{ textAlign: 'center', maxWidth: 280 }}>{sentLine(formatMinor(sent.amount_minor, sent.currency), sent.to_shown_name || name)}</Body>
         </View>
