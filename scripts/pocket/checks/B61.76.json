@@ -1,0 +1,7 @@
+[
+  { "route": "/", "screen": "p-home", "name": "home", "live": "await P.unlock();", "words": "report", "why": "B61.76: the floating tab bar with the tangerine marker under Home (Pocket Live, any tab); Home's own words are their own items'" },
+  { "route": "/", "screen": "p-home", "name": "home", "dark": true, "live": "await P.unlock();", "words": "report", "why": "the same, with the phone set to dark" },
+  { "route": "/agents", "screen": "p-home", "name": "agents", "live": "await P.unlock(); await P.goTab('agents');", "words": "report", "why": "B61.76: the marker under Agents" },
+  { "route": "/approvals", "screen": "p-home", "name": "approvals", "live": "await P.unlock(); await P.goTab('approvals');", "words": "report", "why": "B61.76: the marker under Approvals, the badge as it was" },
+  { "route": "/", "screen": "p-home", "name": "home-end", "scroll": "Pause every agent", "live": "await P.unlock();", "words": "report", "why": "B61.76: the content scrolls under the bar and its end clears it" }
+]
