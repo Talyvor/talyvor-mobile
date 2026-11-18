@@ -159,13 +159,13 @@ export function AgentView({ data, onChanged, opens }: { data: AgentData; onChang
       </View>
       <View style={{ flexDirection: 'row', justifyContent: 'space-around' }} testID="agent-actions">
         <Round icon="plus" label="Add money" accessibilityLabel={`Add money to ${agent.name}`} onPress={() => setFunding('to_agent')} />
-        <Round icon="download" label="Take back" accessibilityLabel={`Take back from ${agent.name}`} onPress={() => setFunding('to_company')} />
+        <Round icon="arrowDown" label="Take back" accessibilityLabel={`Take back from ${agent.name}`} onPress={() => setFunding('to_company')} />
         {paused ? (
           <Round icon={signs ? 'faceid' : 'arrow'} label={signs ? `Resume with ${biometricName}` : 'Resume'} disabled={busy} hint="Resuming…" onPress={() => (signs ? setAsking(true) : void resume())} />
         ) : !allPaused ? (
           <Round icon="pause" label="Pause" disabled={busy} hint="Pausing…" onPress={() => void pause()} />
         ) : null}
-        <Round icon="settings" label="Rules" accessibilityLabel={`${agent.name}’s rules`} onPress={() => setRulesOpen(true)} />
+        <Round icon="sliders" label="Rules" accessibilityLabel={`${agent.name}’s rules`} onPress={() => setRulesOpen(true)} />
       </View>
       {moved ? <Body>{moved}</Body> : null}
       {allPaused ? <StartEveryAgentButton signs={signs} busy={busy} onPress={() => setStarting(true)} /> : null}
