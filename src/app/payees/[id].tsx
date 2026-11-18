@@ -20,7 +20,7 @@ import { Pressable, Text, View } from 'react-native'
 import { accountName, useAccount } from '@/account'
 import { Icon } from '@/components/icon'
 import { MoneyLabel, PAY_OUT } from '@/components/money-label'
-import { AccountChoice, BottomSheet, ConfirmPayment } from '@/components/pay-sheet'
+import { AccountChoice, BottomSheet, ConfirmPayment, FeeRows } from '@/components/pay-sheet'
 import { pendingPrepared, preparedBy } from '@/components/prepared-payment-card'
 import { Body, Button, Card, Field, Headline, LoadState, Screen, Toggle, useLoad } from '@/components/ui'
 import { forgetThisPhone, keyGone, keyGoneText, keysAvailable, phoneKey, signPayment } from '@/keys'
@@ -142,12 +142,11 @@ export default function PayeeScreen() {
   const total = account && minor !== null ? formatMinor(minor, account.currency) : ''
   // B61.116 — Lens takes a local payment's fee once the plan's free ones this month are used (B61.58), so it is said first.
   const fee = account ? localPaymentFee(data?.plan, account.currency) : undefined
-  const feeLine =
-    !fee || (fee.free && fee.left < 0)
-      ? ''
-      : fee.free
-        ? `Free. You have ${fee.left} free ${fee.left === 1 ? 'payment' : 'payments'} left this month.`
-        : `Fee ${formatMinor(fee.fee_minor, account!.currency)}${minor !== null ? ` · Total ${formatMinor(minor + fee.fee_minor, account!.currency)}` : ''}`
+  const freeLine = fee?.free && fee.left >= 0 ? `Free. You have ${fee.left} free ${fee.left === 1 ? 'payment' : 'payments'} left this month.` : ''
+  const charges: [string, string][] =
+    fee && !fee.free
+      ? [['Fee', formatMinor(fee.fee_minor, account!.currency)], ...(minor !== null ? [['Total', formatMinor(minor + fee.fee_minor, account!.currency)] as [string, string]] : [])]
+      : []
   const first = !!payee && !data?.payments.some((p) => p.payee_id === payee.id)
   const open = () => {
     setRefusal('')
@@ -234,7 +233,8 @@ export default function PayeeScreen() {
             )}
           </View>
           <Field label={`Amount in ${account?.currency ?? 'the account currency'}`} keyboardType="decimal-pad" value={amount} onChangeText={typed(setAmount)} />
-          {feeLine ? <Body muted>{feeLine}</Body> : null}
+          {freeLine ? <Body muted>{freeLine}</Body> : null}
+          {charges.length ? <FeeRows charges={charges} /> : null}
           <Field label="Reference" value={reference} onChangeText={typed(setReference)} />
           {data.waiting ? (
             <Card>
@@ -293,6 +293,7 @@ export default function PayeeScreen() {
                 from={accountName(account, owner)}
                 amount={total}
                 reference={reference.trim()}
+                charges={charges}
                 first={first}
                 hasKey={data.hasKey}
                 busy={busy}

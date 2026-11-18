@@ -50,11 +50,14 @@ export function ConfirmPayment({
   onPay,
   onCancel,
   onApprovals,
+  charges = [],
 }: {
   payee: string
   from: string
   amount: string
   reference: string
+  /** B57.189 — the Fee and Total rows, when Lens takes a fee (FeeRows). */
+  charges?: [string, string][]
   first: boolean
   hasKey: boolean
   busy: boolean
@@ -74,17 +77,16 @@ export function ConfirmPayment({
         Pay {payee} {amount}?
       </Headline>
       <Card>
-        {[
-          ['From', from],
-          ['To', payee],
-          ['Amount', amount],
-          ['Reference', reference || 'None'],
-        ].map(([label, value]) => (
-          <View key={label} style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12 }}>
-            <Body muted>{label}</Body>
-            {label === 'Amount' ? <Figure>{value}</Figure> : <Body style={{ flexShrink: 1, textAlign: 'right' }}>{value}</Body>}
-          </View>
-        ))}
+        {[['From', from], ['To', payee], ['Amount', amount], ...charges, ['Reference', reference || 'None']].map(([label, value]) =>
+          label === 'Amount' || charges.some(([l]) => l === label) ? (
+            <FactRow key={label} label={label} value={value} />
+          ) : (
+            <View key={label} style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12 }}>
+              <Body muted>{label}</Body>
+              <Body style={{ flexShrink: 1, textAlign: 'right' }}>{value}</Body>
+            </View>
+          ),
+        )}
       </Card>
       {first
         ? SCAM_QUESTIONS.map((q) => (
@@ -138,6 +140,27 @@ export function ConfirmPayment({
       {refusal ? <Body style={{ color: c.danger }}>{refusal}</Body> : null}
       <Body muted>{`${biometricName === 'Face ID' ? 'Face ID asks' : 'Your fingerprint is asked for'} before anything is sent. A cancelled ${biometricName === 'Face ID' ? 'Face ID' : 'fingerprint check'} pays nothing.`}</Body>
     </>
+  )
+}
+
+/** A row of figures as Pocket's review sheet draws its Fee row: the label, then the figure. */
+export function FactRow({ label, value }: { label: string; value: string }) {
+  return (
+    <View accessible accessibilityLabel={`${label} ${value}`} style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12 }}>
+      <Body muted>{label}</Body>
+      <Figure>{value}</Figure>
+    </View>
+  )
+}
+
+/** B57.189 — a local payment's fee and the total with it, once the plan's free ones this month are used (B61.116). */
+export function FeeRows({ charges }: { charges: [string, string][] }) {
+  return (
+    <Card>
+      {charges.map(([label, value]) => (
+        <FactRow key={label} label={label} value={value} />
+      ))}
+    </Card>
   )
 }
 

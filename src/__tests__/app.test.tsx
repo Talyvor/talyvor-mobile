@@ -1106,7 +1106,13 @@ describe('B57.72 Pay and a payee', () => {
     withPlan(0)
     await renderRouter('./src/app', { initialUrl: '/payees/py_1' })
     await fireEvent.changeText(await screen.findByLabelText('Amount in GBP'), '20')
-    expect(await screen.findByText('Fee £0.20 · Total £20.20')).toBeTruthy()
+    // B57.189 — drawn as p-pay-kite's review sheet draws its Fee row: the label, then the figure, under the amount and in the confirm step.
+    expect(await screen.findByLabelText('Fee £0.20')).toBeTruthy()
+    expect(screen.getByLabelText('Total £20.20')).toBeTruthy()
+    await fireEvent.press(screen.getByRole('button', { name: 'Pay £20.00' }))
+    expect(await screen.findByText('Pay Acme Hosting £20.00?')).toBeTruthy()
+    expect(screen.getAllByLabelText('Fee £0.20')).toHaveLength(2)
+    expect(screen.getAllByLabelText('Total £20.20')).toHaveLength(2)
   })
 
   test('on a plan with no limit, it says nothing about a fee', async () => {
