@@ -47,6 +47,10 @@ const WEB = {
     open: 'Open the app',
     gate: 'Your account can look around but can’t move money until you confirm who you are.',
     finish: 'Finish confirming who you are',
+    // B61.118 (suite PR, apps/web/src/areas/auth/signupWords.ts): the way into the app while a check waits or did not pass
+    openWaiting: 'You can look around now. Once your identity check passes, you can move money.',
+    openNotPassed: 'You can try the check again from Settings, Verification.',
+    waiting: 'Waiting for the checker',
     companyFirst: 'Save the company details, with at least one director, first.',
     personFailed: 'We couldn’t confirm who you are. Check your full name, date of birth and country, and try again.',
   },
@@ -97,7 +101,7 @@ jest.mock('../../modules/talyvor-keys', () => ({
 }))
 
 /** The BFF: a new workspace with no key yet, and the sign-up's session once the answers are in. */
-function mockBff(refuseSession = false, { failPerson = false, level = 'L0', countries = undefined as string[] | undefined, refuseCountry = '' } = {}) {
+function mockBff(refuseSession = false, { failPerson = false, pendingPerson = false, level = 'L0', countries = undefined as string[] | undefined, refuseCountry = '' } = {}) {
   const sessions: Record<string, unknown>[] = []
   const devices: unknown[] = []
   const signInKeys: { name: string; device: { challenge: string; public_key: string }; passcode: string }[] = []
@@ -142,9 +146,12 @@ function mockBff(refuseSession = false, { failPerson = false, level = 'L0', coun
       verified.push({ kind, ...JSON.parse(init.body as string) })
       const next = { contact: 'L1', identity: 'L2', company: 'L3' }[kind]!
       const failed = kind === 'identity' && failPerson
-      const check = { level: next, subject: kind === 'identity' ? 'person' : kind, status: failed ? 'failed' : 'completed', test: true, method: 'test', evidence_ref: `ev_${kind}` }
+      // B61.118 — the person check the provider has not decided yet
+      const pending = kind === 'identity' && pendingPerson
+      const status = failed ? 'failed' : pending ? 'pending' : 'completed'
+      const check = { level: next, subject: kind === 'identity' ? 'person' : kind, status, test: true, method: 'test', evidence_ref: `ev_${kind}` }
       checks.push(check)
-      if (!failed) level = next
+      if (status === 'completed') level = next
       return json({ check, verification: record() })
     }
     if (route === 'GET /api/money/devices') return json({ devices })
@@ -377,6 +384,9 @@ test('B61.21: a Personal sign-up ends on the identity step and reaches Home only
     { kind: 'identity', name: 'Maya Lind', country: 'GB', date_of_birth: '1990-04-21' },
   ])
   expect(screen.getAllByText(WEB.identity.passedSandbox)).toHaveLength(2)
+  // B61.118 — once passed, no line about finishing the check later
+  expect(screen.queryByText(WEB.identity.openWaiting)).toBeNull()
+  expect(screen.queryByText(WEB.identity.openNotPassed)).toBeNull()
   await fireEvent.press(screen.getByRole('button', { name: WEB.identity.open }))
   await waitFor(() => expect(screen).toHavePathname('/'))
 })
@@ -421,7 +431,7 @@ test('B61.21: a Business sign-up asks for its company, and opens once the compan
   expect(screen.getByRole('button', { name: WEB.identity.open })).toBeTruthy()
 })
 
-test('B61.21: a check that does not pass says what to fix, and the account stays on the step', async () => {
+test('B61.21, B61.118: a check that does not pass says what to fix, and still lets the person into the app', async () => {
   const bff = mockBff(false, { failPerson: true })
   await renderRouter('./src/app', { initialUrl: '/sign-up' })
   await toStepFour('Personal', 'Maya Lind')
@@ -431,8 +441,26 @@ test('B61.21: a check that does not pass says what to fix, and the account stays
   expect(screen.getByText(WEB.identity.notPassed)).toBeTruthy()
   expect(bff.verified.map((v) => v.kind)).toEqual(['contact', 'identity'])
   expect(screen.queryByText(WEB.identity.done)).toBeNull()
-  expect(screen.queryByRole('button', { name: WEB.identity.open })).toBeNull()
   expect(screen).toHavePathname('/sign-up')
+  const foot = within(screen.getByTestId('screen-footer'))
+  expect(foot.getByText(WEB.identity.openNotPassed)).toBeTruthy()
+  expect(foot.getByRole('button', { name: WEB.identity.run })).toBeTruthy()
+  await fireEvent.press(foot.getByRole('button', { name: WEB.identity.open }))
+  await waitFor(() => expect(screen).toHavePathname('/'))
+})
+
+test('B61.118: while the person check waits for the checker, the step lets the person into the app and says it finishes in the background', async () => {
+  mockBff(false, { pendingPerson: true })
+  await renderRouter('./src/app', { initialUrl: '/sign-up' })
+  await toStepFour('Personal', 'Maya Lind')
+  await fillYou()
+  await fireEvent.press(screen.getByRole('button', { name: WEB.identity.run }))
+  expect(await screen.findByText(WEB.identity.waiting)).toBeTruthy()
+  expect(screen.queryByText(WEB.identity.done)).toBeNull()
+  const foot = within(screen.getByTestId('screen-footer'))
+  expect(foot.getByText(WEB.identity.openWaiting)).toBeTruthy()
+  await fireEvent.press(foot.getByRole('button', { name: WEB.identity.open }))
+  await waitFor(() => expect(screen).toHavePathname('/'))
 })
 
 test('B61.21: Home says the account cannot move money until the check is finished, and leads back to it', async () => {

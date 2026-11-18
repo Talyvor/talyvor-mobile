@@ -350,7 +350,8 @@ function StepKey({ onContinue }: { onContinue: () => void }) {
   )
 }
 
-/** Step 4 (B61.21): the identity check. The app opens on Home only once Lens's checks for the account pass. B57.174: drawn
+/** Step 4 (B61.21): the identity check. The app opens on Home once Lens's checks for the account pass, and (B61.118)
+ * while one waits or after one did not pass, with a line that says so. B57.174: drawn
  * as Pocket Live's su5, under the same top and step bars as the steps before it. */
 function StepConfirm({ another }: { another: boolean }) {
   return (
@@ -364,6 +365,7 @@ function StepConfirm({ another }: { another: boolean }) {
         </>
       }
       done={<Button primary label={IDENTITY_WORDS.open} onPress={() => router.replace('/')} />}
+      wayIn
     />
   )
 }

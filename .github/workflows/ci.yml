@@ -18,8 +18,8 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      # B58.19 — what ships in the app; a high or critical advisory fails the build.
-      - run: npm audit --omit=dev --audit-level=high
+      # B58.19 — what ships in the app; a high or critical advisory fails the build. B66.2: except scripts/audit-allow.txt.
+      - run: node scripts/check-audit.js
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test -- --ci
