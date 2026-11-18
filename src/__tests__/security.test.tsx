@@ -13,6 +13,11 @@ jest.setTimeout(240_000)
 const root = join(__dirname, '../..')
 // eslint-disable-next-line @typescript-eslint/no-require-imports -- a plain Node script: node scripts/check-bundle.js dist
 const { scan } = require(join(root, 'scripts/check-bundle.js')) as { scan: (dir: string) => string[] }
+// eslint-disable-next-line @typescript-eslint/no-require-imports -- a plain Node script: node scripts/check-audit.js
+const audit = require(join(root, 'scripts/check-audit.js')) as {
+  allowed: (file?: string) => string[]
+  check: (report: unknown, allow: string[]) => string[]
+}
 
 function sources(dir: string): string[] {
   return readdirSync(dir).flatMap((f) => {
@@ -236,7 +241,8 @@ describe('dependencies', () => {
   // deepmerge (low, every version, no fix) is only in Expo's and Jest's config loaders at build time, merging our own files.
   // minimatch's globparts ReDoS (GHSA-g3hv-75wg-m249) is excepted only for the 3.x copies under eslint 9, its plugins and
   // jest's test-exclude: they call minimatch as a function, which 11 no longer exports, and they only match our own lint and
-  // test globs. package.json's overrides move every other minimatch and glob to the patched major.
+  // test globs. package.json's overrides move every other minimatch and glob to the patched major. The advisories in
+  // scripts/audit-allow.txt have no fix to take.
   test('npm audit finds nothing moderate or worse', () => {
     const { stdout } = spawnSync('npm', ['audit', '--json'], { cwd: root, encoding: 'utf8' })
     const found: string[] = []
@@ -245,11 +251,43 @@ describe('dependencies', () => {
       for (const a of v.via) {
         if (typeof a !== 'object') continue
         const { name, url } = a as { name: string; url: string }
-        const excepted = url.endsWith('GHSA-g3hv-75wg-m249') &&
-          v.nodes.every((n) => JSON.parse(readFileSync(join(root, n, 'package.json'), 'utf8')).version.startsWith('3.'))
+        const excepted = (url.endsWith('GHSA-g3hv-75wg-m249') &&
+          v.nodes.every((n) => JSON.parse(readFileSync(join(root, n, 'package.json'), 'utf8')).version.startsWith('3.'))) ||
+          audit.allowed().some((g) => url.endsWith(g))
         if (!excepted) found.push(`${name} ${url}`)
       }
     }
     expect(found).toEqual([])
+  })
+
+  // B66.2 — CI's audit (node scripts/check-audit.js) lets through exactly the advisories in scripts/audit-allow.txt.
+  const advisory = (name: string, ghsa: string, severity = 'high') =>
+    ({ name, severity, url: `https://github.com/advisories/${ghsa}` })
+  const report = (...via: (object | string)[]) => ({ vulnerabilities: { picomatch: { severity: 'high', via, nodes: [] } } })
+  const picomatch = advisory('picomatch', 'GHSA-fc5q-39xc-vjpf')
+
+  test('the allowed list is picomatch and nothing else', () => {
+    expect(audit.allowed()).toEqual(['GHSA-fc5q-39xc-vjpf'])
+    expect(audit.check(report(picomatch, 'micromatch'), audit.allowed())).toEqual([])
+  })
+
+  test('a second high or critical advisory fails the audit', () => {
+    const other = advisory('picomatch', 'GHSA-aaaa-bbbb-cccc', 'critical')
+    expect(audit.check(report(picomatch, other), audit.allowed())).toEqual([
+      'picomatch critical https://github.com/advisories/GHSA-aaaa-bbbb-cccc',
+    ])
+    expect(audit.check(report(advisory('picomatch', 'GHSA-aaaa-bbbb-cccc', 'moderate')), audit.allowed())).toEqual([])
+  })
+
+  test('without its line, picomatch fails the audit', () => {
+    const file = join(mkdtempSync(join(tmpdir(), 'audit-allow-')), 'audit-allow.txt')
+    writeFileSync(file, readFileSync(join(root, 'scripts/audit-allow.txt'), 'utf8').replace(/^GHSA-fc5q-39xc-vjpf\n/m, ''))
+    expect(audit.check(report(picomatch), audit.allowed(file))).toEqual([
+      'picomatch high https://github.com/advisories/GHSA-fc5q-39xc-vjpf',
+    ])
+  })
+
+  test('a report that is not an audit fails it', () => {
+    expect(() => audit.check({ error: { code: 'ENOTFOUND' } }, audit.allowed())).toThrow('not an npm audit report')
   })
 })
