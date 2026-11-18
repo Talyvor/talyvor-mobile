@@ -138,11 +138,21 @@ function Title({ children }: { children: string }) {
   )
 }
 
+/** B61.118 — the line under the way into the app while the next check waits on the provider or did not pass; null
+ *  while nothing has been asked of the provider yet. */
+function wayInLine(v: WorkspaceVerification): string | null {
+  const next = latest(v, rank(v.level) + 1)
+  if (next?.status === 'pending') return IDENTITY_WORDS.openWaiting
+  if (next?.status === 'failed' || next?.status === 'returned') return IDENTITY_WORDS.openNotPassed
+  return null
+}
+
 /**
  * The screen under `head`: the fields the next checks need, the company details for a Business, the Sandbox note and
- * the checks for this account. `done` takes the foot once they pass.
+ * the checks for this account. `done` takes the foot once they pass; with `wayIn` (sign-up's last step, B61.118) it is
+ * also at the foot while a check waits or after one did not pass, with a line that says so.
  */
-export function IdentityChecks({ head, done }: { head: ReactNode; done?: ReactNode }) {
+export function IdentityChecks({ head, done, wayIn = false }: { head: ReactNode; done?: ReactNode; wayIn?: boolean }) {
   const { client } = useSession()
   const { c } = useTheme()
   const { account } = useAccount(client)
@@ -175,6 +185,7 @@ export function IdentityChecks({ head, done }: { head: ReactNode; done?: ReactNo
   const errors = tried ? missing(d, level) : {}
   const set = (k: keyof Draft) => (value: string) => setD({ ...d, [k]: value })
   const personName = level >= 2 ? (latest(v, 2)?.verified_name ?? '') : d.name
+  const wayInSaid = wayIn && running === null ? wayInLine(v) : null
 
   const run = async () => {
     if (running) return
@@ -260,6 +271,12 @@ export function IdentityChecks({ head, done }: { head: ReactNode; done?: ReactNo
             </View>
           ) : null}
           <Button primary label={running ? IDENTITY_WORDS.running : IDENTITY_WORDS.run} disabled={running !== null} onPress={() => void run()} />
+          {wayInSaid ? (
+            <View testID="identity-way-in" accessibilityLiveRegion="polite" style={{ gap: 8 }}>
+              {done}
+              <Body muted>{wayInSaid}</Body>
+            </View>
+          ) : null}
         </>
       }>
       {head}
