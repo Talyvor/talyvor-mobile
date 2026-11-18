@@ -14,6 +14,7 @@ import { AgentFundingSheet, type FundingDirection } from './agent-funding'
 import { Face } from './face'
 import { Icon, type IconName } from './icon'
 import { Money } from './money'
+import { FlightTarget } from './picture-flight'
 import { AGENT_CREDIT, MoneyHeader } from './money-label'
 import { BottomSheet } from './pay-sheet'
 import { StartEveryAgentButton, StartEveryAgentSheet } from './start-every-agent'
@@ -130,7 +131,9 @@ export function AgentView({ data, onChanged, opens }: { data: AgentData; onChang
       {/* B61.85: its face, its name and Running or Paused; its card is a row under This month. */}
       <View testID="agent-head">
         <Card>
-          <Face agent={agent} state={paused || allPaused ? 'asleep' : 'happy'} size={60} />
+          <FlightTarget agentId={agent.id}>
+            <Face agent={agent} state={paused || allPaused ? 'asleep' : 'happy'} size={60} />
+          </FlightTarget>
           <View
             style={{
               flexDirection: 'row',
