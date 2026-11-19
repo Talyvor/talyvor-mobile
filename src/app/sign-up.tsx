@@ -31,8 +31,7 @@ import {
 import { fonts, useTheme } from '@/theme'
 
 // sign-up.tsx — B59.9: a new person opens an account on the phone, with the web's words (suite B59.8; the design's P1
-// and P2). Steps 1 and 2 are asked BEFORE the identity provider, because Lens sets the type and the kind only on the call
-// that makes the workspace: the answers ride the ID token to the BFF's /auth/mobile/session, which refuses a partial set.
+// and P2). Lens sets the type and the kind only on the call that makes the workspace, so the BFF refuses a partial set.
 // Step 3 makes this phone's key with Face ID, through the same card Approvals uses.
 //
 // B57.135 — drawn in Pocket as the launch pack's P1 and P2: the logo (or Back) with Sandbox at the top, the step bars,

@@ -23,7 +23,7 @@ jest.mock('expo-crypto', () => ({
   digest: async (_: string, b: Uint8Array) => Uint8Array.from(jest.requireActual('node:crypto').createHash('sha256').update(b).digest()).buffer,
   randomUUID: () => 'uuid-1',
 }))
-jest.mock('../config', () => ({ config: { bffUrl: 'https://bff.test', oidcIssuer: 'https://idp', oidcClientId: 'mobile' } }))
+jest.mock('../config', () => ({ config: { bffUrl: 'https://bff.test' } }))
 
 /** The notification the person tapped, as Lens's B40.15 push carries it, and the button they tapped on it. */
 const mockTap: { data: Record<string, string> | null; action: string } = { data: null, action: 'expo.modules.notifications.actions.DEFAULT' }

@@ -25,7 +25,7 @@ jest.mock('expo-crypto', () => ({
   digest: async (_: string, b: Uint8Array) => Uint8Array.from(jest.requireActual('node:crypto').createHash('sha256').update(b).digest()).buffer,
   randomUUID: () => 'uuid-1',
 }))
-jest.mock('../config', () => ({ config: { bffUrl: 'https://bff.test', oidcIssuer: 'https://idp', oidcClientId: 'mobile' } }))
+jest.mock('../config', () => ({ config: { bffUrl: 'https://bff.test' } }))
 jest.mock('../../modules/talyvor-keys', () => {
   const nodeCrypto = jest.requireActual('node:crypto')
   const keys = new Map()

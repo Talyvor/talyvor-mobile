@@ -5,9 +5,6 @@ if (!__DEV__ && !bffUrl.startsWith('https://')) throw new Error('EXPO_PUBLIC_BFF
 
 export const config = {
   bffUrl,
-  oidcIssuer: process.env.EXPO_PUBLIC_OIDC_ISSUER ?? 'https://accounts.google.com',
-  // The identity provider's client for the phone app (a public client: PKCE, no secret). Empty until it is issued.
-  oidcClientId: process.env.EXPO_PUBLIC_OIDC_CLIENT_ID ?? '',
   // "Hey Taly" (B40.16): the trained keyword file's path. Empty until it exists. Its Picovoice access key is never built
   // in: the phone asks the BFF for it after sign-in (B58.11).
   heyTalyKeyword: process.env.EXPO_PUBLIC_HEY_TALY_KEYWORD ?? '',

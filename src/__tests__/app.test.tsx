@@ -28,12 +28,6 @@ jest.mock('expo-secure-store', () => ({
   deleteItemAsync: async (k: string) => void mockStore.delete(k),
 }))
 jest.mock('expo-font', () => ({ ...jest.requireActual('expo-font'), useFonts: () => [true, null] }))
-jest.mock('expo-auth-session', () => ({
-  makeRedirectUri: () => 'talyvor://auth',
-  useAutoDiscovery: () => ({ authorizationEndpoint: 'https://idp/auth', tokenEndpoint: 'https://idp/token' }),
-  useAuthRequest: () => [{ codeVerifier: 'verifier' }, null, async () => ({ type: 'success', params: { code: 'code-1' } })],
-  exchangeCodeAsync: async () => ({ idToken: 'id-token-1' }),
-}))
 let mockUuid = 0
 jest.mock('expo-crypto', () => ({ randomUUID: () => `uuid-${++mockUuid}` }))
 const mockSnapshots: { signedIn: boolean; total: string; agents: { id: string; paused: boolean; pauseUrl: string }[]; payees: { id: string; name: string; last: string; openUrl: string }[] }[] = []
@@ -46,7 +40,7 @@ jest.mock('expo-widgets', () => {
     createWidget: (_name: string, layout: unknown) => (layouts.push(layout), { updateSnapshot: (p: never) => mockSnapshots.push(p) }),
   }
 })
-jest.mock('../config', () => ({ config: { bffUrl: 'https://bff.test', oidcIssuer: 'https://idp', oidcClientId: 'mobile' } }))
+jest.mock('../config', () => ({ config: { bffUrl: 'https://bff.test' } }))
 
 /** Face ID: `face` false is the person cancelling the check, so the key signs nothing. */
 const mockPhone = { face: true, reasons: [] as string[], gone: false }
@@ -110,7 +104,9 @@ function mockBff(
       enrolments = enrolments.filter((x) => x.id !== en.id)
       return { ...en, status: 'declined' }
     }])),
-    'POST /auth/mobile/session': () => ({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }),
+    'POST /auth/phone/start': () => ({ expires_at: '2099-01-01T00:00:00Z', sandbox: true, sandbox_code: '482913' }),
+    'POST /auth/phone/finish': () => ({ check: 'chk_1', has_person: true, expires_at: '2099-01-01T00:00:00Z' }),
+    'POST /auth/phone/signin': () => ({ signed_in: true, signup_unfinished: false, account_id: 'ws_1', token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }),
     'GET /auth/me': () => ({ workspace_id: 'ws_1' }),
     'GET /api/agents': () => ({
       workspace_balance_ulxc: 20_000_000,
@@ -232,9 +228,13 @@ test('signs in, shows the pending approval first on Home, and pauses an agent', 
   const calls = mockBff()
   await renderRouter('./src/app', { initialUrl: '/' })
 
-  await fireEvent.press(await screen.findByText('Continue with Google'))
+  await fireEvent.changeText(await screen.findByLabelText('Phone number'), '7700 900456')
+  await fireEvent.press(screen.getByRole('button', { name: 'Continue' }))
+  await fireEvent.changeText(await screen.findByLabelText('Code'), '482913')
+  expect(await screen.findByText('Enter your passcode')).toBeTruthy()
+  for (const d of '418263') await fireEvent.press(screen.getByRole('button', { name: d }))
   expect(await screen.findByText('1 payment waits for your yes')).toBeTruthy()
-  expect(calls.find((c) => c.path === '/auth/mobile/session')?.body).toBe(JSON.stringify({ id_token: 'id-token-1' }))
+  expect(calls.find((c) => c.path === '/auth/phone/signin')?.body).toBe(JSON.stringify({ check: 'chk_1', passcode: '418263' }))
   // B61.27 — the door reads Lens's public Sandbox labels before anyone signs in; everything else carries the session.
   expect(calls.filter((c) => c.path.startsWith('/api/') && c.path !== '/api/pricing').every((c) => c.auth === 'Bearer session-1')).toBe(true)
 

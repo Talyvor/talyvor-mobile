@@ -19,18 +19,12 @@ jest.mock('expo-secure-store', () => ({
   deleteItemAsync: async (k: string) => void mockStore.delete(k),
 }))
 jest.mock('expo-font', () => ({ ...jest.requireActual('expo-font'), useFonts: () => [true, null] }))
-jest.mock('expo-auth-session', () => ({
-  makeRedirectUri: () => 'talyvor://auth',
-  useAutoDiscovery: () => ({ authorizationEndpoint: 'https://idp/auth', tokenEndpoint: 'https://idp/token' }),
-  useAuthRequest: () => [{ codeVerifier: 'verifier' }, null, async () => ({ type: 'success', params: { code: 'code-1' } })],
-  exchangeCodeAsync: async () => ({ idToken: 'id-token-1' }),
-}))
 jest.mock('expo-crypto', () => ({
   CryptoDigestAlgorithm: { SHA256: 'SHA-256' },
   digest: async (_: string, b: Uint8Array) => Uint8Array.from(jest.requireActual('node:crypto').createHash('sha256').update(b).digest()).buffer,
   randomUUID: () => 'uuid-1',
 }))
-jest.mock('../config', () => ({ config: { bffUrl: 'https://bff.test', oidcIssuer: 'https://idp', oidcClientId: 'mobile' } }))
+jest.mock('../config', () => ({ config: { bffUrl: 'https://bff.test' } }))
 
 /** The phone's key store: keys by alias, usable only when the biometric check passes. */
 const mockPhone = { keys: new Map<string, KeyObject>(), face: true }
@@ -131,7 +125,9 @@ function mockExpiredSession(devices: { id: string; revoked_at?: string }[], work
   globalThis.fetch = jest.fn(async (url: string, init: RequestInit = {}) => {
     const route = `${init.method ?? 'GET'} ${url.replace('https://bff.test', '')}`
     const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status })
-    if (route === 'POST /auth/mobile/session') return json({ token: (token = 'session-2'), expires_at: '2099-01-01T00:00:00Z' })
+    if (route === 'POST /auth/phone/start') return json({ expires_at: '2099-01-01T00:00:00Z', sandbox: true, sandbox_code: '482913' })
+    if (route === 'POST /auth/phone/finish') return json({ check: 'chk_1', has_person: true, expires_at: '2099-01-01T00:00:00Z' })
+    if (route === 'POST /auth/phone/signin') return json({ signed_in: true, signup_unfinished: false, account_id: workspace, token: (token = 'session-2'), expires_at: '2099-01-01T00:00:00Z' })
     if ((init.headers as Record<string, string>).Authorization !== `Bearer ${token}` || !token) return json({}, 401)
     if (route === 'GET /auth/me') return json({ workspace_id: workspace })
     if (route === 'GET /api/money/devices') {
@@ -157,17 +153,26 @@ const holdKey = (workspace = 'ws_1') => {
 /** Home gets a 401, so the app signs out; the key must still be on the phone then. */
 async function signedOutOnHome() {
   await renderRouter('./src/app', { initialUrl: '/' })
-  const signIn = await screen.findByText('Continue with Google')
+  await screen.findByLabelText('Phone number')
   expect(mockPhone.keys.has('approval')).toBe(true)
   expect(mockStore.get('talyvor.device-key')).toBe('dev_1')
   expect(mockStore.has('talyvor.session')).toBe(false)
-  return signIn
+}
+
+/** The door again: the number, its code and its passcode. */
+async function signInAgain() {
+  await fireEvent.changeText(screen.getByLabelText('Phone number'), '7700 900456')
+  await fireEvent.press(screen.getByRole('button', { name: 'Continue' }))
+  await fireEvent.changeText(await screen.findByLabelText('Code'), '482913')
+  await screen.findByText('Enter your passcode')
+  for (const d of '418263') await fireEvent.press(screen.getByRole('button', { name: d }))
 }
 
 test('a 401 on Home signs out but keeps the key, and after signing in again with the key listed an approval signs with it', async () => {
   const publicKey = holdKey()
   const keysWhenListed = mockExpiredSession([{ id: 'dev_1' }])
-  await fireEvent.press(await signedOutOnHome())
+  await signedOutOnHome()
+  await signInAgain()
   await waitFor(() => expect(keysWhenListed).toEqual([1]))
   await waitFor(() => expect(mockStore.get('talyvor.session')).toContain('session-2'))
   expect(mockPhone.keys.has('approval')).toBe(true)
@@ -183,7 +188,8 @@ test.each([
 ])('after signing in with the key %s in its workspace, the phone deletes it and Turn on shows', async (_, devices) => {
   holdKey()
   const keysWhenListed = mockExpiredSession(devices)
-  await fireEvent.press(await signedOutOnHome())
+  await signedOutOnHome()
+  await signInAgain()
   await waitFor(() => expect(mockPhone.keys.size).toBe(0))
   // Deleted only once Lens's list was read, with the key still there.
   expect(keysWhenListed).toEqual([1])
@@ -196,7 +202,8 @@ test.each([
 test("signing in to another workspace keeps the key the first workspace still holds", async () => {
   holdKey('ws_a')
   const keysWhenListed = mockExpiredSession([], 'ws_b')
-  await fireEvent.press(await signedOutOnHome())
+  await signedOutOnHome()
+  await signInAgain()
   await waitFor(() => expect(mockStore.get('talyvor.session')).toContain('session-2'))
   await waitFor(() => expect(keysWhenListed).toEqual([1]))
   expect(mockPhone.keys.has('approval')).toBe(true)

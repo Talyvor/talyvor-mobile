@@ -8,7 +8,6 @@ import { useEffect } from 'react'
 
 import { useHideFromAppSwitcher } from '@/app-switcher'
 import { BackdropHues } from '@/components/backdrop'
-import { Door } from '@/components/door'
 import { forgetTopLine, TopLine } from '@/components/live'
 import { Cover, LockScreen } from '@/components/lock-screen'
 import { PictureFlight } from '@/components/picture-flight'
@@ -22,7 +21,7 @@ import { fonts, useTheme } from '@/theme'
 const SHEET: NativeStackNavigationOptions = { presentation: 'formSheet', sheetGrabberVisible: true, sheetCornerRadius: 28, sheetAllowedDetents: [1] }
 
 function Navigator() {
-  const { ready, signedIn, client, locked, joining, phoneNeeded, covered } = useSession()
+  const { ready, signedIn, client, locked, joining, covered } = useSession()
   const { c, dark } = useTheme()
   // B61.27 — nothing reads the account while the app is locked or a sign-up has still to choose its account.
   const open = ready && signedIn && !locked && !joining
@@ -40,15 +39,6 @@ function Navigator() {
       <>
         <StatusBar style={dark ? 'light' : 'dark'} />
         <LockScreen />
-        {covered ? <Cover /> : null}
-      </>
-    )
-  // B61.27 — a Google sign-in takes a number and a passcode before anything else (the move, suite B61.25).
-  if (signedIn && phoneNeeded && !joining)
-    return (
-      <>
-        <StatusBar style={dark ? 'light' : 'dark'} />
-        <Door move />
         {covered ? <Cover /> : null}
       </>
     )

@@ -16,18 +16,12 @@ jest.mock('expo-secure-store', () => ({
   deleteItemAsync: async (k: string) => void mockStore.delete(k),
 }))
 jest.mock('expo-font', () => ({ ...jest.requireActual('expo-font'), useFonts: () => [true, null] }))
-jest.mock('expo-auth-session', () => ({
-  makeRedirectUri: () => 'talyvor://auth',
-  useAutoDiscovery: () => ({ authorizationEndpoint: 'https://idp/auth', tokenEndpoint: 'https://idp/token' }),
-  useAuthRequest: () => [{ codeVerifier: 'verifier' }, null, async () => ({ type: 'success', params: { code: 'code-1' } })],
-  exchangeCodeAsync: async () => ({ idToken: 'id-token-1' }),
-}))
 jest.mock('expo-crypto', () => ({
   CryptoDigestAlgorithm: { SHA256: 'SHA-256' },
   digest: async (_: string, b: Uint8Array) => Uint8Array.from(jest.requireActual('node:crypto').createHash('sha256').update(b).digest()).buffer,
   randomUUID: () => 'uuid-1',
 }))
-jest.mock('../config', () => ({ config: { bffUrl: 'https://bff.test', oidcIssuer: 'https://idp', oidcClientId: 'mobile' } }))
+jest.mock('../config', () => ({ config: { bffUrl: 'https://bff.test' } }))
 
 /** The phone's key store: Face ID passes unless told to fail. */
 const mockPhone = { signed: [] as string[], fail: false }
@@ -56,7 +50,7 @@ function mockBff({ known = true, sandboxCode = '482913', waitAfter = 5 } = {}) {
     const body = init.body ? (JSON.parse(init.body as string) as Record<string, unknown>) : undefined
     calls.push({ route, auth, body })
     if (route === 'GET /api/pricing') return json({ labels: { payments_out: 'sandbox' } })
-    if (route === 'GET /auth/me' && !auth) return json({ authenticated: false, google_signin: true })
+    if (route === 'GET /auth/me' && !auth) return json({ authenticated: false })
     if (route === 'POST /auth/phone/start') return json({ expires_at: '2099-01-01T00:00:00Z', sandbox: true, sandbox_code: sandboxCode })
     if (route === 'POST /auth/phone/finish')
       return body?.code === sandboxCode ? json({ check: 'chk_1', has_person: known, expires_at: '2099-01-01T00:00:00Z' }) : json({ error: 'That code is not right.', reason: 'wrong_code' }, 400)
