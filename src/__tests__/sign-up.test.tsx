@@ -525,9 +525,10 @@ const lookOf = (el: { props: { style?: unknown } }) => {
 }
 
 test.each([
-  ['waits for the checker', { pendingPerson: true }, WEB.identity.openWaiting],
-  ['did not pass', { failPerson: true }, WEB.identity.openNotPassed],
-] as const)("B57.193: while the person check %s, the way in is Pocket's foot: its line in a note, Confirm who I am the one main button, Open the app the quiet one under it", async (_, opts, line) => {
+  ['waits for the checker', { pendingPerson: true }, WEB.identity.openWaiting, WEB.identity.run],
+  // B65.3: after a check that did not pass the main button is Start again, the same check started anew.
+  ['did not pass', { failPerson: true }, WEB.identity.openNotPassed, WEB.identity.again],
+] as const)("B57.193: while the person check %s, the way in is Pocket's foot: its line in a note, the one main button, Open the app the quiet one under it", async (_, opts, line, run) => {
   mockBff(false, opts)
   await renderRouter('./src/app', { initialUrl: '/sign-up' })
   await toStepFour('Personal', 'Maya Lind')
@@ -538,14 +539,14 @@ test.each([
   expect(within(wayIn.getByTestId('note')).getByText(line)).toBeTruthy()
   const foot = within(screen.getByTestId('screen-footer'))
   const main = foot.getAllByRole('button').filter((b) => lookOf(b).backgroundColor === palettes.light.primary)
-  expect(main.map((b) => within(b).getByText(/./).props.children)).toEqual([WEB.identity.run])
+  expect(main.map((b) => within(b).getByText(/./).props.children)).toEqual([run])
   // Open the app is su6's "Not now": the ghost button, no fill and no rule round it.
   const open = lookOf(foot.getByRole('button', { name: WEB.identity.open }))
   expect(open.backgroundColor).toBeUndefined()
   expect(open.borderWidth).toBeUndefined()
   // The order su6's dock reads in: the line, the main button, then the quiet one.
-  const order = texts().filter((t) => [line, WEB.identity.run, WEB.identity.open].includes(t))
-  expect(order).toEqual([line, WEB.identity.run, WEB.identity.open])
+  const order = texts().filter((t) => [line, run, WEB.identity.open].includes(t))
+  expect(order).toEqual([line, run, WEB.identity.open])
 })
 
 test("B65.3: a check waiting at Persona draws Verify your ID, opens Persona's page in the app's browser sheet, and a pass there goes on to Home", async () => {
