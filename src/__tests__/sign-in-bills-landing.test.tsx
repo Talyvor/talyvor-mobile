@@ -1,4 +1,7 @@
+import { createBffClient } from '@talyvor/bff-client'
 import { fireEvent, renderRouter, screen } from 'expo-router/testing-library'
+import { readdirSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
 
 // B57.78 — sign-in, Bills due and an approval's landing page in Pocket's words (design/pocket p-signin, p-bills,
 // p-approval-landing; journey "Bills due on the phone").
@@ -43,8 +46,9 @@ const declined = {
 }
 
 /** The BFF with the given payment requests and approvals; anything else answers 404. */
-function mockBff({ requests = [northwind], approvals = [declined] }: { requests?: unknown[]; approvals?: unknown[] } = {}) {
+function mockBff({ requests = [northwind], approvals = [declined], me }: { requests?: unknown[]; approvals?: unknown[]; me?: unknown } = {}) {
   const routes: Record<string, unknown> = {
+    ...(me ? { 'GET /auth/me': me } : {}),
     'GET /api/money/payment-requests?status=pending_approval': { requests },
     'GET /api/money/payment-requests/preq_northwind': northwind,
     'GET /api/agents': { workspace_balance_ulxc: 0, allocated_ulxc: 0, unallocated_ulxc: 0, spent_ulxc: 0, agents: [{ id: 'ag_sales', name: 'Sales', balance_ulxc: 0, spent_ulxc: 0, created_at: '2026-10-01T00:00:00Z' }] },
@@ -63,7 +67,7 @@ const signedIn = () => mockStore.set('talyvor.session', JSON.stringify({ token: 
 
 beforeEach(() => mockStore.clear())
 
-test('B61.27: sign-in is the door: the logo, the phone number and Continue, and Google under it while the BFF offers it', async () => {
+test('B61.27: sign-in is the door: the logo, the phone number and Continue', async () => {
   mockBff()
   await renderRouter('./src/app', { initialUrl: '/' })
   expect(await screen.findByText('What’s your phone number?')).toBeTruthy()
@@ -71,8 +75,22 @@ test('B61.27: sign-in is the door: the logo, the phone number and Continue, and 
   expect(screen.getByText('We text you a code to check it’s yours.')).toBeTruthy()
   expect(screen.getByLabelText('Phone number')).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Continue' })).toBeTruthy()
-  expect(await screen.findByRole('button', { name: 'Continue with Google' })).toBeTruthy()
   expect(screen.queryByText('Agent wallets')).toBeNull()
+})
+
+// B61.119 — Google sign-in is switched off (suite B61.29 removed it from the BFF): the door is the only way in, even
+// where an older BFF still says Google is offered, and nothing in the app calls the endpoints that went with it.
+test('B61.119: the door offers no Google, and the app has no call to /auth/mobile/session or /auth/google/move', async () => {
+  mockBff({ me: { authenticated: false, google_signin: true } })
+  await renderRouter('./src/app', { initialUrl: '/' })
+  expect(await screen.findByText('What’s your phone number?')).toBeTruthy()
+  await expect(screen.findByText(/Google/, {}, { timeout: 500 })).rejects.toThrow()
+  const client = createBffClient('https://bff.test', () => null) as unknown as Record<string, unknown>
+  expect(client.signIn).toBeUndefined()
+  expect(client.googleMove).toBeUndefined()
+  const sources = ['src', 'packages/bff-client/src'].flatMap((d) => readdirSync(d, { recursive: true, encoding: 'utf8' }).map((f) => join(d, f)))
+  const calling = sources.filter((f) => !f.includes('__tests__') && /\.tsx?$/.test(f) && /\/auth\/(mobile\/session|google\/move)/.test(readFileSync(f, 'utf8')))
+  expect(calling).toEqual([])
 })
 
 test('Pay’s Bills due opens p-bills, whose row opens the approval card', async () => {
