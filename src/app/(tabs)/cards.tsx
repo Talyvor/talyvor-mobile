@@ -1,7 +1,7 @@
 import { formatMinor, refusalText, type Agent, type AgentCard as Held, type AgentRules, type CardAuthorization, type CardSpend } from '@talyvor/bff-client'
 import { router, useFocusEffect } from 'expo-router'
-import { useCallback, useState } from 'react'
-import { useWindowDimensions, View } from 'react-native'
+import { useCallback, useEffect, useState } from 'react'
+import { AppState, useWindowDimensions, View } from 'react-native'
 
 import { useAccount } from '@/account'
 import { AgentCard } from '@/components/card'
@@ -114,6 +114,13 @@ export default function Cards() {
   // Whose details show, and only until you leave the tab.
   const [shown, setShown] = useState<string | null>(null)
   useFocusEffect(useCallback(() => () => setShown(null), []))
+  // The sheet is its own window, drawn above the Cover, so the details go the moment the app leaves the front.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state !== 'active') setShown(null)
+    })
+    return () => sub.remove()
+  }, [])
   const [said, setSaid] = useState<{ id: string; text: string } | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
 
