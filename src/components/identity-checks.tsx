@@ -1,9 +1,11 @@
-import { BffError, type BffClient, type VerificationBody, type VerificationCheck, type WorkspaceVerification } from '@talyvor/bff-client'
+import { BffError, type BffClient, type CheckReturn, type VerificationBody, type VerificationCheck, type WorkspaceVerification } from '@talyvor/bff-client'
 import { router } from 'expo-router'
+import * as WebBrowser from 'expo-web-browser'
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Text, View } from 'react-native'
 
 import { useAccount } from '@/account'
+import { config } from '@/config'
 import { CompanyDetailsSection } from '@/components/company-details'
 import { CountryField, FieldError, countryRefusal } from '@/components/country-field'
 import { Icon } from '@/components/icon'
@@ -22,6 +24,13 @@ import { fonts, useTheme } from '@/theme'
 //
 // B57.174 — drawn as Pocket Live's su5 (design/pocket-live, 15 Nov): the line, the fields with no card round them, the
 // Sandbox note in place of the ID document's card, then the checks; the one main button at the foot, out of the scroll.
+//
+// B65.3 — the web's B65.2 (suite PR #1192) on the phone: when Lens answers the person check pending with a `link` (Persona's
+// one-time page, Lens B30.112 and B65.1), the main button is "Verify your ID" and opens it in the app's own browser sheet,
+// an auth session that closes when Persona sends the person back to the phone's link (Lens B65.1's "phone"). The step
+// then reads the record until the check is decided: a pass goes on to Home, a check that failed or expired offers Start
+// again, which is the same check started anew. The note says what Persona checks, with our privacy notice. The link
+// lives only in the record's read and on the button; nothing of Persona's is kept on the phone, and its words never drawn.
 
 const LEVELS = ['L0', 'L1', 'L2', 'L3'] as const
 
@@ -43,28 +52,45 @@ const neededLevel = (type: 'personal' | 'business') => (type === 'business' ? 3 
 const E164 = /^\+[1-9][0-9]{7,14}$/
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-/** A check the provider has not decided yet, for the level after the one reached. */
-const waitingOnNext = (v: WorkspaceVerification | null) =>
-  (v?.checks ?? []).some((c) => c.status === 'pending' && rank(c.level) === rank(v?.level) + 1)
+/** B65.3 — where a check's link sends the person back to: the phone's own link (Lens B65.1's CheckReturns), which the
+ *  browser sheet waits for. */
+const RETURN_TO: CheckReturn = 'phone'
+const BACK_LINK = 'talyvor://settings/verification'
 
 /** The newest check Lens has for a level. */
 const latest = (v: WorkspaceVerification | null, level: number): VerificationCheck | undefined => (v?.checks ?? []).find((c) => rank(c.level) === level)
 
+/** B65.3 — the identity partner's own pages: a link the browser sheet opens is https on Persona's domain, never another
+ *  address a reply could carry. */
+const PARTNER_PAGE = /^https:\/\/([a-z0-9-]+\.)*withpersona\.com(\/|\?|$)/i
+
+/** The partner's page the next check waits for the person at, when it does. */
+const atPartner = (v: WorkspaceVerification | null) => {
+  const next = latest(v, rank(v?.level) + 1)
+  return next?.status === 'pending' && next.link && PARTNER_PAGE.test(next.link) ? next.link : undefined
+}
+
+/** A check the provider has not decided yet, for the level after the one reached. B65.3: one waiting for the person at
+ *  its link is not asked again until they are back from it (`back`): nothing changes before, and each read makes a fresh
+ *  link. */
+const waitingOnNext = (v: WorkspaceVerification | null, back: boolean) =>
+  (v?.checks ?? []).some((c) => c.status === 'pending' && (back || !c.link) && rank(c.level) === rank(v?.level) + 1)
+
 /** Lens's record, read again every 5 seconds while the next check waits on the provider. A read that fails draws nothing. */
-function useVerification(client: BffClient) {
+function useVerification(client: BffClient, back: boolean) {
   const [v, setV] = useState<WorkspaceVerification | null>(null)
   const [failed, setFailed] = useState(false)
-  const read = useCallback(() => client.verification().then((got) => (setV(got), setFailed(false)), () => setFailed(true)), [client])
+  const read = useCallback(() => client.verification(RETURN_TO).then((got) => (setV(got), setFailed(false)), () => setFailed(true)), [client])
   useEffect(() => {
     void read()
   }, [read])
-  const waiting = waitingOnNext(v)
+  const waiting = waitingOnNext(v, back)
   useEffect(() => {
     if (!waiting) return
     const t = setInterval(() => void read(), 5000)
     return () => clearInterval(t)
   }, [waiting, read])
-  return { v, setV, failed }
+  return { v, setV, failed, read }
 }
 
 type ChipTone = Parameters<typeof Chip>[0]['tone']
@@ -74,6 +100,8 @@ function stateOf(v: WorkspaceVerification | null, level: number, running: boolea
   const c = latest(v, level)
   if (rank(v?.level) >= level) return { text: c?.test === false ? IDENTITY_WORDS.passed : IDENTITY_WORDS.passedSandbox, tone: 'good' }
   if (running) return { text: IDENTITY_WORDS.checking, tone: 'wait' }
+  // B65.3 — a check waiting for the person at the partner's page is not checked yet
+  if (c?.status === 'pending' && c.link && PARTNER_PAGE.test(c.link)) return { text: IDENTITY_WORDS.notYet, tone: 'plain' }
   if (c?.status === 'pending') return { text: IDENTITY_WORDS.waiting, tone: 'wait' }
   if (c?.status === 'failed' || c?.status === 'returned') return { text: IDENTITY_WORDS.notPassed, tone: 'bad' }
   return { text: IDENTITY_WORDS.notYet, tone: 'plain' }
@@ -116,7 +144,7 @@ function missing(d: Draft, level: number): Errors {
 
 function bodyFor(kind: VerificationBody['kind'], d: Draft): VerificationBody {
   if (kind === 'contact') return { kind, email: d.email.trim(), phone: d.phone.replace(/\s/g, '') }
-  if (kind === 'identity') return { kind, name: d.name.trim(), country: d.country, date_of_birth: d.dob.trim() }
+  if (kind === 'identity') return { kind, name: d.name.trim(), country: d.country, date_of_birth: d.dob.trim(), return_to: RETURN_TO }
   // Lens fills an empty company check from the saved company details (talyvor-lens B59.30).
   return { kind, name: '', country: '', company_number: '', directors: [], people_with_significant_control: [] }
 }
@@ -147,17 +175,41 @@ function wayInLine(v: WorkspaceVerification): string | null {
   return null
 }
 
+/** B65.3 — what the identity partner checks, and our privacy notice, opened in the app's browser sheet. */
+function PartnerNote() {
+  const { c } = useTheme()
+  return (
+    <View style={{ gap: 8 }}>
+      <Note icon="shield">{IDENTITY_WORDS.documentLine}</Note>
+      <Text
+        accessibilityRole="link"
+        onPress={() => void WebBrowser.openBrowserAsync(`${config.bffUrl}/privacy`).catch(() => undefined)}
+        style={{ fontFamily: fonts.uiBold, fontSize: 13.5, color: c.ink, textDecorationLine: 'underline', paddingHorizontal: 14 }}>
+        {IDENTITY_WORDS.privacy}
+      </Text>
+    </View>
+  )
+}
+
 /**
- * The screen under `head`: the fields the next checks need, the company details for a Business, the Sandbox note and
- * the checks for this account. `done` takes the foot once they pass; with `wayIn` (sign-up's last step, B61.118) the foot
- * also has Open the app while a check waits or after one did not pass, with a note that says so (B57.193: the note, the
- * main button, then Open the app as the quiet one under it).
+ * The screen under `head`: the fields the next checks need, the company details for a Business, the identity partner's
+ * note and the checks for this account. `done` takes the foot once they pass; with `wayIn` (sign-up's last step, B61.118)
+ * the foot also has Open the app while a check waits or after one did not pass, with a note that says so (B57.193: the
+ * note, the main button, then Open the app as the quiet one under it). B65.3: `onPassed` runs once the checks pass after
+ * a check waited for the person at the partner's page.
  */
-export function IdentityChecks({ head, done, wayIn = false }: { head: ReactNode; done?: ReactNode; wayIn?: boolean }) {
+export function IdentityChecks({ head, done, wayIn = false, onPassed }: { head: ReactNode; done?: ReactNode; wayIn?: boolean; onPassed?: () => void }) {
   const { client } = useSession()
   const { c } = useTheme()
   const { account } = useAccount(client)
-  const { v, setV, failed } = useVerification(client)
+  // B65.3 — back from the partner's page: the check is read until it is decided.
+  const [back, setBack] = useState(false)
+  const [opening, setOpening] = useState(false)
+  const { v, setV, failed, read } = useVerification(client, back)
+  const passed = !!v && !!account && rank(v.level) >= neededLevel(account.account_type)
+  useEffect(() => {
+    if (passed && back) onPassed?.()
+  }, [passed, back, onPassed])
   const [running, setRunning] = useState<Subject | null>(null)
   const [said, setSaid] = useState<string | null>(null)
   // B61.111 — the country Lens refused (country_not_served) and its sentence, said on the country until another is picked.
@@ -187,6 +239,20 @@ export function IdentityChecks({ head, done, wayIn = false }: { head: ReactNode;
   const set = (k: keyof Draft) => (value: string) => setD({ ...d, [k]: value })
   const personName = level >= 2 ? (latest(v, 2)?.verified_name ?? '') : d.name
   const wayInSaid = wayIn && running === null ? wayInLine(v) : null
+  // B65.3 — the next check, when it waits for the person at the partner's page, or did not pass and can be started again
+  const partner = atPartner(v)
+  const next = latest(v, level + 1)
+  const again = next?.subject === 'person' && (next.status === 'failed' || next.status === 'returned')
+  const shownSaid = said ?? (again && !tried && next ? failedText(next) : null)
+
+  const verify = async () => {
+    if (!partner || opening) return
+    setOpening(true)
+    await WebBrowser.openAuthSessionAsync(partner, BACK_LINK).catch(() => undefined)
+    setBack(true)
+    await read()
+    setOpening(false)
+  }
 
   const run = async () => {
     if (running) return
@@ -266,9 +332,9 @@ export function IdentityChecks({ head, done, wayIn = false }: { head: ReactNode;
     <Screen
       footer={
         <>
-          {said ? (
+          {shownSaid ? (
             <View accessibilityLiveRegion="polite">
-              <FieldError>{said}</FieldError>
+              <FieldError>{shownSaid}</FieldError>
             </View>
           ) : null}
           {wayInSaid ? (
@@ -276,14 +342,18 @@ export function IdentityChecks({ head, done, wayIn = false }: { head: ReactNode;
               <Note icon={wayInSaid === IDENTITY_WORDS.openWaiting ? 'clock' : 'shield'}>{wayInSaid}</Note>
             </View>
           ) : null}
-          <Button primary label={running ? IDENTITY_WORDS.running : IDENTITY_WORDS.run} disabled={running !== null} onPress={() => void run()} />
+          {partner ? (
+            <Button primary label={IDENTITY_WORDS.verify} disabled={opening} onPress={() => void verify()} />
+          ) : (
+            <Button primary label={running ? IDENTITY_WORDS.running : again ? IDENTITY_WORDS.again : IDENTITY_WORDS.run} disabled={running !== null} onPress={() => void run()} />
+          )}
           {/* B57.193 — drawn as Pocket Live's su6 dock draws a way on past the main button ("Not now"): the ghost one. */}
           {wayInSaid ? <Button variant="ghost" label={IDENTITY_WORDS.open} onPress={() => router.replace('/')} /> : null}
         </>
       }>
       {head}
       <Body muted>{IDENTITY_WORDS.line}</Body>
-      {level < 2 ? (
+      {level < 2 && !partner ? (
         <View style={{ gap: 14 }}>
           {level < 1
             ? [
@@ -297,7 +367,7 @@ export function IdentityChecks({ head, done, wayIn = false }: { head: ReactNode;
         </View>
       ) : null}
       {type === 'business' ? <CompanyDetailsSection titled /> : null}
-      <Note icon="shield">{IDENTITY_WORDS.sandboxNote}</Note>
+      <PartnerNote />
       {checks}
     </Screen>
   )

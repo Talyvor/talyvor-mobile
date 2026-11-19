@@ -86,7 +86,7 @@ export function servedCountries(served: readonly string[] | undefined): readonly
 // B61.21 — step 4, "Confirm who you are", word for word from the web's B61.20 (talyvor-suite PR #1120 at 99205a0,
 // apps/web/src/areas/auth/signupWords.ts): the identity check, run against Lens's levels. Settings, Verification shows the
 // same parts with the same words. B57.174: what Pocket Live draws (design/pocket-live texts.json 'ph su5', 15 Nov) takes
-// its words: the line, Full name and the Sandbox note in place of the ID document's card.
+// its words: the line, Full name and the note in place of the ID document's card (B65.3: the identity partner's line).
 export const IDENTITY_WORDS = {
   line: 'The law asks us to check. It takes a minute.',
   checks: 'The checks',
@@ -108,7 +108,12 @@ export const IDENTITY_WORDS = {
   waiting: 'Waiting for the checker',
   notPassed: 'Not passed',
   notYet: 'Not checked yet',
-  sandboxNote: 'In Sandbox we check these details only. No document or photo is uploaded.',
+  // B65.3 — the web's B65.2 words (suite PR #1192): the identity partner's own page takes the photo of the ID and the
+  // selfie, in the app's browser sheet; the consent line is for Mihai to confirm (selfie matching is biometric data).
+  documentLine: 'Persona, our identity partner, checks a photo of your ID and a selfie for us.',
+  privacy: 'Our privacy notice',
+  verify: 'Verify your ID',
+  again: 'Start again',
   done: 'You’re confirmed. Your account is open.',
   open: 'Open the app',
   // B61.118 — the way into the app while a check waits, or after one did not pass; never says the check passed.

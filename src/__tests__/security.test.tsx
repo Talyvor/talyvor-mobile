@@ -133,8 +133,16 @@ describe('links', () => {
 
   test('no link can send the person to another address: nothing opens a URL it was given', () => {
     const opens = appSources.filter((f) => /Linking\.openURL|openBrowserAsync|openAuthSessionAsync|\+native-intent/.test(readFileSync(f, 'utf8')))
-    // B61.39 — the one exception: Help's "Send to our team" opens the phone's mail app, always to COMPANY_CONTACT.
-    expect(opens.map((f) => f.replace(root, ''))).toEqual(['/src/help-words.ts'])
+    // B61.39 — Help's "Send to our team" opens the phone's mail app, always to COMPANY_CONTACT. B65.3 — the identity step
+    // opens our privacy notice on our own address, and the identity check's link only when it is Persona's own page.
+    expect(opens.map((f) => f.replace(root, ''))).toEqual(['/src/components/identity-checks.tsx', '/src/help-words.ts'])
+    const identity = readFileSync(join(root, 'src/components/identity-checks.tsx'), 'utf8')
+    expect(identity.match(/(Linking\.openURL|openBrowserAsync|openAuthSessionAsync)\([^)]*\)/g)).toEqual([
+      'openBrowserAsync(`${config.bffUrl}/privacy`)',
+      'openAuthSessionAsync(partner, BACK_LINK)',
+    ])
+    expect(identity).toContain('const PARTNER_PAGE = /^https:\\/\\/([a-z0-9-]+\\.)*withpersona\\.com(\\/|\\?|$)/i')
+    expect(identity).toMatch(/next\.link && PARTNER_PAGE\.test\(next\.link\) \? next\.link : undefined/)
     const help = readFileSync(join(root, 'src/help-words.ts'), 'utf8')
     expect(help.match(/Linking\.openURL\([^)]*\)/g)).toEqual(['Linking.openURL(helpMailto(question)'])
     expect(help).toMatch(/helpMailto = \(question: string\) =>\s+`mailto:\$\{COMPANY_CONTACT\}\?subject=\$\{encodeURIComponent\('Help with Talyvor'\)\}&body=\$\{encodeURIComponent\(question\)\}`/)

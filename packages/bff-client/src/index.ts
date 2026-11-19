@@ -991,7 +991,13 @@ export interface VerificationCheck {
   country?: string
   company_number?: string
   detail?: string
+  /** B65.3 — where the person finishes a check still waiting for them: the identity partner's one-time page (Lens B65.1). */
+  link?: string
 }
+
+/** B65.3 — the places the identity partner may send the person back to, by name (Lens B65.1's CheckReturns): "phone"
+ *  is this app's own link back to Settings, Verification. */
+export type CheckReturn = 'signup' | 'settings' | 'phone'
 
 /** Lens economy.WorkspaceVerification (B30.4): the level the checks reach, the level live money is judged by, every check. */
 export interface WorkspaceVerification {
@@ -1011,7 +1017,7 @@ export interface VerificationAnswer {
 /** What each level's check is asked to confirm (Lens economy.VerificationRequest). */
 export type VerificationBody =
   | { kind: 'contact'; email: string; phone: string }
-  | { kind: 'identity'; name: string; country: string; date_of_birth: string }
+  | { kind: 'identity'; name: string; country: string; date_of_birth: string; return_to?: CheckReturn }
   | { kind: 'company'; name: string; country: string; company_number: string; directors: string[]; people_with_significant_control: string[] }
 
 const VERIFY_PATH: Record<VerificationBody['kind'], string> = {
@@ -1377,7 +1383,8 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
       return { ...got, people: got.people ?? [] }
     },
     /** B61.21 — the workspace's identity checks and the level they reach (Lens B30.4). */
-    verification: () => call<WorkspaceVerification>('GET', '/api/verification'),
+    // B65.3 — returnTo names where a check's link sends the person back to (Lens B65.1); none is Settings on the web.
+    verification: (returnTo?: CheckReturn) => call<WorkspaceVerification>('GET', returnTo ? `/api/verification?return_to=${returnTo}` : '/api/verification'),
     /** Runs one level's check against the provider (the Test provider in Sandbox) and answers it with the record after. */
     verify: ({ kind, ...body }: VerificationBody) => call<VerificationAnswer>('POST', VERIFY_PATH[kind], body),
     /** B59.39 — the workspace's members and their roles (Track, through the BFF's track_members.go). */

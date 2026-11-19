@@ -54,6 +54,13 @@ const WEB = {
     openNotPassed: 'You can try the check again from Settings, Verification.',
     waiting: 'Waiting for the checker',
     companyFirst: 'Save the company details, with at least one director, first.',
+    // B65.2 (suite PR #1192, apps/web/src/areas/auth/signupWords.ts): the identity partner's step
+    documentLine: 'Persona, our identity partner, checks a photo of your ID and a selfie for us.',
+    privacy: 'Our privacy notice',
+    verify: 'Verify your ID',
+    again: 'Start again',
+    notYet: 'Not checked yet',
+    expired: 'Your identity check expired. Start it again.',
     personFailed: 'We couldn’t confirm who you are. Check your full name, date of birth and country, and try again.',
   },
 }
@@ -63,7 +70,8 @@ const LIVE = {
   line: 'The law asks us to check. It takes a minute.',
   fullName: 'Full name',
   dateOfBirth: 'Date of birth',
-  note: 'In Sandbox we check these details only. No document or photo is uploaded.',
+  // B65.3 — the note is the identity partner's line, the web's B65.2 words (suite PR #1192), in su5's place for it.
+  note: 'Persona, our identity partner, checks a photo of your ID and a selfie for us.',
 }
 
 /** B61.111 — talyvor-lens B61.53's refusal of a country Talyvor does not serve, as the BFF relays it (suite B61.110). */
@@ -87,6 +95,20 @@ jest.mock('expo-crypto', () => ({
   digest: async (_: string, b: Uint8Array) => Uint8Array.from(jest.requireActual('node:crypto').createHash('sha256').update(b).digest()).buffer,
   randomUUID: () => 'uuid-1',
 }))
+/** B65.3 — the app's browser sheet: what it was asked to open, and what the person does there before it closes. */
+const mockBrowser = { auth: [] as [string, string][], pages: [] as string[], there: () => undefined as void }
+jest.mock('expo-web-browser', () => ({
+  ...jest.requireActual('expo-web-browser'),
+  openAuthSessionAsync: async (url: string, back: string) => {
+    mockBrowser.auth.push([url, back])
+    mockBrowser.there()
+    return { type: 'success', url: `${back}?inquiry-id=inq_1&status=completed` }
+  },
+  openBrowserAsync: async (url: string) => {
+    mockBrowser.pages.push(url)
+    return { type: 'dismiss' }
+  },
+}))
 jest.mock('../config', () => ({ config: { bffUrl: 'https://bff.test', oidcIssuer: 'https://idp', oidcClientId: 'mobile' } }))
 
 /** The phone's key store: Face ID passes, so the key it makes signs. */
@@ -103,12 +125,18 @@ jest.mock('../../modules/talyvor-keys', () => ({
 }))
 
 /** The BFF: a new workspace with no key yet, and the sign-up's session once the answers are in. */
-function mockBff(refuseSession = false, { failPerson = false, pendingPerson = false, level = 'L0', countries = undefined as string[] | undefined, refuseCountry = '' } = {}) {
+function mockBff(
+  refuseSession = false,
+  { failPerson = false, pendingPerson = false, persona = false, personaLink = 'https://inquiry.withpersona.com/verify?inquiry-id=inq_1', level = 'L0', countries = undefined as string[] | undefined, refuseCountry = '', expiredPerson = false } = {},
+) {
   const sessions: Record<string, unknown>[] = []
   const devices: unknown[] = []
   const signInKeys: { name: string; device: { challenge: string; public_key: string }; passcode: string }[] = []
   // B61.21 — Lens's identity checks against the Test provider: each level's check passes unless told otherwise.
-  const checks: { level: string; subject: string; status: string; test: boolean }[] = []
+  const checks: { level: string; subject: string; status: string; test: boolean; link?: string; detail?: string }[] = []
+  // B65.3 — a person check Lens sent to Persona, as Lens B65.1 records one that expired
+  if (expiredPerson) checks.push({ level: 'L2', subject: 'person', status: 'failed', test: false, detail: 'Your ID check expired. Start it again.' })
+  const reads: string[] = []
   const verified: Record<string, unknown>[] = []
   const company = { company_name: '', registration_number: '', country: '', people: [] as { name: string; role: string; share_bps: number }[] }
   const record = () => ({ level, meaning: '', live_level: 'L0', live_meaning: '', checks: [...checks].reverse() })
@@ -140,7 +168,10 @@ function mockBff(refuseSession = false, { failPerson = false, pendingPerson = fa
     if (route === 'GET /api/workspace/account' && made) return json({ account_type: made.account_type, money_kind: made.money_kind })
     if (route === 'GET /api/workspace/business' && made?.account_type === 'business') return json(company)
     if (route === 'PUT /api/workspace/business' && made?.account_type === 'business') return json(Object.assign(company, JSON.parse(init.body as string)))
-    if (route === 'GET /api/verification') return json(record())
+    if (route.startsWith('GET /api/verification')) {
+      reads.push(route)
+      return json(record())
+    }
     const verify = /^POST \/api\/verification\/(contact|identity|company)$/.exec(route)
     if (verify) {
       const kind = verify[1]
@@ -150,8 +181,18 @@ function mockBff(refuseSession = false, { failPerson = false, pendingPerson = fa
       const failed = kind === 'identity' && failPerson
       // B61.118 — the person check the provider has not decided yet
       const pending = kind === 'identity' && pendingPerson
-      const status = failed ? 'failed' : pending ? 'pending' : 'completed'
-      const check = { level: next, subject: kind === 'identity' ? 'person' : kind, status, test: true, method: 'test', evidence_ref: `ev_${kind}` }
+      // B65.3 — Lens sends a real person's check to Persona: it waits for them at Persona's one-time page
+      const atPersona = kind === 'identity' && persona
+      const status = failed ? 'failed' : pending || atPersona ? 'pending' : 'completed'
+      const check = {
+        level: next,
+        subject: kind === 'identity' ? 'person' : kind,
+        status,
+        test: !atPersona,
+        method: atPersona ? 'persona' : 'test',
+        evidence_ref: `ev_${kind}`,
+        ...(atPersona ? { link: personaLink } : {}),
+      }
       checks.push(check)
       if (status === 'completed') level = next
       return json({ check, verification: record() })
@@ -165,13 +206,24 @@ function mockBff(refuseSession = false, { failPerson = false, pendingPerson = fa
     }
     return json({ error: 'no' }, 404)
   }) as unknown as typeof fetch
-  return { sessions, devices, verified, company, signInKeys }
+  /** B65.3 — the person finishes at Persona's page and Persona passes them. */
+  const passAtPersona = () => {
+    for (const c of checks.filter((c) => c.link)) {
+      c.status = 'completed'
+      delete c.link
+    }
+    level = 'L2'
+  }
+  return { sessions, devices, verified, company, signInKeys, reads, passAtPersona }
 }
 
 /** B61.27 — the door's sign-up session, as the keychain keeps it after the app opened again: no passcode in memory. */
 const joining = () => mockStore.set('talyvor.session', JSON.stringify({ token: 'signup-1', expires_at: '2099-01-01T00:00:00Z', joining: true }))
 
 beforeEach(() => {
+  mockBrowser.auth = []
+  mockBrowser.pages = []
+  mockBrowser.there = () => undefined
   mockStore.clear()
   mockPhone.made = 0
   joining()
@@ -371,7 +423,7 @@ test('B61.21: a Personal sign-up ends on the identity step and reaches Home only
   expect(screen.getByText(WEB.identity.checks[1])).toBeTruthy()
   expect(screen.queryByText(WEB.identity.checks[2])).toBeNull()
   expect(screen.queryByText('Company details')).toBeNull()
-  // In Sandbox the details are checked alone: the note says so, and nothing asks for a file or a photo.
+  // The note says Persona checks the ID and the selfie on its own page: nothing here asks for a file or a photo.
   expect(screen.getByText(LIVE.note)).toBeTruthy()
   expect(texts().filter((t) => t !== LIVE.note).some((t) => /upload|choose a file|take a photo/i.test(t))).toBe(false)
   // No way on to Home until the checks pass.
@@ -383,7 +435,7 @@ test('B61.21: a Personal sign-up ends on the identity step and reaches Home only
   expect(await screen.findByText(WEB.identity.done)).toBeTruthy()
   expect(bff.verified).toEqual([
     { kind: 'contact', email: 'maya@example.test', phone: '+447700900123' },
-    { kind: 'identity', name: 'Maya Lind', country: 'GB', date_of_birth: '1990-04-21' },
+    { kind: 'identity', name: 'Maya Lind', country: 'GB', date_of_birth: '1990-04-21', return_to: 'phone' },
   ])
   expect(screen.getAllByText(WEB.identity.passedSandbox)).toHaveLength(2)
   // B61.118 — once passed, no line about finishing the check later
@@ -401,7 +453,7 @@ test("B57.174: the identity step is drawn as Pocket Live's su5, its one main but
   for (const label of [LIVE.fullName, LIVE.dateOfBirth]) expect(screen.getByLabelText(label)).toBeTruthy()
   expect(screen.getByRole('button', { name: WEB.identity.labels.country })).toBeTruthy()
   expect(screen.getByText(LIVE.note)).toBeTruthy()
-  // The note says what the document step did: nothing is uploaded, so there is no card for it.
+  // The note says what the document step does: Persona's own page takes the photos, so there is no card for it.
   expect(screen.queryByText(WEB.identity.documentTitle)).toBeNull()
   // The decision sits at the foot, out of the scroll, as every other step's does.
   const foot = within(screen.getByTestId('screen-footer'))
@@ -446,7 +498,8 @@ test('B61.21, B61.118: a check that does not pass says what to fix, and still le
   expect(screen).toHavePathname('/sign-up')
   const foot = within(screen.getByTestId('screen-footer'))
   expect(foot.getByText(WEB.identity.openNotPassed)).toBeTruthy()
-  expect(foot.getByRole('button', { name: WEB.identity.run })).toBeTruthy()
+  // B65.3 — the person check that did not pass is started again
+  expect(foot.getByRole('button', { name: WEB.identity.again })).toBeTruthy()
   await fireEvent.press(foot.getByRole('button', { name: WEB.identity.open }))
   await waitFor(() => expect(screen).toHavePathname('/'))
 })
@@ -472,9 +525,10 @@ const lookOf = (el: { props: { style?: unknown } }) => {
 }
 
 test.each([
-  ['waits for the checker', { pendingPerson: true }, WEB.identity.openWaiting],
-  ['did not pass', { failPerson: true }, WEB.identity.openNotPassed],
-] as const)("B57.193: while the person check %s, the way in is Pocket's foot: its line in a note, Confirm who I am the one main button, Open the app the quiet one under it", async (_, opts, line) => {
+  ['waits for the checker', { pendingPerson: true }, WEB.identity.openWaiting, WEB.identity.run],
+  // B65.3: after a check that did not pass the main button is Start again, the same check started anew.
+  ['did not pass', { failPerson: true }, WEB.identity.openNotPassed, WEB.identity.again],
+] as const)("B57.193: while the person check %s, the way in is Pocket's foot: its line in a note, the one main button, Open the app the quiet one under it", async (_, opts, line, run) => {
   mockBff(false, opts)
   await renderRouter('./src/app', { initialUrl: '/sign-up' })
   await toStepFour('Personal', 'Maya Lind')
@@ -485,14 +539,78 @@ test.each([
   expect(within(wayIn.getByTestId('note')).getByText(line)).toBeTruthy()
   const foot = within(screen.getByTestId('screen-footer'))
   const main = foot.getAllByRole('button').filter((b) => lookOf(b).backgroundColor === palettes.light.primary)
-  expect(main.map((b) => within(b).getByText(/./).props.children)).toEqual([WEB.identity.run])
+  expect(main.map((b) => within(b).getByText(/./).props.children)).toEqual([run])
   // Open the app is su6's "Not now": the ghost button, no fill and no rule round it.
   const open = lookOf(foot.getByRole('button', { name: WEB.identity.open }))
   expect(open.backgroundColor).toBeUndefined()
   expect(open.borderWidth).toBeUndefined()
   // The order su6's dock reads in: the line, the main button, then the quiet one.
-  const order = texts().filter((t) => [line, WEB.identity.run, WEB.identity.open].includes(t))
-  expect(order).toEqual([line, WEB.identity.run, WEB.identity.open])
+  const order = texts().filter((t) => [line, run, WEB.identity.open].includes(t))
+  expect(order).toEqual([line, run, WEB.identity.open])
+})
+
+test("B65.3: a check waiting at Persona draws Verify your ID, opens Persona's page in the app's browser sheet, and a pass there goes on to Home", async () => {
+  const bff = mockBff(false, { persona: true })
+  mockBrowser.there = bff.passAtPersona
+  await renderRouter('./src/app', { initialUrl: '/sign-up' })
+  await toStepFour('Personal', 'Maya Lind')
+  expect(await screen.findByText(WEB.identity.documentLine)).toBeTruthy()
+  await fillYou()
+  await fireEvent.press(screen.getByRole('button', { name: WEB.identity.run }))
+  // Waiting for the person, not the checker: the one button opens Persona's page, and the fields are done with.
+  const foot = within(screen.getByTestId('screen-footer'))
+  expect(await foot.findByRole('button', { name: WEB.identity.verify })).toBeTruthy()
+  expect(foot.queryByRole('button', { name: WEB.identity.run })).toBeNull()
+  expect(screen.queryByLabelText(WEB.identity.labels.legalName)).toBeNull()
+  expect(screen.queryByText(WEB.identity.waiting)).toBeNull()
+  expect(texts().some((t) => /persona:|inquiry/i.test(t))).toBe(false)
+  // Lens sends Persona's page back to the phone's own link (Lens B65.1's "phone").
+  expect(bff.verified.at(-1)).toMatchObject({ kind: 'identity', return_to: 'phone' })
+  expect(bff.reads.every((r) => r.endsWith('?return_to=phone'))).toBe(true)
+
+  await fireEvent.press(foot.getByRole('button', { name: WEB.identity.verify }))
+  expect(mockBrowser.auth).toEqual([['https://inquiry.withpersona.com/verify?inquiry-id=inq_1', 'talyvor://settings/verification']])
+  await waitFor(() => expect(screen).toHavePathname('/'))
+  // Nothing of Persona's is kept on the phone.
+  expect([...mockStore.values()].some((v) => /persona|inq_1/.test(v))).toBe(false)
+})
+
+test("B65.3: a link to anywhere but Persona's own pages is never opened", async () => {
+  mockBff(false, { persona: true, personaLink: 'https://withpersona.com.evil.example/verify' })
+  await renderRouter('./src/app', { initialUrl: '/sign-up' })
+  await toStepFour('Personal', 'Maya Lind')
+  await fillYou()
+  await fireEvent.press(await screen.findByRole('button', { name: WEB.identity.run }))
+  expect(await screen.findByText(WEB.identity.waiting)).toBeTruthy()
+  expect(screen.queryByRole('button', { name: WEB.identity.verify })).toBeNull()
+  expect(mockBrowser.auth).toEqual([])
+})
+
+test('B65.3: our privacy notice opens from the identity step', async () => {
+  mockBff()
+  await renderRouter('./src/app', { initialUrl: '/sign-up' })
+  await toStepFour('Personal', 'Maya Lind')
+  await fireEvent.press(await screen.findByRole('link', { name: WEB.identity.privacy }))
+  expect(mockBrowser.pages).toEqual(['https://bff.test/privacy'])
+})
+
+test('B65.3: an expired check says so and offers Start again, which starts the check anew at Persona', async () => {
+  const bff = mockBff(false, { level: 'L1', expiredPerson: true, persona: true })
+  bff.sessions.push({ account_type: 'personal', money_kind: 'hybrid' })
+  mockStore.set('talyvor.session', JSON.stringify({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }))
+  await renderRouter('./src/app', { initialUrl: '/settings/verification' })
+  expect(await screen.findByText(WEB.identity.expired)).toBeTruthy()
+  expect(screen.getByText(WEB.identity.notPassed)).toBeTruthy()
+  const foot = within(screen.getByTestId('screen-footer'))
+  expect(foot.queryByRole('button', { name: WEB.identity.run })).toBeNull()
+  await fireEvent.changeText(screen.getByLabelText(WEB.identity.labels.legalName), 'Maya Lind')
+  await fireEvent.changeText(screen.getByLabelText(WEB.identity.labels.dateOfBirth), '1990-04-21')
+  await fireEvent.press(screen.getByRole('button', { name: WEB.identity.labels.country }))
+  await fireEvent.press(screen.getAllByRole('button', { name: 'United Kingdom' }).at(-1)!)
+  await fireEvent.press(foot.getByRole('button', { name: WEB.identity.again }))
+  expect(await foot.findByRole('button', { name: WEB.identity.verify })).toBeTruthy()
+  expect(bff.verified).toEqual([{ kind: 'identity', name: 'Maya Lind', country: 'GB', date_of_birth: '1990-04-21', return_to: 'phone' }])
+  expect(screen.queryByText(WEB.identity.expired)).toBeNull()
 })
 
 test('B61.21: Home says the account cannot move money until the check is finished, and leads back to it', async () => {
