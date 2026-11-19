@@ -531,7 +531,6 @@ export function PendingApprovals({
   labels?: boolean
   onDecided: () => void
 }) {
-  const { c } = useTheme()
   const [open, setOpen] = useState<string | null>(focus ?? null)
   const [result, setResult] = useState<Decided | null>(null)
   const sheet = pending.find((a) => a.id === open)
@@ -561,10 +560,7 @@ export function PendingApprovals({
         ) : sheet ? (
           <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(17,18,22,0.4)' }}>
             <Pressable accessible={false} style={{ flex: 1 }} onPress={close} />
-            <Sheet>
-              <Pressable accessibilityRole="button" accessibilityLabel="Close" hitSlop={10} onPress={close} style={{ alignSelf: 'flex-end' }}>
-                <Icon name="x" color={c.ink2} />
-              </Pressable>
+            <Sheet onClose={close}>
               <ApprovalSheet
                 key={sheet.id}
                 approval={sheet}

@@ -5,13 +5,14 @@ import { View } from 'react-native'
 
 import { Icon } from '@/components/icon'
 import { StartEveryAgentButton, StartEveryAgentSheet, useSigns } from '@/components/start-every-agent'
-import { Back, Body, Button, Headline, Screen, useLoad } from '@/components/ui'
+import { Body, Button, Headline, Screen, SheetTop, useLoad } from '@/components/ui'
 import { biometricName } from '@/keys'
 import { useSession } from '@/session'
 import { useTheme } from '@/theme'
 
 /** Pocket's p-pause-all (B57.71), from Home's Pause every agent and the "Pause my agents in Talyvor" shortcut (B40.17):
- * one tap stops every agent's next request or payment; starting them again is signed with this phone's key. */
+ * one tap stops every agent's next request or payment; starting them again is signed with this phone's key. B61.77: it
+ * opens as the phone's own sheet, with Close. */
 export default function PauseAll() {
   const { client } = useSession()
   const { c } = useTheme()
@@ -42,7 +43,7 @@ export default function PauseAll() {
   if (!data && !error) return <Screen>{null}</Screen>
   return (
     <Screen>
-      <Back home="/" />
+      <SheetTop home="/" />
       <View style={{ gap: 14, paddingTop: 40 }}>
         <View style={{ alignSelf: 'center', width: 84, height: 84, borderRadius: 42, alignItems: 'center', justifyContent: 'center', backgroundColor: c.cloud }}>
           <Icon name="pause" size={42} color={c.ink2} />

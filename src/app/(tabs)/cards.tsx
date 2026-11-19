@@ -1,7 +1,7 @@
 import { formatMinor, refusalText, type Agent, type AgentCard as Held, type AgentRules, type CardAuthorization, type CardSpend } from '@talyvor/bff-client'
 import { router, useFocusEffect } from 'expo-router'
-import { useCallback, useState } from 'react'
-import { useWindowDimensions, View } from 'react-native'
+import { useCallback, useEffect, useState } from 'react'
+import { AppState, useWindowDimensions, View } from 'react-native'
 
 import { useAccount } from '@/account'
 import { AgentCard } from '@/components/card'
@@ -10,6 +10,7 @@ import { CardSpends } from '@/components/card-spends'
 import { CardLimits, IssueCard } from '@/components/card-forms'
 import { Icon } from '@/components/icon'
 import { OwnerCard } from '@/components/owner-card'
+import { BottomSheet } from '@/components/pay-sheet'
 import { Body, Button, Card, Chip, Eyebrow, Figure, Headline, LoadState, Row, Screen, Toggle, useLoad } from '@/components/ui'
 import { DISPUTE_WORDS } from '@/dispute-words'
 import { biometricName, checkItsYou, keyGoneText } from '@/keys'
@@ -41,19 +42,21 @@ export function frozenText(name: string, card: Held): string {
     : `Unfrozen. ${name}’s card takes purchases again, each one judged by ${name}’s rules.`
 }
 
+/** B61.77 — Show card details checks it is you, then the details open in a sheet over the card; closing it hides them. */
 function Details({ card, shown, onShow, onHide }: { card: Held; shown: boolean; onShow: () => void; onHide: () => void }) {
   return (
     <Card>
       <Eyebrow>Card details</Eyebrow>
-      {shown ? (
+      <Body muted>Hidden until you check it is you with {biometricName}.</Body>
+      <Button label="Show card details" onPress={onShow} />
+      <BottomSheet visible={shown} onClose={onHide} testID="card-details-sheet">
+        <Headline>Card details</Headline>
         <View testID="card-details">
           <Figure size={20}>•••• {card.last4}</Figure>
           <Body muted>{expiry(card)}</Body>
         </View>
-      ) : (
-        <Body muted>Hidden until you check it is you with {biometricName}.</Body>
-      )}
-      <Button label={shown ? 'Hide card details' : 'Show card details'} onPress={shown ? onHide : onShow} />
+        <Button label="Hide card details" onPress={onHide} />
+      </BottomSheet>
     </Card>
   )
 }
@@ -111,6 +114,13 @@ export default function Cards() {
   // Whose details show, and only until you leave the tab.
   const [shown, setShown] = useState<string | null>(null)
   useFocusEffect(useCallback(() => () => setShown(null), []))
+  // The sheet is its own window, drawn above the Cover, so the details go the moment the app leaves the front.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state !== 'active') setShown(null)
+    })
+    return () => sub.remove()
+  }, [])
   const [said, setSaid] = useState<{ id: string; text: string } | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
 

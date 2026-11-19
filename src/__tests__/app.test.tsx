@@ -1,6 +1,7 @@
 import { labelOf } from '@talyvor/bff-client'
 import { render } from '@testing-library/react-native'
-import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library'
+import { router } from 'expo-router'
+import { act, fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library'
 import * as compose from '@expo/ui/jetpack-compose'
 import * as Notifications from 'expo-notifications'
 import * as modifiers from '@expo/ui/jetpack-compose/modifiers'
@@ -1202,11 +1203,11 @@ describe('B57.74 Approve payments', () => {
   const clock = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
   const preq = { id: 'preq_1', status: 'pending_approval', summary: '', client: 'chat', totals: { GBP: 18_000 }, items: [{ position: 1, payee_id: 'py_2', payee_name: 'Kite Accounting', currency: 'GBP', amount_minor: 18_000, reference: 'Invoice 1042', decision: 'needs_approval', reason: 'no permission you signed covers it' }], created_at: now.toISOString() }
 
-  test('Back, the payment it asks for, from where and by whom, and the payment as its own card with why it asks', async () => {
+  test('Close, the payment it asks for, from where and by whom, and the payment as its own card with why it asks', async () => {
     mockBff({ requests: [preq] })
     await renderRouter('./src/app', { initialUrl: '/approve/preq_1' })
     expect(await screen.findByText('Pay Kite Accounting £180.00')).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Back' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Close' })).toBeTruthy()
     expect(screen.getByText(`From the company’s account · prepared by Chat · today at ${clock}`)).toBeTruthy()
     // Saved as a payee, verified, and never paid before.
     expect(await screen.findByText('Known payee · Verified · First payment · Reference: Invoice 1042')).toBeTruthy()
@@ -1700,6 +1701,44 @@ describe('B59.3 a hidden area is not there', () => {
     expect(chatTab()).toHaveLength(0)
   })
 
+})
+
+describe('B61.77 a decision that is its own screen opens as a sheet', () => {
+  beforeEach(() => {
+    mockStore.clear()
+    mockStore.set('talyvor.session', JSON.stringify({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }))
+  })
+  const preq = { id: 'preq_1', status: 'pending_approval', summary: '', client: 'chat', totals: { GBP: 18_000 }, items: [{ position: 1, payee_id: 'py_2', payee_name: 'Kite Accounting', currency: 'GBP', amount_minor: 18_000, reference: 'Invoice 1042', decision: 'needs_approval', reason: 'no permission you signed covers it' }], created_at: new Date().toISOString() }
+
+  test('an approval opens over Approvals, and Close returns to Approvals', async () => {
+    mockBff({ requests: [preq] })
+    await renderRouter('./src/app', { initialUrl: '/approvals' })
+    await act(() => router.push('/approve/preq_1'))
+    expect(await screen.findByText('Pay Kite Accounting £180.00')).toBeTruthy()
+    await fireEvent.press(screen.getByRole('button', { name: 'Close' }))
+    await waitFor(() => expect(screen).toHavePathname('/approvals'))
+    expect(screen.queryByText('Pay Kite Accounting £180.00')).toBeNull()
+  })
+
+  test('Pause every agent opens over Agents, and Close returns to Agents', async () => {
+    mockBff()
+    await renderRouter('./src/app', { initialUrl: '/agents' })
+    await fireEvent.press(await screen.findByRole('link', { name: 'Pause every agent' }))
+    expect(await screen.findByText('Pause every agent?')).toBeTruthy()
+    await fireEvent.press(screen.getByRole('button', { name: 'Close' }))
+    await waitFor(() => expect(screen).toHavePathname('/agents'))
+    expect(screen.queryByText('Pause every agent?')).toBeNull()
+  })
+
+  test("an agent's rules open as a sheet over its screen, and Close returns to it", async () => {
+    mockBff()
+    await renderRouter('./src/app', { initialUrl: '/agents/ag_1' })
+    await fireEvent.press(await screen.findByRole('button', { name: 'Researcher’s rules' }))
+    const sheet = within(await screen.findByTestId('agent-rules'))
+    await fireEvent.press(sheet.getByRole('button', { name: 'Close' }))
+    await waitFor(() => expect(screen.queryByTestId('agent-rules')).toBeNull())
+    expect(screen.getByTestId('agent-head')).toBeTruthy()
+  })
 })
 
 describe('B57.71 Pause every agent, and starting again with Face ID', () => {

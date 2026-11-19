@@ -1,0 +1,6 @@
+[
+  { "route": "/wallets", "screen": "p-home", "name": "add-money", "press": ["Add money"], "phoneKey": true, "words": "report", "why": "B61.77: Add money as a sheet with its grab bar and Close; its words are B61.80's" },
+  { "route": "/wallets", "screen": "p-home", "name": "add-money", "dark": true, "press": ["Add money"], "phoneKey": true, "words": "report", "why": "the same, with the phone set to dark" },
+  { "route": "/", "screen": "p-home", "name": "accounts", "press": ["Switch account. Northwind Studio, Business · Hybrid"], "words": "report", "why": "B61.77: Your accounts as a sheet; its words are B61.10's" },
+  { "route": "/pause-all", "screen": "p-home", "name": "pause-all", "words": "report", "why": "B61.77: Pause every agent opens as the phone's own sheet with Close; on the web export it draws as a page, the phone draws the native sheet" }
+]

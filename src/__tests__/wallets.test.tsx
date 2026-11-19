@@ -171,6 +171,23 @@ test.each([
   expect(['Add money', 'Withdraw', 'Convert'].filter((w) => screen.queryByRole('button', { name: w }) !== null)).toEqual(shown)
 })
 
+// B61.77 — each opens as a sheet over Balances, and Close puts it away with nothing sent.
+test.each([
+  ['Add money', 'top-up'],
+  ['Withdraw', 'withdraw'],
+  ['Convert', 'convert'],
+] as const)('%s opens as a sheet, and Close returns to Balances with nothing sent', async (action, testID) => {
+  phoneHoldsTheKey()
+  mockBff('hybrid')
+  await renderRouter('./src/app', { initialUrl: '/wallets' })
+  await fireEvent.press(await screen.findByRole('button', { name: action }))
+  const sheet = within(await screen.findByTestId(testID))
+  await fireEvent.press(sheet.getByRole('button', { name: 'Close' }))
+  await waitFor(() => expect(screen.queryByTestId(testID)).toBeNull())
+  expect(screen.getByRole('button', { name: action })).toBeTruthy()
+  expect(writes).toEqual([])
+})
+
 test('Add money: the confirm step first, then Face ID, then Sandbox money once under its key', async () => {
   phoneHoldsTheKey()
   mockBff('fiat')

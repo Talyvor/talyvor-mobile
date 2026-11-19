@@ -1,4 +1,5 @@
-import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library'
+import { act, fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library'
+import { AppState, type AppStateStatus } from 'react-native'
 
 // B59.34 — Cards on the phone: each agent's card in its art, its details hidden until Face ID, freeze and unfreeze, the
 // limits its purchases are judged by, and every purchase, in the web's words.
@@ -156,6 +157,37 @@ test('the card details stay hidden until Face ID passes', async () => {
 
   await fireEvent.press(screen.getByText('Hide card details'))
   expect(screen.queryByText(/4242/)).toBeNull()
+})
+
+// B61.77 — the details open in a sheet over the card once Face ID passes, and Close hides them again.
+test('the card details open as a sheet over Cards, and Close returns to Cards with them hidden', async () => {
+  mockBff()
+  await renderRouter('./src/app', { initialUrl: '/cards' })
+  await fireEvent.press(await screen.findByText('Show card details'))
+  const sheet = within(await screen.findByTestId('card-details-sheet'))
+  expect(sheet.getByText('•••• 4242')).toBeTruthy()
+  await fireEvent.press(sheet.getByRole('button', { name: 'Close' }))
+  await waitFor(() => expect(screen.queryByTestId('card-details-sheet')).toBeNull())
+  expect(screen.queryByText(/4242/)).toBeNull()
+  expect(screen.getByText('Show card details')).toBeTruthy()
+})
+
+// The sheet is its own window, above the Cover: leaving the app hides the details, so the app switcher never shows them.
+test('the card details sheet closes when the app leaves the front, and Face ID is asked again', async () => {
+  let tell: ((s: AppStateStatus) => void)[] = []
+  jest.spyOn(AppState, 'addEventListener').mockImplementation((_, f) => {
+    tell.push(f as (s: AppStateStatus) => void)
+    return { remove: () => (tell = tell.filter((g) => g !== f)) } as ReturnType<typeof AppState.addEventListener>
+  })
+  mockBff()
+  await renderRouter('./src/app', { initialUrl: '/cards' })
+  await fireEvent.press(await screen.findByText('Show card details'))
+  expect(await screen.findByTestId('card-details-sheet')).toBeTruthy()
+  await act(async () => tell.forEach((f) => f('inactive')))
+  await act(async () => tell.forEach((f) => f('active')))
+  await waitFor(() => expect(screen.queryByTestId('card-details-sheet')).toBeNull())
+  expect(screen.queryByText(/4242/)).toBeNull()
+  jest.restoreAllMocks()
 })
 
 test('a phone with no key shows no details and says where to turn approving on', async () => {

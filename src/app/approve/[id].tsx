@@ -5,9 +5,8 @@ import { Modal, Pressable, Text, View } from 'react-native'
 
 import { onDay } from '@/activity'
 import { approveBatch, notApproved, payWord, takeRefusal, totalsOf } from '@/approve-batch'
-import { Icon } from '@/components/icon'
 import { MoneyHeader, paymentRequestCapabilities } from '@/components/money-label'
-import { Back, Body, Button, Card, Figure, Headline, LoadState, Screen, Sheet, useLoad } from '@/components/ui'
+import { Body, Button, Card, Figure, Headline, LoadState, Screen, Sheet, SheetTop, useLoad } from '@/components/ui'
 import { biometricName } from '@/keys'
 import { syncLiveActivities } from '@/live-activity'
 import { haptic } from '@/motion'
@@ -19,7 +18,8 @@ import { fonts, useTheme } from '@/theme'
 // they will not pay and approves the rest with Face ID or a fingerprint over the statement Lens writes for exactly those,
 // or declines the whole request (B55.11). B57.74: drawn as Pocket's p-approve-req, each payment its own card, Decline asking
 // in a sheet, and a line after each payment Lens tried saying what happened to it. B57.93: where a notification's Approve
-// with Face ID lands, saying Approved. and what was paid, or Nothing was approved with Lens's sentence.
+// with Face ID lands, saying Approved. and what was paid, or Nothing was approved with Lens's sentence. B61.77: it opens as
+// the phone's own sheet over the screen it came from, with Close.
 
 const DECIDED: Record<string, string> = {
   approved: 'Approved.',
@@ -130,7 +130,7 @@ export default function ApproveScreen() {
         reload()
       }}
       refreshing={loading && !!data}>
-      <Back home="/approvals" />
+      <SheetTop home="/approvals" />
       <MoneyHeader capability={r ? paymentRequestCapabilities([r]) : []}>Approve payments</MoneyHeader>
       <Headline>{r ? headline(r) : 'Payments waiting for your approval'}</Headline>
       {notFound ? <Body muted>There is no request at this address. It may belong to another workspace.</Body> : <LoadState loading={loading && !data} error={error} />}
@@ -207,11 +207,8 @@ export default function ApproveScreen() {
       <Modal visible={pending && declining} transparent animationType="slide" onRequestClose={() => setDeclining(false)}>
         <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(17,18,22,0.4)' }}>
           <Pressable accessible={false} style={{ flex: 1 }} onPress={() => setDeclining(false)} />
-          <Sheet>
+          <Sheet onClose={() => setDeclining(false)}>
             <View testID="decline-sheet" style={{ gap: 14 }}>
-              <Pressable accessibilityRole="button" accessibilityLabel="Close" hitSlop={10} onPress={() => setDeclining(false)} style={{ alignSelf: 'flex-end' }}>
-                <Icon name="x" color={c.ink2} />
-              </Pressable>
               <Headline>Decline these payments?</Headline>
               <Body muted>Nothing waiting here is paid.</Body>
               {refusal ? <Body style={{ color: c.critical }}>{refusal}</Body> : null}
