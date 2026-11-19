@@ -150,7 +150,7 @@ test('the pay sheet: amount, account and note, one review, Send with Face ID, pa
   await fireEvent.press(from.getByRole('button', { name: 'Your account · USD, $2,000.00' }))
   const review = screen.getByRole('button', { name: 'Review' })
   expect(review.props.accessibilityState).toEqual({ disabled: true })
-  await fireEvent.changeText(screen.getByLabelText('Amount in USD'), '42')
+  await typeOnPad('42')
   await fireEvent.changeText(screen.getByLabelText('Note'), ' Dinner ')
   await fireEvent.press(review)
 
@@ -188,7 +188,8 @@ test('the pay sheet: amount, account and note, one review, Send with Face ID, pa
 test("a refusal is said in Lens's words, and nothing is said to be sent", async () => {
   mockBff([{ status: 409, error: 'economy: Dana R. holds no account in EUR, so nothing was sent' }])
   await renderRouter('./src/app', { initialUrl: '/pay-person?to=dana' })
-  await fireEvent.changeText(await screen.findByLabelText('Amount in USD'), '5')
+  await screen.findByLabelText('Amount in USD')
+  await typeOnPad('5')
   await fireEvent.press(screen.getByRole('button', { name: 'Review' }))
   await fireEvent.press(await screen.findByRole('button', { name: 'Send with Face ID' }))
   expect(await screen.findByText('Dana R. holds no account in EUR, so nothing was sent.')).toBeTruthy()
@@ -199,7 +200,8 @@ test('with no key on this phone, nothing is sent and the sheet offers Approvals 
   mockBff()
   mockStore.delete('talyvor.device-key')
   await renderRouter('./src/app', { initialUrl: '/pay-person?to=dana' })
-  await fireEvent.changeText(await screen.findByLabelText('Amount in USD'), '5')
+  await screen.findByLabelText('Amount in USD')
+  await typeOnPad('5')
   await fireEvent.press(screen.getByRole('button', { name: 'Review' }))
   const sheet = within(await screen.findByTestId('pay-a-person-review'))
   expect(sheet.queryByRole('button', { name: 'Send with Face ID' })).toBeNull()
@@ -216,4 +218,57 @@ test('a link names nobody: the screen names the person only as Lens answers for 
   await renderRouter('./src/app', { initialUrl: '/pay-person?to=someone' })
   expect(await screen.findByText(NOBODY)).toBeTruthy()
   expect(screen.queryByLabelText('Amount in USD')).toBeNull()
+})
+
+/** Presses the amount pad's keys in turn, as a person types an amount on it. */
+async function typeOnPad(keys: string) {
+  for (const k of keys) await fireEvent.press(screen.getByRole('button', { name: k === '.' ? 'Decimal point' : k === '<' ? 'Delete' : k }))
+}
+
+test('B57.183: Pay and Pay a person are drawn as Pocket Live draws them: the pill, the one row, the amount on the keypad, Sent at the foot', async () => {
+  mockBff()
+  await renderRouter('./src/app', { initialUrl: '/pay' })
+  const card = within(await screen.findByTestId('pay-a-person'))
+  // The search pill: its words are its placeholder, with no label above it that says them again.
+  const pill = card.getByLabelText('Name, phone number or email')
+  expect(pill.props.placeholder).toBe('Name, phone number or email')
+  expect(card.queryAllByText('Name, phone number or email')).toEqual([])
+  await fireEvent.changeText(pill, 'dana')
+  await fireEvent.press(card.getByRole('button', { name: 'Find' }))
+  // The person found is one row to press, as the reference's rows are: no Pay button of its own.
+  const found = within(await screen.findByTestId('pay-a-person-found'))
+  expect(found.getAllByRole('button').map((b) => b.props.accessibilityLabel)).toEqual(['Pay Dana R.'])
+  expect(found.queryByText('Pay')).toBeNull()
+  await fireEvent.press(found.getByRole('button', { name: 'Pay Dana R.' }))
+
+  // The amount is the big figure, typed on the keypad: $0 until a key is pressed.
+  expect(await screen.findByText('Pay Dana')).toBeTruthy()
+  const amount = screen.getByLabelText('Amount in USD')
+  expect(amount.props.children).toBe('$0')
+  expect(screen.queryByPlaceholderText('0.00')).toBeNull()
+  await typeOnPad('12345.678')
+  // Two places at most, a thousands comma, and Delete takes the last key back.
+  expect(screen.getByLabelText('Amount in USD').props.children).toBe('$12,345.67')
+  await typeOnPad('<<<<<<<<<42')
+  expect(screen.getByLabelText('Amount in USD').props.children).toBe('$42')
+  // Review sits at the foot with the keypad, and more than the account holds is said, with no sheet.
+  const foot = within(screen.getByTestId('screen-footer'))
+  expect(foot.getByRole('button', { name: 'Delete' })).toBeTruthy()
+  await typeOnPad('000')
+  expect(screen.getByLabelText('Amount in USD').props.children).toBe('$42,000')
+  await fireEvent.press(foot.getByRole('button', { name: 'Review' }))
+  expect(await screen.findByText('That is more than this account holds')).toBeTruthy()
+  expect(screen.queryByTestId('pay-a-person-review')).toBeNull()
+  await typeOnPad('<<<')
+  expect(screen.queryByText('That is more than this account holds')).toBeNull()
+  await fireEvent.press(foot.getByRole('button', { name: 'Review' }))
+  await fireEvent.press(within(await screen.findByTestId('pay-a-person-review')).getByRole('button', { name: 'Send with Face ID' }))
+
+  // Sent: the tick, the line, and Done and See it in Activity at the foot.
+  expect(await screen.findByText('Sent')).toBeTruthy()
+  expect(pays().map((p) => p.body.amount_minor)).toEqual([4200])
+  const done = within(screen.getByTestId('screen-footer'))
+  expect(done.getAllByRole('button').map((b) => b.props.children ?? b.props.accessibilityLabel)).toHaveLength(2)
+  expect(done.getByRole('button', { name: 'Done' })).toBeTruthy()
+  expect(done.getByRole('button', { name: 'See it in Activity' })).toBeTruthy()
 })

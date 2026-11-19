@@ -2,12 +2,13 @@ import { BffError, refusalText, type BffClient } from '@talyvor/bff-client'
 import { router, useFocusEffect } from 'expo-router'
 import * as SecureStore from 'expo-secure-store'
 import { useCallback, useState } from 'react'
-import { Text, View } from 'react-native'
+import { Text, TextInput, View } from 'react-native'
 
 import { useSession } from '../session'
 import { fonts, useTheme } from '../theme'
 import { Icon } from './icon'
-import { Body, Button, Card, Eyebrow, Field, Row } from './ui'
+import { Press } from './press'
+import { Body, Button, Card, Eyebrow, Row } from './ui'
 
 // B61.34 — Pay, to a person on Talyvor, on the phone: the web's B61.33 (talyvor-suite PayPerson.tsx) with its words, as
 // Pocket Live's phone `pay` draws it. One field takes their Talyvor name, phone number or email; Lens answers the
@@ -85,7 +86,9 @@ export function Initials({ name, size = 40 }: { name: string; size?: number }) {
   )
 }
 
-/** The "To a person" card, first on Pay: the field, what it found, and the chips of people paid before. */
+/** The "To a person" card, first on Pay: the field, what it found, and the chips of people paid before. B57.183 — drawn as
+ * Pocket Live's phone `pay`: the field is its search pill, with its words as the placeholder, and the person found is one
+ * row to press (their initials, the shown name, On Talyvor and the chevron), which opens Pay a person. */
 export function PayToAPerson() {
   const { client } = useSession()
   const { c } = useTheme()
@@ -133,30 +136,31 @@ export function PayToAPerson() {
         <Text accessibilityRole="header" style={{ fontFamily: fonts.display, fontSize: 20, color: c.ink }}>
           To a person
         </Text>
-        <Field
-          label="Name, phone number or email"
-          placeholder="Name, phone number or email"
-          autoCapitalize="none"
-          autoCorrect={false}
-          autoComplete="off"
-          returnKeyType="search"
-          value={typed}
-          onChangeText={(v) => {
-            setTyped(v)
-            setFound(null)
-            setSaid('')
-          }}
-          onSubmitEditing={() => !busy && void look(typed)}
-        />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, height: 48, paddingHorizontal: 16, borderRadius: 999, backgroundColor: c.cloud }}>
+          <Icon name="search" size={18} color={c.ink2} />
+          <TextInput
+            accessibilityLabel="Name, phone number or email"
+            placeholder="Name, phone number or email"
+            placeholderTextColor={c.ink3}
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoComplete="off"
+            returnKeyType="search"
+            value={typed}
+            onChangeText={(v) => {
+              setTyped(v)
+              setFound(null)
+              setSaid('')
+            }}
+            onSubmitEditing={() => !busy && void look(typed)}
+            style={{ flex: 1, height: 48, fontFamily: fonts.uiMedium, fontSize: 15, color: c.ink }}
+          />
+        </View>
         {found ? (
           <View testID="pay-a-person-found">
-            <Row
-              first
-              left={<Initials name={found.shown_name} />}
-              title={found.shown_name}
-              sub="On Talyvor"
-              right={<Button small primary label="Pay" accessibilityLabel={`Pay ${found.shown_name}`} onPress={() => pay(found)} />}
-            />
+            <Press kind="row" accessibilityRole="button" accessibilityLabel={`Pay ${found.shown_name}`} onPress={() => pay(found)}>
+              <Row first left={<Initials name={found.shown_name} size={42} />} title={found.shown_name} sub="On Talyvor" right={<Icon name="chev" size={16} color={c.ink3} />} />
+            </Press>
           </View>
         ) : (
           <Button
