@@ -5,6 +5,7 @@ import { Modal, Pressable, Text, View } from 'react-native'
 
 import { onDay } from '@/activity'
 import { approveBatch, notApproved, payWord, takeRefusal, totalsOf } from '@/approve-batch'
+import { SheetCover } from '@/components/lock-screen'
 import { MoneyHeader, paymentRequestCapabilities } from '@/components/money-label'
 import { Body, Button, Card, Figure, Headline, LoadState, Screen, Sheet, SheetTop, useLoad } from '@/components/ui'
 import { biometricName } from '@/keys'
@@ -217,6 +218,7 @@ export default function ApproveScreen() {
             </View>
           </Sheet>
         </View>
+        <SheetCover />
       </Modal>
     </Screen>
   )

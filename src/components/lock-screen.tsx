@@ -1,7 +1,7 @@
 import { BffError } from '@talyvor/bff-client'
 import { Image } from 'expo-image'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { StyleSheet, Text, View } from 'react-native'
+import { AppState, StyleSheet, Text, View } from 'react-native'
 
 import { PasscodePad } from '@/components/passcode-pad'
 import { Body, Button, Headline, Screen } from '@/components/ui'
@@ -123,4 +123,15 @@ export function Cover() {
       <Image source={icon} style={{ width: 64, height: 64, borderRadius: 16 }} accessibilityLabel="Talyvor" />
     </View>
   )
+}
+
+/** B50.57 — iOS draws a sheet above the app, so the Cover in the app sits under it: every sheet draws this inside
+ * itself too, over whatever it shows while the app is not in front. The sheet stays up, so what was typed is kept. */
+export function SheetCover() {
+  const [away, setAway] = useState(AppState.currentState === 'background' || AppState.currentState === 'inactive')
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (s) => setAway(s !== 'active'))
+    return () => sub.remove()
+  }, [])
+  return away ? <Cover /> : null
 }

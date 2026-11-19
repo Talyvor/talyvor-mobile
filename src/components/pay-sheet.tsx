@@ -3,6 +3,7 @@ import { Modal, Pressable, View } from 'react-native'
 
 import { biometricName } from '../keys'
 import { useTheme } from '../theme'
+import { SheetCover } from './lock-screen'
 import { Body, Button, Card, Figure, Headline, Sheet } from './ui'
 
 // B57.72 — Pay's confirm step as Pocket's bottom sheet (design/pocket dlg-ppay-k and dlg-ppay-n), and the sheet From opens.
@@ -23,6 +24,7 @@ export function BottomSheet({ visible, onClose, children, testID }: { visible: b
         <Pressable accessible={false} disabled={!onClose} style={{ flex: 1 }} onPress={onClose} />
         <Sheet onClose={onClose}>{children}</Sheet>
       </View>
+      <SheetCover />
     </Modal>
   )
 }
