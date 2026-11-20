@@ -1,7 +1,7 @@
 import { Image } from 'expo-image'
-import { BffError } from '@talyvor/bff-client'
+import { BffError, refusalText, type PersonFinding } from '@talyvor/bff-client'
 import { Redirect, router, useLocalSearchParams } from 'expo-router'
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Pressable, Text, View } from 'react-native'
 
 import { CARDS, type CardFace } from '@/cards'
@@ -10,6 +10,7 @@ import { Icon } from '@/components/icon'
 import { MoneyLabel, useMoneyLabels } from '@/components/money-label'
 import { PasscodePad } from '@/components/passcode-pad'
 import { CountryField, FieldError, countryRefusal } from '@/components/country-field'
+import { FIND_WORDS, askFindMe, findMeYes } from '@/components/find-me'
 import { IdentityChecks } from '@/components/identity-checks'
 import { Body, Button, Field, Headline, Screen } from '@/components/ui'
 import { DOOR_WORDS, doorRefusal } from '@/door-words'
@@ -47,6 +48,10 @@ import { fonts, useTheme } from '@/theme'
 // B61.27 — sign-up starts at the door: the number, the code and a passcode open a sign-up session (suite B61.25), and
 // steps 1 and 2 choose its account with POST /auth/signup/account. Step 3 is Pocket Live's `su6`: one key made with
 // Face ID, kept as the account's approval key and the person's sign-in key, with the passcode just chosen as Lens's proof.
+//
+// B61.94 — the end of sign-up asks once whether people may find the person, to pay them (Pocket Live `su7`, the web's
+// B61.93): Yes, find me switches on finding by name and phone number; No, or no pick, switches nothing on. A person who
+// can already be found, or whose settings cannot be read, goes on to Home. Another account is not asked again.
 //
 // The name is the workspace's name. Country and the registration number are asked as the spec says, and kept on this
 // screen only: Lens has nowhere to hold them yet (the web does the same).
@@ -352,10 +357,59 @@ function StepKey({ onContinue }: { onContinue: () => void }) {
 /** B65.3 — back from the identity partner's page with a pass, the app goes on to Home. */
 const toHome = () => router.replace('/')
 
+/** B61.94 — sign-up's last question (Pocket Live `su7`): may people on Talyvor find this person, to pay them. */
+function StepFind({ onDone }: { onDone: () => void }) {
+  const { client } = useSession()
+  const [f, setF] = useState<PersonFinding | null>(null)
+  const [pick, setPick] = useState<'yes' | 'no' | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [failed, setFailed] = useState('')
+  useEffect(() => {
+    let live = true
+    client.personFinding().then(
+      (v) => live && (askFindMe(v) ? setF(v) : onDone()),
+      () => live && onDone(),
+    )
+    return () => {
+      live = false
+    }
+  }, [client, onDone])
+  if (!f) return null
+  const go = async () => {
+    if (pick !== 'yes') return onDone()
+    setBusy(true)
+    setFailed('')
+    try {
+      await client.changePersonFinding(findMeYes(f))
+      onDone()
+    } catch (err) {
+      setFailed(refusalText(err))
+      setBusy(false)
+    }
+  }
+  return (
+    <Screen
+      footer={
+        <>
+          {failed ? <FieldError>{failed}</FieldError> : null}
+          <Button primary label={FIND_WORDS.open} disabled={busy || !pick} onPress={() => void go()} />
+        </>
+      }>
+      <Header />
+      <Headline>{FIND_WORDS.question}</Headline>
+      <Body muted>{FIND_WORDS.questionLine}</Body>
+      <View accessibilityRole="radiogroup" style={{ gap: 10 }}>
+        <Choice picked={pick === 'yes'} onPick={() => setPick('yes')} title={FIND_WORDS.yes} line={FIND_WORDS.yesLine} />
+        <Choice picked={pick === 'no'} onPick={() => setPick('no')} title={FIND_WORDS.no} line={FIND_WORDS.noLine} />
+      </View>
+    </Screen>
+  )
+}
+
 /** Step 4 (B61.21): the identity check. The app opens on Home once Lens's checks for the account pass, and (B61.118)
  * while one waits or after one did not pass, with a line that says so. B57.174: drawn
  * as Pocket Live's su5, under the same top and step bars as the steps before it. */
-function StepConfirm({ another }: { another: boolean }) {
+function StepConfirm({ another, onOpen }: { another: boolean; onOpen: () => void }) {
   return (
     // B59.32 — a Business gives its company details and the people with control here, beside the check they go to.
     <IdentityChecks
@@ -366,9 +420,10 @@ function StepConfirm({ another }: { another: boolean }) {
           <Headline>{SIGNUP_STEPS[3]}</Headline>
         </>
       }
-      done={<Button primary label={IDENTITY_WORDS.open} onPress={() => router.replace('/')} />}
+      done={<Button primary label={IDENTITY_WORDS.open} onPress={onOpen} />}
       wayIn
-      onPassed={toHome}
+      onOpen={onOpen}
+      onPassed={onOpen}
     />
   )
 }
@@ -386,6 +441,7 @@ export default function SignUp() {
   // Someone already signed in has an account: this screen is for opening one, so Home shows instead. Once this sign-up has
   // started, the session it makes is its own and steps 3 and 4 follow.
   const [started, setStarted] = useState(false)
+  const [asking, setAsking] = useState(false)
   // Another account is opened beside one the person has, so only someone signed in can open one. B61.27: a sign-up
   // starts at the door, which opens the sign-up session these steps finish.
   if (!signedIn) return <Redirect href="/sign-in" />
@@ -434,8 +490,11 @@ export default function SignUp() {
     }
   }
 
-  return step === 4 ? (
-    <StepConfirm another={another} />
+  // B61.94 — a new person's sign-up ends on the question; another account goes straight on to Home.
+  return asking ? (
+    <StepFind onDone={toHome} />
+  ) : step === 4 ? (
+    <StepConfirm another={another} onOpen={another ? toHome : () => setAsking(true)} />
   ) : step === 3 ? (
     <StepKey onContinue={() => setStep(4)} />
   ) : step === 2 && type ? (

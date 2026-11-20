@@ -212,7 +212,14 @@ function PartnerNote() {
  * note, the main button, then Open the app as the quiet one under it). B65.3: `onPassed` runs once the checks pass after
  * a check waited for the person at the partner's page.
  */
-export function IdentityChecks({ head, done, wayIn = false, onPassed }: { head: ReactNode; done?: ReactNode; wayIn?: boolean; onPassed?: () => void }) {
+export function IdentityChecks({ head, done, wayIn = false, onPassed, onOpen = () => router.replace('/') }: {
+  head: ReactNode
+  done?: ReactNode
+  wayIn?: boolean
+  onPassed?: () => void
+  /** B61.94 — where `wayIn`'s Open the app goes: Home, or sign-up's last question */
+  onOpen?: () => void
+}) {
   const { client } = useSession()
   const { c } = useTheme()
   const { account } = useAccount(client)
@@ -362,7 +369,7 @@ export function IdentityChecks({ head, done, wayIn = false, onPassed }: { head: 
             <Button primary label={running ? IDENTITY_WORDS.running : again ? IDENTITY_WORDS.again : IDENTITY_WORDS.run} disabled={running !== null} onPress={() => void run()} />
           )}
           {/* B57.193 — drawn as Pocket Live's su6 dock draws a way on past the main button ("Not now"): the ghost one. */}
-          {wayInSaid ? <Button variant="ghost" label={IDENTITY_WORDS.open} onPress={() => router.replace('/')} /> : null}
+          {wayInSaid ? <Button variant="ghost" label={IDENTITY_WORDS.open} onPress={onOpen} /> : null}
         </>
       }>
       {head}

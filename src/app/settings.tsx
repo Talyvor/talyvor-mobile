@@ -7,6 +7,7 @@ import { COMPANY_ROW } from '@/company-words'
 import { HELP_ROW } from '@/help-words'
 import { PLAN_WORDS } from '@/plan-words'
 import { AccountSettings } from '@/components/account-settings'
+import { FindMeSettings } from '@/components/find-me'
 import { Icon, type IconName } from '@/components/icon'
 import { NoticeSettingsCard } from '@/components/notice-settings'
 import { UnlockSettings } from '@/components/unlock-settings'
@@ -25,6 +26,7 @@ import { fonts, useTheme } from '@/theme'
 // B61.39 — Help, first in its card, opens the Help chat (/help), as Pocket Live's Settings draws it.
 // B59.39 — Security keys, Team and roles (a Business's alone: not drawn at all for Personal), and each agent's Limits.
 // B61.60 — Plan, as the web's Settings lists it (suite B61.59): the plan Lens has the account on, by its name.
+// B61.94 — under the profile, the person's Talyvor name and who can find them, to pay them (components/find-me.tsx).
 
 const HELP_ROWS: readonly { to: '/help' | '/settings/help' | '/settings/data' | '/settings/close'; icon: IconName; title: string; line: string }[] = [
   { to: '/help', icon: 'chat', title: HELP_ROW.title, line: HELP_ROW.line },
@@ -91,6 +93,7 @@ export default function SettingsScreen() {
               />
             ) : null}
           </Card>
+          <FindMeSettings />
 
           {account ? <AccountSettings account={account} /> : null}
 

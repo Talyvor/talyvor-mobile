@@ -1,0 +1,446 @@
+[
+  {
+    "route": "/settings",
+    "screen": "p-settings",
+    "locked": true,
+    "live": "await P.unlock(); await P.push('sub', ['profile']);",
+    "words": "report",
+    "why": "B61.94 draws Settings, Profile's finding settings in the web's B61.93 words (the item's BUILD wins over sub:profile's one switch); listed under Words to confirm",
+    "name": "find-me",
+    "answers": {
+      "/auth/unlock": {},
+      "/api/people/finding": {
+        "name": "maya.lind",
+        "email": "maya@northwind.example",
+        "phone": "+447700900456",
+        "by_name": true,
+        "by_phone": true,
+        "by_email": false
+      }
+    },
+    "steps": [
+      [
+        "press",
+        "4"
+      ],
+      [
+        "press",
+        "1"
+      ],
+      [
+        "press",
+        "8"
+      ],
+      [
+        "press",
+        "2"
+      ],
+      [
+        "press",
+        "6"
+      ],
+      [
+        "press",
+        "3"
+      ]
+    ],
+    "scroll": "Let people find me by"
+  },
+  {
+    "route": "/settings",
+    "screen": "p-settings",
+    "locked": true,
+    "live": "await P.unlock(); await P.push('sub', ['profile']);",
+    "words": "report",
+    "why": "B61.94 draws Settings, Profile's finding settings in the web's B61.93 words (the item's BUILD wins over sub:profile's one switch); listed under Words to confirm",
+    "name": "find-me",
+    "answers": {
+      "/auth/unlock": {},
+      "/api/people/finding": {
+        "name": "maya.lind",
+        "email": "maya@northwind.example",
+        "phone": "+447700900456",
+        "by_name": true,
+        "by_phone": true,
+        "by_email": false
+      }
+    },
+    "steps": [
+      [
+        "press",
+        "4"
+      ],
+      [
+        "press",
+        "1"
+      ],
+      [
+        "press",
+        "8"
+      ],
+      [
+        "press",
+        "2"
+      ],
+      [
+        "press",
+        "6"
+      ],
+      [
+        "press",
+        "3"
+      ]
+    ],
+    "scroll": "Let people find me by",
+    "dark": true
+  },
+  {
+    "route": "/sign-in",
+    "screen": "p-signin",
+    "signedOut": true,
+    "account": "personal:hybrid",
+    "live": "await P.flow('su', { type: 'Personal', kind: 'Fiat', find: 'yes' }); await P.push('su', [7]);",
+    "words": "report",
+    "why": "B61.94 draws Pocket Live's su7, the sign-up question; listed under Words to confirm",
+    "name": "su7",
+    "answers": {
+      "/auth/me": {
+        "authenticated": false
+      },
+      "/auth/phone/start": {
+        "expires_at": "2099-01-01T00:00:00Z",
+        "sandbox": true,
+        "sandbox_code": "482913"
+      },
+      "/auth/phone/finish": {
+        "check": "chk_1",
+        "has_person": false,
+        "expires_at": "2099-01-01T00:00:00Z"
+      },
+      "/auth/phone/join": {
+        "token": "pocket-shots",
+        "expires_at": "2099-01-01T00:00:00Z",
+        "joining": true,
+        "signup_unfinished": true
+      },
+      "/auth/signup/account": {
+        "token": "pocket-shots",
+        "expires_at": "2099-01-01T00:00:00Z",
+        "account_id": "ws_northwind",
+        "created": true
+      },
+      "/api/verification": {
+        "level": "L2",
+        "meaning": "",
+        "live_level": "L0",
+        "live_meaning": "",
+        "checks": [
+          {
+            "level": "L2",
+            "subject": "person",
+            "method": "test",
+            "test": true,
+            "status": "completed",
+            "evidence_ref": "ev_2"
+          },
+          {
+            "level": "L1",
+            "subject": "contact",
+            "method": "test",
+            "test": true,
+            "status": "completed",
+            "evidence_ref": "ev_1"
+          }
+        ]
+      },
+      "/api/people/finding": {
+        "name": "",
+        "email": "maya@northwind.example",
+        "phone": "+447700900456",
+        "by_name": false,
+        "by_phone": false,
+        "by_email": false
+      }
+    },
+    "steps": [
+      [
+        "fill",
+        "Phone number",
+        "7700 900456"
+      ],
+      [
+        "press",
+        "Continue"
+      ],
+      [
+        "fill",
+        "Code",
+        "482913"
+      ],
+      [
+        "press",
+        "4"
+      ],
+      [
+        "press",
+        "1"
+      ],
+      [
+        "press",
+        "8"
+      ],
+      [
+        "press",
+        "2"
+      ],
+      [
+        "press",
+        "6"
+      ],
+      [
+        "press",
+        "3"
+      ],
+      [
+        "press",
+        "4"
+      ],
+      [
+        "press",
+        "1"
+      ],
+      [
+        "press",
+        "8"
+      ],
+      [
+        "press",
+        "2"
+      ],
+      [
+        "press",
+        "6"
+      ],
+      [
+        "press",
+        "3"
+      ],
+      [
+        "press",
+        "Personal. For you and your own agents."
+      ],
+      [
+        "fill",
+        "Your name",
+        "Maya Lind"
+      ],
+      [
+        "press",
+        "Country"
+      ],
+      [
+        "press",
+        "United Kingdom"
+      ],
+      [
+        "press",
+        "Continue"
+      ],
+      [
+        "press",
+        "Hybrid. Both side by side, under one set of rules."
+      ],
+      [
+        "press",
+        "Continue"
+      ],
+      [
+        "press",
+        "Not now"
+      ],
+      [
+        "press",
+        "Open the app"
+      ],
+      [
+        "press",
+        "Yes, find me. By name or phone number, to pay me."
+      ]
+    ]
+  },
+  {
+    "route": "/sign-in",
+    "screen": "p-signin",
+    "signedOut": true,
+    "account": "personal:hybrid",
+    "live": "await P.flow('su', { type: 'Personal', kind: 'Fiat', find: 'yes' }); await P.push('su', [7]);",
+    "words": "report",
+    "why": "B61.94 draws Pocket Live's su7, the sign-up question; listed under Words to confirm",
+    "name": "su7",
+    "answers": {
+      "/auth/me": {
+        "authenticated": false
+      },
+      "/auth/phone/start": {
+        "expires_at": "2099-01-01T00:00:00Z",
+        "sandbox": true,
+        "sandbox_code": "482913"
+      },
+      "/auth/phone/finish": {
+        "check": "chk_1",
+        "has_person": false,
+        "expires_at": "2099-01-01T00:00:00Z"
+      },
+      "/auth/phone/join": {
+        "token": "pocket-shots",
+        "expires_at": "2099-01-01T00:00:00Z",
+        "joining": true,
+        "signup_unfinished": true
+      },
+      "/auth/signup/account": {
+        "token": "pocket-shots",
+        "expires_at": "2099-01-01T00:00:00Z",
+        "account_id": "ws_northwind",
+        "created": true
+      },
+      "/api/verification": {
+        "level": "L2",
+        "meaning": "",
+        "live_level": "L0",
+        "live_meaning": "",
+        "checks": [
+          {
+            "level": "L2",
+            "subject": "person",
+            "method": "test",
+            "test": true,
+            "status": "completed",
+            "evidence_ref": "ev_2"
+          },
+          {
+            "level": "L1",
+            "subject": "contact",
+            "method": "test",
+            "test": true,
+            "status": "completed",
+            "evidence_ref": "ev_1"
+          }
+        ]
+      },
+      "/api/people/finding": {
+        "name": "",
+        "email": "maya@northwind.example",
+        "phone": "+447700900456",
+        "by_name": false,
+        "by_phone": false,
+        "by_email": false
+      }
+    },
+    "steps": [
+      [
+        "fill",
+        "Phone number",
+        "7700 900456"
+      ],
+      [
+        "press",
+        "Continue"
+      ],
+      [
+        "fill",
+        "Code",
+        "482913"
+      ],
+      [
+        "press",
+        "4"
+      ],
+      [
+        "press",
+        "1"
+      ],
+      [
+        "press",
+        "8"
+      ],
+      [
+        "press",
+        "2"
+      ],
+      [
+        "press",
+        "6"
+      ],
+      [
+        "press",
+        "3"
+      ],
+      [
+        "press",
+        "4"
+      ],
+      [
+        "press",
+        "1"
+      ],
+      [
+        "press",
+        "8"
+      ],
+      [
+        "press",
+        "2"
+      ],
+      [
+        "press",
+        "6"
+      ],
+      [
+        "press",
+        "3"
+      ],
+      [
+        "press",
+        "Personal. For you and your own agents."
+      ],
+      [
+        "fill",
+        "Your name",
+        "Maya Lind"
+      ],
+      [
+        "press",
+        "Country"
+      ],
+      [
+        "press",
+        "United Kingdom"
+      ],
+      [
+        "press",
+        "Continue"
+      ],
+      [
+        "press",
+        "Hybrid. Both side by side, under one set of rules."
+      ],
+      [
+        "press",
+        "Continue"
+      ],
+      [
+        "press",
+        "Not now"
+      ],
+      [
+        "press",
+        "Open the app"
+      ],
+      [
+        "press",
+        "Yes, find me. By name or phone number, to pay me."
+      ]
+    ],
+    "dark": true
+  }
+]
