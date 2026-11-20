@@ -122,7 +122,7 @@ jest.mock('../../modules/talyvor-keys', () => ({
 /** The BFF: a new workspace with no key yet, and the sign-up's session once the answers are in. */
 function mockBff(
   refuseSession = false,
-  { failPerson = false, pendingPerson = false, persona = false, personaLink = 'https://inquiry.withpersona.com/verify?inquiry-id=inq_1', level = 'L0', countries = undefined as string[] | undefined, refuseCountry = '', expiredPerson = false } = {},
+  { failPerson = false, pendingPerson = false, persona = false, personaLink = 'https://inquiry.withpersona.com/verify?inquiry-id=inq_1', level = 'L0', countries = undefined as string[] | undefined, refuseCountry = '', expiredPerson = false, finding = undefined as Record<string, unknown> | undefined } = {},
 ) {
   const sessions: Record<string, unknown>[] = []
   const devices: unknown[] = []
@@ -132,6 +132,7 @@ function mockBff(
   // B65.3 — a person check Lens sent to Persona, as Lens B65.1 records one that expired
   if (expiredPerson) checks.push({ level: 'L2', subject: 'person', status: 'failed', test: false, detail: 'Your ID check expired. Start it again.' })
   const reads: string[] = []
+  const findingChanges: unknown[] = []
   const verified: Record<string, unknown>[] = []
   const company = { company_name: '', registration_number: '', country: '', people: [] as { name: string; role: string; share_bps: number }[] }
   const record = () => ({ level, meaning: '', live_level: 'L0', live_meaning: '', checks: [...checks].reverse() })
@@ -157,6 +158,12 @@ function mockBff(
       return json({ id: 'pk_1', kind: 'device', name: r.name, created_at: '2026-11-16T12:00:00Z' }, 201)
     }
     if (route === 'GET /auth/me') return json({ workspace_id: 'ws_new' })
+    // B61.94 — how the person is found (BFF B61.93): no finding given is a BFF that does not answer it
+    if (route === 'GET /api/people/finding' && finding) return json(finding)
+    if (route === 'POST /api/people/finding' && finding) {
+      findingChanges.push(JSON.parse(init.body as string))
+      return json(Object.assign(finding, JSON.parse(init.body as string)))
+    }
     if (route === 'GET /api/workspace/name') return json({ id: 'ws_new', name: 'Maya Lind' })
     // B59.32 — the workspace is what sign-up asked for; only a Business has company details.
     const made = sessions[0] as { account_type?: string; money_kind?: string } | undefined
@@ -209,7 +216,7 @@ function mockBff(
     }
     level = 'L2'
   }
-  return { sessions, devices, verified, company, signInKeys, reads, passAtPersona }
+  return { sessions, devices, verified, company, signInKeys, reads, passAtPersona, findingChanges }
 }
 
 /** B61.27 — the door's sign-up session, as the keychain keeps it after the app opened again: no passcode in memory. */
@@ -709,5 +716,70 @@ describe('the countries Lens serves (B61.111)', () => {
     expect(within(field).getByText(COUNTRY_NOT_SERVED.error)).toBeTruthy()
     expect(screen.queryByText(WEB.identity.personFailed)).toBeNull()
     expect(bff.verified.map((v) => v.kind)).toEqual(['contact'])
+  })
+})
+
+describe('B61.94: the end of sign-up asks once whether people may find you, to pay you (Pocket Live su7)', () => {
+  const SU7 = {
+    question: 'Let people find you?',
+    line: 'So people can pay you by your name or phone number.',
+    yes: 'Yes, find me',
+    yesLine: 'By name or phone number, to pay me.',
+    no: 'No',
+    noLine: 'People need your account details to pay you.',
+    open: 'Open my account',
+  }
+  const nobodyFinds = () => ({ name: '', email: '', phone: '+447700900123', by_name: false, by_phone: false, by_email: false })
+
+  async function toTheQuestion(finding: Record<string, unknown>) {
+    const bff = mockBff(false, { finding })
+    await renderRouter('./src/app', { initialUrl: '/sign-up' })
+    await toStepFour('Personal', 'Maya Lind')
+    await fillYou()
+    await fireEvent.press(screen.getByRole('button', { name: WEB.identity.run }))
+    await fireEvent.press(await screen.findByRole('button', { name: WEB.identity.open }))
+    return bff
+  }
+
+  test('the question is asked in su7’s words, and Open my account waits for an answer', async () => {
+    const bff = await toTheQuestion(nobodyFinds())
+    expect(await screen.findByText(SU7.question)).toBeTruthy()
+    expect(screen.getByText(SU7.line)).toBeTruthy()
+    expect(screen.getByRole('radio', { name: `${SU7.yes}. ${SU7.yesLine}` }).props.accessibilityState).toMatchObject({ checked: false })
+    expect(screen.getByRole('radio', { name: `${SU7.no}. ${SU7.noLine}` }).props.accessibilityState).toMatchObject({ checked: false })
+    expect(screen.getByRole('button', { name: SU7.open }).props.accessibilityState).toMatchObject({ disabled: true })
+    expect(screen).toHavePathname('/sign-up')
+    expect(bff.findingChanges).toEqual([])
+  })
+
+  test('Yes, find me switches on finding by phone number, and by name once there is one, then opens Home', async () => {
+    const bff = await toTheQuestion({ ...nobodyFinds(), name: 'maya.lind' })
+    await fireEvent.press(await screen.findByRole('radio', { name: new RegExp(`^${SU7.yes}`) }))
+    await fireEvent.press(screen.getByRole('button', { name: SU7.open }))
+    await waitFor(() => expect(screen).toHavePathname('/'))
+    expect(bff.findingChanges).toEqual([{ by_name: true, by_phone: true }])
+  })
+
+  test('Yes with no Talyvor name yet switches on the phone number alone', async () => {
+    const bff = await toTheQuestion(nobodyFinds())
+    await fireEvent.press(await screen.findByRole('radio', { name: new RegExp(`^${SU7.yes}`) }))
+    await fireEvent.press(screen.getByRole('button', { name: SU7.open }))
+    await waitFor(() => expect(screen).toHavePathname('/'))
+    expect(bff.findingChanges).toEqual([{ by_phone: true }])
+  })
+
+  test('No switches nothing on and opens Home', async () => {
+    const bff = await toTheQuestion(nobodyFinds())
+    await fireEvent.press(await screen.findByRole('radio', { name: new RegExp(`^${SU7.no}\\.`) }))
+    await fireEvent.press(screen.getByRole('button', { name: SU7.open }))
+    await waitFor(() => expect(screen).toHavePathname('/'))
+    expect(bff.findingChanges).toEqual([])
+  })
+
+  test('a person who can already be found is not asked again', async () => {
+    const bff = await toTheQuestion({ ...nobodyFinds(), by_phone: true })
+    await waitFor(() => expect(screen).toHavePathname('/'))
+    expect(screen.queryByText(SU7.question)).toBeNull()
+    expect(bff.findingChanges).toEqual([])
   })
 })

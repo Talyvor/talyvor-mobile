@@ -583,6 +583,30 @@ export interface FoundPerson {
   shown_name: string
 }
 
+/** B61.94 — how the signed-in person is found on Talyvor, to be paid (BFF B61.93, Lens B61.32): each switch off until they
+ * turn it on. */
+export interface PersonFinding {
+  /** their Talyvor name, "" until they choose one */
+  name: string
+  /** the email Talyvor confirmed, "" with none */
+  email: string
+  phone: string
+  by_name: boolean
+  by_phone: boolean
+  by_email: boolean
+}
+
+/** A change to PersonFinding: what is left out stays as it is. */
+export type PersonFindingChange = Partial<Pick<PersonFinding, 'name' | 'by_name' | 'by_phone' | 'by_email'>>
+
+/** An answer that is not a person's settings is a failed read, never switches drawn from nothing. */
+function asFinding(v: PersonFinding): PersonFinding {
+  const strings = [v?.name, v?.email, v?.phone].every((x) => typeof x === 'string')
+  const switches = [v?.by_name, v?.by_phone, v?.by_email].every((x) => typeof x === 'boolean')
+  if (!strings || !switches) throw new BffError(502, '/api/people/finding', '')
+  return v
+}
+
 /** B61.34 — a payment to a person, exactly as it is asked a challenge for and then sent (BFF B61.33, Lens B61.32). */
 export interface PersonPaymentRequest {
   /** the Talyvor name, phone number or email typed */
@@ -1256,6 +1280,10 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     // B61.34 — Pay, to a person on Talyvor (BFF B61.33, Lens B61.32): find answers their shown name and nothing else, or
     // Lens's one answer for nobody found (404); a payment is signed over its own challenge and paid once under its key.
     findPerson: (to: string) => call<FoundPerson>('POST', '/api/money/people/find', { to }),
+    // B61.94 — how the signed-in person is found (BFF B61.93, Lens B61.32): their Talyvor name and the three switches, each
+    // off until they press it; a refused name comes back in Lens's words.
+    personFinding: () => call<PersonFinding>('GET', '/api/people/finding').then(asFinding),
+    changePersonFinding: (change: PersonFindingChange) => call<PersonFinding>('POST', '/api/people/finding', change).then(asFinding),
     personPaymentChallenge: (body: PersonPaymentRequest) =>
       call<{ challenge: string; allow_credentials: string[] | null }>('POST', '/api/money/people/pay/challenge', body),
     payPerson: (body: PersonPaymentRequest, assertion?: DeviceAssertion) =>
