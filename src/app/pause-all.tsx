@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react'
 import { View } from 'react-native'
 
 import { Icon } from '@/components/icon'
+import { SheetCover } from '@/components/lock-screen'
 import { StartEveryAgentButton, StartEveryAgentSheet, useSigns } from '@/components/start-every-agent'
 import { Body, Button, Headline, Screen, SheetTop, useLoad } from '@/components/ui'
 import { biometricName } from '@/keys'
@@ -41,45 +42,49 @@ export default function PauseAll() {
 
   // A failed read still lets the person pause: pausing is never what waits on a read.
   if (!data && !error) return <Screen>{null}</Screen>
+  // B50.57 — the phone draws this sheet above the app, over the app's own Cover, so it draws the Cover itself.
   return (
-    <Screen>
-      <SheetTop home="/" />
-      <View style={{ gap: 14, paddingTop: 40 }}>
-        <View style={{ alignSelf: 'center', width: 84, height: 84, borderRadius: 42, alignItems: 'center', justifyContent: 'center', backgroundColor: c.cloud }}>
-          <Icon name="pause" size={42} color={c.ink2} />
+    <View style={{ flex: 1 }}>
+      <Screen>
+        <SheetTop home="/" />
+        <View style={{ gap: 14, paddingTop: 40 }}>
+          <View style={{ alignSelf: 'center', width: 84, height: 84, borderRadius: 42, alignItems: 'center', justifyContent: 'center', backgroundColor: c.cloud }}>
+            <Icon name="pause" size={42} color={c.ink2} />
+          </View>
+          {allPaused ? (
+            <>
+              <Centred headline>Every agent is paused</Centred>
+              <Centred>Nothing they ask for is paid until you start them again.</Centred>
+              <StartEveryAgentButton signs={signs} onPress={() => setStarting(true)} />
+              <Button variant="secondary" label="Home" onPress={home} />
+            </>
+          ) : (
+            <>
+              <Centred headline>Pause every agent?</Centred>
+              <Centred>
+                {signs === false
+                  ? `Each agent’s next request or payment is refused until you start them again, with your passkey on the web, or with ${biometricName} once approving is on here again.`
+                  : `Each agent’s next request or payment is refused until you start them again. Starting them again needs ${biometricName}.`}
+              </Centred>
+              <Button variant="danger" label={busy ? 'Pausing…' : 'Pause every agent'} disabled={busy} onPress={() => void pause()} />
+              <Button variant="secondary" label="Not now" disabled={busy} onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} />
+            </>
+          )}
+          {said ? <Body style={{ color: c.danger, textAlign: 'center' }}>{said}</Body> : null}
         </View>
-        {allPaused ? (
-          <>
-            <Centred headline>Every agent is paused</Centred>
-            <Centred>Nothing they ask for is paid until you start them again.</Centred>
-            <StartEveryAgentButton signs={signs} onPress={() => setStarting(true)} />
-            <Button variant="secondary" label="Home" onPress={home} />
-          </>
-        ) : (
-          <>
-            <Centred headline>Pause every agent?</Centred>
-            <Centred>
-              {signs === false
-                ? `Each agent’s next request or payment is refused until you start them again, with your passkey on the web, or with ${biometricName} once approving is on here again.`
-                : `Each agent’s next request or payment is refused until you start them again. Starting them again needs ${biometricName}.`}
-            </Centred>
-            <Button variant="danger" label={busy ? 'Pausing…' : 'Pause every agent'} disabled={busy} onPress={() => void pause()} />
-            <Button variant="secondary" label="Not now" disabled={busy} onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} />
-          </>
-        )}
-        {said ? <Body style={{ color: c.danger, textAlign: 'center' }}>{said}</Body> : null}
-      </View>
-      <StartEveryAgentSheet
-        visible={starting}
-        signs={signs}
-        onClose={() => setStarting(false)}
-        onStarted={() => {
-          setStarting(false)
-          setPaused(false)
-          home()
-        }}
-      />
-    </Screen>
+        <StartEveryAgentSheet
+          visible={starting}
+          signs={signs}
+          onClose={() => setStarting(false)}
+          onStarted={() => {
+            setStarting(false)
+            setPaused(false)
+            home()
+          }}
+        />
+      </Screen>
+      <SheetCover />
+    </View>
   )
 }
 
