@@ -4,8 +4,7 @@ import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/te
 import { palettes } from '@/theme'
 
 // B59.9 — sign-up on the phone shows the web's words (talyvor-suite B59.8, apps/web/src/areas/auth/signupWords.ts at
-// a8240e4), asks who the account is for and the kind of money before the identity provider, sends both with the name to
-// the BFF's /auth/mobile/session, and its step 3 makes this phone's key with Face ID. B61.21: step 4 is the identity
+// a8240e4), asks who the account is for and the kind of money, and its step 3 makes this phone's key with Face ID. B61.21: step 4 is the identity
 // check (the web's B61.20), and the app opens on Home only once Lens's checks pass. B61.27: sign-up starts at the door,
 // so these steps finish a sign-up session (POST /auth/signup/account), and step 3 is Pocket Live's "Approve with Face ID".
 
@@ -84,12 +83,6 @@ jest.mock('expo-secure-store', () => ({
   deleteItemAsync: async (k: string) => void mockStore.delete(k),
 }))
 jest.mock('expo-font', () => ({ ...jest.requireActual('expo-font'), useFonts: () => [true, null] }))
-jest.mock('expo-auth-session', () => ({
-  makeRedirectUri: () => 'talyvor://auth',
-  useAutoDiscovery: () => ({ authorizationEndpoint: 'https://idp/auth', tokenEndpoint: 'https://idp/token' }),
-  useAuthRequest: () => [{ codeVerifier: 'verifier' }, null, async () => ({ type: 'success', params: { code: 'code-1' } })],
-  exchangeCodeAsync: async () => ({ idToken: 'id-token-1' }),
-}))
 jest.mock('expo-crypto', () => ({
   CryptoDigestAlgorithm: { SHA256: 'SHA-256' },
   digest: async (_: string, b: Uint8Array) => Uint8Array.from(jest.requireActual('node:crypto').createHash('sha256').update(b).digest()).buffer,
@@ -109,7 +102,7 @@ jest.mock('expo-web-browser', () => ({
     return { type: 'dismiss' }
   },
 }))
-jest.mock('../config', () => ({ config: { bffUrl: 'https://bff.test', oidcIssuer: 'https://idp', oidcClientId: 'mobile' } }))
+jest.mock('../config', () => ({ config: { bffUrl: 'https://bff.test' } }))
 
 /** The phone's key store: Face ID passes, so the key it makes signs. */
 const mockPhone = { made: 0 }

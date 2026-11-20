@@ -13,7 +13,7 @@ jest.mock('expo-secure-store', () => ({
 }))
 jest.mock('expo-font', () => ({ ...jest.requireActual('expo-font'), useFonts: () => [true, null] }))
 jest.mock('expo-crypto', () => ({ randomUUID: () => 'uuid-1' }))
-jest.mock('../config', () => ({ config: { bffUrl: 'https://bff.test', oidcIssuer: 'https://idp', oidcClientId: 'mobile' } }))
+jest.mock('../config', () => ({ config: { bffUrl: 'https://bff.test' } }))
 const mockPhone = { reasons: [] as string[] }
 jest.mock('../../modules/talyvor-keys', () => ({
   isAvailable: () => true,

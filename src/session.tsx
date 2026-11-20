@@ -1,4 +1,4 @@
-import { BffError, createBffClient, type AccountMove, type BffClient, type DoorSession, type MobileSession, type OpenAccountAnswers, type SignupAnswers } from '@talyvor/bff-client'
+import { BffError, createBffClient, type AccountMove, type BffClient, type DoorSession, type MobileSession, type OpenAccountAnswers } from '@talyvor/bff-client'
 import * as SecureStore from 'expo-secure-store'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { AppState } from 'react-native'
@@ -27,8 +27,6 @@ interface Session {
   client: BffClient
   /** USD per LXC once read, for formatLXC; null until then, or while Lens does not supply it. */
   peg: number | null
-  /** Trades an ID token for a BFF session and keeps it in the phone's keychain; sign-up sends its answers with it. */
-  signIn: (idToken: string, signup?: SignupAnswers) => Promise<void>
   signOut: () => Promise<void>
   /** B61.10 — moves the session to another of the person's accounts; every screen then reads that account. */
   switchAccount: (accountID: string) => Promise<void>
@@ -39,16 +37,12 @@ interface Session {
   signInWithDoor: (s: DoorSession, passcode?: string) => Promise<void>
   /** B61.27 — the sign-up session chose its account: the session the BFF answered replaces it. */
   finishSignup: (answers: OpenAccountAnswers) => Promise<void>
-  /** B61.27 — a Google sign-in took a number and a passcode: from now on it locks like any other. */
-  movedFromGoogle: (s: MobileSession) => Promise<void>
   /** B61.27 — the passcode a person just chose, once, for the Face ID step; null once used, or after the app restarted. */
   takeNewPasscode: () => string | null
   /** B61.27 — a session the BFF locks (the door's), so the app asks for the passcode or Face ID. */
   person: boolean
   /** B61.27 — a sign-up session that may only choose its account. */
   joining: boolean
-  /** B61.27 — a Google sign-in still to take a number and a passcode. */
-  phoneNeeded: boolean
   /** B61.27 — the app is locked: nothing of the account is drawn until the passcode or Face ID opens it. */
   locked: boolean
   /** B61.27 — the app is not in front: the app switcher's picture is the logo. */
@@ -64,7 +58,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false)
   const [person, setPerson] = useState(false)
   const [joining, setJoining] = useState(false)
-  const [phoneNeeded, setPhoneNeeded] = useState(false)
   const [locked, setLocked] = useState(false)
   const [covered, setCovered] = useState(false)
   const newPasscode = useRef<string | null>(null)
@@ -83,12 +76,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setToken(s.token)
   }, [])
 
-  // A Google sign-in with no number yet is asked for one (the move, suite B61.25), once the BFF says so.
-  const askMove = useCallback(async (t: string) => {
-    const me = await createBffClient(config.bffUrl, () => t).authMe().catch(() => null)
-    setPhoneNeeded(!!me?.phone_needed)
-  }, [])
-
   useEffect(() => {
     SecureStore.getItemAsync(KEY)
       .then(async (stored) => {
@@ -101,10 +88,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           // Every time the app opens it asks for the passcode or Face ID, and the BFF's lock shuts with it.
           setLocked(true)
           await createBffClient(config.bffUrl, () => s.token).lock('closed').catch(() => undefined)
-        } else await askMove(s.token)
+        }
       })
       .finally(() => setReady(true))
-  }, [askMove])
+  }, [])
 
   // Away: the BFF is told, and after 2 minutes the app asks again. Not in front: the app switcher shows the logo.
   const awayAt = useRef<number | null>(null)
@@ -124,19 +111,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return () => sub.remove()
   }, [client, token, person])
 
-  const signIn = useCallback(
-    async (idToken: string, signup?: SignupAnswers) => {
-      const s = await client.signIn(idToken, signup)
-      await SecureStore.setItemAsync(KEY, JSON.stringify(s))
-      await recheckPhoneKey(createBffClient(config.bffUrl, () => s.token)).catch((err) => console.warn('device: not checked', err))
-      await askMove(s.token)
-      setPerson(false)
-      setJoining(false)
-      setLocked(false)
-      setToken(s.token)
-    },
-    [client, askMove],
-  )
   const signOut = useCallback(async () => {
     await SecureStore.deleteItemAsync(KEY)
     await clearWidget()
@@ -145,7 +119,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setLocked(false)
     setPerson(false)
     setJoining(false)
-    setPhoneNeeded(false)
     setToken(null)
   }, [])
 
@@ -165,13 +138,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       await keep({ token: s.token, expires_at: s.expires_at, person: true, joining: false })
     },
     [client, keep],
-  )
-  const movedFromGoogle = useCallback(
-    async (s: MobileSession) => {
-      setPhoneNeeded(false)
-      await keep({ token: s.token, expires_at: s.expires_at, person: true })
-    },
-    [keep],
   )
   const takeNewPasscode = useCallback(() => {
     const p = newPasscode.current
@@ -216,23 +182,20 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       signedIn: token !== null,
       client,
       peg,
-      signIn,
       signOut,
       switchAccount,
       openAccount,
       signInWithDoor,
       finishSignup,
-      movedFromGoogle,
       takeNewPasscode,
       person,
       joining,
-      phoneNeeded,
       locked,
       covered,
       unlock,
       unlockFaceID,
     }),
-    [ready, token, client, peg, signIn, signOut, switchAccount, openAccount, signInWithDoor, finishSignup, movedFromGoogle, takeNewPasscode, person, joining, phoneNeeded, locked, covered, unlock, unlockFaceID],
+    [ready, token, client, peg, signOut, switchAccount, openAccount, signInWithDoor, finishSignup, takeNewPasscode, person, joining, locked, covered, unlock, unlockFaceID],
   )
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
 }

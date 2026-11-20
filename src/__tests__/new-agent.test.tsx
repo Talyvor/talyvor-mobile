@@ -14,7 +14,7 @@ jest.mock('expo-secure-store', () => ({
 }))
 jest.mock('expo-font', () => ({ ...jest.requireActual('expo-font'), useFonts: () => [true, null] }))
 jest.mock('expo-crypto', () => ({ ...jest.requireActual('expo-crypto'), randomUUID: () => 'uuid-1' }))
-jest.mock('../config', () => ({ config: { bffUrl: 'https://bff.test', oidcIssuer: 'https://idp', oidcClientId: 'mobile' } }))
+jest.mock('../config', () => ({ config: { bffUrl: 'https://bff.test' } }))
 const mockSign = jest.fn(async () => 'sig')
 jest.mock('../../modules/talyvor-keys', () => ({ isAvailable: () => true, sign: (...a: unknown[]) => mockSign(...(a as [])) }))
 

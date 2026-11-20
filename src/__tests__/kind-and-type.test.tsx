@@ -13,7 +13,7 @@ jest.mock('expo-secure-store', () => ({
   deleteItemAsync: async (k: string) => void mockStore.delete(k),
 }))
 jest.mock('expo-font', () => ({ ...jest.requireActual('expo-font'), useFonts: () => [true, null] }))
-jest.mock('../config', () => ({ config: { bffUrl: 'https://bff.test', oidcIssuer: 'https://idp', oidcClientId: 'mobile' } }))
+jest.mock('../config', () => ({ config: { bffUrl: 'https://bff.test' } }))
 jest.mock('../../modules/talyvor-keys', () => ({ isAvailable: () => true, sign: async () => '', deleteKey: async () => undefined }))
 
 /** The web's strings, typed from suite e24f282 (apps/web/src/areas/lens/agentBankApi.ts and Pay.tsx): the phone is

@@ -18,8 +18,7 @@
     "name": "su1",
     "answers": {
       "/auth/me": {
-        "authenticated": false,
-        "google_signin": true
+        "authenticated": false
       },
       "/auth/phone/start": {
         "expires_at": "2099-01-01T00:00:00Z",
@@ -49,8 +48,7 @@
     "name": "su2",
     "answers": {
       "/auth/me": {
-        "authenticated": false,
-        "google_signin": true
+        "authenticated": false
       },
       "/auth/phone/start": {
         "expires_at": "2099-01-01T00:00:00Z",
@@ -149,8 +147,7 @@
     "name": "su1",
     "answers": {
       "/auth/me": {
-        "authenticated": false,
-        "google_signin": true
+        "authenticated": false
       },
       "/auth/phone/start": {
         "expires_at": "2099-01-01T00:00:00Z",
@@ -181,8 +178,7 @@
     "name": "su2",
     "answers": {
       "/auth/me": {
-        "authenticated": false,
-        "google_signin": true
+        "authenticated": false
       },
       "/auth/phone/start": {
         "expires_at": "2099-01-01T00:00:00Z",

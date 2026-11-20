@@ -14,7 +14,7 @@ jest.mock('expo-secure-store', () => ({
 }))
 jest.mock('expo-font', () => ({ ...jest.requireActual('expo-font'), useFonts: () => [true, null] }))
 jest.mock('expo-crypto', () => ({ ...jest.requireActual('expo-crypto'), randomUUID: () => 'uuid-1' }))
-jest.mock('../config', () => ({ config: { bffUrl: 'https://bff.test', oidcIssuer: 'https://idp', oidcClientId: 'mobile' } }))
+jest.mock('../config', () => ({ config: { bffUrl: 'https://bff.test' } }))
 jest.mock('../../modules/talyvor-keys', () => ({ isAvailable: () => true, sign: async () => 'sig' }))
 
 const agent = { id: 'ag_1', name: 'Research', colour: 'cobalt', balance_ulxc: 0, spent_ulxc: 0, created_at: '2026-10-01T00:00:00Z', wallet_kind: 'fiat', fiat_currency: 'GBP' }

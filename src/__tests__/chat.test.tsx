@@ -18,7 +18,7 @@ jest.mock('expo-crypto', () => ({
   randomUUID: () => 'uuid-1',
 }))
 jest.mock('../config', () => ({
-  config: { bffUrl: 'https://bff.test', oidcIssuer: 'https://idp', oidcClientId: 'mobile', heyTalyKeyword: 'hey-taly_ios.ppn' },
+  config: { bffUrl: 'https://bff.test', heyTalyKeyword: 'hey-taly_ios.ppn' },
 }))
 
 /** Porcupine on the phone: `hear()` is the engine recognising the wake phrase in what the microphone picks up. */

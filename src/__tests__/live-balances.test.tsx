@@ -12,7 +12,7 @@ jest.mock('expo-secure-store', () => ({
   deleteItemAsync: async (k: string) => void mockStore.delete(k),
 }))
 jest.mock('expo-font', () => ({ ...jest.requireActual('expo-font'), useFonts: () => [true, null] }))
-jest.mock('../config', () => ({ config: { bffUrl: 'https://bff.test', oidcIssuer: 'https://idp', oidcClientId: 'mobile' } }))
+jest.mock('../config', () => ({ config: { bffUrl: 'https://bff.test' } }))
 jest.mock('../../modules/talyvor-keys', () => ({ isAvailable: () => true, sign: async () => 'sig', deleteKey: async () => undefined }))
 
 const accounts = [{ id: 'acc_gbp', currency: 'GBP', purpose: 'company', status: 'open', name: '', balance_minor: 150, test_minor: 150, live_minor: 0 }]

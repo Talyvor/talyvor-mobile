@@ -1,10 +1,10 @@
 [
   { "route": "/sign-in", "screen": "p-signin", "signedOut": true, "words": "report", "why": "B61.27 draws Pocket Live's su0 (design/pocket-live), not Pocket 4.1's p-signin", "name": "door" },
   { "route": "/sign-in", "screen": "p-signin", "signedOut": true, "words": "report", "why": "Pocket Live su1", "name": "code",
-    "answers": { "/auth/me": { "authenticated": false, "google_signin": true }, "/auth/phone/start": { "expires_at": "2099-01-01T00:00:00Z", "sandbox": true, "sandbox_code": "482913" } },
+    "answers": { "/auth/me": { "authenticated": false }, "/auth/phone/start": { "expires_at": "2099-01-01T00:00:00Z", "sandbox": true, "sandbox_code": "482913" } },
     "steps": [["fill", "Phone number", "7700 900456"], ["press", "Continue"]] },
   { "route": "/sign-in", "screen": "p-signin", "signedOut": true, "words": "report", "why": "Pocket Live su2", "name": "choose",
-    "answers": { "/auth/me": { "authenticated": false, "google_signin": true }, "/auth/phone/start": { "expires_at": "2099-01-01T00:00:00Z", "sandbox": true, "sandbox_code": "482913" }, "/auth/phone/finish": { "check": "chk_1", "has_person": false, "expires_at": "2099-01-01T00:00:00Z" } },
+    "answers": { "/auth/me": { "authenticated": false }, "/auth/phone/start": { "expires_at": "2099-01-01T00:00:00Z", "sandbox": true, "sandbox_code": "482913" }, "/auth/phone/finish": { "check": "chk_1", "has_person": false, "expires_at": "2099-01-01T00:00:00Z" } },
     "steps": [["fill", "Phone number", "7700 900456"], ["press", "Continue"], ["fill", "Code", "482913"]] },
   { "route": "/", "screen": "p-signin", "locked": true, "words": "report", "why": "Pocket Live lock", "name": "lock" },
   { "route": "/", "screen": "p-signin", "locked": true, "dark": true, "words": "report", "why": "Pocket Live lock", "name": "lock" }

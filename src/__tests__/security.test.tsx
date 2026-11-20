@@ -36,13 +36,7 @@ jest.mock('expo-secure-store', () => ({
 }))
 jest.mock('expo-font', () => ({ ...jest.requireActual('expo-font'), useFonts: () => [true, null] }))
 jest.mock('expo-crypto', () => ({ randomUUID: () => 'uuid-1' }))
-jest.mock('../config', () => ({ config: { bffUrl: 'https://bff.test', oidcIssuer: 'https://idp', oidcClientId: 'mobile' } }))
-jest.mock('expo-auth-session', () => ({
-  makeRedirectUri: () => 'talyvor://auth',
-  useAutoDiscovery: () => ({ authorizationEndpoint: 'https://idp/auth', tokenEndpoint: 'https://idp/token' }),
-  useAuthRequest: () => [{ codeVerifier: 'verifier' }, null, async () => ({ type: 'success', params: { code: 'code-1' } })],
-  exchangeCodeAsync: async () => ({ idToken: 'id-token-1' }),
-}))
+jest.mock('../config', () => ({ config: { bffUrl: 'https://bff.test' } }))
 
 const request = {
   id: 'pr_1',
@@ -59,7 +53,9 @@ const request = {
 function mockBff() {
   const calls: { method: string; path: string }[] = []
   const routes: Record<string, unknown> = {
-    'POST /auth/mobile/session': { token: 'session-1', expires_at: '2099-01-01T00:00:00Z' },
+    'POST /auth/phone/start': { expires_at: '2099-01-01T00:00:00Z', sandbox: true, sandbox_code: '482913' },
+    'POST /auth/phone/finish': { check: 'chk_1', has_person: true, expires_at: '2099-01-01T00:00:00Z' },
+    'POST /auth/phone/signin': { signed_in: true, signup_unfinished: false, account_id: 'ws_1', token: 'session-1', expires_at: '2099-01-01T00:00:00Z' },
     'GET /api/agents': { workspace_balance_ulxc: 0, allocated_ulxc: 0, unallocated_ulxc: 0, spent_ulxc: 0, agents: [{ id: 'ag_1', name: 'Researcher', balance_ulxc: 0, spent_ulxc: 0, created_at: '2026-10-01T00:00:00Z' }] },
     'GET /api/agents/approvals': { approvals: [{ id: 'apr_1', agent_id: 'ag_1', amount_ulxc: 2_000_000, model: '', payee: { kind: 'listing', id: 'l_1', name: 'GPU hour' }, status: 'pending', created_at: '2026-10-28T08:00:00Z' }] },
     'GET /api/money/payment-requests?status=pending_approval': { requests: [request] },
@@ -92,7 +88,11 @@ describe('storage', () => {
 
     mockBff()
     await renderRouter('./src/app', { initialUrl: '/' })
-    await fireEvent.press(await screen.findByText('Continue with Google'))
+    await fireEvent.changeText(await screen.findByLabelText('Phone number'), '7700 900456')
+    await fireEvent.press(screen.getByRole('button', { name: 'Continue' }))
+    await fireEvent.changeText(await screen.findByLabelText('Code'), '482913')
+    await screen.findByText('Enter your passcode')
+    for (const d of '418263') await fireEvent.press(screen.getByRole('button', { name: d }))
     await waitFor(() => expect(JSON.parse(mockStore.get('talyvor.session')!).token).toBe('session-1'))
   })
 
@@ -179,9 +179,9 @@ describe('the bundle', () => {
 
   test('only public settings are built in', () => {
     const names = new Set(appSources.flatMap((f) => [...readFileSync(f, 'utf8').matchAll(/EXPO_PUBLIC_\w+/g)].map((m) => m[0])))
-    // Each is safe to ship in the app: addresses, a public OIDC client, the wake word's file, and the test key's flag,
+    // Each is safe to ship in the app: the BFF's address, the wake word's file, and the test key's flag,
     // which a release build refuses. No vendor key: "Hey Taly"'s Picovoice key comes from the BFF after sign-in (B58.11).
-    expect([...names].sort()).toEqual(['EXPO_PUBLIC_BFF_URL', 'EXPO_PUBLIC_HEY_TALY_KEYWORD', 'EXPO_PUBLIC_OIDC_CLIENT_ID', 'EXPO_PUBLIC_OIDC_ISSUER', 'EXPO_PUBLIC_TALYVOR_TEST_KEYS'])
+    expect([...names].sort()).toEqual(['EXPO_PUBLIC_BFF_URL', 'EXPO_PUBLIC_HEY_TALY_KEYWORD', 'EXPO_PUBLIC_TALYVOR_TEST_KEYS'])
   })
 })
 
@@ -240,7 +240,7 @@ describe('the app switcher', () => {
   test('not signed in, nothing is hidden', async () => {
     mockBff()
     await renderRouter('./src/app', { initialUrl: '/' })
-    await screen.findByText('Continue with Google')
+    await screen.findByLabelText('Phone number')
     expect(ScreenCapture.preventScreenCaptureAsync).not.toHaveBeenCalled()
   })
 })

@@ -22,11 +22,9 @@ Build-time settings (`EXPO_PUBLIC_*`):
 | variable | default | |
 | --- | --- | --- |
 | `EXPO_PUBLIC_BFF_URL` | `https://app.talyvor.com` | the BFF the app talks to |
-| `EXPO_PUBLIC_OIDC_ISSUER` | `https://accounts.google.com` | the identity provider |
-| `EXPO_PUBLIC_OIDC_CLIENT_ID` | empty | the provider's client for the phone app; sign-in stays off until it is set |
 
-Sign-in runs in the phone's browser with PKCE; the app sends the ID token to the BFF's `POST /auth/mobile/session`
-and keeps the session it answers in the keychain.
+Sign-in is the door: the phone number, the texted code, then the passcode, Face ID or a passkey. The app keeps the
+session the BFF answers in the keychain.
 
 Top-ups stay on the web: the app sells nothing and links to no purchase.
 

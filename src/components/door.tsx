@@ -16,7 +16,6 @@ import { fonts, useTheme } from '@/theme'
 // B61.27 — the front door on the phone, as the web's (suite B61.25 and B61.26): the phone number, the texted code
 // (filled from the text where the phone offers it), then the passcode for a known number, or a new one chosen twice for
 // a new number, which goes on to sign-up's steps. Nothing says whether a number has an account until the code is right.
-// `move` is a Google sign-in taking a number and a passcode, once (the BFF's /auth/google/move).
 // B57.185 — drawn as Pocket Live's `su0` to `su2`: the country beside the number in one row, the code's six dots with
 // the Sandbox code in a note, and the passcode's dots under the words with the number pad at the foot. The code is
 // still typed with the phone's own keyboard under the dots, so the phone can fill it from the text.
@@ -53,8 +52,8 @@ function Top({ onBack }: { onBack?: () => void }) {
   )
 }
 
-export function Door({ move, google }: { move?: boolean; google?: () => void }) {
-  const { client, signInWithDoor, movedFromGoogle } = useSession()
+export function Door() {
+  const { client, signInWithDoor } = useSession()
   const { c } = useTheme()
   const [stage, setStage] = useState<Stage>('phone')
   const [dial, setDial] = useState('+44')
@@ -115,7 +114,6 @@ export function Door({ move, google }: { move?: boolean; google?: () => void }) 
 
   const enter = (passcode: string) =>
     run(async () => {
-      if (move) return movedFromGoogle(await client.googleMove(check, passcode))
       await signInWithDoor(await client.phoneSignIn(check, passcode))
     })
 
@@ -128,7 +126,6 @@ export function Door({ move, google }: { move?: boolean; google?: () => void }) 
         return
       }
       try {
-        if (move) return movedFromGoogle(await client.googleMove(check, passcode))
         await signInWithDoor(await client.phoneJoin(check, passcode), passcode)
       } catch (err) {
         // A passcode Lens finds too easy to guess is chosen again; its words say why.
@@ -151,7 +148,6 @@ export function Door({ move, google }: { move?: boolean; google?: () => void }) 
           <>
             {error}
             <Button primary label={DOOR_WORDS.phone.go} disabled={busy || number.replace(/\D/g, '').length < 6} onPress={() => void start()} />
-            {google && !move ? <Button variant="ghost" small label={DOOR_WORDS.google} disabled={busy} onPress={google} /> : null}
           </>
         }>
         <Top />

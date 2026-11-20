@@ -28,7 +28,6 @@ export const DOOR_WORDS = {
     mail: 'I forgot my Talyvor passcode and need help to get back in.',
     back: 'Back to the passcode',
   },
-  google: 'Continue with Google',
   failed: 'That did not work just now. Try again.',
 } as const
 

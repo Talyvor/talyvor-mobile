@@ -843,18 +843,15 @@ export interface DeviceRegistration {
   attestation: string
 }
 
-/** B61.27 — what GET /auth/me says beside the workspace: a Google sign-in still to take a number and a passcode, a
- * sign-up still to choose its account, and whether Google sign-in is offered at all. */
+/** B61.27 — what GET /auth/me says beside the workspace: whether a sign-up has still to choose its account. */
 export interface AuthMe {
   workspace_id: string
   authenticated?: boolean
-  phone_needed?: boolean
   signup_unfinished?: boolean
-  google_signin?: boolean
 }
 
-/** B59.9 — what sign-up asks before the identity provider (suite B59.8): the BFF sends them to Lens when it makes the
- * workspace, and refuses a set that lacks one. Signing in sends none. */
+/** B59.9 — what sign-up asks (suite B59.8): the BFF sends them to Lens when it makes the workspace, and refuses a set
+ * that lacks one. Signing in sends none. */
 export interface SignupAnswers {
   account_type: 'personal' | 'business'
   money_kind: 'fiat' | 'stablecoin' | 'hybrid'
@@ -1075,9 +1072,6 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
       if (usdPerLXC === null) usdPerLXC = (await call<{ usd_per_lxc?: number }>('GET', '/api/lxc/topup-options').catch(() => null))?.usd_per_lxc ?? null
       return usdPerLXC
     },
-    /** Trades the identity provider's ID token, got in the system browser with PKCE, for a BFF session; with sign-up's
-     * answers when the person is signing up. */
-    signIn: (idToken: string, signup?: SignupAnswers) => call<MobileSession>('POST', '/auth/mobile/session', { id_token: idToken, ...signup }),
     /** B61.27 — the door (suite B61.25): a code texted to the number; in Sandbox the code itself, for the screen. */
     phoneStart: (phone: string) => call<{ expires_at: string; sandbox: boolean; sandbox_code?: string }>('POST', '/auth/phone/start', { phone }),
     /** The code: a check, and whether a person holds the number. */
@@ -1095,8 +1089,6 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
         country: answers.country,
         ...(answers.registration_number ? { registration_number: answers.registration_number } : {}),
       }),
-    /** A Google sign-in takes a number and a passcode, once: from then the person signs in the new way. */
-    googleMove: (check: string, passcode: string) => call<MobileSession & { moved: boolean }>('POST', '/auth/google/move', { check, passcode }),
     /** The challenge a new sign-in key is made over; `device` makes it the account's approval key's challenge too. */
     keyRegisterChallenge: () => call<{ challenge: string }>('POST', '/auth/passkey/register/challenge', { kind: 'device' }),
     /** Keeps this phone's key as the person's sign-in key; the passcode is the proof Lens asks for once one is set. */
@@ -1109,7 +1101,7 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     /** Opens the lock with the passcode, checked by Lens, or the sign-in key's signature over unlockChallenge's. */
     unlock: async (proof: { passcode: string } | DeviceAssertion) =>
       void (await send('POST', '/auth/unlock', JSON.stringify(proof), { 'Content-Type': 'application/json' })),
-    /** B61.27 — who is signed in, and what the door still asks of them; signed out, whether Google is offered. */
+    /** B61.27 — who is signed in, and what the door still asks of them. */
     authMe: () => call<AuthMe>('GET', '/auth/me'),
     /** B61.10 — the person's accounts, the session's marked current. */
     accounts: async () => (await call<{ accounts: PersonAccount[] | null }>('GET', '/api/accounts')).accounts ?? [],
