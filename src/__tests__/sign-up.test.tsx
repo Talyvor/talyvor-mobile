@@ -40,6 +40,8 @@ const WEB = {
   identity: {
     checks: ['Email and phone', 'Who you are', 'Your company'],
     labels: { email: 'Email', phone: 'Phone number', legalName: 'Full name', dateOfBirth: 'Date of birth', country: 'Country you live in' },
+    // B61.46 (suite PR #1154 at c22e1d39, apps/web/src/areas/auth/signupWords.ts): the home address, sent with the identity check.
+    address: { title: 'Home address', line1: 'Address line 1', line2: 'Address line 2', town: 'Town or city', postcode: 'Postcode' },
     run: 'Confirm who I am',
     passedSandbox: 'Passed in Sandbox',
     notPassed: 'Not passed',
@@ -60,7 +62,7 @@ const WEB = {
     again: 'Start again',
     notYet: 'Not checked yet',
     expired: 'Your identity check expired. Start it again.',
-    personFailed: 'We couldn’t confirm who you are. Check your full name, date of birth and country, and try again.',
+    personFailed: 'We couldn’t confirm who you are. Check your full name, date of birth, home address and country, and try again.',
   },
 }
 
@@ -245,13 +247,17 @@ async function toStepFour(type: 'Personal' | 'Business', name: string) {
   expect(await screen.findByText(WEB.steps[3])).toBeTruthy()
 }
 
-/** The identity check's fields: email and phone, full name, date of birth and the country lived in. */
+/** The identity check's fields: email and phone, full name, date of birth, the home address and the country lived in. */
 async function fillYou() {
   const L = WEB.identity.labels
+  const A = WEB.identity.address
   await fireEvent.changeText(await screen.findByLabelText(L.email), 'maya@example.test')
   await fireEvent.changeText(screen.getByLabelText(L.phone), '+447700900123')
   await fireEvent.changeText(screen.getByLabelText(L.legalName), 'Maya Lind')
   await fireEvent.changeText(screen.getByLabelText(L.dateOfBirth), '1990-04-21')
+  await fireEvent.changeText(screen.getByLabelText(A.line1), '1 High Street')
+  await fireEvent.changeText(screen.getByLabelText(A.town), 'London')
+  await fireEvent.changeText(screen.getByLabelText(A.postcode), 'N1 9GU')
   await fireEvent.press(screen.getByRole('button', { name: L.country }))
   await fireEvent.press(screen.getAllByRole('button', { name: 'United Kingdom' }).at(-1)!)
 }
@@ -428,7 +434,15 @@ test('B61.21: a Personal sign-up ends on the identity step and reaches Home only
   expect(await screen.findByText(WEB.identity.done)).toBeTruthy()
   expect(bff.verified).toEqual([
     { kind: 'contact', email: 'maya@example.test', phone: '+447700900123' },
-    { kind: 'identity', name: 'Maya Lind', country: 'GB', date_of_birth: '1990-04-21', return_to: 'phone' },
+    // B61.47 — the home address goes whole with the identity check (Lens B61.45); the empty second line is left out.
+    {
+      kind: 'identity',
+      name: 'Maya Lind',
+      country: 'GB',
+      date_of_birth: '1990-04-21',
+      address: { lines: ['1 High Street'], town: 'London', postcode: 'N1 9GU', country: 'GB' },
+      return_to: 'phone',
+    },
   ])
   expect(screen.getAllByText(WEB.identity.passedSandbox)).toHaveLength(2)
   // B61.118 — once passed, no line about finishing the check later
@@ -598,11 +612,23 @@ test('B65.3: an expired check says so and offers Start again, which starts the c
   expect(foot.queryByRole('button', { name: WEB.identity.run })).toBeNull()
   await fireEvent.changeText(screen.getByLabelText(WEB.identity.labels.legalName), 'Maya Lind')
   await fireEvent.changeText(screen.getByLabelText(WEB.identity.labels.dateOfBirth), '1990-04-21')
+  await fireEvent.changeText(screen.getByLabelText(WEB.identity.address.line1), '1 High Street')
+  await fireEvent.changeText(screen.getByLabelText(WEB.identity.address.town), 'London')
+  await fireEvent.changeText(screen.getByLabelText(WEB.identity.address.postcode), 'N1 9GU')
   await fireEvent.press(screen.getByRole('button', { name: WEB.identity.labels.country }))
   await fireEvent.press(screen.getAllByRole('button', { name: 'United Kingdom' }).at(-1)!)
   await fireEvent.press(foot.getByRole('button', { name: WEB.identity.again }))
   expect(await foot.findByRole('button', { name: WEB.identity.verify })).toBeTruthy()
-  expect(bff.verified).toEqual([{ kind: 'identity', name: 'Maya Lind', country: 'GB', date_of_birth: '1990-04-21', return_to: 'phone' }])
+  expect(bff.verified).toEqual([
+    {
+      kind: 'identity',
+      name: 'Maya Lind',
+      country: 'GB',
+      date_of_birth: '1990-04-21',
+      address: { lines: ['1 High Street'], town: 'London', postcode: 'N1 9GU', country: 'GB' },
+      return_to: 'phone',
+    },
+  ])
   expect(screen.queryByText(WEB.identity.expired)).toBeNull()
 })
 

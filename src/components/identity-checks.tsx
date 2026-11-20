@@ -20,6 +20,9 @@ import { fonts, useTheme } from '@/theme'
 // from the company details B59.32 saved) and shows each as it passes. No document is asked for: in Sandbox the details are
 // checked alone, and the note says so.
 //
+// B61.47 — the person gives their home address with the identity check, as the web's B61.46 has it (talyvor-suite PR #1154):
+// Lens B61.45 passes it to the provider and keeps none of it; its country is the one they live in.
+//
 // A Personal account is confirmed at L2, a Business at L3. Until then Home says so in one sentence (IdentityGate).
 //
 // B57.174 — drawn as Pocket Live's su5 (design/pocket-live, 15 Nov): the line, the fields with no card round them, the
@@ -127,6 +130,10 @@ interface Draft {
   phone: string
   name: string
   dob: string
+  line1: string
+  line2: string
+  town: string
+  postcode: string
   country: string
 }
 
@@ -138,13 +145,20 @@ function missing(d: Draft, level: number): Errors {
   if (level < 1 && !E164.test(d.phone.replace(/\s/g, ''))) out.phone = IDENTITY_ERRORS.phone
   if (level < 2 && !d.name.trim()) out.name = IDENTITY_ERRORS.legalName
   if (level < 2 && !/^\d{4}-\d{2}-\d{2}$/.test(d.dob.trim())) out.dob = IDENTITY_ERRORS.dateOfBirth
+  if (level < 2 && !d.line1.trim()) out.line1 = IDENTITY_ERRORS.addressLine1
+  if (level < 2 && !d.town.trim()) out.town = IDENTITY_ERRORS.town
+  if (level < 2 && !d.postcode.trim()) out.postcode = IDENTITY_ERRORS.postcode
   if (level < 2 && !d.country) out.country = IDENTITY_ERRORS.country
   return out
 }
 
 function bodyFor(kind: VerificationBody['kind'], d: Draft): VerificationBody {
   if (kind === 'contact') return { kind, email: d.email.trim(), phone: d.phone.replace(/\s/g, '') }
-  if (kind === 'identity') return { kind, name: d.name.trim(), country: d.country, date_of_birth: d.dob.trim(), return_to: RETURN_TO }
+  if (kind === 'identity') {
+    const lines = [d.line1, d.line2].map((l) => l.trim()).filter(Boolean)
+    const address = { lines, town: d.town.trim(), postcode: d.postcode.trim(), country: d.country }
+    return { kind, name: d.name.trim(), country: d.country, date_of_birth: d.dob.trim(), address, return_to: RETURN_TO }
+  }
   // Lens fills an empty company check from the saved company details (talyvor-lens B59.30).
   return { kind, name: '', country: '', company_number: '', directors: [], people_with_significant_control: [] }
 }
@@ -215,7 +229,7 @@ export function IdentityChecks({ head, done, wayIn = false, onPassed }: { head: 
   // B61.111 — the country Lens refused (country_not_served) and its sentence, said on the country until another is picked.
   const [refused, setRefused] = useState<{ country: string; sentence: string } | null>(null)
   const [tried, setTried] = useState(false)
-  const [d, setD] = useState<Draft>({ email: '', phone: '', name: '', dob: '', country: '' })
+  const [d, setD] = useState<Draft>({ email: '', phone: '', name: '', dob: '', line1: '', line2: '', town: '', postcode: '', country: '' })
   if (failed && !v)
     return (
       <Screen>
@@ -363,6 +377,11 @@ export function IdentityChecks({ head, done, wayIn = false, onPassed }: { head: 
             : null}
           {field('name', <Field label={IDENTITY_WORDS.legalName} value={d.name} onChangeText={set('name')} maxLength={200} autoComplete="name" autoCapitalize="words" />)}
           {field('dob', <Field label={IDENTITY_WORDS.dateOfBirth} value={d.dob} onChangeText={set('dob')} placeholder="YYYY-MM-DD" keyboardType="numbers-and-punctuation" autoComplete="birthdate-full" autoCorrect={false} />)}
+          <Title>{IDENTITY_WORDS.homeAddress}</Title>
+          {field('line1', <Field label={IDENTITY_WORDS.addressLine1} value={d.line1} onChangeText={set('line1')} maxLength={200} autoComplete="address-line1" />)}
+          {field('line2', <Field label={IDENTITY_WORDS.addressLine2} value={d.line2} onChangeText={set('line2')} maxLength={200} autoComplete="address-line2" />)}
+          {field('town', <Field label={IDENTITY_WORDS.town} value={d.town} onChangeText={set('town')} maxLength={100} autoComplete="postal-address-locality" autoCapitalize="words" />)}
+          {field('postcode', <Field label={IDENTITY_WORDS.postcode} value={d.postcode} onChangeText={set('postcode')} maxLength={20} autoComplete="postal-code" autoCapitalize="characters" autoCorrect={false} />)}
           {field('country', <CountryField label={IDENTITY_WORDS.country} value={d.country} onChange={set('country')} error={refused?.country === d.country && !errors.country ? refused.sentence : undefined} />)}
         </View>
       ) : null}
