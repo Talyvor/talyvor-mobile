@@ -15,6 +15,7 @@ import { AgentCard } from './card'
 import { Face } from './face'
 import { Icon } from './icon'
 import { say, Tick, TopLine } from './live'
+import { SheetCover } from './lock-screen'
 import { moneyParts } from './money'
 import { MoneyLabel, approvalCapability } from './money-label'
 import { preparedBy, preparedPayee, preparedTotal } from './prepared-payment-card'
@@ -505,6 +506,7 @@ export function ApprovedFromNotification({
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onDone}>
       <ApprovalResult d={d} onDone={onDone} onNext={(id) => router.replace({ pathname: '/approvals/[id]', params: { id } })} />
+      <SheetCover />
     </Modal>
   )
 }
@@ -591,6 +593,7 @@ export function PendingApprovals({
             </Sheet>
           </View>
         ) : null}
+        <SheetCover />
       </Modal>
     </>
   )

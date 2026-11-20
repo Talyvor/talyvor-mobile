@@ -5,6 +5,7 @@ import { Modal, Pressable, Text, View } from 'react-native'
 
 import { onDay } from '@/activity'
 import { approveBatch, notApproved, payWord, takeRefusal, totalsOf } from '@/approve-batch'
+import { SheetCover } from '@/components/lock-screen'
 import { MoneyHeader, paymentRequestCapabilities } from '@/components/money-label'
 import { Body, Button, Card, Figure, Headline, LoadState, Screen, Sheet, SheetTop, useLoad } from '@/components/ui'
 import { biometricName } from '@/keys'
@@ -122,102 +123,107 @@ export default function ApproveScreen() {
   /** One line for each payment Lens tried to pay: `Northwind Data, $180.00: Paid.` */
   const tried = r?.items.filter((it) => it.pay_status) ?? []
 
+  // B50.57 — the phone draws this sheet above the app, over the app's own Cover, so it draws the Cover itself.
   return (
-    <Screen
-      onRefresh={() => {
-        setDone(null)
-        setDeclined(false)
-        reload()
-      }}
-      refreshing={loading && !!data}>
-      <SheetTop home="/approvals" />
-      <MoneyHeader capability={r ? paymentRequestCapabilities([r]) : []}>Approve payments</MoneyHeader>
-      <Headline>{r ? headline(r) : 'Payments waiting for your approval'}</Headline>
-      {notFound ? <Body muted>There is no request at this address. It may belong to another workspace.</Body> : <LoadState loading={loading && !data} error={error} />}
-      {r ? (
-        <Text style={{ fontFamily: fonts.ui, fontSize: 13, lineHeight: 18, color: c.ink3 }}>
-          From {agent ? `${agent}’s account` : 'the company’s account'} · prepared by {askedBy(r.client)} · {onDay(r.created_at)}
-        </Text>
-      ) : null}
-      {pending && asked.length > 1 ? (
-        <Body>
-          {ticked.length} of {payWord(asked.length)} to approve
-          {ticked.length ? (
-            <>
-              , total <Figure>{totalsOf(ticked)}</Figure>
-            </>
-          ) : null}
-        </Body>
-      ) : null}
-      {r?.items.map((it) => {
-        const choosable = pending && it.decision === 'needs_approval'
-        const on = !unticked.has(it.position)
-        const facts = [...(it.payee_id ? payeeFacts(it.payee_id) : []), it.reference ? `Reference: ${it.reference}` : ''].filter(Boolean)
-        return (
-          <Card white key={it.position}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              {choosable ? (
-                <Pressable
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: on }}
-                  accessibilityLabel={`Approve ${formatMinor(it.amount_minor, it.currency)} to ${it.payee_name}`}
-                  onPress={() => toggle(it.position)}
-                  hitSlop={12}
-                  style={{ width: 22, height: 22, borderRadius: 4, borderWidth: 1.5, borderColor: on ? c.accent : c.lineStrong, backgroundColor: on ? c.accent : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
-                  {on ? <Text style={{ color: c.onAccent, fontFamily: fonts.uiBold, fontSize: 14 }}>✓</Text> : null}
-                </Pressable>
-              ) : null}
-              <Body style={{ flex: 1, fontFamily: fonts.uiBold }}>{it.payee_name || it.listing_id}</Body>
-              <Figure>{formatMinor(it.amount_minor, it.currency)}</Figure>
-            </View>
-            {facts.length ? <Text style={{ fontFamily: fonts.ui, fontSize: 13, lineHeight: 18, color: c.ink3 }}>{facts.join(' · ')}</Text> : null}
-            <Text style={{ fontFamily: fonts.ui, fontSize: 13, lineHeight: 18, color: c.ink2 }}>
-              {it.decision === 'auto'
-                ? 'Inside a permission you signed: paid without asking you.'
-                : it.decision === 'blocked'
-                  ? `Blocked: ${it.reason}.`
-                  : `Asks for approval: ${it.reason}.`}
-            </Text>
-          </Card>
-        )
-      })}
-      {refusal ? <Body style={{ color: c.critical }}>{refusal}</Body> : null}
-      {pending ? (
-        // Behind the Decline sheet, its buttons are hidden from a screen reader as well as disabled.
-        <View aria-hidden={declining} style={{ gap: 10 }}>
-          <Button primary label={busy ? 'Approving…' : `Approve ${payWord(ticked.length)} with ${biometricName}`} disabled={busy || declining || !ticked.length} onPress={() => void approve()} />
-          <Button variant="secondary" label="Decline" haptic={false} disabled={busy || declining} onPress={() => setDeclining(true)} />
-        </View>
-      ) : r ? (
-        <Card tight>
-          <Body style={{ fontFamily: fonts.uiBold, color: r.status === 'approved' ? c.positive : c.ink }}>
-            {declined && r.status === 'cancelled' ? 'Declined. Nothing waiting here will be paid.' : (DECIDED[r.status] ?? 'Nothing waiting here will be paid.')}
+    <View style={{ flex: 1 }}>
+      <Screen
+        onRefresh={() => {
+          setDone(null)
+          setDeclined(false)
+          reload()
+        }}
+        refreshing={loading && !!data}>
+        <SheetTop home="/approvals" />
+        <MoneyHeader capability={r ? paymentRequestCapabilities([r]) : []}>Approve payments</MoneyHeader>
+        <Headline>{r ? headline(r) : 'Payments waiting for your approval'}</Headline>
+        {notFound ? <Body muted>There is no request at this address. It may belong to another workspace.</Body> : <LoadState loading={loading && !data} error={error} />}
+        {r ? (
+          <Text style={{ fontFamily: fonts.ui, fontSize: 13, lineHeight: 18, color: c.ink3 }}>
+            From {agent ? `${agent}’s account` : 'the company’s account'} · prepared by {askedBy(r.client)} · {onDay(r.created_at)}
+          </Text>
+        ) : null}
+        {pending && asked.length > 1 ? (
+          <Body>
+            {ticked.length} of {payWord(asked.length)} to approve
+            {ticked.length ? (
+              <>
+                , total <Figure>{totalsOf(ticked)}</Figure>
+              </>
+            ) : null}
           </Body>
-          {tried.map((it) => (
-            <Text key={it.position} style={{ fontFamily: fonts.ui, fontSize: 13, lineHeight: 18, color: c.ink3 }}>
-              {`${it.payee_name || it.listing_id}, ${formatMinor(it.amount_minor, it.currency)}: ${payWords(it)}.`}
-            </Text>
-          ))}
-        </Card>
-      ) : null}
-      {!pending && pay === '1' ? (
-        // "Pay my bills" (B40.17) walks the bills due one card at a time; each still needs its own approval.
-        <Button label="Next bill due" onPress={() => router.replace({ pathname: '/bills', params: { pay: '1' } })} />
-      ) : null}
-      <Modal visible={pending && declining} transparent animationType="slide" onRequestClose={() => setDeclining(false)}>
-        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(17,18,22,0.4)' }}>
-          <Pressable accessible={false} style={{ flex: 1 }} onPress={() => setDeclining(false)} />
-          <Sheet onClose={() => setDeclining(false)}>
-            <View testID="decline-sheet" style={{ gap: 14 }}>
-              <Headline>Decline these payments?</Headline>
-              <Body muted>Nothing waiting here is paid.</Body>
-              {refusal ? <Body style={{ color: c.critical }}>{refusal}</Body> : null}
-              <Button variant="danger" label="Decline" haptic={false} disabled={busy} hint="Declining…" onPress={() => void decline()} />
-              <Button variant="secondary" label="Keep it" disabled={busy} onPress={() => setDeclining(false)} />
-            </View>
-          </Sheet>
-        </View>
-      </Modal>
-    </Screen>
+        ) : null}
+        {r?.items.map((it) => {
+          const choosable = pending && it.decision === 'needs_approval'
+          const on = !unticked.has(it.position)
+          const facts = [...(it.payee_id ? payeeFacts(it.payee_id) : []), it.reference ? `Reference: ${it.reference}` : ''].filter(Boolean)
+          return (
+            <Card white key={it.position}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                {choosable ? (
+                  <Pressable
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: on }}
+                    accessibilityLabel={`Approve ${formatMinor(it.amount_minor, it.currency)} to ${it.payee_name}`}
+                    onPress={() => toggle(it.position)}
+                    hitSlop={12}
+                    style={{ width: 22, height: 22, borderRadius: 4, borderWidth: 1.5, borderColor: on ? c.accent : c.lineStrong, backgroundColor: on ? c.accent : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
+                    {on ? <Text style={{ color: c.onAccent, fontFamily: fonts.uiBold, fontSize: 14 }}>✓</Text> : null}
+                  </Pressable>
+                ) : null}
+                <Body style={{ flex: 1, fontFamily: fonts.uiBold }}>{it.payee_name || it.listing_id}</Body>
+                <Figure>{formatMinor(it.amount_minor, it.currency)}</Figure>
+              </View>
+              {facts.length ? <Text style={{ fontFamily: fonts.ui, fontSize: 13, lineHeight: 18, color: c.ink3 }}>{facts.join(' · ')}</Text> : null}
+              <Text style={{ fontFamily: fonts.ui, fontSize: 13, lineHeight: 18, color: c.ink2 }}>
+                {it.decision === 'auto'
+                  ? 'Inside a permission you signed: paid without asking you.'
+                  : it.decision === 'blocked'
+                    ? `Blocked: ${it.reason}.`
+                    : `Asks for approval: ${it.reason}.`}
+              </Text>
+            </Card>
+          )
+        })}
+        {refusal ? <Body style={{ color: c.critical }}>{refusal}</Body> : null}
+        {pending ? (
+          // Behind the Decline sheet, its buttons are hidden from a screen reader as well as disabled.
+          <View aria-hidden={declining} style={{ gap: 10 }}>
+            <Button primary label={busy ? 'Approving…' : `Approve ${payWord(ticked.length)} with ${biometricName}`} disabled={busy || declining || !ticked.length} onPress={() => void approve()} />
+            <Button variant="secondary" label="Decline" haptic={false} disabled={busy || declining} onPress={() => setDeclining(true)} />
+          </View>
+        ) : r ? (
+          <Card tight>
+            <Body style={{ fontFamily: fonts.uiBold, color: r.status === 'approved' ? c.positive : c.ink }}>
+              {declined && r.status === 'cancelled' ? 'Declined. Nothing waiting here will be paid.' : (DECIDED[r.status] ?? 'Nothing waiting here will be paid.')}
+            </Body>
+            {tried.map((it) => (
+              <Text key={it.position} style={{ fontFamily: fonts.ui, fontSize: 13, lineHeight: 18, color: c.ink3 }}>
+                {`${it.payee_name || it.listing_id}, ${formatMinor(it.amount_minor, it.currency)}: ${payWords(it)}.`}
+              </Text>
+            ))}
+          </Card>
+        ) : null}
+        {!pending && pay === '1' ? (
+          // "Pay my bills" (B40.17) walks the bills due one card at a time; each still needs its own approval.
+          <Button label="Next bill due" onPress={() => router.replace({ pathname: '/bills', params: { pay: '1' } })} />
+        ) : null}
+        <Modal visible={pending && declining} transparent animationType="slide" onRequestClose={() => setDeclining(false)}>
+          <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(17,18,22,0.4)' }}>
+            <Pressable accessible={false} style={{ flex: 1 }} onPress={() => setDeclining(false)} />
+            <Sheet onClose={() => setDeclining(false)}>
+              <View testID="decline-sheet" style={{ gap: 14 }}>
+                <Headline>Decline these payments?</Headline>
+                <Body muted>Nothing waiting here is paid.</Body>
+                {refusal ? <Body style={{ color: c.critical }}>{refusal}</Body> : null}
+                <Button variant="danger" label="Decline" haptic={false} disabled={busy} hint="Declining…" onPress={() => void decline()} />
+                <Button variant="secondary" label="Keep it" disabled={busy} onPress={() => setDeclining(false)} />
+              </View>
+            </Sheet>
+          </View>
+          <SheetCover />
+        </Modal>
+      </Screen>
+      <SheetCover />
+    </View>
   )
 }

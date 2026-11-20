@@ -6,6 +6,7 @@ import { KeyboardAvoidingView, Modal, Platform, Pressable, Text, View } from 're
 
 import { MessageBox } from '@/components/account-requests'
 import { Icon } from '@/components/icon'
+import { SheetCover } from '@/components/lock-screen'
 import { Body, Button, Card, Chip, Eyebrow, Field, Figure, Row, Sheet } from '@/components/ui'
 import { day, when } from '@/activity'
 import { DISPUTE_WORDS as W, disputeState, exportName, exportedText, isDay, MAX_REASON } from '@/dispute-words'
@@ -103,6 +104,7 @@ export function DisputePayment({ paymentId, payment, dispute, onSent }: { paymen
             </View>
           </Sheet>
         </KeyboardAvoidingView>
+        <SheetCover />
       </Modal>
     </>
   )
