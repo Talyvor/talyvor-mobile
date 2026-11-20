@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { Text, View } from 'react-native'
 
 import { FieldError } from '@/components/country-field'
-import { Body, Button, Card, Field, Toggle } from '@/components/ui'
+import { Body, Button, Card, Eyebrow, Field, Note, Toggle } from '@/components/ui'
 import { useSession } from '@/session'
 import { fonts, useTheme } from '@/theme'
 
@@ -13,6 +13,9 @@ import { fonts, useTheme } from '@/theme'
 // question once (Pocket Live `su7`, drawn in sign-up.tsx). Both draw what Lens RECORDED, from the answer to each write,
 // never what was pressed, and a refusal (a name taken, one that reads like a name held, one kept for Talyvor) is said in
 // Lens's words.
+// B57.204 — drawn as Pocket Live's `sub:profile`, with `sub:security`'s setting rows (B57.185): the name's card under
+// Settings' Profile with Save small beside its rule line, then the ways to be found as setting rows in one card, a rule
+// between them, and who sees what in the note with its shield. su7 already draws as Pocket Live (sign-up.tsx).
 
 export const FIND_WORDS = {
   name: 'Your Talyvor name',
@@ -86,43 +89,34 @@ export function FindMeSettings() {
     }
   }
   const typed = name.trim()
+  const ways = [
+    { key: 'by-name', label: FIND_WORDS.byName, sub: f.name ? `@${f.name}` : FIND_WORDS.nameFirst, on: f.by_name, can: !!f.name, set: (on: boolean) => ({ by_name: on }) },
+    { key: 'by-phone', label: FIND_WORDS.byPhone, sub: f.phone || FIND_WORDS.noPhone, on: f.by_phone, can: !!f.phone, set: (on: boolean) => ({ by_phone: on }) },
+    { key: 'by-email', label: FIND_WORDS.byEmail, sub: f.email || FIND_WORDS.noEmail, on: f.by_email, can: !!f.email, set: (on: boolean) => ({ by_email: on }) },
+  ]
   return (
-    <View testID="settings-find-me">
+    <View testID="settings-find-me" style={{ gap: 10 }}>
       <Card>
         <Field label={FIND_WORDS.name} value={name} onChangeText={setName} autoCapitalize="none" autoCorrect={false} autoComplete="off" maxLength={21} />
-        <Text style={{ fontFamily: fonts.ui, fontSize: 13, lineHeight: 19, color: c.ink3 }}>{FIND_WORDS.nameHint}</Text>
-        {typed !== f.name ? <Button variant="outline" small label={busy ? FIND_WORDS.saving : FIND_WORDS.save} disabled={busy} onPress={() => void change({ name: typed })} /> : null}
-        <Text accessibilityRole="header" style={{ marginTop: 8, fontFamily: fonts.uiBold, fontSize: 16, lineHeight: 22, color: c.ink }}>
-          {FIND_WORDS.findBy}
-        </Text>
-        <Text style={{ fontFamily: fonts.ui, fontSize: 14, lineHeight: 20, color: c.ink2 }}>{FIND_WORDS.findByLine}</Text>
-        <Toggle
-          label={FIND_WORDS.byName}
-          sub={f.name ? `@${f.name}` : FIND_WORDS.nameFirst}
-          value={f.by_name}
-          disabled={busy || !f.name}
-          onValueChange={(on) => void change({ by_name: on })}
-        />
-        <Toggle
-          label={FIND_WORDS.byPhone}
-          sub={f.phone || FIND_WORDS.noPhone}
-          value={f.by_phone}
-          disabled={busy || !f.phone}
-          onValueChange={(on) => void change({ by_phone: on })}
-        />
-        <Toggle
-          label={FIND_WORDS.byEmail}
-          sub={f.email || FIND_WORDS.noEmail}
-          value={f.by_email}
-          disabled={busy || !f.email}
-          onValueChange={(on) => void change({ by_email: on })}
-        />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <Text style={{ flex: 1, fontFamily: fonts.ui, fontSize: 13, lineHeight: 19, color: c.ink3 }}>{FIND_WORDS.nameHint}</Text>
+          {typed !== f.name ? <Button variant="outline" small label={busy ? FIND_WORDS.saving : FIND_WORDS.save} disabled={busy} onPress={() => void change({ name: typed })} /> : null}
+        </View>
+      </Card>
+      <Eyebrow>{FIND_WORDS.findBy}</Eyebrow>
+      <Card tight>
+        {ways.map((w, i) => (
+          <View key={w.key} testID={`find-me-${w.key}`} style={[{ paddingVertical: 4 }, i > 0 && { borderTopWidth: 1, borderTopColor: c.line }]}>
+            <Toggle label={w.label} sub={w.sub} value={w.on} disabled={busy || !w.can} onValueChange={(on) => void change(w.set(on))} />
+          </View>
+        ))}
         {failed ? (
           <View accessibilityLiveRegion="polite">
             <FieldError>{failed}</FieldError>
           </View>
         ) : null}
       </Card>
+      <Note icon="shield">{FIND_WORDS.findByLine}</Note>
     </View>
   )
 }

@@ -149,3 +149,16 @@ test('a session that is not a person’s draws no finding settings', async () =>
   expect(screen.queryByTestId('settings-find-me')).toBeNull()
   expect((globalThis.fetch as jest.Mock).mock.calls.some(([u]) => String(u).includes('/api/people/finding'))).toBe(false)
 })
+
+// B57.204 — drawn as Pocket Live's `sub:profile`, with `sub:security`'s setting rows: the ways to be found in one card
+// with a rule between them, and who sees what in the shield note.
+test('the ways to be found are drawn as Pocket’s setting rows, with the line in the shield note', async () => {
+  mockBff({ name: 'maya.lind', email: 'maya@northwind.example' })
+  await openSettings()
+  const c = await card()
+  const rule = (testID: string) => [c.getByTestId(testID).props.style].flat().find((s: { borderTopWidth?: number } | undefined) => s?.borderTopWidth)
+  expect(rule('find-me-by-name')).toBeUndefined()
+  expect(rule('find-me-by-phone')).toMatchObject({ borderTopWidth: 1 })
+  expect(rule('find-me-by-email')).toMatchObject({ borderTopWidth: 1 })
+  expect(within(c.getByTestId('note')).getByText('Someone who finds you sees only your first name and the first letter of your last name.')).toBeTruthy()
+})
