@@ -73,6 +73,9 @@ export function decidedWords(a: AgentApproval) {
   return 'Closed'
 }
 
+/** B62.11 — why a payment it approved was stopped (Lens B62.9), in the web's B62.10 words; null when none was. */
+export const stoppedText = (a: AgentApproval) => (a.stopped ? `Stopped: the ${a.stopped.changed} changed after you approved.` : null)
+
 /** The amount in the currency that pays it: an account's or a card's own, else dollars (B61.15: never LXC beside it). */
 export function amountParts(a: AgentApproval, peg: number | null) {
   if ((a.paid_from?.kind === 'account' || a.paid_from?.kind === 'card') && a.paid_from.currency) return { large: formatMinor(a.paid_from.amount_minor, a.paid_from.currency), small: null }
@@ -396,7 +399,7 @@ export function DecidedApprovals({ decided, agents, prepared = [] }: { decided: 
       key: a.id,
       at: decidedAt(a),
       title: `${agentOf(agents, a.agent_id).name} · ${subject(a)}`,
-      sub: `${decidedWords(a)} · ${decidedOn(a)}`,
+      sub: stoppedText(a) ?? `${decidedWords(a)} · ${decidedOn(a)}`,
       ...amountParts(a, peg),
       open: () => router.push({ pathname: '/approvals/[id]', params: { id: a.id } }),
     })),
@@ -455,6 +458,7 @@ export function DecidedCard({ approval: a, agentName }: { approval: AgentApprova
   const { peg } = useSession()
   const { c } = useTheme()
   const what = whatItWas(a, agentName, peg)
+  const stopped = stoppedText(a)
   return (
     <>
       <Card white>
@@ -463,6 +467,7 @@ export function DecidedCard({ approval: a, agentName }: { approval: AgentApprova
           <Chip>{decidedWords(a)}</Chip>
         </View>
         {what ? <Text style={{ fontFamily: fonts.ui, fontSize: 13, lineHeight: 18, color: c.ink2 }}>{what}</Text> : null}
+        {stopped ? <Text style={{ fontFamily: fonts.uiMedium, fontSize: 13, lineHeight: 18, color: c.critical }}>{stopped}</Text> : null}
         <Text style={{ fontFamily: fonts.ui, fontSize: 13, lineHeight: 18, color: c.ink3 }}>{`${endedWords(a)} Nothing is waiting for you here.`}</Text>
       </Card>
       <Card>

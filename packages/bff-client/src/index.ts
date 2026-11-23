@@ -172,6 +172,9 @@ export interface AgentApproval {
   kind?: 'card_challenge'
   /** B62.4 — what the agent says the payment is for, in its own words (Lens B62.2); "" when it gave none. Never a fact. */
   task?: string
+  /** B62.11 — the newest payment it stopped because it was not the one approved (Lens B62.9): the first of payee, amount,
+   * currency and agent that differed, and when; null when none did, or once the payment approved was sent */
+  stopped?: { changed: 'payee' | 'amount' | 'currency' | 'agent'; at: string } | null
 }
 
 /** Lens economy.PaidFrom (B57.11): what pays an approval, named in words, its amount in that currency and its balance now. */
@@ -1378,7 +1381,8 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     // B53.9 — the web's Spending screen's reads (B53.8), every number from Lens.
     /** The payments in [from, to), RFC 3339, with each wallet's totals by category. */
     spending: (from: string, to: string) => call<Spending>('GET', `/api/money/spending?${new URLSearchParams({ from, to })}`),
-    /** B62.4 — a payment's proof, by its money entry (Lens B62.1, suite B62.3's relay); null for a payment the rules never judged. */
+    /** B62.4 — a payment's proof, by its money entry (Lens B62.1, suite B62.3's relay), or by its approval's id (B62.11, Lens
+     * B62.9); null for a payment the rules never judged. */
     paymentProof: async (entry: string): Promise<PaymentProof | null> => {
       try {
         return await call<PaymentProof>('GET', `/api/payment-proofs/${e(entry)}`)

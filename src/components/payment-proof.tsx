@@ -83,7 +83,8 @@ export function proofText(p: PaymentProof, facts: readonly Fact[], task?: string
   ].join('\n')
 }
 
-/** A payment's notice's proof (B62.4): the agent's task, then the Proof section, under the notice's own card (p-notice). */
+/** A payment's notice's proof (B62.4): the agent's task, then the Proof section, under the notice's own card (p-notice).
+ * B62.11: a used approval's too, its `entry` the approval's id. */
 export function PaymentProofSection({ entry }: { entry: string }) {
   const read = usePaymentProof(entry)
   const task = read.data?.proof?.sent.task
