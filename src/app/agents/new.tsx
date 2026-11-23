@@ -1,4 +1,4 @@
-import { type Agent, BffError, CURRENCY_WORDS, formatMinor, parseRuleAmount, refusalText } from '@talyvor/bff-client'
+import { type Agent, BffError, CURRENCY_WORDS, formatMinor, merchantCategoriesText, parseRuleAmount, refusalText } from '@talyvor/bff-client'
 import { router } from 'expo-router'
 import { type ReactNode, useCallback, useState } from 'react'
 import { Pressable, Text, TextInput, View } from 'react-native'
@@ -9,6 +9,7 @@ import { AGENT_PICTURES, type AgentPicture, lookFor } from '@/agent-pictures'
 import { Face } from '@/components/face'
 import { HOME_MONEY } from '@/components/home'
 import { Icon } from '@/components/icon'
+import { MerchantChoices } from '@/components/merchant-categories'
 import { MoneyLabel } from '@/components/money-label'
 import { BottomSheet } from '@/components/pay-sheet'
 import { Press } from '@/components/press'
@@ -25,6 +26,8 @@ import { fonts, useTheme } from '@/theme'
 // B57.178 — as Pocket Live draws it: the back arrow alone, three step bars without words, the pictures at 56, and the
 // limits as a card of rows, each its amount in the account's currency, opening its own sheet (ruleEdit) to change it.
 // B61.103 — your own picks from the web's gallery of 27: the six's faces, lime's, and the twenty drawn ones (B61.36).
+// B61.120 — under the limits, Merchants and categories as the web's More rules draws it (B61.64): any merchant until some
+// are picked, then only those, by card.
 
 const FIAT_ORDER = ['USD', 'EUR', 'GBP']
 const STEPS = 3
@@ -115,6 +118,7 @@ export default function NewAgentScreen() {
   const [said, setSaid] = useState('')
   const [made, setMade] = useState<{ agent: Agent; unsaved: string[] } | null>(null)
   const [editing, setEditing] = useState<RuleKey | null>(null)
+  const [merchants, setMerchants] = useState<string[]>([])
 
   const ours = start && start !== 'own' ? start : null
   const pick = (s: Start) => {
@@ -149,7 +153,7 @@ export default function NewAgentScreen() {
         unsaved.push(`what it does was not saved: ${refusalText(err)}`)
       }
     }
-    const rules = newAgentRules(minor, currency)
+    const rules = newAgentRules(minor, currency, merchants)
     try {
       const [j, key] = await Promise.all([client.rulesChallenge(agent.id, rules), phoneKey(client)])
       const assertion = j.looser && j.challenge && key?.here ? await signWithThisPhone(client, j.challenge, `Set ${agent.name}’s rules`) : undefined
@@ -249,6 +253,15 @@ export default function NewAgentScreen() {
         {nothingTyped ? (
           <View testID="new-agent-every-payment">
             <Body>With none of these set, every payment waits for your yes.</Body>
+          </View>
+        ) : null}
+        {currency ? (
+          <View testID="new-agent-merchants" style={{ gap: 8 }}>
+            <Text style={{ fontFamily: fonts.uiBold, fontSize: 15, color: c.ink }}>Merchants and categories</Text>
+            <Text style={{ fontFamily: fonts.ui, fontSize: 13.5, color: c.ink3 }}>
+              {merchants.length > 0 ? `${merchantCategoriesText(merchants)}. Only these, by card.` : 'Any merchant. Pick some to let it pay only them by card.'}
+            </Text>
+            <MerchantChoices label="Merchants and categories" chosen={merchants} onChange={setMerchants} />
           </View>
         ) : null}
         <View style={{ flexDirection: 'row', gap: 10, paddingVertical: 12, paddingHorizontal: 14, borderRadius: 14, backgroundColor: c.cloud }}>

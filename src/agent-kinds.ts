@@ -41,7 +41,7 @@ export const EVERY_PAYMENT_ASKS_MINOR = 1
 
 /** The rules New agent saves, as the web's do: held in the account's currency, the four amounts in its minor units and no
  * µLXC limit. With none of the four typed, every payment waits for the owner's yes. */
-export function newAgentRules(minor: Record<RuleKey, number>, currency: string): AgentRulesSave {
+export function newAgentRules(minor: Record<RuleKey, number>, currency: string, merchants: string[] = []): AgentRulesSave {
   const rules: AgentRulesSave = {
     currency,
     max_per_payment_minor: 0,
@@ -58,5 +58,7 @@ export function newAgentRules(minor: Record<RuleKey, number>, currency: string):
   }
   for (const [key, , field] of RULE_FIELDS) rules[field] = minor[key]
   if (RULE_FIELDS.every(([key]) => minor[key] === 0)) rules.approval_above_minor = EVERY_PAYMENT_ASKS_MINOR
+  // B61.120 — the merchant categories it may pay in by card, as the web's More rules names them (B61.64).
+  if (merchants.length > 0) rules.allowed_merchant_categories = merchants
   return rules
 }
