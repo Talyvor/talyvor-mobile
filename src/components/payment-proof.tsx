@@ -1,4 +1,4 @@
-import { formatLXC, formatMinor, type ApprovalKey, type PaymentProof, type ProofPayment, type SpendPayment } from '@talyvor/bff-client'
+import { formatLXC, formatMinor, type AgentApproval, type ApprovalKey, type PaymentProof, type ProofPayment, type SpendPayment } from '@talyvor/bff-client'
 import * as Clipboard from 'expo-clipboard'
 import { useCallback, useState } from 'react'
 import { Text, View } from 'react-native'
@@ -7,7 +7,7 @@ import { when } from '../activity'
 import { useSession } from '../session'
 import { categoryName } from '../spending'
 import { fonts, useTheme } from '../theme'
-import { Facts, TaskSays, type Fact } from './approval-card'
+import { DecidedCard, Facts, TaskSays, type Fact } from './approval-card'
 import { Icon } from './icon'
 import { Money, moneyParts } from './money'
 import { Body, Button, Card, Chip, useLoad } from './ui'
@@ -83,8 +83,7 @@ export function proofText(p: PaymentProof, facts: readonly Fact[], task?: string
   ].join('\n')
 }
 
-/** A payment's notice's proof (B62.4): the agent's task, then the Proof section, under the notice's own card (p-notice).
- * B62.11: a used approval's too, its `entry` the approval's id. */
+/** A payment's notice's proof (B62.4): the agent's task, then the Proof section, under the notice's own card (p-notice). */
 export function PaymentProofSection({ entry }: { entry: string }) {
   const read = usePaymentProof(entry)
   const task = read.data?.proof?.sent.task
@@ -94,6 +93,15 @@ export function PaymentProofSection({ entry }: { entry: string }) {
       <ProofSection read={read} task={task} />
     </View>
   )
+}
+
+/** B62.11 — a used approval where its notification lands, with the proof of the payment it let through, read by the
+ * approval's id (Lens B62.9). B57.208: drawn as B57.191's receipt draws a payment, the agent's task under what it was and
+ * the Proof a section of its own inside the request's card. */
+export function UsedApprovalCard({ approval, agentName }: { approval: AgentApproval; agentName: string }) {
+  const read = usePaymentProof(approval.id)
+  const task = read.data?.proof?.sent.task
+  return <DecidedCard approval={approval} agentName={agentName} task={task} proof={<ProofSection read={read} task={task} />} />
 }
 
 /** The read of a payment's proof by its money entry, with the key that signed it: its receipt starts it, so the task it

@@ -1,6 +1,6 @@
 import { BffError, formatLXC, formatMinor, refusalText, type Agent, type AgentApproval, type PaymentRequest } from '@talyvor/bff-client'
 import { router } from 'expo-router'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
@@ -400,6 +400,7 @@ export function DecidedApprovals({ decided, agents, prepared = [] }: { decided: 
       at: decidedAt(a),
       title: `${agentOf(agents, a.agent_id).name} · ${subject(a)}`,
       sub: stoppedText(a) ?? `${decidedWords(a)} · ${decidedOn(a)}`,
+      stopped: !!a.stopped,
       ...amountParts(a, peg),
       open: () => router.push({ pathname: '/approvals/[id]', params: { id: a.id } }),
     })),
@@ -410,6 +411,7 @@ export function DecidedApprovals({ decided, agents, prepared = [] }: { decided: 
       sub: `${preparedWords(r)} · ${onDay(r.decided_at ?? r.created_at)}`,
       large: preparedTotal(r),
       small: null as string | null,
+      stopped: false,
       open: () => router.push({ pathname: '/approve/[id]', params: { id: r.id } }),
     })),
   ].sort((x, y) => Date.parse(y.at) - Date.parse(x.at))
@@ -418,12 +420,13 @@ export function DecidedApprovals({ decided, agents, prepared = [] }: { decided: 
     <Card white>
       <Eyebrow>Decided</Eyebrow>
       <View>
-        {rows.map(({ key, title, sub, large, small, open }, i) => (
+        {rows.map(({ key, title, sub, large, small, stopped, open }, i) => (
           <Row
             key={key}
             first={i === 0}
             title={title}
             sub={sub}
+            subTone={stopped ? c.tangerineInk : undefined}
             right={
               <View accessible accessibilityLabel={small ? `${large} (${small})` : large} style={{ alignItems: 'flex-end' }}>
                 <Text style={{ fontFamily: fonts.display, fontSize: 15, color: c.ink, fontVariant: ['tabular-nums'] }}>{large}</Text>
@@ -452,9 +455,22 @@ function endedWords(a: AgentApproval) {
   return `${decidedWords(a)} ${decidedOn(a)}.`
 }
 
+/** B57.208 — why a payment it approved was stopped, as Pocket's note: the sentence on tangerine with the shield's mark,
+ * inside the request's card. */
+function StoppedNote({ text }: { text: string }) {
+  const { c } = useTheme()
+  return (
+    <View testID="stopped-note" style={{ flexDirection: 'row', gap: 10, paddingVertical: 12, paddingHorizontal: 14, borderRadius: 14, backgroundColor: c.tangerine50 }}>
+      <Icon name="shield" size={20} color={c.tangerineInk} />
+      <Text style={{ flex: 1, fontFamily: fonts.uiMedium, fontSize: 13.5, lineHeight: 19, color: c.tangerineInk }}>{text}</Text>
+    </View>
+  )
+}
+
 /** B57.78 — a decided request where its notification lands, as Pocket's p-approval-landing draws it: what it was and how
- * it ended, then why nothing opens here, with the way to Approvals. */
-export function DecidedCard({ approval: a, agentName }: { approval: AgentApproval; agentName: string }) {
+ * it ended, then why nothing opens here, with the way to Approvals. B57.208: a stopped one's sentence is a note in its
+ * card; a used one's card carries the agent's `task` under what it was and its `proof` last, as B57.191's receipt does. */
+export function DecidedCard({ approval: a, agentName, task, proof }: { approval: AgentApproval; agentName: string; task?: string; proof?: ReactNode }) {
   const { peg } = useSession()
   const { c } = useTheme()
   const what = whatItWas(a, agentName, peg)
@@ -462,13 +478,17 @@ export function DecidedCard({ approval: a, agentName }: { approval: AgentApprova
   return (
     <>
       <Card white>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <Text style={{ flex: 1, fontFamily: fonts.uiBold, fontSize: 15, color: c.ink, fontVariant: ['tabular-nums'] }}>{`${subject(a)} · ${amountParts(a, peg).large}`}</Text>
-          <Chip>{decidedWords(a)}</Chip>
+        <View testID="decided-card" style={{ gap: 10 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            <Text style={{ flex: 1, fontFamily: fonts.uiBold, fontSize: 15, color: c.ink, fontVariant: ['tabular-nums'] }}>{`${subject(a)} · ${amountParts(a, peg).large}`}</Text>
+            <Chip>{decidedWords(a)}</Chip>
+          </View>
+          {what ? <Text style={{ fontFamily: fonts.ui, fontSize: 13, lineHeight: 18, color: c.ink2 }}>{what}</Text> : null}
+          <TaskSays task={task} />
+          {stopped ? <StoppedNote text={stopped} /> : null}
+          <Text style={{ fontFamily: fonts.ui, fontSize: 13, lineHeight: 18, color: c.ink3 }}>{`${endedWords(a)} Nothing is waiting for you here.`}</Text>
+          {proof}
         </View>
-        {what ? <Text style={{ fontFamily: fonts.ui, fontSize: 13, lineHeight: 18, color: c.ink2 }}>{what}</Text> : null}
-        {stopped ? <Text style={{ fontFamily: fonts.uiMedium, fontSize: 13, lineHeight: 18, color: c.critical }}>{stopped}</Text> : null}
-        <Text style={{ fontFamily: fonts.ui, fontSize: 13, lineHeight: 18, color: c.ink3 }}>{`${endedWords(a)} Nothing is waiting for you here.`}</Text>
       </Card>
       <Card>
         <Text style={{ fontFamily: fonts.ui, fontSize: 13, lineHeight: 18, color: c.ink2 }}>

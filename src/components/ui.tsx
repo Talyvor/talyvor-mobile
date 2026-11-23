@@ -322,15 +322,16 @@ export function Note({ icon, children }: { icon: IconName; children: string }) {
   )
 }
 
-/** A list row: something on the left, a title over a line, something on the right. A rule above every row but the first. */
-export function Row({ left, title, sub, right, first, onPress }: { left?: ReactNode; title: string; sub?: string; right?: ReactNode; first?: boolean; onPress?: () => void }) {
+/** A list row: something on the left, a title over a line, something on the right. A rule above every row but the first.
+ * `subTone` colours the line, for one that warns (B57.208, a stopped approval's). */
+export function Row({ left, title, sub, subTone, right, first, onPress }: { left?: ReactNode; title: string; sub?: string; subTone?: string; right?: ReactNode; first?: boolean; onPress?: () => void }) {
   const { c } = useTheme()
   const body = (
     <>
       {left}
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text style={[styles.body, { color: c.ink, fontFamily: fonts.uiMedium }]}>{title}</Text>
-        {sub ? <Text style={[styles.sub, { color: c.ink3 }]}>{sub}</Text> : null}
+        {sub ? <Text style={[styles.sub, { color: subTone ?? c.ink3 }]}>{sub}</Text> : null}
       </View>
       {right}
     </>
