@@ -2,7 +2,7 @@ import { BffError, createBffClient } from '@talyvor/bff-client'
 import { Image } from 'expo-image'
 import { router } from 'expo-router'
 import { useMemo, useState } from 'react'
-import { Pressable, StyleSheet, TextInput, View } from 'react-native'
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 
 import { FieldError } from '@/components/country-field'
 import { Icon } from '@/components/icon'
@@ -24,6 +24,8 @@ import { fonts, useTheme } from '@/theme'
 // B61.109 — `forgot`: the lock's "Forgot your passcode?" with Face ID on. The number and its texted code, then Face ID
 // (the sign-in key's answer to the lock's challenge), then a new passcode typed twice, set by the BFF (suite B61.108)
 // and then opening the lock. The number's steps go without the locked session, which the BFF answers 423 to.
+// B57.207 — the forgot path's Face ID step drawn as Pocket Live's `su6`: the Face ID mark in its circle over the words,
+// and Face ID's button at the foot. The top bar is DoorTop, which Settings' Change passcode draws too.
 
 type Stage = 'phone' | 'code' | 'face' | 'enter' | 'choose' | 'again'
 
@@ -32,7 +34,7 @@ function SandboxLabel() {
   return <MoneyLabel capability={Object.keys(labels ?? {})} />
 }
 
-function Top({ onBack }: { onBack?: () => void }) {
+export function DoorTop({ onBack }: { onBack?: () => void }) {
   const { c, dark } = useTheme()
   return (
     <View style={{ height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -187,7 +189,7 @@ export function Door({ forgot }: { forgot?: { back: () => void } } = {}) {
             <Button primary label={DOOR_WORDS.phone.go} disabled={busy || number.replace(/\D/g, '').length < 6} onPress={() => void start()} />
           </>
         }>
-        <Top onBack={back} />
+        <DoorTop onBack={back} />
         <Headline>{DOOR_WORDS.phone.title}</Headline>
         <Body muted>{DOOR_WORDS.phone.line}</Body>
         <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
@@ -222,7 +224,7 @@ export function Door({ forgot }: { forgot?: { back: () => void } } = {}) {
   if (stage === 'code')
     return (
       <Screen footer={error}>
-        <Top onBack={back} />
+        <DoorTop onBack={back} />
         <Headline>{DOOR_WORDS.code.title}</Headline>
         <Body muted>{DOOR_WORDS.code.sentTo(`${dial} ${number.trim()}`)}</Body>
         <View style={{ height: 46, marginTop: 4, justifyContent: 'center' }}>
@@ -255,16 +257,21 @@ export function Door({ forgot }: { forgot?: { back: () => void } } = {}) {
 
   if (stage === 'face')
     return (
-      <Screen footer={<>{error}<Button primary label={DOOR_WORDS.lock.faceID} disabled={busy} onPress={() => void run(face)} /></>}>
-        <Top onBack={back} />
-        <Headline>{DOOR_WORDS.forgot.title}</Headline>
-        <Body muted>{DOOR_WORDS.forgot.faceID}</Body>
+      <Screen footer={<>{error}<Button primary icon="faceid" label={DOOR_WORDS.lock.faceID} disabled={busy} onPress={() => void run(face)} /></>}>
+        <DoorTop onBack={back} />
+        <View style={{ alignItems: 'center', gap: 10, paddingTop: 40 }}>
+          <View style={{ width: 96, height: 96, borderRadius: 48, backgroundColor: c.cloud2, alignItems: 'center', justifyContent: 'center' }}>
+            <Icon name="faceid" size={48} color={c.ink} />
+          </View>
+          <Headline>{DOOR_WORDS.forgot.title}</Headline>
+          <Text style={{ maxWidth: 300, textAlign: 'center', fontFamily: fonts.ui, fontSize: 15, lineHeight: 22, color: c.ink2 }}>{DOOR_WORDS.forgot.faceID}</Text>
+        </View>
       </Screen>
     )
 
   const pad = (title: string, line: string | null, onDone: (p: string) => Promise<void> | void) => (
     <Screen fill>
-      <Top onBack={back} />
+      <DoorTop onBack={back} />
       <Headline>{title}</Headline>
       {line ? <Body muted>{line}</Body> : null}
       <PasscodePad spread onDone={onDone} disabled={busy || waiting} reset={`${stage}-${round}`}>

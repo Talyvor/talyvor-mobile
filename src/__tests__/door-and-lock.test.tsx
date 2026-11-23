@@ -390,3 +390,44 @@ test('Forgot your passcode? with Face ID: the number’s code, Face ID, a new pa
   })
   expect(bff.calls.filter((c) => c.route === 'POST /auth/unlock').at(-1)?.body).toEqual({ passcode: '730591' })
 })
+
+// B57.207 — Change passcode and the forgot path drawn as Pocket Live: the pad pages as `su2`, the Face ID step as `su6`.
+
+test('Change passcode in Pocket: the door’s top bar, then the tick, and Done goes back to Security', async () => {
+  mockBff()
+  signedInBefore()
+  mockStore.set('talyvor.signin-key', 'pk_1')
+  await renderRouter('./src/app', { initialUrl: '/settings' })
+  await waitFor(() => expect(screen.queryByTestId('lock-screen')).toBeNull())
+  await fireEvent.press(await screen.findByText('Change passcode'))
+  expect(await screen.findByText('Enter your passcode')).toBeTruthy()
+  // The chevron alone, as the door's pages draw it: no "Back" written beside it.
+  expect(screen.getByRole('button', { name: 'Back' })).toBeTruthy()
+  expect(screen.queryByText('Back')).toBeNull()
+  await typeDigits(PASSCODE)
+  await screen.findByText('Choose a new passcode')
+  await typeDigits('730591')
+  await screen.findByText('Type it again')
+  await typeDigits('730591')
+  expect(await screen.findByText('Your passcode is changed.')).toBeTruthy()
+  expect(screen.getByTestId('tick')).toBeTruthy()
+  await fireEvent.press(screen.getByRole('button', { name: 'Done' }))
+  expect(await screen.findByText('Unlock with Face ID')).toBeTruthy()
+})
+
+test('Forgot your passcode? in Pocket: Face ID that does not pass waits on su6’s step, and Use Face ID goes on', async () => {
+  mockBff()
+  signedInBefore()
+  mockStore.set('talyvor.signin-key', 'pk_1')
+  mockPhone.fail = true
+  await renderRouter('./src/app', { initialUrl: '/' })
+  await fireEvent.press(await screen.findByRole('button', { name: 'Forgot your passcode?' }))
+  await toCode()
+  await fireEvent.changeText(screen.getByLabelText('Code'), '482913')
+  expect(await screen.findByText('Check it’s you with Face ID, then choose a new passcode.')).toBeTruthy()
+  // su6's Face ID mark in its circle, over the words, and the button carries the mark too.
+  expect(screen.getAllByTestId('icon-faceid', { includeHiddenElements: true })).toHaveLength(2)
+  mockPhone.fail = false
+  await fireEvent.press(screen.getByRole('button', { name: 'Use Face ID' }))
+  expect(await screen.findByText('Choose a new passcode')).toBeTruthy()
+})

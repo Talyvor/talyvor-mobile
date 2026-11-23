@@ -1,0 +1,538 @@
+[
+  {
+    "route": "/settings/passcode",
+    "screen": "p-settings",
+    "locked": true,
+    "newKey": true,
+    "words": "report",
+    "live": "await P.flow('su', { type: 'Personal', kind: 'Fiat', find: 'yes' }); await P.push('su', [2]);",
+    "why": "B57.207 draws Settings, Security's Change passcode as Pocket Live's pad pages (texts.json 'ph su2') and its end as 'ph done'; its steps' words are B61.109's, listed under Words to confirm",
+    "name": "change-passcode",
+    "steps": [
+      [
+        "press",
+        "4"
+      ],
+      [
+        "press",
+        "1"
+      ],
+      [
+        "press",
+        "8"
+      ],
+      [
+        "press",
+        "2"
+      ],
+      [
+        "press",
+        "6"
+      ],
+      [
+        "press",
+        "3"
+      ]
+    ],
+    "answers": {
+      "/auth/unlock": {},
+      "/auth/passcode/change": {
+        "changed": true
+      }
+    }
+  },
+  {
+    "route": "/settings/passcode",
+    "screen": "p-settings",
+    "locked": true,
+    "newKey": true,
+    "words": "report",
+    "live": "await P.flow('su', { type: 'Personal', kind: 'Fiat', find: 'yes' }); await P.push('su', [2]);",
+    "why": "B57.207 draws Settings, Security's Change passcode as Pocket Live's pad pages (texts.json 'ph su2') and its end as 'ph done'; its steps' words are B61.109's, listed under Words to confirm",
+    "name": "change-passcode-new",
+    "steps": [
+      [
+        "press",
+        "4"
+      ],
+      [
+        "press",
+        "1"
+      ],
+      [
+        "press",
+        "8"
+      ],
+      [
+        "press",
+        "2"
+      ],
+      [
+        "press",
+        "6"
+      ],
+      [
+        "press",
+        "3"
+      ],
+      [
+        "press",
+        "4"
+      ],
+      [
+        "press",
+        "1"
+      ],
+      [
+        "press",
+        "8"
+      ],
+      [
+        "press",
+        "2"
+      ],
+      [
+        "press",
+        "6"
+      ],
+      [
+        "press",
+        "3"
+      ]
+    ],
+    "answers": {
+      "/auth/unlock": {},
+      "/auth/passcode/change": {
+        "changed": true
+      }
+    }
+  },
+  {
+    "route": "/settings/passcode",
+    "screen": "p-settings",
+    "locked": true,
+    "newKey": true,
+    "words": "report",
+    "live": "await P.unlock(); await P.push('done', [encodeURIComponent('Change passcode'), encodeURIComponent('Your passcode is changed.')]);",
+    "why": "B57.207 draws Settings, Security's Change passcode as Pocket Live's pad pages (texts.json 'ph su2') and its end as 'ph done'; its steps' words are B61.109's, listed under Words to confirm",
+    "name": "change-passcode-done",
+    "steps": [
+      [
+        "press",
+        "4"
+      ],
+      [
+        "press",
+        "1"
+      ],
+      [
+        "press",
+        "8"
+      ],
+      [
+        "press",
+        "2"
+      ],
+      [
+        "press",
+        "6"
+      ],
+      [
+        "press",
+        "3"
+      ],
+      [
+        "press",
+        "4"
+      ],
+      [
+        "press",
+        "1"
+      ],
+      [
+        "press",
+        "8"
+      ],
+      [
+        "press",
+        "2"
+      ],
+      [
+        "press",
+        "6"
+      ],
+      [
+        "press",
+        "3"
+      ],
+      [
+        "press",
+        "7"
+      ],
+      [
+        "press",
+        "3"
+      ],
+      [
+        "press",
+        "0"
+      ],
+      [
+        "press",
+        "5"
+      ],
+      [
+        "press",
+        "9"
+      ],
+      [
+        "press",
+        "1"
+      ],
+      [
+        "press",
+        "7"
+      ],
+      [
+        "press",
+        "3"
+      ],
+      [
+        "press",
+        "0"
+      ],
+      [
+        "press",
+        "5"
+      ],
+      [
+        "press",
+        "9"
+      ],
+      [
+        "press",
+        "1"
+      ]
+    ],
+    "answers": {
+      "/auth/unlock": {},
+      "/auth/passcode/change": {
+        "changed": true
+      }
+    },
+    "reduce": true
+  },
+  {
+    "route": "/",
+    "screen": "p-signin",
+    "faceLocked": true,
+    "words": "report",
+    "why": "B57.207 draws the lock's Forgot your passcode? with Face ID: its Face ID step as Pocket Live's su6 (texts.json 'ph su6'); its words are B61.109's, listed under Words to confirm",
+    "live": "await P.flow('su', { type: 'Personal', kind: 'Fiat', find: 'yes' }); await P.push('su', [6]);",
+    "name": "forgot-face",
+    "answers": {
+      "/auth/phone/start": {
+        "expires_at": "2099-01-01T00:00:00Z",
+        "sandbox": true,
+        "sandbox_code": "482913"
+      },
+      "/auth/phone/finish": {
+        "check": "chk_pocket_shots",
+        "has_person": true
+      },
+      "/auth/unlock/challenge": {
+        "challenge": "ch_pocket_shots"
+      }
+    },
+    "steps": [
+      [
+        "press",
+        "Forgot your passcode?"
+      ],
+      [
+        "fill",
+        "Phone number",
+        "7700 900456"
+      ],
+      [
+        "press",
+        "Continue"
+      ],
+      [
+        "fill",
+        "Code",
+        "482913"
+      ]
+    ]
+  },
+  {
+    "route": "/settings/passcode",
+    "screen": "p-settings",
+    "locked": true,
+    "newKey": true,
+    "words": "report",
+    "live": "await P.flow('su', { type: 'Personal', kind: 'Fiat', find: 'yes' }); await P.push('su', [2]);",
+    "why": "B57.207 draws Settings, Security's Change passcode as Pocket Live's pad pages (texts.json 'ph su2') and its end as 'ph done'; its steps' words are B61.109's, listed under Words to confirm",
+    "name": "change-passcode",
+    "steps": [
+      [
+        "press",
+        "4"
+      ],
+      [
+        "press",
+        "1"
+      ],
+      [
+        "press",
+        "8"
+      ],
+      [
+        "press",
+        "2"
+      ],
+      [
+        "press",
+        "6"
+      ],
+      [
+        "press",
+        "3"
+      ]
+    ],
+    "answers": {
+      "/auth/unlock": {},
+      "/auth/passcode/change": {
+        "changed": true
+      }
+    },
+    "dark": true
+  },
+  {
+    "route": "/settings/passcode",
+    "screen": "p-settings",
+    "locked": true,
+    "newKey": true,
+    "words": "report",
+    "live": "await P.flow('su', { type: 'Personal', kind: 'Fiat', find: 'yes' }); await P.push('su', [2]);",
+    "why": "B57.207 draws Settings, Security's Change passcode as Pocket Live's pad pages (texts.json 'ph su2') and its end as 'ph done'; its steps' words are B61.109's, listed under Words to confirm",
+    "name": "change-passcode-new",
+    "steps": [
+      [
+        "press",
+        "4"
+      ],
+      [
+        "press",
+        "1"
+      ],
+      [
+        "press",
+        "8"
+      ],
+      [
+        "press",
+        "2"
+      ],
+      [
+        "press",
+        "6"
+      ],
+      [
+        "press",
+        "3"
+      ],
+      [
+        "press",
+        "4"
+      ],
+      [
+        "press",
+        "1"
+      ],
+      [
+        "press",
+        "8"
+      ],
+      [
+        "press",
+        "2"
+      ],
+      [
+        "press",
+        "6"
+      ],
+      [
+        "press",
+        "3"
+      ]
+    ],
+    "answers": {
+      "/auth/unlock": {},
+      "/auth/passcode/change": {
+        "changed": true
+      }
+    },
+    "dark": true
+  },
+  {
+    "route": "/settings/passcode",
+    "screen": "p-settings",
+    "locked": true,
+    "newKey": true,
+    "words": "report",
+    "live": "await P.unlock(); await P.push('done', [encodeURIComponent('Change passcode'), encodeURIComponent('Your passcode is changed.')]);",
+    "why": "B57.207 draws Settings, Security's Change passcode as Pocket Live's pad pages (texts.json 'ph su2') and its end as 'ph done'; its steps' words are B61.109's, listed under Words to confirm",
+    "name": "change-passcode-done",
+    "steps": [
+      [
+        "press",
+        "4"
+      ],
+      [
+        "press",
+        "1"
+      ],
+      [
+        "press",
+        "8"
+      ],
+      [
+        "press",
+        "2"
+      ],
+      [
+        "press",
+        "6"
+      ],
+      [
+        "press",
+        "3"
+      ],
+      [
+        "press",
+        "4"
+      ],
+      [
+        "press",
+        "1"
+      ],
+      [
+        "press",
+        "8"
+      ],
+      [
+        "press",
+        "2"
+      ],
+      [
+        "press",
+        "6"
+      ],
+      [
+        "press",
+        "3"
+      ],
+      [
+        "press",
+        "7"
+      ],
+      [
+        "press",
+        "3"
+      ],
+      [
+        "press",
+        "0"
+      ],
+      [
+        "press",
+        "5"
+      ],
+      [
+        "press",
+        "9"
+      ],
+      [
+        "press",
+        "1"
+      ],
+      [
+        "press",
+        "7"
+      ],
+      [
+        "press",
+        "3"
+      ],
+      [
+        "press",
+        "0"
+      ],
+      [
+        "press",
+        "5"
+      ],
+      [
+        "press",
+        "9"
+      ],
+      [
+        "press",
+        "1"
+      ]
+    ],
+    "answers": {
+      "/auth/unlock": {},
+      "/auth/passcode/change": {
+        "changed": true
+      }
+    },
+    "dark": true,
+    "reduce": true
+  },
+  {
+    "route": "/",
+    "screen": "p-signin",
+    "faceLocked": true,
+    "words": "report",
+    "why": "B57.207 draws the lock's Forgot your passcode? with Face ID: its Face ID step as Pocket Live's su6 (texts.json 'ph su6'); its words are B61.109's, listed under Words to confirm",
+    "live": "await P.flow('su', { type: 'Personal', kind: 'Fiat', find: 'yes' }); await P.push('su', [6]);",
+    "name": "forgot-face",
+    "answers": {
+      "/auth/phone/start": {
+        "expires_at": "2099-01-01T00:00:00Z",
+        "sandbox": true,
+        "sandbox_code": "482913"
+      },
+      "/auth/phone/finish": {
+        "check": "chk_pocket_shots",
+        "has_person": true
+      },
+      "/auth/unlock/challenge": {
+        "challenge": "ch_pocket_shots"
+      }
+    },
+    "steps": [
+      [
+        "press",
+        "Forgot your passcode?"
+      ],
+      [
+        "fill",
+        "Phone number",
+        "7700 900456"
+      ],
+      [
+        "press",
+        "Continue"
+      ],
+      [
+        "fill",
+        "Code",
+        "482913"
+      ]
+    ],
+    "dark": true
+  }
+]

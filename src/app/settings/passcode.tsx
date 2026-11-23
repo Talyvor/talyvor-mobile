@@ -1,20 +1,30 @@
 import { BffError } from '@talyvor/bff-client'
+import { router } from 'expo-router'
 import { useState } from 'react'
+import { Text, View } from 'react-native'
 
 import { FieldError } from '@/components/country-field'
+import { DoorTop } from '@/components/door'
+import { Tick } from '@/components/live'
 import { PasscodePad } from '@/components/passcode-pad'
-import { Back, Body, Headline, Screen } from '@/components/ui'
+import { Body, Button, Headline, Screen } from '@/components/ui'
 import { DOOR_WORDS, doorRefusal, waitLeft } from '@/door-words'
 import { useSession } from '@/session'
+import { fonts, useTheme } from '@/theme'
 
 // B61.109 — /settings/passcode, Settings, Security's "Change passcode" (Pocket Live `sub:security`): the old passcode,
 // then the new one typed twice, on the number pad, through the BFF (suite B61.105). Lens checks the old one, with its
 // wrong tries and its wait, and says why a new one is refused; the phone keeps none of them.
+// B57.207 — drawn as Pocket Live's pad pages (`su2`): the door's top bar, the chevron and the Sandbox label, over the
+// words, the dots and the pad; changed, Pocket Live's `done`: the tick and its line, with Done at the foot.
 
 type Stage = 'old' | 'choose' | 'again' | 'done'
 
+const toSecurity = () => (router.canGoBack() ? router.back() : router.replace('/settings'))
+
 export default function ChangePasscodeScreen() {
   const { client } = useSession()
+  const { c } = useTheme()
   const [stage, setStage] = useState<Stage>('old')
   const [old, setOld] = useState('')
   const [chosen, setChosen] = useState('')
@@ -49,10 +59,14 @@ export default function ChangePasscodeScreen() {
 
   if (stage === 'done')
     return (
-      <Screen>
-        <Back home="/settings" />
-        <Headline>{DOOR_WORDS.change.title}</Headline>
-        <Body muted>{DOOR_WORDS.change.done}</Body>
+      <Screen fill footer={<Button primary label="Done" onPress={toSecurity} />}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+          <Tick size={84} />
+          <Text accessibilityRole="header" style={{ fontFamily: fonts.display, fontSize: 30, lineHeight: 36, marginTop: 8, color: c.ink }}>
+            {DOOR_WORDS.change.title}
+          </Text>
+          <Text style={{ maxWidth: 300, textAlign: 'center', fontFamily: fonts.ui, fontSize: 15, lineHeight: 22, color: c.ink2 }}>{DOOR_WORDS.change.done}</Text>
+        </View>
       </Screen>
     )
 
@@ -70,7 +84,7 @@ export default function ChangePasscodeScreen() {
         : [DOOR_WORDS.again.title, DOOR_WORDS.again.line, change]
   return (
     <Screen fill>
-      <Back home="/settings" />
+      <DoorTop onBack={busy ? undefined : stage === 'old' ? toSecurity : () => go(stage === 'again' ? 'choose' : 'old')} />
       <Headline>{title}</Headline>
       {line ? <Body muted>{line}</Body> : null}
       <PasscodePad spread onDone={onDone} disabled={busy || waiting} reset={`${stage}-${round}`}>
