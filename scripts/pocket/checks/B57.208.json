@@ -1,0 +1,674 @@
+[
+  {
+    "route": "/approvals",
+    "screen": "p-approvals",
+    "name": "decided",
+    "words": "report",
+    "why": "B57.208: the reference draws no stopped approval or approval proof yet; the stopped sentence is drawn as Pocket's note in the request's card, and a used approval's task and Proof as B57.191's receipt draws a payment's",
+    "scroll": "Decided",
+    "answers": {
+      "/api/agents/approvals": {
+        "approvals": [
+          {
+            "agent_id": "agt_research",
+            "amount_ulxc": 3400000000,
+            "model": "",
+            "payee": {
+              "kind": "outside",
+              "id": "py_acme",
+              "name": "Acme Hosting"
+            },
+            "created_at": "2026-11-16T10:00:00Z",
+            "decided_at": "2026-11-16T10:21:00Z",
+            "task": "Pay November’s hosting for the research cluster",
+            "id": "apr_stop",
+            "status": "approved",
+            "stopped": {
+              "changed": "payee",
+              "at": "2026-11-16T10:24:00Z"
+            }
+          },
+          {
+            "agent_id": "agt_research",
+            "amount_ulxc": 3400000000,
+            "model": "",
+            "payee": {
+              "kind": "outside",
+              "id": "py_north",
+              "name": "Northwind Data"
+            },
+            "created_at": "2026-11-15T09:00:00Z",
+            "decided_at": "2026-11-15T09:12:00Z",
+            "task": "Pay November’s hosting for the research cluster",
+            "id": "apr_used",
+            "status": "used",
+            "stopped": null
+          }
+        ]
+      },
+      "/api/payment-proofs/apr_used": {
+        "id": "pp_north",
+        "rule": "approval_above",
+        "rules_version": 4,
+        "approval_id": "apr_used",
+        "shown": {
+          "agent_id": "agt_research",
+          "payee": {
+            "kind": "outside",
+            "id": "py_north",
+            "name": "Northwind Data"
+          },
+          "amount_minor": 34000,
+          "currency": "USD",
+          "agent_name": "Research"
+        },
+        "key_kind": "device",
+        "key_id": "dev_iphone",
+        "signed_at": "2026-11-15T09:12:00Z",
+        "sent": {
+          "agent_id": "agt_research",
+          "payee": {
+            "kind": "outside",
+            "id": "py_north",
+            "name": "Northwind Data"
+          },
+          "amount_minor": 34000,
+          "currency": "USD",
+          "rail": "account",
+          "reference": "ref_north",
+          "task": "Pay November’s hosting for the research cluster"
+        },
+        "created_at": "2026-11-15T09:14:00Z",
+        "verified": true
+      }
+    }
+  },
+  {
+    "route": "/approvals",
+    "screen": "p-approvals",
+    "name": "decided",
+    "words": "report",
+    "why": "B57.208: the reference draws no stopped approval or approval proof yet; the stopped sentence is drawn as Pocket's note in the request's card, and a used approval's task and Proof as B57.191's receipt draws a payment's",
+    "scroll": "Decided",
+    "answers": {
+      "/api/agents/approvals": {
+        "approvals": [
+          {
+            "agent_id": "agt_research",
+            "amount_ulxc": 3400000000,
+            "model": "",
+            "payee": {
+              "kind": "outside",
+              "id": "py_acme",
+              "name": "Acme Hosting"
+            },
+            "created_at": "2026-11-16T10:00:00Z",
+            "decided_at": "2026-11-16T10:21:00Z",
+            "task": "Pay November’s hosting for the research cluster",
+            "id": "apr_stop",
+            "status": "approved",
+            "stopped": {
+              "changed": "payee",
+              "at": "2026-11-16T10:24:00Z"
+            }
+          },
+          {
+            "agent_id": "agt_research",
+            "amount_ulxc": 3400000000,
+            "model": "",
+            "payee": {
+              "kind": "outside",
+              "id": "py_north",
+              "name": "Northwind Data"
+            },
+            "created_at": "2026-11-15T09:00:00Z",
+            "decided_at": "2026-11-15T09:12:00Z",
+            "task": "Pay November’s hosting for the research cluster",
+            "id": "apr_used",
+            "status": "used",
+            "stopped": null
+          }
+        ]
+      },
+      "/api/payment-proofs/apr_used": {
+        "id": "pp_north",
+        "rule": "approval_above",
+        "rules_version": 4,
+        "approval_id": "apr_used",
+        "shown": {
+          "agent_id": "agt_research",
+          "payee": {
+            "kind": "outside",
+            "id": "py_north",
+            "name": "Northwind Data"
+          },
+          "amount_minor": 34000,
+          "currency": "USD",
+          "agent_name": "Research"
+        },
+        "key_kind": "device",
+        "key_id": "dev_iphone",
+        "signed_at": "2026-11-15T09:12:00Z",
+        "sent": {
+          "agent_id": "agt_research",
+          "payee": {
+            "kind": "outside",
+            "id": "py_north",
+            "name": "Northwind Data"
+          },
+          "amount_minor": 34000,
+          "currency": "USD",
+          "rail": "account",
+          "reference": "ref_north",
+          "task": "Pay November’s hosting for the research cluster"
+        },
+        "created_at": "2026-11-15T09:14:00Z",
+        "verified": true
+      }
+    },
+    "dark": true
+  },
+  {
+    "route": "/approvals/apr_stop",
+    "screen": "p-approval-landing",
+    "name": "stopped",
+    "words": "report",
+    "why": "B57.208: the reference draws no stopped approval or approval proof yet; the stopped sentence is drawn as Pocket's note in the request's card, and a used approval's task and Proof as B57.191's receipt draws a payment's",
+    "answers": {
+      "/api/agents/approvals": {
+        "approvals": [
+          {
+            "agent_id": "agt_research",
+            "amount_ulxc": 3400000000,
+            "model": "",
+            "payee": {
+              "kind": "outside",
+              "id": "py_acme",
+              "name": "Acme Hosting"
+            },
+            "created_at": "2026-11-16T10:00:00Z",
+            "decided_at": "2026-11-16T10:21:00Z",
+            "task": "Pay November’s hosting for the research cluster",
+            "id": "apr_stop",
+            "status": "approved",
+            "stopped": {
+              "changed": "payee",
+              "at": "2026-11-16T10:24:00Z"
+            }
+          },
+          {
+            "agent_id": "agt_research",
+            "amount_ulxc": 3400000000,
+            "model": "",
+            "payee": {
+              "kind": "outside",
+              "id": "py_north",
+              "name": "Northwind Data"
+            },
+            "created_at": "2026-11-15T09:00:00Z",
+            "decided_at": "2026-11-15T09:12:00Z",
+            "task": "Pay November’s hosting for the research cluster",
+            "id": "apr_used",
+            "status": "used",
+            "stopped": null
+          }
+        ]
+      },
+      "/api/payment-proofs/apr_used": {
+        "id": "pp_north",
+        "rule": "approval_above",
+        "rules_version": 4,
+        "approval_id": "apr_used",
+        "shown": {
+          "agent_id": "agt_research",
+          "payee": {
+            "kind": "outside",
+            "id": "py_north",
+            "name": "Northwind Data"
+          },
+          "amount_minor": 34000,
+          "currency": "USD",
+          "agent_name": "Research"
+        },
+        "key_kind": "device",
+        "key_id": "dev_iphone",
+        "signed_at": "2026-11-15T09:12:00Z",
+        "sent": {
+          "agent_id": "agt_research",
+          "payee": {
+            "kind": "outside",
+            "id": "py_north",
+            "name": "Northwind Data"
+          },
+          "amount_minor": 34000,
+          "currency": "USD",
+          "rail": "account",
+          "reference": "ref_north",
+          "task": "Pay November’s hosting for the research cluster"
+        },
+        "created_at": "2026-11-15T09:14:00Z",
+        "verified": true
+      }
+    }
+  },
+  {
+    "route": "/approvals/apr_stop",
+    "screen": "p-approval-landing",
+    "name": "stopped",
+    "words": "report",
+    "why": "B57.208: the reference draws no stopped approval or approval proof yet; the stopped sentence is drawn as Pocket's note in the request's card, and a used approval's task and Proof as B57.191's receipt draws a payment's",
+    "answers": {
+      "/api/agents/approvals": {
+        "approvals": [
+          {
+            "agent_id": "agt_research",
+            "amount_ulxc": 3400000000,
+            "model": "",
+            "payee": {
+              "kind": "outside",
+              "id": "py_acme",
+              "name": "Acme Hosting"
+            },
+            "created_at": "2026-11-16T10:00:00Z",
+            "decided_at": "2026-11-16T10:21:00Z",
+            "task": "Pay November’s hosting for the research cluster",
+            "id": "apr_stop",
+            "status": "approved",
+            "stopped": {
+              "changed": "payee",
+              "at": "2026-11-16T10:24:00Z"
+            }
+          },
+          {
+            "agent_id": "agt_research",
+            "amount_ulxc": 3400000000,
+            "model": "",
+            "payee": {
+              "kind": "outside",
+              "id": "py_north",
+              "name": "Northwind Data"
+            },
+            "created_at": "2026-11-15T09:00:00Z",
+            "decided_at": "2026-11-15T09:12:00Z",
+            "task": "Pay November’s hosting for the research cluster",
+            "id": "apr_used",
+            "status": "used",
+            "stopped": null
+          }
+        ]
+      },
+      "/api/payment-proofs/apr_used": {
+        "id": "pp_north",
+        "rule": "approval_above",
+        "rules_version": 4,
+        "approval_id": "apr_used",
+        "shown": {
+          "agent_id": "agt_research",
+          "payee": {
+            "kind": "outside",
+            "id": "py_north",
+            "name": "Northwind Data"
+          },
+          "amount_minor": 34000,
+          "currency": "USD",
+          "agent_name": "Research"
+        },
+        "key_kind": "device",
+        "key_id": "dev_iphone",
+        "signed_at": "2026-11-15T09:12:00Z",
+        "sent": {
+          "agent_id": "agt_research",
+          "payee": {
+            "kind": "outside",
+            "id": "py_north",
+            "name": "Northwind Data"
+          },
+          "amount_minor": 34000,
+          "currency": "USD",
+          "rail": "account",
+          "reference": "ref_north",
+          "task": "Pay November’s hosting for the research cluster"
+        },
+        "created_at": "2026-11-15T09:14:00Z",
+        "verified": true
+      }
+    },
+    "dark": true
+  },
+  {
+    "route": "/approvals/apr_used",
+    "screen": "p-approval-landing",
+    "name": "proof",
+    "words": "report",
+    "why": "B57.208: the reference draws no stopped approval or approval proof yet; the stopped sentence is drawn as Pocket's note in the request's card, and a used approval's task and Proof as B57.191's receipt draws a payment's",
+    "scroll": "Proof",
+    "answers": {
+      "/api/agents/approvals": {
+        "approvals": [
+          {
+            "agent_id": "agt_research",
+            "amount_ulxc": 3400000000,
+            "model": "",
+            "payee": {
+              "kind": "outside",
+              "id": "py_acme",
+              "name": "Acme Hosting"
+            },
+            "created_at": "2026-11-16T10:00:00Z",
+            "decided_at": "2026-11-16T10:21:00Z",
+            "task": "Pay November’s hosting for the research cluster",
+            "id": "apr_stop",
+            "status": "approved",
+            "stopped": {
+              "changed": "payee",
+              "at": "2026-11-16T10:24:00Z"
+            }
+          },
+          {
+            "agent_id": "agt_research",
+            "amount_ulxc": 3400000000,
+            "model": "",
+            "payee": {
+              "kind": "outside",
+              "id": "py_north",
+              "name": "Northwind Data"
+            },
+            "created_at": "2026-11-15T09:00:00Z",
+            "decided_at": "2026-11-15T09:12:00Z",
+            "task": "Pay November’s hosting for the research cluster",
+            "id": "apr_used",
+            "status": "used",
+            "stopped": null
+          }
+        ]
+      },
+      "/api/payment-proofs/apr_used": {
+        "id": "pp_north",
+        "rule": "approval_above",
+        "rules_version": 4,
+        "approval_id": "apr_used",
+        "shown": {
+          "agent_id": "agt_research",
+          "payee": {
+            "kind": "outside",
+            "id": "py_north",
+            "name": "Northwind Data"
+          },
+          "amount_minor": 34000,
+          "currency": "USD",
+          "agent_name": "Research"
+        },
+        "key_kind": "device",
+        "key_id": "dev_iphone",
+        "signed_at": "2026-11-15T09:12:00Z",
+        "sent": {
+          "agent_id": "agt_research",
+          "payee": {
+            "kind": "outside",
+            "id": "py_north",
+            "name": "Northwind Data"
+          },
+          "amount_minor": 34000,
+          "currency": "USD",
+          "rail": "account",
+          "reference": "ref_north",
+          "task": "Pay November’s hosting for the research cluster"
+        },
+        "created_at": "2026-11-15T09:14:00Z",
+        "verified": true
+      }
+    }
+  },
+  {
+    "route": "/approvals/apr_used",
+    "screen": "p-approval-landing",
+    "name": "proof",
+    "words": "report",
+    "why": "B57.208: the reference draws no stopped approval or approval proof yet; the stopped sentence is drawn as Pocket's note in the request's card, and a used approval's task and Proof as B57.191's receipt draws a payment's",
+    "scroll": "Proof",
+    "answers": {
+      "/api/agents/approvals": {
+        "approvals": [
+          {
+            "agent_id": "agt_research",
+            "amount_ulxc": 3400000000,
+            "model": "",
+            "payee": {
+              "kind": "outside",
+              "id": "py_acme",
+              "name": "Acme Hosting"
+            },
+            "created_at": "2026-11-16T10:00:00Z",
+            "decided_at": "2026-11-16T10:21:00Z",
+            "task": "Pay November’s hosting for the research cluster",
+            "id": "apr_stop",
+            "status": "approved",
+            "stopped": {
+              "changed": "payee",
+              "at": "2026-11-16T10:24:00Z"
+            }
+          },
+          {
+            "agent_id": "agt_research",
+            "amount_ulxc": 3400000000,
+            "model": "",
+            "payee": {
+              "kind": "outside",
+              "id": "py_north",
+              "name": "Northwind Data"
+            },
+            "created_at": "2026-11-15T09:00:00Z",
+            "decided_at": "2026-11-15T09:12:00Z",
+            "task": "Pay November’s hosting for the research cluster",
+            "id": "apr_used",
+            "status": "used",
+            "stopped": null
+          }
+        ]
+      },
+      "/api/payment-proofs/apr_used": {
+        "id": "pp_north",
+        "rule": "approval_above",
+        "rules_version": 4,
+        "approval_id": "apr_used",
+        "shown": {
+          "agent_id": "agt_research",
+          "payee": {
+            "kind": "outside",
+            "id": "py_north",
+            "name": "Northwind Data"
+          },
+          "amount_minor": 34000,
+          "currency": "USD",
+          "agent_name": "Research"
+        },
+        "key_kind": "device",
+        "key_id": "dev_iphone",
+        "signed_at": "2026-11-15T09:12:00Z",
+        "sent": {
+          "agent_id": "agt_research",
+          "payee": {
+            "kind": "outside",
+            "id": "py_north",
+            "name": "Northwind Data"
+          },
+          "amount_minor": 34000,
+          "currency": "USD",
+          "rail": "account",
+          "reference": "ref_north",
+          "task": "Pay November’s hosting for the research cluster"
+        },
+        "created_at": "2026-11-15T09:14:00Z",
+        "verified": true
+      }
+    },
+    "dark": true
+  },
+  {
+    "route": "/approvals/apr_used",
+    "screen": "p-approval-landing",
+    "name": "task",
+    "words": "report",
+    "why": "B57.208: the reference draws no stopped approval or approval proof yet; the stopped sentence is drawn as Pocket's note in the request's card, and a used approval's task and Proof as B57.191's receipt draws a payment's",
+    "answers": {
+      "/api/agents/approvals": {
+        "approvals": [
+          {
+            "agent_id": "agt_research",
+            "amount_ulxc": 3400000000,
+            "model": "",
+            "payee": {
+              "kind": "outside",
+              "id": "py_acme",
+              "name": "Acme Hosting"
+            },
+            "created_at": "2026-11-16T10:00:00Z",
+            "decided_at": "2026-11-16T10:21:00Z",
+            "task": "Pay November’s hosting for the research cluster",
+            "id": "apr_stop",
+            "status": "approved",
+            "stopped": {
+              "changed": "payee",
+              "at": "2026-11-16T10:24:00Z"
+            }
+          },
+          {
+            "agent_id": "agt_research",
+            "amount_ulxc": 3400000000,
+            "model": "",
+            "payee": {
+              "kind": "outside",
+              "id": "py_north",
+              "name": "Northwind Data"
+            },
+            "created_at": "2026-11-15T09:00:00Z",
+            "decided_at": "2026-11-15T09:12:00Z",
+            "task": "Pay November’s hosting for the research cluster",
+            "id": "apr_used",
+            "status": "used",
+            "stopped": null
+          }
+        ]
+      },
+      "/api/payment-proofs/apr_used": {
+        "id": "pp_north",
+        "rule": "approval_above",
+        "rules_version": 4,
+        "approval_id": "apr_used",
+        "shown": {
+          "agent_id": "agt_research",
+          "payee": {
+            "kind": "outside",
+            "id": "py_north",
+            "name": "Northwind Data"
+          },
+          "amount_minor": 34000,
+          "currency": "USD",
+          "agent_name": "Research"
+        },
+        "key_kind": "device",
+        "key_id": "dev_iphone",
+        "signed_at": "2026-11-15T09:12:00Z",
+        "sent": {
+          "agent_id": "agt_research",
+          "payee": {
+            "kind": "outside",
+            "id": "py_north",
+            "name": "Northwind Data"
+          },
+          "amount_minor": 34000,
+          "currency": "USD",
+          "rail": "account",
+          "reference": "ref_north",
+          "task": "Pay November’s hosting for the research cluster"
+        },
+        "created_at": "2026-11-15T09:14:00Z",
+        "verified": true
+      }
+    }
+  },
+  {
+    "route": "/approvals/apr_used",
+    "screen": "p-approval-landing",
+    "name": "task",
+    "words": "report",
+    "why": "B57.208: the reference draws no stopped approval or approval proof yet; the stopped sentence is drawn as Pocket's note in the request's card, and a used approval's task and Proof as B57.191's receipt draws a payment's",
+    "answers": {
+      "/api/agents/approvals": {
+        "approvals": [
+          {
+            "agent_id": "agt_research",
+            "amount_ulxc": 3400000000,
+            "model": "",
+            "payee": {
+              "kind": "outside",
+              "id": "py_acme",
+              "name": "Acme Hosting"
+            },
+            "created_at": "2026-11-16T10:00:00Z",
+            "decided_at": "2026-11-16T10:21:00Z",
+            "task": "Pay November’s hosting for the research cluster",
+            "id": "apr_stop",
+            "status": "approved",
+            "stopped": {
+              "changed": "payee",
+              "at": "2026-11-16T10:24:00Z"
+            }
+          },
+          {
+            "agent_id": "agt_research",
+            "amount_ulxc": 3400000000,
+            "model": "",
+            "payee": {
+              "kind": "outside",
+              "id": "py_north",
+              "name": "Northwind Data"
+            },
+            "created_at": "2026-11-15T09:00:00Z",
+            "decided_at": "2026-11-15T09:12:00Z",
+            "task": "Pay November’s hosting for the research cluster",
+            "id": "apr_used",
+            "status": "used",
+            "stopped": null
+          }
+        ]
+      },
+      "/api/payment-proofs/apr_used": {
+        "id": "pp_north",
+        "rule": "approval_above",
+        "rules_version": 4,
+        "approval_id": "apr_used",
+        "shown": {
+          "agent_id": "agt_research",
+          "payee": {
+            "kind": "outside",
+            "id": "py_north",
+            "name": "Northwind Data"
+          },
+          "amount_minor": 34000,
+          "currency": "USD",
+          "agent_name": "Research"
+        },
+        "key_kind": "device",
+        "key_id": "dev_iphone",
+        "signed_at": "2026-11-15T09:12:00Z",
+        "sent": {
+          "agent_id": "agt_research",
+          "payee": {
+            "kind": "outside",
+            "id": "py_north",
+            "name": "Northwind Data"
+          },
+          "amount_minor": 34000,
+          "currency": "USD",
+          "rail": "account",
+          "reference": "ref_north",
+          "task": "Pay November’s hosting for the research cluster"
+        },
+        "created_at": "2026-11-15T09:14:00Z",
+        "verified": true
+      }
+    },
+    "dark": true
+  }
+]

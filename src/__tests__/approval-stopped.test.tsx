@@ -114,3 +114,24 @@ test('a used approval opens its proof, read by the approval’s id, with Copy th
   expect(await proof.findByText('Proof copied')).toBeTruthy()
   expect(mockCopied[0].split('\n')[0]).toBe('Payment proof')
 })
+
+// B57.208 — drawn in Pocket: on the landing the stopped sentence is a note inside the request's card, and a used
+// approval's card carries the agent's task under what it was and its Proof as a section of its own, as B57.191's payment
+// receipt draws them; the card that explains where notifications land comes last.
+test('the landing draws the stopped sentence as a note inside the request’s card', async () => {
+  mockBff()
+  await renderRouter('./src/app', { initialUrl: '/approvals/apr_payee' })
+  const card = within(await screen.findByTestId('decided-card'))
+  const note = within(card.getByTestId('stopped-note'))
+  expect(note.getByText('Stopped: the payee changed after you approved.')).toBeTruthy()
+})
+
+test('a used approval’s card holds the agent’s task and its Proof, above the card about notifications', async () => {
+  mockBff()
+  await renderRouter('./src/app', { initialUrl: '/approvals/apr_used' })
+  const card = within(await screen.findByTestId('decided-card'))
+  expect(await card.findByTestId('payment-proof')).toBeTruthy()
+  expect(card.getByText(`The agent says: “${TASK}”`)).toBeTruthy()
+  expect(card.queryByText(/A notification for a request still waiting/)).toBeNull()
+  expect(screen.getByText(/A notification for a request still waiting/)).toBeTruthy()
+})
