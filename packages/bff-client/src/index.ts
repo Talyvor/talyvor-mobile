@@ -1138,6 +1138,13 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     /** Opens the lock with the passcode, checked by Lens, or the sign-in key's signature over unlockChallenge's. */
     unlock: async (proof: { passcode: string } | DeviceAssertion) =>
       void (await send('POST', '/auth/unlock', JSON.stringify(proof), { 'Content-Type': 'application/json' })),
+    /** B61.109 — Settings, Security's "Change passcode" (suite B61.105): the old one, checked by Lens, and the new. */
+    passcodeChange: (oldPasscode: string, passcode: string) =>
+      call<{ changed: boolean }>('POST', '/auth/passcode/change', { old_passcode: oldPasscode, passcode }),
+    /** B61.109 — a forgotten passcode set again (suite B61.108): the number's check and the sign-in key's answer to
+     * unlockChallenge's. A locked session stays locked: the new passcode then opens it. */
+    passcodeReplace: async (check: string, passcode: string, answer: DeviceAssertion) =>
+      void (await send('POST', '/auth/passcode/replace', JSON.stringify({ check, passcode, ...answer }), { 'Content-Type': 'application/json' })),
     /** B61.27 — who is signed in, and what the door still asks of them. */
     authMe: () => call<AuthMe>('GET', '/auth/me'),
     /** B61.10 — the person's accounts, the session's marked current. */

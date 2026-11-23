@@ -1,7 +1,7 @@
-import { BffError } from '@talyvor/bff-client'
+import { BffError, createBffClient } from '@talyvor/bff-client'
 import { Image } from 'expo-image'
 import { router } from 'expo-router'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Pressable, StyleSheet, TextInput, View } from 'react-native'
 
 import { FieldError } from '@/components/country-field'
@@ -9,7 +9,9 @@ import { Icon } from '@/components/icon'
 import { MoneyLabel, useMoneyLabels } from '@/components/money-label'
 import { PasscodePad } from '@/components/passcode-pad'
 import { Body, Button, Headline, Note, Screen } from '@/components/ui'
+import { config } from '@/config'
 import { DOOR_WORDS, doorRefusal, waitLeft } from '@/door-words'
+import { faceIDAnswer } from '@/keys'
 import { useSession } from '@/session'
 import { fonts, useTheme } from '@/theme'
 
@@ -19,8 +21,11 @@ import { fonts, useTheme } from '@/theme'
 // B57.185 — drawn as Pocket Live's `su0` to `su2`: the country beside the number in one row, the code's six dots with
 // the Sandbox code in a note, and the passcode's dots under the words with the number pad at the foot. The code is
 // still typed with the phone's own keyboard under the dots, so the phone can fill it from the text.
+// B61.109 — `forgot`: the lock's "Forgot your passcode?" with Face ID on. The number and its texted code, then Face ID
+// (the sign-in key's answer to the lock's challenge), then a new passcode typed twice, set by the BFF (suite B61.108)
+// and then opening the lock. The number's steps go without the locked session, which the BFF answers 423 to.
 
-type Stage = 'phone' | 'code' | 'enter' | 'choose' | 'again'
+type Stage = 'phone' | 'code' | 'face' | 'enter' | 'choose' | 'again'
 
 function SandboxLabel() {
   const labels = useMoneyLabels()
@@ -52,8 +57,10 @@ function Top({ onBack }: { onBack?: () => void }) {
   )
 }
 
-export function Door() {
-  const { client, signInWithDoor } = useSession()
+export function Door({ forgot }: { forgot?: { back: () => void } } = {}) {
+  const { client: session, signInWithDoor, unlock } = useSession()
+  const signedOut = useMemo(() => createBffClient(config.bffUrl, () => null), [])
+  const client = forgot ? signedOut : session
   const { c } = useTheme()
   const [stage, setStage] = useState<Stage>('phone')
   const [dial, setDial] = useState('+44')
@@ -66,6 +73,7 @@ export function Door() {
   const [busy, setBusy] = useState(false)
   const [waiting, setWaiting] = useState(false)
   const [round, setRound] = useState(0)
+  const [answer, setAnswer] = useState<Awaited<ReturnType<typeof faceIDAnswer>> | null>(null)
 
   // Pocket Live's .input: 46 high, round 14, a 1.5 control edge on the page.
   const input = { height: 46, borderRadius: 14, borderWidth: 1.5, borderColor: c.control, backgroundColor: c.page }
@@ -108,8 +116,36 @@ export function Door() {
       void run(async () => {
         const f = await client.phoneFinish(phone, digits)
         setCheck(f.check)
-        go(f.has_person ? 'enter' : 'choose')
+        if (!forgot) return go(f.has_person ? 'enter' : 'choose')
+        go('face')
+        await face()
       })
+  }
+
+  // Face ID that does not pass says nothing: the step stays, with Face ID to try again.
+  const face = async () => {
+    setSaid('')
+    try {
+      setAnswer(await faceIDAnswer(session))
+    } catch (err) {
+      if (err instanceof BffError) throw err
+      return
+    }
+    go('choose')
+  }
+
+  const replace = async (passcode: string) => {
+    if (!answer) return go('face')
+    try {
+      await session.passcodeReplace(check, passcode, answer)
+    } catch (err) {
+      // A refusal asks for Face ID again, over a new challenge; a passcode too easy to guess is chosen again.
+      setChosen('')
+      setAnswer(null)
+      setStage(err instanceof BffError && err.code === 'weak_passcode' ? 'choose' : 'face')
+      throw err
+    }
+    await unlock(passcode)
   }
 
   const enter = (passcode: string) =>
@@ -125,6 +161,7 @@ export function Door() {
         setSaid(DOOR_WORDS.again.differ)
         return
       }
+      if (forgot) return replace(passcode)
       try {
         await signInWithDoor(await client.phoneJoin(check, passcode), passcode)
       } catch (err) {
@@ -139,7 +176,7 @@ export function Door() {
     })
 
   const error = said ? <FieldError>{said}</FieldError> : null
-  const back = busy ? undefined : () => go(stage === 'again' ? 'choose' : stage === 'code' ? 'phone' : 'phone')
+  const back = busy ? undefined : stage === 'phone' ? forgot?.back : () => go(stage === 'again' ? 'choose' : 'phone')
 
   if (stage === 'phone')
     return (
@@ -150,7 +187,7 @@ export function Door() {
             <Button primary label={DOOR_WORDS.phone.go} disabled={busy || number.replace(/\D/g, '').length < 6} onPress={() => void start()} />
           </>
         }>
-        <Top />
+        <Top onBack={back} />
         <Headline>{DOOR_WORDS.phone.title}</Headline>
         <Body muted>{DOOR_WORDS.phone.line}</Body>
         <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
@@ -216,6 +253,15 @@ export function Door() {
       </Screen>
     )
 
+  if (stage === 'face')
+    return (
+      <Screen footer={<>{error}<Button primary label={DOOR_WORDS.lock.faceID} disabled={busy} onPress={() => void run(face)} /></>}>
+        <Top onBack={back} />
+        <Headline>{DOOR_WORDS.forgot.title}</Headline>
+        <Body muted>{DOOR_WORDS.forgot.faceID}</Body>
+      </Screen>
+    )
+
   const pad = (title: string, line: string | null, onDone: (p: string) => Promise<void> | void) => (
     <Screen fill>
       <Top onBack={back} />
@@ -228,7 +274,7 @@ export function Door() {
   )
   if (stage === 'enter') return pad(DOOR_WORDS.enter.title, null, enter)
   if (stage === 'choose')
-    return pad(DOOR_WORDS.choose.title, DOOR_WORDS.choose.line, (p) => {
+    return pad(forgot ? DOOR_WORDS.forgot.choose : DOOR_WORDS.choose.title, DOOR_WORDS.choose.line, (p) => {
       setChosen(p)
       go('again')
     })

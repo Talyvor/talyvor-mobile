@@ -1,19 +1,23 @@
 import { BffError } from '@talyvor/bff-client'
+import { router } from 'expo-router'
 import { useEffect, useState } from 'react'
 import { View } from 'react-native'
 
 import { FieldError } from '@/components/country-field'
+import { Icon } from '@/components/icon'
 import { PasscodePad } from '@/components/passcode-pad'
-import { Body, Card, Eyebrow, Note, Toggle } from '@/components/ui'
+import { Body, Card, Eyebrow, Note, Row, Toggle } from '@/components/ui'
 import { DOOR_WORDS, doorRefusal } from '@/door-words'
 import { faceIDUnlocks, hasSignInKey, keysAvailable, setFaceIDUnlocks, thisPhoneDevice, turnOnFaceID } from '@/keys'
 import { useSession } from '@/session'
+import { useTheme } from '@/theme'
 
 // B61.27 — Settings, Security (Pocket Live `sub:security`): Face ID on or off for opening the app. Off keeps the key, so
 // on again asks for nothing; a phone with no key yet makes one, with the passcode as Lens's proof. A phone that already
 // approves with a key made before sign-in keys existed keeps it: making another would replace the one that approves.
 // B57.185 — drawn as Pocket Live's `sub:security`: the setting as a row with its line under it and the switch beside,
 // then the note with its shield.
+// B61.109 — "Change passcode" first, as Pocket Live draws it, to /settings/passcode.
 
 export const UNLOCK_WORDS = {
   title: 'Security',
@@ -25,6 +29,7 @@ export const UNLOCK_WORDS = {
 
 export function UnlockSettings() {
   const { client, person } = useSession()
+  const { c } = useTheme()
   const [on, setOn] = useState<boolean | null>(null)
   const [blocked, setBlocked] = useState(false)
   const [asking, setAsking] = useState(false)
@@ -43,9 +48,26 @@ export function UnlockSettings() {
       live = false
     }
   }, [version])
-  if (!person || on === null || !keysAvailable()) return null
+  if (!person || on === null) return null
+  const change = (
+    <Row
+      first
+      title={DOOR_WORDS.change.title}
+      sub={DOOR_WORDS.change.line}
+      right={<Icon name="chev" size={16} color={c.ink3} />}
+      onPress={() => router.push('/settings/passcode')}
+    />
+  )
+  if (!keysAvailable())
+    return (
+      <>
+        <Eyebrow>{UNLOCK_WORDS.title}</Eyebrow>
+        <Card>{change}</Card>
+        <Note icon="shield">{UNLOCK_WORDS.line}</Note>
+      </>
+    )
 
-  const change = async (next: boolean) => {
+  const turn = async (next: boolean) => {
     setFailed('')
     if (!next) return void (await setFaceIDUnlocks(false), read())
     if (await hasSignInKey()) return void (await setFaceIDUnlocks(true), read())
@@ -66,7 +88,8 @@ export function UnlockSettings() {
     <>
       <Eyebrow>{UNLOCK_WORDS.title}</Eyebrow>
       <Card>
-        <Toggle label={UNLOCK_WORDS.faceID} sub={blocked ? UNLOCK_WORDS.keyFirst : UNLOCK_WORDS.sub} value={on} disabled={blocked || asking} onValueChange={(v) => void change(v)} />
+        {change}
+        <Toggle label={UNLOCK_WORDS.faceID} sub={blocked ? UNLOCK_WORDS.keyFirst : UNLOCK_WORDS.sub} value={on} disabled={blocked || asking} onValueChange={(v) => void turn(v)} />
         {asking ? (
           <View>
             <Body>{DOOR_WORDS.enter.title}</Body>
