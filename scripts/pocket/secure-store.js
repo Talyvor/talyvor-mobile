@@ -13,6 +13,8 @@ export async function getItemAsync(key) {
   if (globalThis.__POCKET_SHOTS_PHONE_KEY && key === 'talyvor.device-workspace-name') return 'Northwind Studio'
   // B61.27: a check with `locked` opens on a session the door opened, so the app opens on its lock.
   if (globalThis.__POCKET_SHOTS_LOCKED && key === 'talyvor.session') return JSON.stringify({ ...JSON.parse(SESSION), person: true })
+  // B57.207: a check with `faceLocked` has Face ID on for opening the app, with a sign-in key whose Face ID fails.
+  if (globalThis.__POCKET_SHOTS_FACE_LOCKED && key === 'talyvor.signin-key') return 'pk_pocket_shots'
   return key === 'talyvor.session' ? SESSION : null
 }
 export async function setItemAsync() {}

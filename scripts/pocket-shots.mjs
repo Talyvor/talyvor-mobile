@@ -27,6 +27,8 @@
  * hold still) is drawn at its end: the tick drawn, the top line shown.
  * B61.79: a press also finds a link by its name (a list's row), and `move` moves the held clock on by that many
  * milliseconds after the presses, so a move that runs on the clock is shot part of the way through.
+ * B57.207: `faceLocked` opens the app on the lock with Face ID on and a key whose Face ID does not pass, so the lock
+ * offers "Forgot your passcode?" with Face ID and the forgot path waits on its Face ID step.
  *
  * It exports the app for the web once (npx expo export --platform web) with the sample session in the keychain
  * (metro.config.js, POCKET_SHOTS=1), serves it, answers every BFF request from scripts/pocket/sample.mjs, and shoots
@@ -210,6 +212,7 @@ async function app(c) {
   if (c.phoneKey) await ctx.addInitScript(() => (globalThis.__POCKET_SHOTS_PHONE_KEY = true))
   if (c.newKey) await ctx.addInitScript(() => (globalThis.__POCKET_SHOTS_NEW_KEY = true))
   if (c.locked) await ctx.addInitScript(() => (globalThis.__POCKET_SHOTS_LOCKED = true))
+  if (c.faceLocked) await ctx.addInitScript(() => (globalThis.__POCKET_SHOTS_LOCKED = globalThis.__POCKET_SHOTS_FACE_LOCKED = true))
   const page = await ctx.newPage()
   await page.clock.setFixedTime(new Date(SAMPLE_NOW))
   await page.route(`${BFF}/**`, (route) => {

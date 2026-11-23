@@ -17,4 +17,13 @@ export default globalThis.__POCKET_SHOTS_PHONE_KEY
         sign: async () => 'pocket-shots',
         deleteKey: async () => undefined,
       }
-    : null
+    : globalThis.__POCKET_SHOTS_FACE_LOCKED
+      ? {
+          // B57.207: Face ID that does not pass, so the lock and the forgot path wait on the passcode and Face ID's step.
+          isAvailable: () => true,
+          sign: async () => {
+            throw Object.assign(new Error('Face ID did not pass'), { code: 'ERR_BIOMETRIC' })
+          },
+          deleteKey: async () => undefined,
+        }
+      : null
