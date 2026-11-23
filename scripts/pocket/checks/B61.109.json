@@ -1,0 +1,144 @@
+[
+  {
+    "route": "/settings",
+    "screen": "p-settings",
+    "locked": true,
+    "newKey": true,
+    "live": "await P.unlock(); await P.push('sub', ['security']);",
+    "words": "report",
+    "why": "B61.109 adds Change passcode to Pocket Live's sub:security (design/pocket-live texts.json 'ph sub:security'); the steps Pocket Live does not draw are listed under Words to confirm on the PR",
+    "name": "security",
+    "answers": {
+      "/auth/unlock": {}
+    },
+    "steps": [
+      [
+        "press",
+        "4"
+      ],
+      [
+        "press",
+        "1"
+      ],
+      [
+        "press",
+        "8"
+      ],
+      [
+        "press",
+        "2"
+      ],
+      [
+        "press",
+        "6"
+      ],
+      [
+        "press",
+        "3"
+      ]
+    ],
+    "scroll": "Change passcode"
+  },
+  {
+    "route": "/settings/passcode",
+    "screen": "p-settings",
+    "locked": true,
+    "newKey": true,
+    "live": "await P.unlock(); await P.push('sub', ['security']);",
+    "words": "report",
+    "why": "B61.109 adds Change passcode to Pocket Live's sub:security (design/pocket-live texts.json 'ph sub:security'); the steps Pocket Live does not draw are listed under Words to confirm on the PR",
+    "name": "change-passcode",
+    "answers": {
+      "/auth/unlock": {}
+    },
+    "steps": [
+      [
+        "press",
+        "4"
+      ],
+      [
+        "press",
+        "1"
+      ],
+      [
+        "press",
+        "8"
+      ],
+      [
+        "press",
+        "2"
+      ],
+      [
+        "press",
+        "6"
+      ],
+      [
+        "press",
+        "3"
+      ]
+    ]
+  },
+  {
+    "route": "/settings/passcode",
+    "screen": "p-settings",
+    "locked": true,
+    "newKey": true,
+    "live": "await P.unlock(); await P.push('sub', ['security']);",
+    "words": "report",
+    "why": "B61.109 adds Change passcode to Pocket Live's sub:security (design/pocket-live texts.json 'ph sub:security'); the steps Pocket Live does not draw are listed under Words to confirm on the PR",
+    "name": "change-passcode-new",
+    "answers": {
+      "/auth/unlock": {}
+    },
+    "steps": [
+      [
+        "press",
+        "4"
+      ],
+      [
+        "press",
+        "1"
+      ],
+      [
+        "press",
+        "8"
+      ],
+      [
+        "press",
+        "2"
+      ],
+      [
+        "press",
+        "6"
+      ],
+      [
+        "press",
+        "3"
+      ],
+      [
+        "press",
+        "1"
+      ],
+      [
+        "press",
+        "1"
+      ],
+      [
+        "press",
+        "1"
+      ],
+      [
+        "press",
+        "1"
+      ],
+      [
+        "press",
+        "1"
+      ],
+      [
+        "press",
+        "1"
+      ]
+    ]
+  }
+]

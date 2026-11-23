@@ -3,6 +3,7 @@ import { Image } from 'expo-image'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AppState, StyleSheet, Text, View } from 'react-native'
 
+import { Door } from '@/components/door'
 import { PasscodePad } from '@/components/passcode-pad'
 import { Body, Button, Headline, Screen } from '@/components/ui'
 import { DOOR_WORDS, doorRefusal, waitLeft } from '@/door-words'
@@ -16,6 +17,8 @@ import { fonts, useTheme } from '@/theme'
 // BFF's (suite B61.25), so the passcode and the Face ID signature are checked there and a copied session opens nothing.
 // B57.185 — laid out as Pocket Live draws it: the mark and the words at the top, the dots under them, the number pad at
 // the foot with the two ways out under it, small, over the full background.
+// B61.109 — "Forgot your passcode?" with Face ID on: the door's number and code, Face ID, and a new passcode (suite
+// B61.108), which then opens the lock. Without Face ID it points to help.
 
 const W = DOOR_WORDS.lock
 
@@ -82,6 +85,7 @@ export function LockScreen() {
     }
   }
 
+  if (forgot && face) return <Door forgot={{ back: () => setForgot(false) }} />
   if (forgot)
     return (
       <Screen footer={<Button variant="ghost" label={DOOR_WORDS.forgot.back} onPress={() => setForgot(false)} />}>

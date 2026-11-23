@@ -27,6 +27,15 @@ export const DOOR_WORDS = {
     write: 'Write to us',
     mail: 'I forgot my Talyvor passcode and need help to get back in.',
     back: 'Back to the passcode',
+    // B61.109 — with Face ID on: the number's code, then Face ID, then a new passcode.
+    faceID: 'Check it’s you with Face ID, then choose a new passcode.',
+    choose: 'Choose a new passcode',
+  },
+  change: {
+    title: 'Change passcode',
+    line: '6 digits, asked each time you open Talyvor',
+    old: 'Enter your passcode',
+    done: 'Your passcode is changed.',
   },
   failed: 'That did not work just now. Try again.',
 } as const

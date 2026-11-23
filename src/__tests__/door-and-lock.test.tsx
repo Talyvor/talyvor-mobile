@@ -43,7 +43,7 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 /** The BFF's door and lock (suite B61.25), and enough of the account for Home to draw. */
 function mockBff({ known = true, sandboxCode = '482913', waitAfter = 5 } = {}) {
   const calls: { route: string; auth?: string; body?: Record<string, unknown> }[] = []
-  const state = { locked: false, wrong: 0, lockAll: false }
+  const state = { locked: false, wrong: 0, lockAll: false, passcode: PASSCODE }
   globalThis.fetch = jest.fn(async (url: string, init: RequestInit = {}) => {
     const route = `${init.method ?? 'GET'} ${url.replace('https://bff.test', '')}`
     const auth = (init.headers as Record<string, string>).Authorization
@@ -64,7 +64,7 @@ function mockBff({ known = true, sandboxCode = '482913', waitAfter = 5 } = {}) {
     }
     if (route === 'POST /auth/unlock/challenge') return json({ challenge: 'ch_unlock' })
     if (route === 'POST /auth/unlock') {
-      if (body?.signature ? body.device_id === 'pk_1' && body.signature === 'signed:talyvor-device-v1:ch_unlock' : body?.passcode === PASSCODE) {
+      if (body?.signature ? body.device_id === 'pk_1' && body.signature === 'signed:talyvor-device-v1:ch_unlock' : body?.passcode === state.passcode) {
         state.locked = false
         state.wrong = 0
         return new Response(null, { status: 204 })
@@ -73,12 +73,24 @@ function mockBff({ known = true, sandboxCode = '482913', waitAfter = 5 } = {}) {
         return json({ error: 'Too many wrong passcodes. Try again at 2099-01-01T14:05:00Z.', reason: 'passcode_wait', retry_at: '2099-01-01T14:05:00Z' }, 429)
       return json({ error: 'That passcode is not right.', reason: 'wrong_passcode' }, 400)
     }
+    // B61.108 — a locked session reaches the forgotten passcode's route: the number's check and the key's answer.
+    if (route === 'POST /auth/passcode/replace') {
+      if (body?.check !== 'chk_1' || body.device_id !== 'pk_1' || body.signature !== 'signed:talyvor-device-v1:ch_unlock')
+        return json({ error: 'Check it’s you with your number and Face ID.', reason: 'key_needed' }, 401)
+      state.passcode = body.passcode as string
+      return new Response(null, { status: 204 })
+    }
     // Every other route is the account's: the BFF answers 423 while the lock is shut.
     if (state.locked || state.lockAll) return json({ error: 'Unlock the app with your passcode or Face ID.', reason: 'locked' }, 423)
     if (route === 'GET /auth/me') return json({ workspace_id: 'ws_1' })
     if (route === 'GET /api/workspace/name') return json({ id: 'ws_1', name: 'Maya Lind' })
     if (route === 'GET /api/money/devices') return json({ devices: [] })
     if (route === 'GET /api/money/notices') return json({ settings: {}, notices: [] })
+    if (route === 'POST /auth/passcode/change') {
+      if (body?.old_passcode !== state.passcode) return json({ error: 'That passcode is not right.', reason: 'wrong_passcode' }, 400)
+      state.passcode = body.passcode as string
+      return json({ changed: true })
+    }
     return json({ error: 'no' }, 404)
   }) as unknown as typeof fetch
   return { calls, state }
@@ -317,4 +329,64 @@ test('Settings, Security draws Unlock with Face ID with its line, and the passco
   expect(screen.getByText('This phone’s key never leaves it')).toBeTruthy()
   expect(screen.getByText('Your passcode opens the phone app. It never approves a payment.')).toBeTruthy()
   expect(screen.getByTestId('icon-shield', { includeHiddenElements: true })).toBeTruthy()
+})
+
+// B61.109 — Settings, Security's "Change passcode", and "Forgot your passcode?" with Face ID on.
+
+test('Change passcode: the old one, then the new one twice; a wrong old one is refused in Lens’s words', async () => {
+  const bff = mockBff()
+  signedInBefore()
+  mockStore.set('talyvor.signin-key', 'pk_1')
+  await renderRouter('./src/app', { initialUrl: '/settings' })
+  await waitFor(() => expect(screen.queryByTestId('lock-screen')).toBeNull())
+  await fireEvent.press(await screen.findByText('Change passcode'))
+  expect(await screen.findByText('Enter your passcode')).toBeTruthy()
+  await typeDigits('111111')
+  expect(await screen.findByText('Choose a new passcode')).toBeTruthy()
+  await typeDigits('730591')
+  await screen.findByText('Type it again')
+  await typeDigits('730591')
+  expect(await screen.findByText('That passcode is not right.')).toBeTruthy()
+  expect(screen.getByText('Enter your passcode')).toBeTruthy()
+  expect(bff.state.passcode).toBe(PASSCODE)
+
+  await typeDigits(PASSCODE)
+  await screen.findByText('Choose a new passcode')
+  await typeDigits('730591')
+  await screen.findByText('Type it again')
+  await typeDigits('730591')
+  expect(await screen.findByText('Your passcode is changed.')).toBeTruthy()
+  expect(bff.calls.filter((c) => c.route === 'POST /auth/passcode/change').map((c) => c.body)).toEqual([
+    { old_passcode: '111111', passcode: '730591' },
+    { old_passcode: PASSCODE, passcode: '730591' },
+  ])
+  expect(bff.state.passcode).toBe('730591')
+})
+
+test('Forgot your passcode? with Face ID: the number’s code, Face ID, a new passcode twice, and the lock opens with it', async () => {
+  const bff = mockBff()
+  signedInBefore()
+  mockStore.set('talyvor.signin-key', 'pk_1')
+  mockPhone.fail = true
+  await renderRouter('./src/app', { initialUrl: '/' })
+  await fireEvent.press(await screen.findByRole('button', { name: 'Forgot your passcode?' }))
+  mockPhone.fail = false
+  await toCode()
+  await fireEvent.changeText(screen.getByLabelText('Code'), '482913')
+  expect(await screen.findByText('Choose a new passcode')).toBeTruthy()
+  expect(mockPhone.signed).toEqual(['talyvor-device-v1:ch_unlock'])
+  await typeDigits('730591')
+  await screen.findByText('Type it again')
+  await typeDigits('730591')
+  await waitFor(() => expect(screen.queryByTestId('lock-screen')).toBeNull())
+  // The number's steps go without the locked session; the new passcode goes with the key's answer, then opens the lock.
+  expect(bff.calls.filter((c) => c.route.startsWith('POST /auth/phone/')).map((c) => c.auth)).toEqual([undefined, undefined])
+  expect(bff.calls.find((c) => c.route === 'POST /auth/passcode/replace')?.body).toEqual({
+    check: 'chk_1',
+    passcode: '730591',
+    device_id: 'pk_1',
+    challenge: 'ch_unlock',
+    signature: 'signed:talyvor-device-v1:ch_unlock',
+  })
+  expect(bff.calls.filter((c) => c.route === 'POST /auth/unlock').at(-1)?.body).toEqual({ passcode: '730591' })
 })

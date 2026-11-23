@@ -155,6 +155,15 @@ export async function unlockWithFaceID(client: BffClient): Promise<void> {
   }
 }
 
+/** B61.109 — "Forgot your passcode?": the sign-in key's answer to a fresh unlock challenge, after Face ID, for the BFF
+ * to set a new passcode with the number's check (suite B61.108). Nothing is opened by it alone. */
+export async function faceIDAnswer(client: BffClient): Promise<DeviceAssertion> {
+  const id = await SecureStore.getItemAsync(SIGNIN_KEY)
+  if (!TalyvorKeys || !id) throw new Error(`${biometricName} is not on for this phone.`)
+  const { challenge } = await client.unlockChallenge()
+  return { device_id: id, challenge, signature: await TalyvorKeys.sign(ALIAS, deviceMessage(challenge), 'Set a new passcode') }
+}
+
 /** A Lens time in milliseconds: Go writes up to nine digits of a second, more than every phone's Date reads. */
 const at = (t: string) => Date.parse(t.replace(/(\.\d{3})\d+/, '$1'))
 
