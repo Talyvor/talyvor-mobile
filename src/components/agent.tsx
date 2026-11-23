@@ -1,4 +1,4 @@
-import { BffError, type AgentRules, type AgentSummary, formatLXC, refusalText, rulesInWords, rulesSave } from '@talyvor/bff-client'
+import { BffError, type AgentRules, type AgentRulesSave, type AgentSummary, formatLXC, merchantCategoriesText, merchantsSave, merchantsSummary, refusalText, rulesInWords, rulesSave } from '@talyvor/bff-client'
 import { router } from 'expo-router'
 import { useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
@@ -13,6 +13,7 @@ import { PendingApprovals } from './approval-card'
 import { AgentFundingSheet, type FundingDirection } from './agent-funding'
 import { Face } from './face'
 import { Icon, type IconName } from './icon'
+import { MerchantChoices } from './merchant-categories'
 import { Money } from './money'
 import { FlightTarget } from './picture-flight'
 import { AGENT_CREDIT, MoneyHeader } from './money-label'
@@ -63,6 +64,9 @@ export function AgentView({ data, onChanged, opens }: { data: AgentData; onChang
   const [funding, setFunding] = useState<FundingDirection | null>(opens === 'fund' ? 'to_agent' : null)
   const [moved, setMoved] = useState('')
   const [rulesOpen, setRulesOpen] = useState(false)
+  // B61.120 — the Merchants and categories row: Edit opens its choices, Save sends them only when they changed.
+  const [merchants, setMerchants] = useState<string[] | null>(null)
+  const [merchantsSaid, setMerchantsSaid] = useState('')
 
   const changed = () => {
     onChanged()
@@ -122,6 +126,35 @@ export function AgentView({ data, onChanged, opens }: { data: AgentData; onChang
         else if (err instanceof BffError) setInstantSaid(refusalText(err))
         else setInstantSaid('Cancelled. Nothing changed.')
       }
+    })
+
+  // A save Lens judges looser — allowing more merchants, or any once it named some — is signed with this phone's key over
+  // the change's challenge, as every rules save on the phone is (B59.44).
+  const saveRules = async (proposed: AgentRulesSave, what: string): Promise<string> => {
+    try {
+      const [j, key] = await Promise.all([client.rulesChallenge(agent.id, proposed), phoneKey(client)])
+      let assertion
+      if (j.looser && j.challenge) {
+        if (!key?.here) return `Loosen ${agent.name}’s rules with ${biometricName} on this phone: turn approving on in Approvals first.`
+        assertion = await signWithThisPhone(client, j.challenge, what)
+      }
+      await client.setRules(agent.id, proposed, assertion)
+      return ''
+    } catch (err) {
+      if (keyGone(err)) return keyGoneText
+      if (err instanceof BffError) return refusalText(err)
+      return 'Cancelled. Nothing changed.'
+    }
+  }
+  const saveMerchants = (allowed: string[]) =>
+    act(async () => {
+      setMerchantsSaid('')
+      const proposed = merchantsSave(data.rules, peg ?? 0, allowed)
+      if (!proposed) return setMerchants(null)
+      const why = await saveRules(proposed, `Set ${agent.name}’s merchants and categories`)
+      if (why) return setMerchantsSaid(why)
+      setMerchants(null)
+      setMerchantsSaid('Saved. Lens applies these rules to the next request or payment.')
     })
 
   const state = paused ? 'Paused. It can spend nothing until you resume it.' : allPaused ? 'Paused with every agent.' : 'Running.'
@@ -212,6 +245,22 @@ export function AgentView({ data, onChanged, opens }: { data: AgentData; onChang
             {instantSaid ? <Body>{instantSaid}</Body> : null}
           </View>
         ) : null}
+        <View testID="merchants-rule" style={{ gap: 8 }}>
+          <MerchantsRow summary={merchantsSummary(data.rules)} editing={merchants !== null} onEdit={() => {
+            setMerchantsSaid('')
+            setMerchants(data.rules.allowed_merchant_categories ?? [])
+          }} />
+          {merchants !== null ? (
+            <>
+              <MerchantChoices label={`Merchants and categories ${agent.name} may pay in`} chosen={merchants} disabled={busy || !countable} onChange={setMerchants} />
+              <Body muted style={{ fontSize: 13 }}>
+                {merchants.length > 0 ? `${merchantCategoriesText(merchants)}. Only these, by card.` : 'Any merchant. Pick some to let it pay only them by card.'}
+              </Body>
+              <Button primary label={busy ? 'Saving…' : 'Save'} disabled={busy || !countable} hint="Saving…" onPress={() => void saveMerchants(merchants)} />
+            </>
+          ) : null}
+          {merchantsSaid ? <Body>{merchantsSaid}</Body> : null}
+        </View>
         </Card>
       </BottomSheet>
       <AgentFundingSheet
@@ -269,6 +318,26 @@ export function AgentView({ data, onChanged, opens }: { data: AgentData; onChang
         }}
       />
     </>
+  )
+}
+
+/** B61.120 — the Merchants and categories row: its name over its summary in words, and Edit. */
+function MerchantsRow({ summary, editing, onEdit }: { summary: string; editing: boolean; onEdit: () => void }) {
+  const { c } = useTheme()
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Merchants and categories · ${summary}`}
+      accessibilityHint="Edit"
+      accessibilityState={{ expanded: editing }}
+      onPress={onEdit}
+      style={({ pressed }) => [{ flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 52, borderTopWidth: 1, borderTopColor: c.line, paddingTop: 8 }, pressed && { opacity: 0.6 }]}>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={{ fontFamily: fonts.uiMedium, fontSize: 15, color: c.ink }}>Merchants and categories</Text>
+        <Text style={{ fontFamily: fonts.ui, fontSize: 13, color: c.ink3 }}>{summary}</Text>
+      </View>
+      {editing ? null : <Text style={{ fontFamily: fonts.uiBold, fontSize: 14, color: c.ink }}>Edit</Text>}
+    </Pressable>
   )
 }
 

@@ -54,6 +54,11 @@ export interface AgentRules {
   timezone: string
   /** B59.20 — "Can use Instant transfer" (Lens B59.15), off by default. A save without it keeps what Lens holds. */
   may_instant_transfer?: boolean
+  /** B61.120 — "Merchants and categories" (Lens B61.43, the web's B61.64): the merchant categories the agent may pay in by
+   * card (once it names any, a card payment in another is refused) and those it may never pay in, each a
+   * MERCHANT_CATEGORIES id or a four-digit merchant category code. A save without them keeps what Lens holds. */
+  allowed_merchant_categories?: string[] | null
+  blocked_merchant_categories?: string[] | null
   /** B61.88 — the currency the rules are held in, GBP, EUR, USD or USDC (Lens B61.12), and each amount limit in its minor
    * units. The µLXC limits above are what these are worth for the parked gateway; a save names these and not those. */
   currency?: string
@@ -1621,6 +1626,9 @@ export function convertDown(minor: number, from: string, to: string, fx: FXRates
 export function rulesSave(r: AgentRules, peg: number, currency = heldIn(r), limits?: Record<MinorLimit, number>): AgentRulesSave {
   const out: AgentRules = { ...r }
   for (const f of Object.values(ULXC_OF)) delete (out as Partial<AgentRules>)[f]
+  // B61.120 — the merchant categories go only in a save that changes them (merchantsSave); absent, Lens keeps them.
+  delete out.allowed_merchant_categories
+  delete out.blocked_merchant_categories
   const minor = (f: MinorLimit) => limits?.[f] ?? heldMinor(r, f, peg)
   return {
     ...out,
@@ -1632,6 +1640,50 @@ export function rulesSave(r: AgentRules, peg: number, currency = heldIn(r), limi
     monthly_limit_minor: minor('monthly_limit_minor'),
     approval_above_minor: minor('approval_above_minor'),
   }
+}
+
+// B61.120 — the merchant categories an agent's rules name, as Lens's economy.MerchantCategories (B61.43) lists them, in
+// its order, with the web's words (talyvor-suite merchantCategories.ts, B61.64). Lens also takes a four-digit merchant
+// category code, which a summary names as its code.
+
+export const MERCHANT_CATEGORIES = [
+  { id: 'software', name: 'Software' },
+  { id: 'hosting', name: 'Hosting' },
+  { id: 'freight', name: 'Freight' },
+  { id: 'advertising', name: 'Advertising' },
+  { id: 'travel', name: 'Travel' },
+  { id: 'telecoms', name: 'Telecoms' },
+  { id: 'gambling', name: 'Gambling' },
+] as const
+
+/** A category's name, or "Code 5734" for a merchant category code. */
+export function merchantCategoryName(id: string): string {
+  return MERCHANT_CATEGORIES.find((c) => c.id === id)?.name ?? `Code ${id}`
+}
+
+/** The chosen categories in words and in the list's order: "Software, hosting, freight"; "" for none. */
+export function merchantCategoriesText(ids: readonly string[]): string {
+  const at = (id: string) => {
+    const i = MERCHANT_CATEGORIES.findIndex((c) => c.id === id)
+    return i < 0 ? MERCHANT_CATEGORIES.length : i
+  }
+  const names = [...ids].sort((a, b) => at(a) - at(b)).map(merchantCategoryName)
+  return names.map((n, i) => (i === 0 ? n : n.toLowerCase())).join(', ')
+}
+
+/** The Merchants and categories row's summary: the categories it may pay in, "Any merchant" when none, and those it never may. */
+export function merchantsSummary(r: Pick<AgentRules, 'allowed_merchant_categories' | 'blocked_merchant_categories'>): string {
+  const allowed = r.allowed_merchant_categories?.length ? merchantCategoriesText(r.allowed_merchant_categories) : 'Any merchant'
+  const blocked = r.blocked_merchant_categories ?? []
+  return blocked.length ? `${allowed}. Never ${merchantCategoriesText(blocked).toLowerCase()}` : allowed
+}
+
+/** The save of `allowed` as the categories it may pay in: allowing one takes it off the blocked list. Null when nothing changed. */
+export function merchantsSave(r: AgentRules, peg: number, allowed: string[]): AgentRulesSave | null {
+  const blocked = (r.blocked_merchant_categories ?? []).filter((b) => !allowed.includes(b))
+  const same = (a: readonly string[], b: readonly string[]) => a.length === b.length && a.every((x) => b.includes(x))
+  if (same(allowed, r.allowed_merchant_categories ?? []) && same(blocked, r.blocked_merchant_categories ?? [])) return null
+  return { ...rulesSave(r, peg), allowed_merchant_categories: allowed, blocked_merchant_categories: blocked }
 }
 
 /** Each capability's label, by key, from the workspace's capabilities; one without a label is left out. */
