@@ -62,7 +62,7 @@ const lead = {
 }
 
 /** The BFF: two agents, Acme Hosting's payment and Lead finder's use waiting, Sandbox labels, and Lens's peg. */
-function mockBff() {
+function mockBff({ over = false, waiting = false } = {}) {
   const calls: { method: string; path: string; body?: string }[] = []
   const status: Record<string, string> = { apr_acme: 'pending', apr_lead: 'pending' }
   const rules = (monthly: number) => ({ max_per_request_ulxc: 0, daily_limit_ulxc: 0, monthly_limit_ulxc: monthly, approval_above_ulxc: 0, allowed_models: null, allowed_providers: null, active_from: '', active_until: '', timezone: 'UTC' })
@@ -80,7 +80,9 @@ function mockBff() {
         { id: 'ag_sales', name: 'Sales', balance_ulxc: 0, spent_ulxc: 0, created_at: '2026-10-01T00:00:00Z' },
       ],
     }),
-    'GET /api/agents/approvals': () => ({ approvals: [acme, lead].map((a) => ({ ...a, status: status[a.id] })) }),
+    'GET /api/agents/approvals': () => ({
+      approvals: [acme, lead].map((a) => ({ ...a, status: status[a.id], ...(a.id === 'apr_acme' && over ? { over_second_approver_line: true, waiting_for_second_approver: waiting } : {}) })),
+    }),
     'GET /api/agents/ag_research/rules': () => rules(20_000_000_000),
     'GET /api/agents/ag_sales/rules': () => rules(15_000_000_000),
     'GET /api/wallets/capabilities': () => ({
@@ -100,6 +102,12 @@ function mockBff() {
     const path = url.replace('https://bff.test', '')
     const method = init.method ?? 'GET'
     calls.push({ method, path, body: init.body as string | undefined })
+    // B59.56 — over the second-approver line (Lens B28.315): the first approval leaves it waiting, and the same person again is refused.
+    if (over && `${method} ${path}` === 'POST /api/agents/approvals/apr_acme/approve') {
+      if (waiting) return new Response(JSON.stringify({ error: 'economy: approved by you; waiting for a second approver', code: 'same_approver' }), { status: 409 })
+      waiting = true
+      return new Response(JSON.stringify({ ...acme, over_second_approver_line: true, waiting_for_second_approver: true }), { status: 200 })
+    }
     const route = routes[`${method} ${path}`] ?? routes[`${method} ${path.split('?')[0]}`]
     return new Response(JSON.stringify(route ? route(init.body as string | undefined) : { error: 'no' }), { status: route ? 200 : 404 })
   }) as unknown as typeof fetch
@@ -164,6 +172,30 @@ test('Approve with Face ID signs this approval’s challenge, then the result sc
   expect(JSON.parse(calls.find((c) => c.path === '/api/agents/approvals/apr_acme/approve')!.body!)).toEqual({
     assertion: { device_id: 'dk_1', challenge: 'ch_apr_acme', signature: 'signed:talyvor-device-v1:ch_apr_acme' },
   })
+})
+
+test('over a Business’s second approver line, says why it asks and that the first approval waits for a second approver', async () => {
+  mockBff({ over: true })
+  await renderRouter('./src/app', { initialUrl: '/' })
+  await fireEvent.press(await screen.findByRole('button', { name: 'Review: Research wants to pay Acme Hosting' }))
+  await waitFor(() => expect(sheet().getByLabelText('Why it’s asking: Over the second approver line')).toBeTruthy())
+  expect(sheet().queryByLabelText('Why it’s asking: It asks you above $250.00')).toBeNull()
+  await fireEvent.press(sheet().getByRole('button', { name: 'Approve with Face ID' }))
+
+  const result = within(await screen.findByTestId('approval-result'))
+  expect(result.getByText('Approved by you. Waiting for a second approver.')).toBeTruthy()
+  expect(result.getByText('Nothing is paid until a second person approves it.')).toBeTruthy()
+  expect(result.queryByText('Approved')).toBeNull()
+})
+
+test('refuses the same person’s second approval over the line in words', async () => {
+  mockBff({ over: true, waiting: true })
+  await renderRouter('./src/app', { initialUrl: '/' })
+  await fireEvent.press(await screen.findByRole('button', { name: 'Review: Research wants to pay Acme Hosting' }))
+  await waitFor(() => expect(sheet().getByText('Approved once. Waiting for a second approver.')).toBeTruthy())
+  await fireEvent.press(sheet().getByRole('button', { name: 'Approve with Face ID' }))
+  await waitFor(() => expect(sheet().getByText('Approved by you. Waiting for a second approver.')).toBeTruthy())
+  expect(screen.queryByTestId('approval-result')).toBeNull()
 })
 
 test('Decline signs, keeps the reason, and the declined screen says what declining does and the budget left', async () => {

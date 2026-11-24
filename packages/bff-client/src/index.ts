@@ -175,6 +175,10 @@ export interface AgentApproval {
   /** B62.11 — the newest payment it stopped because it was not the one approved (Lens B62.9): the first of payee, amount,
    * currency and agent that differed, and when; null when none did, or once the payment approved was sent */
   stopped?: { changed: 'payee' | 'amount' | 'currency' | 'agent'; at: string } | null
+  /** B59.56 — over a Business account's second-approver line (Lens B28.315): it asks for that, and it waits after the
+   *  first of its two approvals until a second person approves. */
+  over_second_approver_line?: boolean
+  waiting_for_second_approver?: boolean
 }
 
 /** Lens economy.PaidFrom (B57.11): what pays an approval, named in words, its amount in that currency and its balance now. */

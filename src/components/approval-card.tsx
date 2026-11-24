@@ -58,6 +58,18 @@ export function approvedText(name: string, a: AgentApproval, paused: boolean) {
     : `${what} goes through the next time it sends it, once. Your approval lasts 24 hours.`
 }
 
+/** B59.56 — a Business payment over the second-approver line, after the first of its two approvals (suite B28.40's words). */
+export const WAITING_FOR_SECOND = 'Approved by you. Waiting for a second approver.'
+
+/** B59.56 — Lens's refusals of an approval over the second-approver line (B28.315's codes), in the web's words; '' for any other. */
+export function secondApproverRefusal(err: unknown) {
+  const code = err instanceof BffError ? err.code : ''
+  if (code === 'same_approver') return WAITING_FOR_SECOND
+  if (code === 'second_approver_needed') return 'Your second approver must be one of the two approvals. Nothing was paid.'
+  if (code === 'approver_unknown') return 'Over the second approver line, only a person signed in to Talyvor can approve. Nothing was paid.'
+  return ''
+}
+
 /** How a decided approval ended, in B57.68's words: never Denied or Approved and spent. */
 export function decidedWords(a: AgentApproval) {
   switch (a.status) {
@@ -177,7 +189,17 @@ export function ApprovalCard({ approval, agent, capability, label = true, onRevi
   )
 }
 
-export type Decided = { approval: AgentApproval; agent: Who; capability: string; approved: boolean; signed: boolean; paused: boolean; next: { id: string; title: string } | null }
+export type Decided = {
+  approval: AgentApproval
+  agent: Who
+  capability: string
+  approved: boolean
+  signed: boolean
+  paused: boolean
+  next: { id: string; title: string } | null
+  /** B59.56: the first of two approvals over the second-approver line, still waiting for the second */
+  waiting?: boolean
+}
 
 /** The approval sheet: what is asked, what pays it, the budget left after, when it expires, and approve or decline with
  * this phone's key. Decline asks why first: optional, kept by Lens and shown to the agent (B55.18). */
@@ -196,7 +218,7 @@ export function ApprovalSheet({
   paused: boolean
   /** B57.105: what Lens refused when Approve was pressed on the notification that opened this sheet */
   refused?: string
-  onDecided: (approved: boolean, signed: boolean) => void
+  onDecided: (approved: boolean, signed: boolean, waiting?: boolean) => void
   onApprovals: () => void
 }) {
   const { client, peg } = useSession()
@@ -245,15 +267,14 @@ export function ApprovalSheet({
       const assertion = key?.here
         ? await signWithThisPhone(client, (await client.approvalChallenge(a.id)).challenge, card ? `${what} at ${subject(a)} on ${a.paid_from?.name ?? `${agent.name}’s card`}` : `${what} for ${agent.name}`)
         : undefined
-      if (decision === 'approve') await client.approve(a.id, assertion)
-      else await client.deny(a.id, assertion, why.trim())
+      const got = decision === 'approve' ? await client.approve(a.id, assertion) : await client.deny(a.id, assertion, why.trim())
       void syncLiveActivities(client)
       if (decision === 'approve') haptic('success')
-      onDecided(decision === 'approve', !!assertion)
+      onDecided(decision === 'approve', !!assertion, decision === 'approve' && !!got?.waiting_for_second_approver)
     } catch (err) {
       if (decision === 'approve' && err instanceof BffError) haptic('warning')
       // B57.105: an approval that did not happen says so as the notification's Approve does: Nothing was approved.
-      setRefusal(decision === 'approve' ? notApproved(err) : err instanceof BffError ? refusalText(err) : `Nothing changed: ${(err as Error).message}`)
+      setRefusal(secondApproverRefusal(err) || (decision === 'approve' ? notApproved(err) : err instanceof BffError ? refusalText(err) : `Nothing changed: ${(err as Error).message}`))
     } finally {
       setBusy(false)
     }
@@ -282,13 +303,22 @@ export function ApprovalSheet({
         testID="approval-facts"
         rows={[
           card ? ['Why it’s asking', `${subject(a)} asked the card to check with you`] : null,
-          a.asks_above_ulxc != null ? ['Why it’s asking', `It asks you above ${formatLXC(a.asks_above_ulxc, peg)}`] : null,
+          a.over_second_approver_line
+            ? ['Why it’s asking', 'Over the second approver line']
+            : a.asks_above_ulxc != null
+              ? ['Why it’s asking', `It asks you above ${formatLXC(a.asks_above_ulxc, peg)}`]
+              : null,
           paidFrom(a) ? ['Paid from', paidFromWords(paidFrom(a)!)] : null,
           hasBudget ? ['Budget left after', budgetWords(a.budget_left_after_ulxc!, monthly, peg)] : null,
           a.expires_at ? ['Expires', expiresWords(a.expires_at), card ? 'No answer by then declines it.' : undefined] : null,
         ]}
       />
       {paused && !card ? <Body muted>{`${agent.name} is paused: nothing goes through until it runs again. An approval lasts 24 hours.`}</Body> : null}
+      {a.waiting_for_second_approver ? (
+        <View testID="approval-sheet-second" style={{ paddingVertical: 10, paddingHorizontal: 14, borderRadius: 14, backgroundColor: c.tangerine50 }}>
+          <Body>Approved once. Waiting for a second approver.</Body>
+        </View>
+      ) : null}
       <View style={{ flexDirection: 'row', gap: 8 }}>
         <Icon name="check" size={16} color={c.ink2} />
         <Body muted style={{ flex: 1, fontSize: 13, lineHeight: 18 }}>
@@ -322,8 +352,9 @@ export function ApprovalSheet({
 /** After deciding: the check or the x, what happens next, the payee and the amount, what signed it, what pays it and the
  * budget left; Done, and Next when another request waits. */
 /** B61.78 — the one line at the top after a decision: the reference's "Approved. $64.00 to Acme" and "Declined. Nothing was sent". */
-export function decidedLine(d: Pick<Decided, 'approval' | 'agent' | 'approved'>, amount: string) {
+export function decidedLine(d: Pick<Decided, 'approval' | 'agent' | 'approved' | 'waiting'>, amount: string) {
   if (!d.approved) return 'Declined. Nothing was sent'
+  if (d.waiting) return WAITING_FOR_SECOND
   return d.approval.payee ? `Approved. ${amount} to ${subject(d.approval)}` : `Approved. ${amount} for ${d.agent.name}`
 }
 
@@ -349,9 +380,9 @@ export function ApprovalResult({ d, onDone, onNext }: { d: Decided; onDone: () =
               <Icon name="x" size={36} color={c.danger} />
             </View>
           )}
-          <Headline>{d.approved ? 'Approved' : 'Declined'}</Headline>
+          <Headline style={{ textAlign: 'center' }}>{d.waiting ? WAITING_FOR_SECOND : d.approved ? 'Approved' : 'Declined'}</Headline>
           <Body muted style={{ textAlign: 'center' }}>
-            {d.approved ? approvedText(d.agent.name, a, d.paused) : declinedText(d.agent.name, a)}
+            {d.waiting ? 'Nothing is paid until a second person approves it.' : d.approved ? approvedText(d.agent.name, a, d.paused) : declinedText(d.agent.name, a)}
           </Body>
         </View>
         <Card white>
@@ -599,7 +630,7 @@ export function PendingApprovals({
                   close()
                   router.push('/approvals')
                 }}
-                onDecided={(approved, signed) => {
+                onDecided={(approved, signed, waiting) => {
                   const agent = agentOf(agents, sheet.agent_id)
                   const next = pending.find((x) => x.id !== sheet.id)
                   setResult({
@@ -610,6 +641,7 @@ export function PendingApprovals({
                     signed,
                     paused: allPaused || !!agent.paused_at,
                     next: next ? { id: next.id, title: approvalTitle(agentOf(agents, next.agent_id).name, next) } : null,
+                    waiting,
                   })
                   setOpen(null)
                   onDecided()

@@ -152,10 +152,10 @@ export function Back({ home, to }: { home: Href; to?: string }) {
 }
 
 /** A screen's headline, in the display face: one per screen. */
-export function Headline({ children }: { children: ReactNode }) {
+export function Headline({ children, style }: { children: ReactNode; style?: TextStyle }) {
   const { c } = useTheme()
   return (
-    <Text accessibilityRole="header" style={[styles.headline, { color: c.ink }]}>
+    <Text accessibilityRole="header" style={[styles.headline, { color: c.ink }, style]}>
       {children}
     </Text>
   )
