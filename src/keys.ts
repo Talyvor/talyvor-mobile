@@ -1,4 +1,4 @@
-import { BffError, refusalText, type BffClient, type DeviceAssertion, type DeviceKey, type KeyEnrolment, type OutsidePaymentRequest, type PersonPaymentRequest } from '@talyvor/bff-client'
+import { BffError, refusalText, type BffClient, type DeviceAssertion, type DeviceKey, type KeyEnrolment, type OutsidePaymentRequest, type PersonPaymentRequest, type SecondApproverLine } from '@talyvor/bff-client'
 import * as Crypto from 'expo-crypto'
 import * as SecureStore from 'expo-secure-store'
 import { Platform } from 'react-native'
@@ -283,6 +283,16 @@ export async function signPersonPayment(client: BffClient, payment: PersonPaymen
   if (!TalyvorKeys || !key?.here) return null
   const { challenge } = await client.personPaymentChallenge(payment)
   return { device_id: key.id, challenge, signature: await TalyvorKeys.sign(ALIAS, deviceMessage(challenge), reason) }
+}
+
+/** B59.50 — the second approver's line set from this phone, signed the same way over Lens's challenge naming exactly
+ * this line (Lens B28.315); an empty line clears it. Unsigned when approving on this phone is off for this workspace, so
+ * Lens decides: it refuses (403) once the workspace has a passkey or phone key. */
+export async function setSecondApproverSigned(client: BffClient, line: SecondApproverLine, reason: string): Promise<SecondApproverLine> {
+  const { challenge } = await client.secondApproverChallenge(line)
+  const key = await phoneKey(client)
+  const assertion = TalyvorKeys && key?.here ? { device_id: key.id, challenge, signature: await TalyvorKeys.sign(ALIAS, deviceMessage(challenge), reason) } : undefined
+  return client.setSecondApprover(line, assertion)
 }
 
 /** B59.34 — Face ID or a fingerprint before the phone shows a card's details. The approval key signs a fresh message that
