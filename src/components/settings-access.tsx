@@ -4,7 +4,7 @@ import { useCallback, useState, type ReactNode } from 'react'
 import { Text, View } from 'react-native'
 
 import { useAccount } from '@/account'
-import { biometricName, keyGone, keyGoneText, setSecondApproverSigned, thisPhoneDevice, turnOffPhoneApprovals } from '@/keys'
+import { biometricName, keyGone, keyGoneText, phoneKey, setSecondApproverSigned, thisPhoneDevice, turnOffPhoneApprovals } from '@/keys'
 import { Choices } from './account-requests'
 import { Face } from './face'
 import { Icon } from './icon'
@@ -251,16 +251,26 @@ function lineRefusal(err: unknown): string {
   return 'Cancelled. Nothing changed.'
 }
 
-/** B59.50 — a Business owner's second approver: who, and above which amount a payment needs two approvals. */
+/** No second approver: Lens clears the line it is sent empty. */
+const NO_LINE: SecondApproverLine = { user_id: '', above_minor: 0, currency: '' }
+
+/**
+ * B59.50 — a Business owner's second approver: who, and above which amount a payment needs two approvals.
+ * B57.213 — drawn in Pocket as the web's B57.212 draws it: the line set is a w-members row (initial, who, the amount, their
+ * role as a chip) with Remove, which asks first in the bottom sheet; Choose or Change opens Who, Above and Currency in the
+ * bottom sheet, as Add member does. Saving and removing are signed as before.
+ */
 function SecondApprover() {
   const { client } = useSession()
   const { c } = useTheme()
   const { shows } = useAccount(client)
   const load = useCallback(async () => {
-    const [line, team] = await Promise.all([client.secondApprover(), client.givenRoles()])
-    return { line, team }
+    const [line, team, key] = await Promise.all([client.secondApprover(), client.givenRoles(), phoneKey(client).catch(() => null)])
+    return { line, team, signs: !!key?.here }
   }, [client])
   const { data, error, reload } = useLoad(load)
+  const [editing, setEditing] = useState(false)
+  const [removing, setRemoving] = useState(false)
   const [who, setWho] = useState('')
   const [amount, setAmount] = useState('')
   const [currency, setCurrency] = useState('')
@@ -270,17 +280,29 @@ function SecondApprover() {
   const currencies = shows ? [...(shows.bankTransfers ? ['GBP', 'EUR', 'USD'] : []), ...(shows.onChain ? ['USDC'] : [])] : []
   const team = data?.team ?? []
   const people = team.filter((r) => APPROVING_ROLES.includes(r.role) && !!r.user_id)
-  const pickedWho = who || people[0]?.user_id || ''
-  const pickedCurrency = currency || data?.line.currency || currencies[0] || 'GBP'
-  const named = (id: string) => team.find((r) => r.user_id === id)?.email ?? 'someone no longer in your team'
+  const person = (id: string) => team.find((r) => r.user_id === id)
+  const named = (id: string) => person(id)?.email ?? 'someone no longer in your team'
   const now = data && data.line.user_id && data.line.above_minor > 0 ? data.line : null
+  const role = now ? person(now.user_id)?.role : undefined
+  const open = () => {
+    setWho(now && people.some((r) => r.user_id === now.user_id) ? now.user_id : (people[0]?.user_id ?? ''))
+    setCurrency(now?.currency || currencies[0] || 'GBP')
+    setAmount('')
+    setWrong('')
+    setEditing(true)
+  }
+  const ask = () => {
+    setWrong('')
+    setRemoving(true)
+  }
   const save = async (l: SecondApproverLine) => {
     setBusy(true)
     setSaid(null)
     setWrong('')
     try {
       await setSecondApproverSigned(client, l, l.user_id ? 'Set your second approver' : 'Remove your second approver')
-      setAmount('')
+      setEditing(false)
+      setRemoving(false)
       setSaid(l.user_id ? { title: 'Second approver saved', line: `Above ${formatMinor(l.above_minor, l.currency)}, a payment needs two approvals.` } : { title: 'Second approver removed', line: 'One approval is enough again.' })
       reload()
     } catch (err) {
@@ -290,16 +312,19 @@ function SecondApprover() {
     }
   }
   const submit = () => {
-    const minor = amountMinor(amount, pickedCurrency)
+    const minor = amountMinor(amount, currency)
     if (minor === null) return setWrong('Enter an amount above 0.')
-    void save({ user_id: pickedWho, above_minor: minor, currency: pickedCurrency })
+    void save({ user_id: who, above_minor: minor, currency })
   }
   return (
     <View testID="second-approver" style={{ gap: 12 }}>
       <Card>
-        <View style={{ gap: 4 }}>
-          <Text style={{ fontFamily: fonts.uiBold, fontSize: 16.5, color: c.ink }}>Second approver</Text>
-          <Body muted>Above an amount you choose, a payment needs two people to approve it, and one of them is your second approver.</Body>
+        <View style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start' }}>
+          <View style={{ flex: 1, gap: 4 }}>
+            <Text style={{ fontFamily: fonts.uiBold, fontSize: 16.5, color: c.ink }}>Second approver</Text>
+            <Body muted>Above an amount you choose, a payment needs two people to approve it, and one of them is your second approver.</Body>
+          </View>
+          {data && people.length > 0 && currencies.length > 0 ? <Button small variant="secondary" label={now ? 'Change' : 'Choose'} onPress={open} /> : null}
         </View>
         {error ? (
           <Body muted>{refusalText(error)}</Body>
@@ -315,23 +340,18 @@ function SecondApprover() {
               }
               title={named(now.user_id)}
               sub={`Above ${formatMinor(now.above_minor, now.currency)}`}
-              right={<Button small variant="secondary" label="Remove" disabled={busy} onPress={() => void save({ user_id: '', above_minor: 0, currency: '' })} />}
+              right={
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  {role ? <Chip>{GIVEN_ROLE_NAME[role] ?? role}</Chip> : null}
+                  <Button small variant="secondary" label="Remove" onPress={ask} />
+                </View>
+              }
             />
           </View>
         ) : (
           <Body muted>No second approver: one approval is enough.</Body>
         )}
-        {data && people.length > 0 && currencies.length > 0 ? (
-          <View style={{ gap: 12 }}>
-            <Choices label="Who" options={people.map((r) => [r.user_id ?? '', `${r.email} · ${GIVEN_ROLE_NAME[r.role] ?? r.role}`] as [string, string])} value={pickedWho} onChange={setWho} />
-            <Field label="Above" value={amount} onChangeText={setAmount} keyboardType="decimal-pad" autoCorrect={false} editable={!busy} />
-            <Choices label="Currency" options={currencies.map((x) => [x, x] as [string, string])} value={pickedCurrency} onChange={setCurrency} />
-            <Button testID="second-approver-save" primary label={busy ? 'Saving…' : 'Save'} disabled={busy} onPress={submit} />
-          </View>
-        ) : data ? (
-          <Body muted>Give someone the Approver or Admin role. Once they have signed in, you can pick them here.</Body>
-        ) : null}
-        {wrong ? <Body style={{ color: c.critical }}>{wrong}</Body> : null}
+        {data && people.length === 0 ? <Body muted>Give someone the Approver or Admin role. Once they have signed in, you can pick them here.</Body> : null}
       </Card>
       {said ? (
         <View testID="second-approver-said" style={{ gap: 2 }}>
@@ -339,6 +359,27 @@ function SecondApprover() {
           <Body muted>{said.line}</Body>
         </View>
       ) : null}
+      <BottomSheet testID="second-approver-sheet" visible={editing} onClose={() => !busy && setEditing(false)}>
+        <Headline>Second approver</Headline>
+        <Body muted>Above this amount, a payment needs two people to approve it, and one of them is the person you pick here.</Body>
+        <Card>
+          <Choices label="Who" options={people.map((r) => [r.user_id ?? '', `${r.email} · ${GIVEN_ROLE_NAME[r.role] ?? r.role}`] as [string, string])} value={who} onChange={setWho} />
+          <Field label="Above" value={amount} onChangeText={setAmount} keyboardType="decimal-pad" autoCorrect={false} editable={!busy} />
+          <Choices label="Currency" options={currencies.map((x) => [x, x] as [string, string])} value={currency} onChange={setCurrency} />
+        </Card>
+        {data?.signs ? <Body muted>{`Saving asks for ${biometricName}.`}</Body> : null}
+        {wrong ? <Body style={{ color: c.critical }}>{wrong}</Body> : null}
+        <Button testID="second-approver-save" primary label={busy ? 'Saving…' : 'Save'} disabled={busy} onPress={submit} />
+        <Button variant="secondary" label="Cancel" disabled={busy} onPress={() => setEditing(false)} />
+      </BottomSheet>
+      <BottomSheet testID="second-approver-remove-sheet" visible={removing} onClose={() => !busy && setRemoving(false)}>
+        <Headline>{`Remove “${now ? named(now.user_id) : ''}” as second approver?`}</Headline>
+        <Body muted>One approval is enough again, whatever the amount.</Body>
+        {data?.signs ? <Body muted>{`Removing asks for ${biometricName}.`}</Body> : null}
+        {wrong ? <Body style={{ color: c.critical }}>{wrong}</Body> : null}
+        <Button variant="danger" label={busy ? 'Removing…' : 'Remove it'} disabled={busy} onPress={() => void save(NO_LINE)} />
+        <Button variant="secondary" label="Keep it" disabled={busy} onPress={() => setRemoving(false)} />
+      </BottomSheet>
     </View>
   )
 }
