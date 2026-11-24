@@ -13,7 +13,7 @@ import { useSession } from '../session'
 import { fonts, useTheme } from '../theme'
 import { AgentCard } from './card'
 import { Face } from './face'
-import { Icon } from './icon'
+import { Icon, type IconName } from './icon'
 import { say, Tick, TopLine } from './live'
 import { SheetCover } from './lock-screen'
 import { moneyParts } from './money'
@@ -314,11 +314,8 @@ export function ApprovalSheet({
         ]}
       />
       {paused && !card ? <Body muted>{`${agent.name} is paused: nothing goes through until it runs again. An approval lasts 24 hours.`}</Body> : null}
-      {a.waiting_for_second_approver ? (
-        <View testID="approval-sheet-second" style={{ paddingVertical: 10, paddingHorizontal: 14, borderRadius: 14, backgroundColor: c.tangerine50 }}>
-          <Body>Approved once. Waiting for a second approver.</Body>
-        </View>
-      ) : null}
+      {/* B57.214: drawn as B57.208's note on tangerine, with the clock for a wait */}
+      {a.waiting_for_second_approver ? <TangerineNote icon="clock" testID="second-note" text="Approved once. Waiting for a second approver." /> : null}
       <View style={{ flexDirection: 'row', gap: 8 }}>
         <Icon name="check" size={16} color={c.ink2} />
         <Body muted style={{ flex: 1, fontSize: 13, lineHeight: 18 }}>
@@ -380,7 +377,8 @@ export function ApprovalResult({ d, onDone, onNext }: { d: Decided; onDone: () =
               <Icon name="x" size={36} color={c.danger} />
             </View>
           )}
-          <Headline style={{ textAlign: 'center' }}>{d.waiting ? WAITING_FOR_SECOND : d.approved ? 'Approved' : 'Declined'}</Headline>
+          {/* B57.214: one short headline as p-approved-acme draws Approved; the wait is a note in the card */}
+          <Headline>{d.waiting ? 'Approved by you' : d.approved ? 'Approved' : 'Declined'}</Headline>
           <Body muted style={{ textAlign: 'center' }}>
             {d.waiting ? 'Nothing is paid until a second person approves it.' : d.approved ? approvedText(d.agent.name, a, d.paused) : declinedText(d.agent.name, a)}
           </Body>
@@ -392,6 +390,7 @@ export function ApprovalResult({ d, onDone, onNext }: { d: Decided; onDone: () =
             <MoneyLabel capability={d.capability} />
           </View>
           <Amount large={large} small={small ? `${small} for its rules` : null} size={30} />
+          {d.waiting ? <TangerineNote icon="clock" testID="second-note" text="Waiting for a second approver." /> : null}
           <Facts
             rows={
               d.approved
@@ -487,12 +486,12 @@ function endedWords(a: AgentApproval) {
 }
 
 /** B57.208 — why a payment it approved was stopped, as Pocket's note: the sentence on tangerine with the shield's mark,
- * inside the request's card. */
-function StoppedNote({ text }: { text: string }) {
+ * inside the request's card. B57.214: the clock's, for an approval waiting for its second approver. */
+function TangerineNote({ text, icon = 'shield', testID = 'stopped-note' }: { text: string; icon?: IconName; testID?: string }) {
   const { c } = useTheme()
   return (
-    <View testID="stopped-note" style={{ flexDirection: 'row', gap: 10, paddingVertical: 12, paddingHorizontal: 14, borderRadius: 14, backgroundColor: c.tangerine50 }}>
-      <Icon name="shield" size={20} color={c.tangerineInk} />
+    <View testID={testID} style={{ flexDirection: 'row', gap: 10, paddingVertical: 12, paddingHorizontal: 14, borderRadius: 14, backgroundColor: c.tangerine50 }}>
+      <Icon name={icon} size={20} color={c.tangerineInk} />
       <Text style={{ flex: 1, fontFamily: fonts.uiMedium, fontSize: 13.5, lineHeight: 19, color: c.tangerineInk }}>{text}</Text>
     </View>
   )
@@ -516,7 +515,7 @@ export function DecidedCard({ approval: a, agentName, task, proof }: { approval:
           </View>
           {what ? <Text style={{ fontFamily: fonts.ui, fontSize: 13, lineHeight: 18, color: c.ink2 }}>{what}</Text> : null}
           <TaskSays task={task} />
-          {stopped ? <StoppedNote text={stopped} /> : null}
+          {stopped ? <TangerineNote text={stopped} /> : null}
           <Text style={{ fontFamily: fonts.ui, fontSize: 13, lineHeight: 18, color: c.ink3 }}>{`${endedWords(a)} Nothing is waiting for you here.`}</Text>
           {proof}
         </View>

@@ -183,8 +183,10 @@ test('over a Business’s second approver line, says why it asks and that the fi
   await fireEvent.press(sheet().getByRole('button', { name: 'Approve with Face ID' }))
 
   const result = within(await screen.findByTestId('approval-result'))
-  expect(result.getByText('Approved by you. Waiting for a second approver.')).toBeTruthy()
+  // B57.214 — drawn in Pocket: one short headline as p-approved-acme's Approved, and the wait as B57.208's note on tangerine.
+  expect(result.getByRole('header', { name: 'Approved by you' })).toBeTruthy()
   expect(result.getByText('Nothing is paid until a second person approves it.')).toBeTruthy()
+  expect(within(result.getByTestId('second-note')).getByText('Waiting for a second approver.')).toBeTruthy()
   expect(result.queryByText('Approved')).toBeNull()
 })
 
@@ -192,7 +194,7 @@ test('refuses the same person’s second approval over the line in words', async
   mockBff({ over: true, waiting: true })
   await renderRouter('./src/app', { initialUrl: '/' })
   await fireEvent.press(await screen.findByRole('button', { name: 'Review: Research wants to pay Acme Hosting' }))
-  await waitFor(() => expect(sheet().getByText('Approved once. Waiting for a second approver.')).toBeTruthy())
+  await waitFor(() => expect(within(sheet().getByTestId('second-note')).getByText('Approved once. Waiting for a second approver.')).toBeTruthy())
   await fireEvent.press(sheet().getByRole('button', { name: 'Approve with Face ID' }))
   await waitFor(() => expect(sheet().getByText('Approved by you. Waiting for a second approver.')).toBeTruthy())
   expect(screen.queryByTestId('approval-result')).toBeNull()
