@@ -3,6 +3,8 @@ import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/te
 // B59.50 — Settings' Team and roles on the phone: a Business owner sees and sets the second approver, an Approver or
 // Admin who has signed in and the amount above which a payment needs two approvals (Lens B28.315), signed with this
 // phone's key over Lens's challenge for exactly that line. A Personal account never sees it and never asks for it.
+// B57.213 — drawn in Pocket as the web's B57.212 draws it: the line set is a w-members row with the person's role as a
+// chip; Choose or Change opens Who, Above and Currency in the bottom sheet, as Add member does; Remove asks first.
 
 jest.setTimeout(30_000)
 
@@ -36,6 +38,10 @@ const WEB = {
   removed: 'Second approver removed',
   removedLine: 'One approval is enough again.',
   above: 'Above £5,000.00',
+  // B57.212's dialogs (suite 307b993, TeamRoles.tsx SecondApproverDialog and RemoveSecondApproverDialog).
+  pick: 'Above this amount, a payment needs two people to approve it, and one of them is the person you pick here.',
+  removeTitle: 'Remove “bo@northwind.studio” as second approver?',
+  removeLine: 'One approval is enough again, whatever the amount.',
 }
 
 const role = (email: string, r: string, user_id = '') => ({ email, role: r, signed_in: !!user_id, granted_at: '2026-11-20T09:00:00Z', user_id })
@@ -104,13 +110,20 @@ test('a Business picks a signed-in Approver or Admin, and sets the line signed w
   expect(card.getByText(WEB.line)).toBeTruthy()
   expect(await card.findByText(WEB.none)).toBeTruthy()
   // Only a signed-in Approver or Admin: Finance cannot approve, and an Approver who has not signed in has no user id yet.
-  expect(card.getByRole('radio', { name: 'ada@northwind.studio · Approver' })).toBeTruthy()
-  expect(card.getByRole('radio', { name: 'bo@northwind.studio · Admin' })).toBeTruthy()
-  expect(card.queryByText(/fin@northwind\.studio/)).toBeNull()
-  expect(card.queryByText(/new@northwind\.studio/)).toBeNull()
+  // The card offers Choose; Who, Above and Currency are in its sheet, not on the card.
+  expect(card.queryByLabelText('Above')).toBeNull()
+  await fireEvent.press(card.getByRole('button', { name: 'Choose' }))
+  const sheet = within(await screen.findByTestId('second-approver-sheet'))
+  expect(sheet.getByText(WEB.pick)).toBeTruthy()
+  expect(sheet.getByText('Saving asks for Face ID.')).toBeTruthy()
+  // Only a signed-in Approver or Admin: Finance cannot approve, and an Approver who has not signed in has no user id yet.
+  expect(sheet.getByRole('radio', { name: 'ada@northwind.studio · Approver' })).toBeTruthy()
+  expect(sheet.getByRole('radio', { name: 'bo@northwind.studio · Admin' })).toBeTruthy()
+  expect(sheet.queryByText(/fin@northwind\.studio/)).toBeNull()
+  expect(sheet.queryByText(/new@northwind\.studio/)).toBeNull()
 
-  await fireEvent.changeText(card.getByLabelText('Above'), '5000')
-  await fireEvent.press(card.getByTestId('second-approver-save'))
+  await fireEvent.changeText(sheet.getByLabelText('Above'), '5000')
+  await fireEvent.press(sheet.getByTestId('second-approver-save'))
   expect(await screen.findByText(WEB.saved)).toBeTruthy()
   expect(screen.getByText(WEB.savedLine)).toBeTruthy()
   const set = { user_id: 'u_ada', above_minor: 500_000, currency: 'GBP' }
@@ -122,15 +135,25 @@ test('a Business picks a signed-in Approver or Admin, and sets the line signed w
   const now = within(await screen.findByTestId('second-approver-now'))
   expect(now.getByText('ada@northwind.studio')).toBeTruthy()
   expect(now.getByText(WEB.above)).toBeTruthy()
+  expect(now.getByText('Approver')).toBeTruthy()
+  expect(screen.queryByTestId('second-approver-sheet')).toBeNull()
+  expect(within(screen.getByTestId('second-approver')).getByRole('button', { name: 'Change' })).toBeTruthy()
 })
 
-test('Remove clears the line, signed the same way', async () => {
+test('Remove asks first, then clears the line, signed the same way', async () => {
   const calls = mockBff({ line: { user_id: 'u_bo', above_minor: 500_000, currency: 'GBP' } })
   await renderRouter('./src/app', { initialUrl: '/settings' })
   const now = within(await screen.findByTestId('second-approver-now'))
   expect(now.getByText('bo@northwind.studio')).toBeTruthy()
   expect(now.getByText(WEB.above)).toBeTruthy()
+  expect(now.getByText('Admin')).toBeTruthy()
   await fireEvent.press(now.getByText('Remove'))
+  const asked = within(await screen.findByTestId('second-approver-remove-sheet'))
+  expect(asked.getByText(WEB.removeTitle)).toBeTruthy()
+  expect(asked.getByText(WEB.removeLine)).toBeTruthy()
+  expect(asked.getByText('Removing asks for Face ID.')).toBeTruthy()
+  expect(writes(calls)).toEqual([])
+  await fireEvent.press(asked.getByText('Remove it'))
   expect(await screen.findByText(WEB.removed)).toBeTruthy()
   expect(screen.getByText(WEB.removedLine)).toBeTruthy()
   expect(writes(calls)).toEqual([
@@ -145,7 +168,8 @@ test('with nobody to pick, it says how to get someone, and offers no Save', asyn
   await renderRouter('./src/app', { initialUrl: '/settings' })
   const card = within(await screen.findByTestId('second-approver'))
   expect(await card.findByText(WEB.nobody)).toBeTruthy()
-  expect(card.queryByTestId('second-approver-save')).toBeNull()
+  expect(card.queryByRole('button', { name: 'Choose' })).toBeNull()
+  expect(screen.queryByTestId('second-approver-save')).toBeNull()
 })
 
 test('a Personal account never sees the second approver and never asks for it', async () => {
