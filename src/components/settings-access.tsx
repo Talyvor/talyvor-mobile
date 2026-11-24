@@ -1,9 +1,10 @@
-import { BffError, refusalText, rulesInWords, type ApprovalKey, type MemberRole } from '@talyvor/bff-client'
+import { amountMinor, BffError, formatMinor, refusalText, rulesInWords, type ApprovalKey, type GivenRole, type MemberRole, type SecondApproverLine } from '@talyvor/bff-client'
 import { router } from 'expo-router'
 import { useCallback, useState, type ReactNode } from 'react'
 import { Text, View } from 'react-native'
 
-import { thisPhoneDevice, turnOffPhoneApprovals } from '@/keys'
+import { useAccount } from '@/account'
+import { biometricName, keyGone, keyGoneText, setSecondApproverSigned, thisPhoneDevice, turnOffPhoneApprovals } from '@/keys'
 import { Choices } from './account-requests'
 import { Face } from './face'
 import { Icon } from './icon'
@@ -20,6 +21,9 @@ import { fonts, useTheme } from '../theme'
 // B57.154 — drawn in Pocket as w-security, w-members and p-approvals draw the same things: the keys under the shield's
 // "Approvals are signed", each key on its kind's tile with a cloud Remove; each member on their initial with their role
 // as a chip, and Add member opening the bottom sheet; each agent's limits beside its face.
+// B59.50 — the second approver under Team and roles, in the web's words (suite B28.40, TeamRoles.tsx SecondApprover): an
+// Approver or Admin who has signed in, and the amount above which a payment needs two people's approvals, one of them
+// theirs (Lens B28.315). Setting or removing it is signed with this phone's key over Lens's challenge for exactly that line.
 
 /** A row's 36 tile, as w-security draws a key's kind and w-members a person's initial. */
 function Tile({ children, round, testID }: { children: ReactNode; round?: boolean; testID?: string }) {
@@ -217,6 +221,7 @@ export function TeamAndRoles() {
           setAdding(true)
         }}
       />
+      <SecondApprover />
       <BottomSheet visible={adding} onClose={() => !busy && setAdding(false)}>
         <Headline>Add a member</Headline>
         <Body muted>Add someone by the email they sign in with. Each person takes one of your plan’s seats.</Body>
@@ -227,6 +232,113 @@ export function TeamAndRoles() {
         {said && !said.ok ? <Body style={{ color: c.critical }}>{said.text}</Body> : null}
         <Button testID="add-member-send" primary label={busy ? 'Adding…' : 'Add member'} disabled={!email.trim() || busy} onPress={() => void add()} />
       </BottomSheet>
+    </View>
+  )
+}
+
+/** The roles that may approve (talyvor-lens approvalRoles): only they can be a second approver. */
+const APPROVING_ROLES: readonly GivenRole['role'][] = ['approver', 'admin']
+
+const GIVEN_ROLE_NAME: Record<GivenRole['role'], string> = { viewer: 'Viewer', finance: 'Finance', approver: 'Approver', admin: 'Admin' }
+
+/** What went wrong saving the second approver, in words: the web's, and the phone's own for its key. */
+function lineRefusal(err: unknown): string {
+  if (keyGone(err)) return keyGoneText
+  if (err instanceof BffError && err.status === 403)
+    return `It needs your signature. Turn on approving with ${biometricName} in Approvals, or set it on the web.`
+  if (err instanceof BffError && (err.status === 401 || (err.status < 500 && err.sentence))) return refusalText(err)
+  if (err instanceof BffError) return 'The second approver wasn’t saved. Try again.'
+  return 'Cancelled. Nothing changed.'
+}
+
+/** B59.50 — a Business owner's second approver: who, and above which amount a payment needs two approvals. */
+function SecondApprover() {
+  const { client } = useSession()
+  const { c } = useTheme()
+  const { shows } = useAccount(client)
+  const load = useCallback(async () => {
+    const [line, team] = await Promise.all([client.secondApprover(), client.givenRoles()])
+    return { line, team }
+  }, [client])
+  const { data, error, reload } = useLoad(load)
+  const [who, setWho] = useState('')
+  const [amount, setAmount] = useState('')
+  const [currency, setCurrency] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [wrong, setWrong] = useState('')
+  const [said, setSaid] = useState<{ title: string; line: string } | null>(null)
+  const currencies = shows ? [...(shows.bankTransfers ? ['GBP', 'EUR', 'USD'] : []), ...(shows.onChain ? ['USDC'] : [])] : []
+  const team = data?.team ?? []
+  const people = team.filter((r) => APPROVING_ROLES.includes(r.role) && !!r.user_id)
+  const pickedWho = who || people[0]?.user_id || ''
+  const pickedCurrency = currency || data?.line.currency || currencies[0] || 'GBP'
+  const named = (id: string) => team.find((r) => r.user_id === id)?.email ?? 'someone no longer in your team'
+  const now = data && data.line.user_id && data.line.above_minor > 0 ? data.line : null
+  const save = async (l: SecondApproverLine) => {
+    setBusy(true)
+    setSaid(null)
+    setWrong('')
+    try {
+      await setSecondApproverSigned(client, l, l.user_id ? 'Set your second approver' : 'Remove your second approver')
+      setAmount('')
+      setSaid(l.user_id ? { title: 'Second approver saved', line: `Above ${formatMinor(l.above_minor, l.currency)}, a payment needs two approvals.` } : { title: 'Second approver removed', line: 'One approval is enough again.' })
+      reload()
+    } catch (err) {
+      setWrong(lineRefusal(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+  const submit = () => {
+    const minor = amountMinor(amount, pickedCurrency)
+    if (minor === null) return setWrong('Enter an amount above 0.')
+    void save({ user_id: pickedWho, above_minor: minor, currency: pickedCurrency })
+  }
+  return (
+    <View testID="second-approver" style={{ gap: 12 }}>
+      <Card>
+        <View style={{ gap: 4 }}>
+          <Text style={{ fontFamily: fonts.uiBold, fontSize: 16.5, color: c.ink }}>Second approver</Text>
+          <Body muted>Above an amount you choose, a payment needs two people to approve it, and one of them is your second approver.</Body>
+        </View>
+        {error ? (
+          <Body muted>{refusalText(error)}</Body>
+        ) : !data ? (
+          <Body muted>Reading…</Body>
+        ) : now ? (
+          <View testID="second-approver-now">
+            <Row
+              left={
+                <Tile round>
+                  <Text style={{ fontFamily: fonts.uiBold, fontSize: 15, color: c.ink }}>{named(now.user_id).slice(0, 1).toUpperCase()}</Text>
+                </Tile>
+              }
+              title={named(now.user_id)}
+              sub={`Above ${formatMinor(now.above_minor, now.currency)}`}
+              right={<Button small variant="secondary" label="Remove" disabled={busy} onPress={() => void save({ user_id: '', above_minor: 0, currency: '' })} />}
+            />
+          </View>
+        ) : (
+          <Body muted>No second approver: one approval is enough.</Body>
+        )}
+        {data && people.length > 0 && currencies.length > 0 ? (
+          <View style={{ gap: 12 }}>
+            <Choices label="Who" options={people.map((r) => [r.user_id ?? '', `${r.email} · ${GIVEN_ROLE_NAME[r.role] ?? r.role}`] as [string, string])} value={pickedWho} onChange={setWho} />
+            <Field label="Above" value={amount} onChangeText={setAmount} keyboardType="decimal-pad" autoCorrect={false} editable={!busy} />
+            <Choices label="Currency" options={currencies.map((x) => [x, x] as [string, string])} value={pickedCurrency} onChange={setCurrency} />
+            <Button testID="second-approver-save" primary label={busy ? 'Saving…' : 'Save'} disabled={busy} onPress={submit} />
+          </View>
+        ) : data ? (
+          <Body muted>Give someone the Approver or Admin role. Once they have signed in, you can pick them here.</Body>
+        ) : null}
+        {wrong ? <Body style={{ color: c.critical }}>{wrong}</Body> : null}
+      </Card>
+      {said ? (
+        <View testID="second-approver-said" style={{ gap: 2 }}>
+          <Text style={{ fontFamily: fonts.uiBold, fontSize: 14, color: c.ink }}>{said.title}</Text>
+          <Body muted>{said.line}</Body>
+        </View>
+      ) : null}
     </View>
   )
 }

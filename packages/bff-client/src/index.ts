@@ -1074,6 +1074,24 @@ export interface Member {
   avatar_url: string
 }
 
+/** B59.50 — a role the owner gave (talyvor-lens workspace.WorkspaceRole, through the BFF's GET /api/workspace/roles). */
+export interface GivenRole {
+  email: string
+  role: 'viewer' | 'finance' | 'approver' | 'admin'
+  signed_in: boolean
+  granted_at: string
+  /** the person who took the role up, as the second approver names them (talyvor-lens B28.464); "" or absent until then */
+  user_id?: string
+}
+
+/** B59.50 — a Business's second approver (talyvor-lens B28.315): above `above_minor` of `currency`, a payment needs two
+ * people's approvals, one of them `user_id`'s. Empty (user_id "", above_minor 0) when none is set. */
+export interface SecondApproverLine {
+  user_id: string
+  above_minor: number
+  currency: string
+}
+
 const e = encodeURIComponent
 
 /** B61.27 — `onLocked` hears every 423: the BFF has locked the phone's session (suite B61.25), and only unlocking opens it. */
@@ -1435,6 +1453,16 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     members: async () => (await call<Member[] | null>('GET', '/api/members')) ?? [],
     /** Adds a person by the email they sign in with; Track refuses with a code (MEMBER_EXISTS, OWNER_REQUIRED, …). */
     addMember: (email: string, role: MemberRole) => call<Member>('POST', '/api/members', { email, role }),
+    /** B59.50 — the roles the owner gave, as the web's Team and roles reads them (suite B28.70). */
+    givenRoles: async () => (await call<{ items: GivenRole[] | null }>('GET', '/api/workspace/roles')).items ?? [],
+    /** B59.50 — the second approver and its line (suite B28.40); a Personal account's is refused with not_business. */
+    secondApprover: () => call<SecondApproverLine>('GET', '/api/workspace/second-approver'),
+    /** The challenge setting exactly this line, or clearing it with an empty one, is signed over. */
+    secondApproverChallenge: (line: SecondApproverLine) =>
+      call<{ challenge: string; allow_credentials: string[] | null }>('POST', '/api/workspace/second-approver/challenge', line),
+    /** Sets the line, signed over secondApproverChallenge's challenge once the workspace has a passkey or phone key. */
+    setSecondApprover: (line: SecondApproverLine, assertion?: DeviceAssertion) =>
+      call<SecondApproverLine>('PUT', '/api/workspace/second-approver', assertion ? { ...line, assertion } : line),
     /** B61.39 — the Help chat the BFF keeps for the workspace, 30 days. */
     helpChat: async () => (await call<{ messages: HelpMessage[] | null }>('GET', '/api/help/chat')).messages ?? [],
     /** Asks one question from `page`; answers the chat with the reply last. Past the day's questions: HelpLimitError. */
