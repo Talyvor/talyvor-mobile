@@ -173,11 +173,11 @@ export function Figure({ children, size = 15, tone }: { children: ReactNode; siz
 }
 
 /** Pocket's card: cloud, or white with a shadow where it sits on cloud; `tight` is .card.tight, a setting's row. */
-export function Card({ children, white, tight }: { children: ReactNode; white?: boolean; tight?: boolean }) {
+export function Card({ children, white, tight, testID }: { children: ReactNode; white?: boolean; tight?: boolean; testID?: string }) {
   const { c } = useTheme()
   return (
     <OnCard.Provider value>
-      <View style={[styles.card, tight && styles.tight, white ? [{ backgroundColor: c.page }, styles.shadow] : { backgroundColor: c.cloud }]}>{children}</View>
+      <View testID={testID} style={[styles.card, tight && styles.tight, white ? [{ backgroundColor: c.page }, styles.shadow] : { backgroundColor: c.cloud }]}>{children}</View>
     </OnCard.Provider>
   )
 }
@@ -324,14 +324,23 @@ export function Note({ icon, children }: { icon: IconName; children: string }) {
 
 /** A list row: something on the left, a title over a line, something on the right. A rule above every row but the first.
  * `subTone` colours the line, for one that warns (B57.208, a stopped approval's). */
-export function Row({ left, title, sub, subTone, right, first, onPress }: { left?: ReactNode; title: string; sub?: string; subTone?: string; right?: ReactNode; first?: boolean; onPress?: () => void }) {
+/** B57.222 — `under` draws chips on the sub line, under the title, as the account switcher draws a role. */
+export function Row({ left, title, sub, subTone, under, underTestID, right, first, onPress }: { left?: ReactNode; title: string; sub?: string; subTone?: string; under?: ReactNode; underTestID?: string; right?: ReactNode; first?: boolean; onPress?: () => void }) {
   const { c } = useTheme()
+  const subText = sub ? <Text style={[styles.sub, { color: subTone ?? c.ink3 }]}>{sub}</Text> : null
   const body = (
     <>
       {left}
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text style={[styles.body, { color: c.ink, fontFamily: fonts.uiMedium }]}>{title}</Text>
-        {sub ? <Text style={[styles.sub, { color: subTone ?? c.ink3 }]}>{sub}</Text> : null}
+        {under ? (
+          <View testID={underTestID} style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 8, rowGap: 4, marginTop: 2 }}>
+            {subText}
+            {under}
+          </View>
+        ) : (
+          subText
+        )}
       </View>
       {right}
     </>

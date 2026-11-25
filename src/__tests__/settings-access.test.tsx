@@ -289,6 +289,32 @@ describe('Roles', () => {
   })
 })
 
+// B57.222 — Team and roles and Accounts shared with you, drawn in Pocket as w-members and the web's B57.211 draw them:
+// Give a role sits at the end of Your team's heading, each person's signed-in line and role chip sit under their email
+// with Remove beside them, and Accounts shared with you is one card, the email and its code under its accounts.
+describe('Team and roles in Pocket', () => {
+  test('Give a role is Your team’s own, and each role sits under its email', async () => {
+    mockBff()
+    await renderRouter('./src/app', { initialUrl: '/settings' })
+    const card = within(await screen.findByTestId('your-team-card'))
+    expect(card.getByText('Your team')).toBeTruthy()
+    expect(card.getByRole('button', { name: 'Give a role' })).toBeTruthy()
+    const under = within(await card.findByTestId('under:lee@northwind.studio'))
+    expect(under.getByText('Has signed in')).toBeTruthy()
+    expect(under.getByText('Viewer')).toBeTruthy()
+    expect(card.getByRole('button', { name: 'Remove lee@northwind.studio' })).toBeTruthy()
+  })
+
+  test('Accounts shared with you is one card, its accounts above the email that proves them', async () => {
+    mockBff({ type: 'personal' })
+    await renderRouter('./src/app', { initialUrl: '/settings' })
+    const card = within(await screen.findByTestId('shared-with-you-card'))
+    expect(card.getByText('Someone gave a role to your email? Prove it’s yours with a code we send to it, and their account opens from Your accounts.')).toBeTruthy()
+    expect(card.getByLabelText('Your email')).toBeTruthy()
+    expect(card.getByRole('button', { name: 'Send code' })).toBeTruthy()
+  })
+})
+
 // B57.154 — drawn in Pocket as w-security, w-members and p-approvals draw the same things: the keys under the shield's
 // "Approvals are signed", each key on its kind's tile with a cloud Remove; each member on their initial with their role
 // as a chip, and Add member opening Pocket's bottom sheet; each agent's limits beside its face.
