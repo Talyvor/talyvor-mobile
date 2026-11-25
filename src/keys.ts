@@ -323,7 +323,7 @@ export async function signSpendPermission(client: BffClient, agentId: string, ag
     )
   }
   const { canonical } = await client.prepareSpendPermission(agentId, terms)
-  if (!namesTerms(canonical, agentId, terms)) throw new Error('What Lens asked this phone to sign is not the limits you set, so nothing was signed.')
+  if (!namesTerms(canonical, agentId, terms)) throw new Error('What this phone was asked to sign is not the limits you set, so nothing was signed.')
   // The challenge is the phone's own, over exactly the JSON it checked: Lens's is the same hash (economy.MandateChallenge).
   const challenge = toBase64url(await sha256(utf8(canonical)))
   return client.setSpendPermission(agentId, canonical, await signWithThisPhone(client, challenge, reason))

@@ -265,7 +265,7 @@ test('limits Lens prepared other than the ones set are never signed', async () =
   await open('limits')
   await screen.findByText('50.00 USDC a week')
   await press('Freeze Remy')
-  expect(await screen.findByText('What Lens asked this phone to sign is not the limits you set, so nothing was signed.')).toBeTruthy()
+  expect(await screen.findByText('What this phone was asked to sign is not the limits you set, so nothing was signed.')).toBeTruthy()
   expect(writes(calls).filter((c) => c.method === 'PUT')).toEqual([])
   expect(mockSigned).toEqual([])
 })
