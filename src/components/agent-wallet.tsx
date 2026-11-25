@@ -66,6 +66,8 @@ export const USDC_ON_BASE = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
 const newKey = () => Crypto.randomUUID()
 const usdcMinor = (text: string) => amountMinor(text, 'USDC')
 const isAddress = (s: string) => /^0x[0-9a-fA-F]{40}$/.test(s.trim())
+/** biometricName at the start of a sentence: “Your fingerprint” on Android. */
+const Biometric = biometricName[0].toUpperCase() + biometricName.slice(1)
 const shortAddress = (a: string) => (a.length > 14 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a)
 const when = (iso: string) => new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 
@@ -221,7 +223,7 @@ function MoveQuote({ agent, m, gets, onChange, onDone }: { agent: Agent; m: Wall
       {m.sell_currency === m.buy_currency ? null : <Fact name="Rate" value={`1 ${m.sell_currency} = ${m.rate} ${m.buy_currency}`} />}
       <Fact name={gets} value={formatMinor(m.buy_minor, m.buy_currency)} />
       {m.expires_at ? <Fact name="Price held until" value={when(m.expires_at)} /> : null}
-      {signs ? <Body muted>{`${biometricName} asks before anything moves.`}</Body> : null}
+      {signs ? <Body muted>{`${Biometric} asks before anything moves.`}</Body> : null}
       <Button primary label={busy ? 'Confirming…' : signs ? `Confirm with ${biometricName}` : 'Confirm'} icon={signs ? 'faceid' : undefined} disabled={busy} hint="Confirming…" onPress={() => void confirm()} />
       <Button variant="secondary" label="Change" disabled={busy} hint="Confirming…" onPress={onChange} />
       {said ? <Body>{said}</Body> : null}
@@ -565,7 +567,7 @@ function Send({ agent }: { agent: Agent }) {
           <SendFacts q={quote} agent={agent} />
           <Chip>{`Arrives ${arrivalText(quote.arrival_seconds)}`}</Chip>
           {quote.new_address ? <Body muted>A new address: this workspace has not paid it before.</Body> : null}
-          <Body muted>{`${biometricName} asks before anything is sent.`}</Body>
+          <Body muted>{`${Biometric} asks before anything is sent.`}</Body>
           <Button primary icon="faceid" label={busy ? 'Sending…' : `Send with ${biometricName}`} disabled={busy} hint="Sending…" onPress={() => void send()} />
           <Button
             variant="secondary"
@@ -867,7 +869,7 @@ function LimitsForm({ agent, sp, onSigned }: { agent: Agent; sp: SpendPermission
       <Field label="Pay only these addresses" placeholder="Any address, if you leave this empty" autoCapitalize="none" autoCorrect={false} value={allowed} onChangeText={setAllowed} />
       <Field label="Never pay these addresses" placeholder="0x…, 0x…" autoCapitalize="none" autoCorrect={false} value={blocked} onChangeText={setBlocked} />
       <Field label="Ends" placeholder="2027-06-30" autoCapitalize="none" value={ends} onChangeText={setEnds} />
-      <Body muted>{`${biometricName} asks before anything changes.`}</Body>
+      <Body muted>{`${Biometric} asks before anything changes.`}</Body>
       <Button
         primary
         icon="faceid"
