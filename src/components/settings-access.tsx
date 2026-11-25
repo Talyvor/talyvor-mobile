@@ -30,6 +30,9 @@ import { fonts, useTheme } from '../theme'
 // Finance, Approver, Admin), sees each with its chip and takes it away after asking; every account proves an email with a
 // code mailed to it and then sees the accounts shared with it, each with its role, opened as the switcher opens them. A
 // role session gives no roles, and a Personal account has no team: it sees only the accounts shared with it.
+// B57.222 — drawn in Pocket as w-members and the web's B57.211 draw them: Give a role at the end of Your team's heading
+// (where Second approver keeps Choose), each person's signed-in line and role chip under their email with Remove beside
+// them, and Accounts shared with you one card, its accounts above the email and code that prove them.
 
 /** A row's 36 tile, as w-security draws a key's kind and w-members a person's initial. */
 function Tile({ children, round, testID }: { children: ReactNode; round?: boolean; testID?: string }) {
@@ -270,14 +273,17 @@ const readFailure = (err: unknown, what: string) =>
   err instanceof BffError && err.status === 401 ? `${what} can’t be read until you sign in again.` : `${what} could not be read just now.`
 
 /** A card's own heading and the line under it, as the second approver's. */
-function CardTitle({ children, line }: { children: string; line?: string }) {
+function CardTitle({ children, line, action }: { children: string; line?: string; action?: ReactNode }) {
   const { c } = useTheme()
   return (
-    <View style={{ gap: 4 }}>
-      <Text accessibilityRole="header" style={{ fontFamily: fonts.uiBold, fontSize: 16.5, color: c.ink }}>
-        {children}
-      </Text>
-      {line ? <Body muted>{line}</Body> : null}
+    <View style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start' }}>
+      <View style={{ flex: 1, gap: 4 }}>
+        <Text accessibilityRole="header" style={{ fontFamily: fonts.uiBold, fontSize: 16.5, color: c.ink }}>
+          {children}
+        </Text>
+        {line ? <Body muted>{line}</Body> : null}
+      </View>
+      {action}
     </View>
   )
 }
@@ -344,8 +350,22 @@ function YourTeam({ onChange }: { onChange: () => void }) {
   }
   return (
     <View testID="your-team" style={{ gap: 12 }}>
-      <Card>
-        <CardTitle>Your team</CardTitle>
+      <Card testID="your-team-card">
+        <CardTitle
+          action={
+            <Button
+              small
+              variant="secondary"
+              label="Give a role"
+              onPress={() => {
+                setSaid(null)
+                setWrong('')
+                setGiving(true)
+              }}
+            />
+          }>
+          Your team
+        </CardTitle>
         {error ? (
           <Body muted>{readFailure(error, 'Your team')}</Body>
         ) : !data ? (
@@ -359,20 +379,19 @@ function YourTeam({ onChange }: { onChange: () => void }) {
               left={<Initial of={r.email} />}
               title={r.email}
               sub={r.signed_in ? 'Has signed in' : 'Hasn’t signed in yet'}
+              under={<Chip>{roleName(r.role)}</Chip>}
+              underTestID={`under:${r.email}`}
               right={
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Chip>{roleName(r.role)}</Chip>
-                  <Button
-                    small
-                    variant="secondary"
-                    label="Remove"
-                    accessibilityLabel={`Remove ${r.email}`}
-                    onPress={() => {
-                      setWrong('')
-                      setRemoving(r)
-                    }}
-                  />
-                </View>
+                <Button
+                  small
+                  variant="secondary"
+                  label="Remove"
+                  accessibilityLabel={`Remove ${r.email}`}
+                  onPress={() => {
+                    setWrong('')
+                    setRemoving(r)
+                  }}
+                />
               }
             />
           ))
@@ -384,15 +403,6 @@ function YourTeam({ onChange }: { onChange: () => void }) {
           <Body muted>{said.line}</Body>
         </View>
       ) : null}
-      <Button
-        primary
-        label="Give a role"
-        onPress={() => {
-          setSaid(null)
-          setWrong('')
-          setGiving(true)
-        }}
-      />
       <BottomSheet testID="give-role-sheet" visible={giving} onClose={() => !busy && setGiving(false)}>
         <Headline>Give a role</Headline>
         <Body muted>They open your company’s account by proving this email with a code we send to it.</Body>
@@ -480,7 +490,7 @@ export function SharedWithYou({ titled }: { titled?: boolean }) {
   }
   return (
     <View testID="shared-with-you" style={{ gap: 12 }}>
-      <Card>
+      <Card testID="shared-with-you-card">
         {titled ? <CardTitle line={line}>Accounts shared with you</CardTitle> : <Body muted>{line}</Body>}
         {error ? (
           <Body muted>{readFailure(error, 'Accounts shared with you')}</Body>
@@ -495,18 +505,40 @@ export function SharedWithYou({ titled }: { titled?: boolean }) {
                 left={<Initial of={accountName(a)} />}
                 title={accountName(a)}
                 sub={a.email}
-                right={
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <Chip>{roleName(a.role)}</Chip>
-                    {a.current ? <Chip tone="good">Current</Chip> : <Button small label="Open" accessibilityLabel={`Open ${accountName(a)}`} disabled={busy} onPress={() => void open(a.id)} />}
-                  </View>
-                }
+                under={<Chip>{roleName(a.role)}</Chip>}
+                right={a.current ? <Chip tone="good">Current</Chip> : <Button small label="Open" accessibilityLabel={`Open ${accountName(a)}`} disabled={busy} onPress={() => void open(a.id)} />}
               />
             ))}
             {data.accounts.length === 0 && data.emails.length > 0 ? <Body muted>No account has given a role to these emails yet.</Body> : null}
           </>
         )}
         {openFailed ? <Body style={{ color: c.critical }}>That account didn’t open. Try again.</Body> : null}
+        {/* The email and its code under the accounts, past a line, as the web's card draws its form. */}
+        <View style={{ borderTopWidth: 1, borderTopColor: c.line, paddingTop: 14, gap: 10 }}>
+          {sentTo === null ? (
+            <>
+              <Field label="Your email" value={email} onChangeText={setEmail} autoCapitalize="none" autoCorrect={false} keyboardType="email-address" autoComplete="email" editable={!busy} />
+              {wrong ? <Body style={{ color: c.critical }}>{wrong}</Body> : null}
+              <Button variant="secondary" label={busy ? 'Sending…' : 'Send code'} disabled={busy} onPress={() => void ask()} />
+            </>
+          ) : (
+            <>
+              <Body muted>{`We sent a code to ${sentTo}. It works for 10 minutes.`}</Body>
+              <Field label="Code" value={code} onChangeText={setCode} keyboardType="number-pad" autoComplete="one-time-code" textContentType="oneTimeCode" editable={!busy} />
+              {wrong ? <Body style={{ color: c.critical }}>{wrong}</Body> : null}
+              <Button primary label={busy ? 'Checking…' : 'Confirm'} disabled={busy} onPress={() => void check()} />
+              <Button
+                variant="secondary"
+                label="Use another email"
+                disabled={busy}
+                onPress={() => {
+                  setWrong('')
+                  setSentTo(null)
+                }}
+              />
+            </>
+          )}
+        </View>
       </Card>
       {proved ? (
         <View testID="shared-with-you-said" style={{ gap: 2 }}>
@@ -514,31 +546,6 @@ export function SharedWithYou({ titled }: { titled?: boolean }) {
           <Body muted>{proved}</Body>
         </View>
       ) : null}
-      <Card>
-        {sentTo === null ? (
-          <>
-            <Field label="Your email" value={email} onChangeText={setEmail} autoCapitalize="none" autoCorrect={false} keyboardType="email-address" autoComplete="email" editable={!busy} />
-            {wrong ? <Body style={{ color: c.critical }}>{wrong}</Body> : null}
-            <Button variant="secondary" label={busy ? 'Sending…' : 'Send code'} disabled={busy} onPress={() => void ask()} />
-          </>
-        ) : (
-          <>
-            <Body muted>{`We sent a code to ${sentTo}. It works for 10 minutes.`}</Body>
-            <Field label="Code" value={code} onChangeText={setCode} keyboardType="number-pad" autoComplete="one-time-code" textContentType="oneTimeCode" editable={!busy} />
-            {wrong ? <Body style={{ color: c.critical }}>{wrong}</Body> : null}
-            <Button primary label={busy ? 'Checking…' : 'Confirm'} disabled={busy} onPress={() => void check()} />
-            <Button
-              variant="secondary"
-              label="Use another email"
-              disabled={busy}
-              onPress={() => {
-                setWrong('')
-                setSentTo(null)
-              }}
-            />
-          </>
-        )}
-      </Card>
     </View>
   )
 }
@@ -647,12 +654,8 @@ function SecondApprover() {
               }
               title={named(now.user_id)}
               sub={`Above ${formatMinor(now.above_minor, now.currency)}`}
-              right={
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  {role ? <Chip>{GIVEN_ROLE_NAME[role] ?? role}</Chip> : null}
-                  <Button small variant="secondary" label="Remove" onPress={ask} />
-                </View>
-              }
+              under={role ? <Chip>{GIVEN_ROLE_NAME[role] ?? role}</Chip> : undefined}
+              right={<Button small variant="secondary" label="Remove" onPress={ask} />}
             />
           </View>
         ) : (
