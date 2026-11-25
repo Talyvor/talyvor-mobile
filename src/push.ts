@@ -37,6 +37,15 @@ export function spendHref(data: Record<string, unknown> | undefined): Href | nul
   return '/spending'
 }
 
+/** B48.20 — a push about an agent's wallet opens its wallet with the part it is about: a send to a new address waiting
+ * for the owner (Lens's crypto_send_new_address) opens Send, where it is answered; money in or out opens Activity, and a
+ * request paid opens Request. */
+export function walletHref(data: Record<string, unknown> | undefined): Href | null {
+  if (typeof data?.agent_id !== 'string') return null
+  const open = { crypto_send_new_address: 'send', agent_wallet_money_in: 'activity', agent_wallet_money_out: 'activity', crypto_request_paid: 'request' }[String(data.type)]
+  return open ? { pathname: '/agent-wallet/[id]', params: { id: data.agent_id, open } } : null
+}
+
 // B41.34 — a request's notification carries an Approve button, on the lock screen too. It opens the app, where Face ID
 // or a fingerprint unlocks the device key that signs the batch hash: the SHA-256 of Lens's statement for exactly the
 // items the notification names (its data's `items`). One that names none opens the card instead.
@@ -86,6 +95,7 @@ export function usePushApprovals(client: BffClient, signedIn: boolean) {
     const data = pushData(response.notification.request)
     const href = approvalHref(data)
     const spend = spendHref(data)
+    const wallet = walletHref(data)
     const batch = batchOf(data?.items)
     if (response.actionIdentifier === APPROVE_ACTION && data && href && ((data.type === 'payment_request' && batch) || data.type === 'agent_approval')) {
       approved.current = response
@@ -105,6 +115,9 @@ export function usePushApprovals(client: BffClient, signedIn: boolean) {
     } else if (spend && response.actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER) {
       approved.current = response
       router.push(spend)
+    } else if (wallet && response.actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER) {
+      approved.current = response
+      router.push(wallet)
     } else if (href && (response.actionIdentifier === Notifications.DEFAULT_ACTION_IDENTIFIER || response.actionIdentifier === APPROVE_ACTION)) router.push(href)
   }, [client, response, signedIn])
 }

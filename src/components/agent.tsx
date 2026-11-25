@@ -208,6 +208,15 @@ export function AgentView({ data, onChanged, opens }: { data: AgentData; onChang
       <Body muted>Spent this month: {formatLXC(summary.month.spent_ulxc, peg)}</Body>
       <Card white>
         <Row first left={<Icon name="card" color={c.ink} />} title={`${agent.name}’s card`} sub="Freeze, details and limits" right={<Icon name="chev" color={c.ink3} />} onPress={() => router.push('/cards')} />
+        {agent.wallet_kind === 'crypto' || agent.wallet_kind === 'both' ? (
+          <Row
+            left={<Icon name="coin" color={c.ink} />}
+            title={`${agent.name}’s wallet`}
+            sub="Add money, send, request and limits"
+            right={<Icon name="chev" color={c.ink3} />}
+            onPress={() => router.push({ pathname: '/agent-wallet/[id]', params: { id: agent.id } })}
+          />
+        ) : null}
       </Card>
 
       <PendingApprovals pending={pending} agents={[agent]} allPaused={allPaused} labels={false} onDecided={changed} />

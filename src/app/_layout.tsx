@@ -58,6 +58,7 @@ function Navigator() {
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="agents/[id]" />
           <Stack.Screen name="agents/new" />
+          <Stack.Screen name="agent-wallet/[id]" />
           <Stack.Screen name="payees/[id]" />
           <Stack.Screen name="pay-person" />
           <Stack.Screen name="instant-transfer/index" />
