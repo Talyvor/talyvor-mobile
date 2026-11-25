@@ -135,7 +135,14 @@ describe('links', () => {
     const opens = appSources.filter((f) => /Linking\.openURL|openBrowserAsync|openAuthSessionAsync|\+native-intent/.test(readFileSync(f, 'utf8')))
     // B61.39 — Help's "Send to our team" opens the phone's mail app, always to COMPANY_CONTACT. B65.3 — the identity step
     // opens our privacy notice on our own address, and the identity check's link only when it is Persona's own page.
-    expect(opens.map((f) => f.replace(root, ''))).toEqual(['/src/components/identity-checks.tsx', '/src/help-words.ts'])
+    // B48.20 — an agent's wallet opens a transaction only on one of its two explorers, built from a checked hash.
+    expect(opens.map((f) => f.replace(root, ''))).toEqual(['/src/components/agent-wallet.tsx', '/src/components/identity-checks.tsx', '/src/help-words.ts'])
+    const wallet = readFileSync(join(root, 'src/components/agent-wallet.tsx'), 'utf8')
+    expect(wallet.match(/(Linking\.openURL|openBrowserAsync|openAuthSessionAsync)\([^)]*\)/g)).toEqual(['Linking.openURL(url)'])
+    expect(wallet).toContain("const EXPLORERS: Record<string, string> = { base: 'https://basescan.org', 'base-sepolia': 'https://sepolia.basescan.org' }")
+    expect(wallet).toContain('Object.hasOwn(EXPLORERS, network) && /^0x[0-9a-fA-F]{64}$/.test(tx) ? `${EXPLORERS[network]}/tx/${tx}` : null')
+    expect(wallet).toMatch(/const openExplorer = \(url: string \| null\) =>/)
+    expect(wallet.match(/openExplorer\([^)]*\)/g)).toEqual(['openExplorer(explorerUrl(s.network, s.tx_hash ?? \'\')', 'openExplorer(link)'])
     const identity = readFileSync(join(root, 'src/components/identity-checks.tsx'), 'utf8')
     expect(identity.match(/(Linking\.openURL|openBrowserAsync|openAuthSessionAsync)\([^)]*\)/g)).toEqual([
       'openBrowserAsync(`${config.bffUrl}/privacy`)',

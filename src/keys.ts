@@ -1,4 +1,4 @@
-import { BffError, refusalText, type BffClient, type DeviceAssertion, type DeviceKey, type KeyEnrolment, type OutsidePaymentRequest, type PersonPaymentRequest, type SecondApproverLine } from '@talyvor/bff-client'
+import { BffError, refusalText, type BffClient, type DeviceAssertion, type DeviceKey, type KeyEnrolment, type OutsidePaymentRequest, type PersonPaymentRequest, type SecondApproverLine, type SpendPermission, type SpendPermissionTerms, type WalletMove } from '@talyvor/bff-client'
 import * as Crypto from 'expo-crypto'
 import * as SecureStore from 'expo-secure-store'
 import { Platform } from 'react-native'
@@ -293,6 +293,37 @@ export async function setSecondApproverSigned(client: BffClient, line: SecondApp
   const key = await phoneKey(client)
   const assertion = TalyvorKeys && key?.here ? { device_id: key.id, challenge, signature: await TalyvorKeys.sign(ALIAS, deviceMessage(challenge), reason) } : undefined
   return client.setSecondApprover(line, assertion)
+}
+
+/** B48.20 — a cash-out or convert of an agent's wallet, confirmed from this phone: signed over Lens's challenge for exactly
+ * this move (Lens B48.42) after Face ID or a fingerprint. Unsigned only while the workspace has no key to sign it with,
+ * so Lens decides; one only a passkey can sign is refused here, before anything moves. */
+export async function confirmWalletMove(client: BffClient, agentId: string, move: WalletMove, reason: string): Promise<WalletMove> {
+  if (move.route !== 'cash_out' && move.route !== 'convert') return client.walletMoveConfirm(agentId, move.id)
+  const { challenge, allow_credentials } = await client.walletMoveChallenge(agentId, move.id)
+  const key = await phoneKey(client)
+  if (TalyvorKeys && key?.here) return client.walletMoveConfirm(agentId, move.id, await signWithThisPhone(client, challenge, reason))
+  if ((allow_credentials ?? []).length > 0) throw new Error(`Confirm this on the web with your passkey, or turn on Approve with ${biometricName} on this phone.`)
+  return client.walletMoveConfirm(agentId, move.id)
+}
+
+/** B48.20 — an agent's new limits, or Freeze (no tokens), signed by this phone when its key owns the agent's account
+ * (Lens B48.3): Lens prepares the permission's canonical JSON, the key signs its challenge after the biometric check, and
+ * Lens keeps exactly that. An account a passkey owns is changed on the web. */
+export async function signSpendPermission(client: BffClient, agentId: string, agentName: string, terms: SpendPermissionTerms, reason: string): Promise<SpendPermission> {
+  const [{ owners }, key] = await Promise.all([client.smartAccount(agentId), phoneKey(client)])
+  const person = (owners ?? []).find((o) => o.role === 'person')
+  if (!person?.device_id || !key?.here || person.device_id !== key.id) {
+    throw new Error(
+      person?.credential_id
+        ? `The passkey that owns ${agentName}’s wallet signs its limits. Change them on the web.`
+        : person?.device_id
+          ? `Another phone owns ${agentName}’s wallet and signs its limits. Change them on that phone.`
+          : `${agentName}’s wallet has no key to sign its limits.`,
+    )
+  }
+  const { canonical, challenge } = await client.prepareSpendPermission(agentId, terms)
+  return client.setSpendPermission(agentId, canonical, await signWithThisPhone(client, challenge, reason))
 }
 
 /** B59.34 — Face ID or a fingerprint before the phone shows a card's details. The approval key signs a fresh message that

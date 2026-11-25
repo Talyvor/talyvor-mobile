@@ -920,6 +920,159 @@ export interface AccountMove extends MobileSession {
   account_id: string
 }
 
+// B48.20 — an agent's wallets on the phone, through the BFF's relays the web's wallet panel uses (talyvor-suite B48.18,
+// B48.36, B48.47 and B48.48: lens.go's /api/agents/{id}/wallets, crypto-sends, wallet-moves, wallet/activity,
+// crypto-requests and spend-permission).
+
+/** Lens economy.AgentWallet: what one of the agent's wallets holds, and the details for paying into it. */
+export interface AgentMoneyWallet {
+  account_id: string
+  agent_id: string
+  asset: string
+  partner: string
+  balance_minor: number
+  receive: { asset: string; holder?: string; iban?: string; bic?: string; network?: string; address?: string }
+  /** TEST while the sandbox serves it: its details are made up and there is nothing to pay into */
+  mode: 'TEST' | 'LIVE'
+  notice?: string
+  /** quoted with receive when they are the owner's details, not the wallet's own */
+  payment_reference?: string
+}
+
+/** Lens economy.AgentWallets: the agent's kind and its wallets, the fiat one first. */
+export interface AgentWallets {
+  agent_id: string
+  wallet_kind: 'fiat' | 'crypto' | 'both'
+  fiat_currency?: string
+  wallets: AgentMoneyWallet[] | null
+}
+
+/** A send from the agent's crypto wallet: to a 0x address (or a person's @name, email or phone), in USDC's minor units. */
+export interface CryptoSendRequest {
+  to: string
+  network: string
+  token: 'USDC'
+  amount_minor: number
+}
+
+/** Lens economy.CryptoSendQuote: a send before it is made. */
+export interface CryptoSendQuote {
+  network: string
+  token: string
+  amount_minor: number
+  to: string
+  to_kind: 'agent' | 'address'
+  to_label?: string
+  /** the workspace never paid it: a send the agent asks for waits for the owner */
+  new_address: boolean
+  /** the most the network fee can be, in wei of the network's coin */
+  max_fee_wei: string
+  fee_paid_by: 'workspace_gas_budget' | 'agent_account'
+  arrival_seconds?: number
+}
+
+/** Lens economy.CryptoSend: one send and how it ended. */
+export interface CryptoSend extends CryptoSendQuote {
+  id: string
+  agent_id: string
+  direction: 'out' | 'in'
+  status: 'awaiting_owner' | 'sending' | 'sent' | 'landed' | 'failed' | 'refused'
+  reason?: string
+  tx_hash?: string
+  explorer_url?: string
+  created_at: string
+}
+
+/** How money comes into the agent's crypto wallet, or (cash_out) leaves it for the owner's own bank account. */
+export type WalletMoveRoute = 'wallet' | 'card' | 'bank_transfer' | 'convert' | 'cash_out'
+
+export interface WalletMoveRequest {
+  route: WalletMoveRoute
+  amount_minor: number
+  currency: string
+  from_agent_id?: string
+  payee_id?: string
+  to_currency?: string
+}
+
+/** Lens economy.WalletMove: one top-up or cash-out, quoted, then confirmed once. */
+export interface WalletMove {
+  id: string
+  agent_id: string
+  route: WalletMoveRoute
+  sell_minor: number
+  sell_currency: string
+  fee_minor: number
+  buy_minor: number
+  buy_currency: string
+  rate: string
+  status: 'quoted' | 'posted' | 'failed' | 'held' | 'returned'
+  detail?: string
+  expires_at?: string
+}
+
+/** Lens economy.WalletLine: one posting on one of the agent's wallets. */
+export interface WalletLine {
+  entry_id: string
+  line: number
+  at: string
+  /** chain:<network> for a wallet on a chain */
+  account_name: string
+  currency: string
+  kind: string
+  amount_minor: number
+  counterparty?: string
+  /** on a chain, <transaction>:<log> */
+  ref?: string
+  memo?: string
+}
+
+/** Lens economy.CryptoRequest: a request to be paid into the agent's crypto wallet, and where it stands. */
+export interface CryptoPayRequest {
+  id: string
+  token: string
+  network: string
+  amount_minor: number
+  memo: string
+  expires_at: string
+  status: 'open' | 'partial' | 'paid' | 'overpaid' | 'expired'
+  /** the page the payer opens */
+  link: string
+  /** EIP-681: what the QR code encodes */
+  uri: string
+}
+
+/** Lens smartaccount.TokenLimit: what the agent may pay in one token, in its base units (USDC: six decimals). */
+export interface TokenLimit {
+  token: string
+  allowance: number
+  period: 'day' | 'week' | 'month'
+  per_payment: number
+}
+
+/** Lens smartaccount.Permission: no tokens allows nothing, which is how an agent is frozen. */
+export interface SpendPermissionTerms {
+  tokens: TokenLimit[] | null
+  allowed: string[] | null
+  blocked: string[] | null
+  expires: string
+}
+
+/** Lens economy.SpendPermission: the permission in force, signed, and whether the agent is frozen. */
+export interface SpendPermission {
+  number: number
+  permission: SpendPermissionTerms
+  signed_at: string
+  frozen_at?: string
+}
+
+/** Lens economy.SmartAccountOwner: the person's is the passkey or the phone's key that signs. */
+export interface SmartAccountOwner {
+  role: 'person' | 'agent' | 'recovery'
+  credential_id?: string
+  device_id?: string
+}
+
 export class BffError extends Error {
   constructor(
     readonly status: number,
@@ -1234,6 +1387,41 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     instantSend: (agentId: string, body: InstantSend, key: string) =>
       call<InstantTransfer>('POST', `/api/agents/${e(agentId)}/instant-transfers`, body, { 'Idempotency-Key': key }),
     instantTransfer: (id: string) => call<InstantTransfer>('GET', `/api/money/instant-transfers/${e(id)}`),
+    // B48.20 — an agent's wallets (the BFF's relays for the web's wallet panel).
+    agentWallets: (id: string) => call<AgentWallets>('GET', `/api/agents/${e(id)}/wallets`),
+    /** The agent's crypto wallet: its address and who owns it; 404 while it has none. */
+    smartAccount: (id: string) => call<{ agent_id?: string; address: string; owners?: SmartAccountOwner[] | null }>('GET', `/api/agents/${e(id)}/smart-account`),
+    /** Nothing moves: the amount, the most the fee can be and who pays it, the arrival and who it is. */
+    cryptoSendQuote: (id: string, body: CryptoSendRequest) => call<CryptoSendQuote>('POST', `/api/agents/${e(id)}/crypto-sends/quote`, body),
+    /** Sent once however many times `key` arrives. */
+    cryptoSend: (id: string, body: CryptoSendRequest, key: string) =>
+      call<CryptoSend>('POST', `/api/agents/${e(id)}/crypto-sends`, body, { 'Idempotency-Key': key }),
+    cryptoSends: (id: string) => call<{ sends: CryptoSend[] | null }>('GET', `/api/agents/${e(id)}/crypto-sends`),
+    /** The owner says yes to a send to a new address; with a test amount, that much goes first. */
+    approveCryptoSend: (id: string, sendID: string, testAmountMinor?: number) =>
+      call<CryptoSend>('POST', `/api/agents/${e(id)}/crypto-sends/${e(sendID)}/approve`, testAmountMinor ? { test_amount_minor: testAmountMinor } : {}),
+    declineCryptoSend: (id: string, sendID: string) => call<CryptoSend>('POST', `/api/agents/${e(id)}/crypto-sends/${e(sendID)}/decline`),
+    /** Nothing moves: what it sells, the fee, the rate, what it buys, and until when. */
+    walletMoveQuote: (id: string, body: WalletMoveRequest) => call<WalletMove>('POST', `/api/agents/${e(id)}/wallet-moves/quote`, body),
+    /** What a cash-out's or convert's confirm is signed over; no credentials while the workspace signs nothing yet. */
+    walletMoveChallenge: (id: string, moveID: string) =>
+      call<{ challenge: string; allow_credentials: string[] | null }>('POST', `/api/agents/${e(id)}/wallet-moves/${e(moveID)}/challenge`),
+    /** Made once however many times it is confirmed. */
+    walletMoveConfirm: (id: string, moveID: string, assertion?: DeviceAssertion) =>
+      call<WalletMove>('POST', `/api/agents/${e(id)}/wallet-moves/${e(moveID)}/confirm`, assertion ? { assertion } : {}),
+    walletActivity: (id: string) => call<{ lines: WalletLine[] | null }>('GET', `/api/agents/${e(id)}/wallet/activity?limit=100`),
+    cryptoRequests: (id: string) => call<{ requests: CryptoPayRequest[] | null }>('GET', `/api/agents/${e(id)}/crypto-requests`),
+    /** Asked once however many times `key` arrives. */
+    cryptoRequest: (id: string, body: { token: 'USDC'; network: string; amount_minor: number; memo: string; expires_at: string }, key: string) =>
+      call<CryptoPayRequest>('POST', `/api/agents/${e(id)}/crypto-requests`, body, { 'Idempotency-Key': key }),
+    /** 404 while the agent has none signed. */
+    spendPermission: (id: string) => call<SpendPermission>('GET', `/api/agents/${e(id)}/spend-permission`),
+    /** Nothing is kept: the permission as its owner signs it, and the challenge. */
+    prepareSpendPermission: (id: string, p: SpendPermissionTerms) =>
+      call<{ canonical: string; challenge: string }>('POST', `/api/agents/${e(id)}/spend-permission/prepare`, p),
+    /** Kept only when the key that owns the agent's account signed exactly canonical. */
+    setSpendPermission: (id: string, canonical: string, assertion: DeviceAssertion) =>
+      call<SpendPermission>('PUT', `/api/agents/${e(id)}/spend-permission`, { canonical, assertion }),
     /** B59.44 — issues the agent a virtual card to `holder`; Lens answers the card. */
     issueCard: (id: string, holder: Cardholder) => call<AgentCard>('POST', `/api/agents/${e(id)}/card`, holder),
     /** B59.34 — the agent's card and every purchase on it; null when it has none (Lens answers 404). */
