@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
 
 import { accountChip } from '../account'
+import { roleName } from '../role-words'
 import { useSession } from '../session'
 import { fonts, useTheme } from '../theme'
 import { Icon } from './icon'
@@ -16,6 +17,7 @@ import { Body, Button, Chip, Headline } from './ui'
 // marked, then "Open another account", which runs sign-up's steps for a person already signed in. Picking another row
 // moves the session (the BFF's POST /api/accounts/switch, suite B61.8): the phone takes the new token, so every screen
 // reads that account from then on, and Home opens with its words.
+// B28.463 — an account a role was given in (suite B28.70) shows that role on its row as a chip, as the web's switcher does.
 
 /** Where "Open another account" goes: sign-up's steps, for someone already signed in. */
 export const OPEN_ANOTHER_HREF = '/sign-up?another=1'
@@ -30,10 +32,11 @@ function Row({ a, busy, onPick }: { a: PersonAccount; busy: boolean; onPick: () 
   const { c } = useTheme()
   const name = accountName(a)
   const chip = a.type && a.kind ? accountChip({ account_type: a.type, money_kind: a.kind }) : null
+  const role = a.role ? roleName(a.role) : null
   return (
     <Pressable
       accessibilityRole="radio"
-      accessibilityLabel={[name, chip, a.current ? 'Current' : null].filter(Boolean).join(', ')}
+      accessibilityLabel={[name, chip, role, a.current ? 'Current' : null].filter(Boolean).join(', ')}
       accessibilityState={{ checked: a.current, disabled: busy }}
       disabled={busy}
       onPress={onPick}
@@ -46,7 +49,10 @@ function Row({ a, busy, onPick }: { a: PersonAccount; busy: boolean; onPick: () 
         <Text numberOfLines={1} style={{ fontFamily: fonts.uiBold, fontSize: 16, color: c.ink }}>
           {name}
         </Text>
-        {chip ? <Chip>{chip}</Chip> : null}
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+          {chip ? <Chip>{chip}</Chip> : null}
+          {role ? <Chip>{role}</Chip> : null}
+        </View>
       </View>
       {a.current ? (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>

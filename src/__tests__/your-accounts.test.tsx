@@ -23,6 +23,8 @@ interface Workspace {
   type: 'business' | 'personal'
   kind: 'fiat' | 'stablecoin' | 'hybrid'
   level: string
+  /** B28.463 — the role this person holds in an account a role was given in (suite B28.70) */
+  role?: 'viewer' | 'finance' | 'approver' | 'admin'
 }
 
 const NORTHWIND: Workspace = { id: 'ws_northwind', name: 'Northwind Studio', type: 'business', kind: 'hybrid', level: 'L3' }
@@ -49,7 +51,7 @@ function mockBff(accounts: Workspace[]) {
     if (!ws) return json({ error: 'authentication required' }, 401)
     switch (`${method} ${path}`) {
       case 'GET /api/accounts':
-        return json({ accounts: accounts.map((a) => ({ id: a.id, name: a.name, type: a.type, kind: a.kind, opened_at: '2026-11-01T00:00:00Z', current: a.id === ws.id })) })
+        return json({ accounts: accounts.map((a) => ({ id: a.id, name: a.name, type: a.type, kind: a.kind, opened_at: '2026-11-01T00:00:00Z', current: a.id === ws.id, ...(a.role ? { role: a.role } : {}) })) })
       case 'POST /api/accounts/switch':
         if (!accounts.some((a) => a.id === body?.account_id)) return json({ error: 'no such account' }, 404)
         on.delete(token)
@@ -123,6 +125,16 @@ describe('Your accounts', () => {
     const after = calls.slice(calls.findIndex((c) => c.path === '/api/accounts/switch') + 1)
     expect(after.length).toBeGreaterThan(0)
     expect(after.every((c) => c.token === 'session-2')).toBe(true)
+  })
+
+  test('B28.463: an account shared through a role shows the role on its row, as the web’s switcher does', async () => {
+    mockBff([NORTHWIND, MAYA, { id: 'ws_acme', name: 'Acme Ltd', type: 'business', kind: 'fiat', level: 'L3', role: 'finance' }])
+    await renderRouter('./src/app', { initialUrl: '/' })
+    const sheet = await openSheet()
+    const rows = await sheet.findAllByTestId('account-row')
+    expect(rows.map((r) => r.props.accessibilityLabel)).toEqual(['Northwind Studio, Business · Hybrid, Current', 'Maya Lind, Personal · Fiat', 'Acme Ltd, Business · Fiat, Finance'])
+    expect(within(rows[2]).getByText('Finance')).toBeTruthy()
+    expect(within(rows[1]).queryByText('Finance')).toBeNull()
   })
 
   test('B61.77: Your accounts opens as a sheet over Home, and Close returns to Home', async () => {
