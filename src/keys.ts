@@ -1,4 +1,4 @@
-import { BffError, refusalText, type BffClient, type DeviceAssertion, type DeviceKey, type KeyEnrolment, type OutsidePaymentRequest, type PersonPaymentRequest, type SecondApproverLine, type SpendPermission, type SpendPermissionTerms, type WalletMove } from '@talyvor/bff-client'
+import { BffError, refusalText, type BffClient, type CryptoSend, type CryptoSendChallenge, type CryptoSendQuote, type CryptoSendRequest, type DeviceAssertion, type DeviceKey, type KeyEnrolment, type OutsidePaymentRequest, type PersonPaymentRequest, type SecondApproverLine, type SpendPermission, type SpendPermissionTerms, type WalletMove } from '@talyvor/bff-client'
 import * as Crypto from 'expo-crypto'
 import * as SecureStore from 'expo-secure-store'
 import { Platform } from 'react-native'
@@ -305,6 +305,43 @@ export async function confirmWalletMove(client: BffClient, agentId: string, move
   if (TalyvorKeys && key?.here) return client.walletMoveConfirm(agentId, move.id, await signWithThisPhone(client, challenge, reason))
   if ((allow_credentials ?? []).length > 0) throw new Error(`Confirm this on the web with your passkey, or turn on Approve with ${biometricName} on this phone.`)
   return client.walletMoveConfirm(agentId, move.id)
+}
+
+/** B48.51 — this phone's signature over a crypto send's challenge (Lens B48.49), after Face ID or a fingerprint. A send
+ * always asks the key: with none here, the owner is told where they can sign it, and nothing goes. */
+async function signCryptoChallenge(client: BffClient, c: CryptoSendChallenge, reason: string): Promise<DeviceAssertion> {
+  const key = await phoneKey(client)
+  if (!TalyvorKeys || !key?.here) {
+    throw new Error(
+      (c.allow_credentials ?? []).length > 0
+        ? `Sign this on the web with your passkey, or turn on Approve with ${biometricName} on this phone.`
+        : `Turn on Approve with ${biometricName} on this phone first.`,
+    )
+  }
+  try {
+    return await signWithThisPhone(client, c.challenge, reason)
+  } catch (err) {
+    if (keyGone(err)) throw err
+    throw new Error('Cancelled. Nothing was sent.')
+  }
+}
+
+/** B48.51 — the owner's own send from an agent's crypto wallet, signed by this phone over Lens's challenge for exactly it:
+ * the agent, `key`, the amount and the address `to` resolved to. When the challenge's quote names another address or
+ * amount than the one the owner reviewed (a name.eth or a saved name pointed elsewhere since), nothing is signed. */
+export async function sendCryptoSigned(client: BffClient, agentId: string, req: CryptoSendRequest, key: string, reviewed: CryptoSendQuote, reason: string): Promise<CryptoSend> {
+  const c = await client.cryptoSendChallenge(agentId, req, key)
+  if (c.quote && (c.quote.to.toLowerCase() !== reviewed.to.toLowerCase() || c.quote.amount_minor !== reviewed.amount_minor || c.quote.network !== reviewed.network)) {
+    throw new Error(`${req.to} now goes to ${c.quote.to}, not the address you reviewed. Nothing was sent: review it again.`)
+  }
+  return client.cryptoSend(agentId, req, key, await signCryptoChallenge(client, c, reason))
+}
+
+/** B48.51 — the owner's yes to an agent's send to a new address, or the test amount sent there first, signed by this
+ * phone over Lens's challenge for exactly that answer. */
+export async function approveCryptoSendSigned(client: BffClient, agentId: string, s: CryptoSend, testAmountMinor: number | undefined, reason: string): Promise<CryptoSend> {
+  const c = await client.approveCryptoSendChallenge(agentId, s.id, testAmountMinor)
+  return client.approveCryptoSend(agentId, s.id, testAmountMinor, await signCryptoChallenge(client, c, reason))
 }
 
 /** B48.20 — an agent's new limits, or Freeze (no tokens), signed by this phone when its key owns the agent's account
