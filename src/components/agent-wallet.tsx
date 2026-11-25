@@ -6,6 +6,7 @@ import {
   type Agent,
   type AgentMoneyWallet,
   type AgentWallets,
+  type CryptoAddress,
   type CryptoPayRequest,
   type CryptoSend,
   type CryptoSendQuote,
@@ -25,7 +26,7 @@ import Svg, { Path, Rect } from 'react-native-svg'
 import { encode } from 'uqr'
 
 import { useAccount, type Shows } from '@/account'
-import { biometricName, checkItsYou, confirmWalletMove, keyGone, keyGoneText, signSpendPermission } from '@/keys'
+import { approveCryptoSendSigned, biometricName, confirmWalletMove, keyGone, keyGoneText, sendCryptoSigned, signSpendPermission } from '@/keys'
 import { useSession } from '@/session'
 import { fonts, useTheme } from '@/theme'
 
@@ -36,8 +37,10 @@ import { Body, Button, Card, Chip, Eyebrow, Field, Headline, Row, useLoad } from
 // its USDC wallet, Top up and Cash out (each quoted, then confirmed once), Send, Request a payment as a link and QR code,
 // Activity with explorer links, and Limits and permissions. The owner's signatures come from this phone's key behind
 // Face ID or a fingerprint: a cash-out or convert over Lens's challenge for exactly that move (B48.42), and new limits
-// or Freeze over the permission's canonical JSON when this phone's key owns the agent's account (B48.3). A send asks for
-// Face ID before it goes.
+// or Freeze over the permission's canonical JSON when this phone's key owns the agent's account (B48.3). B48.51: a send
+// takes a name.eth or a name the owner saved an address under, and its quote shows the address it resolved to; the
+// owner's send, and their yes to an agent's send to a new address, are signed by this phone's key over Lens's challenge
+// for exactly that send (Lens B48.49).
 
 export type WalletAction = 'top-up' | 'cash-out' | 'send' | 'request' | 'activity' | 'limits'
 
@@ -63,9 +66,6 @@ export const USDC_ON_BASE = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
 const newKey = () => Crypto.randomUUID()
 const usdcMinor = (text: string) => amountMinor(text, 'USDC')
 const isAddress = (s: string) => /^0x[0-9a-fA-F]{40}$/.test(s.trim())
-/** A person on Talyvor, by @name, email or phone number; Lens answers the wallet they chose, or nobody found. */
-const isHandle = (s: string) =>
-  /^@[A-Za-z0-9][A-Za-z0-9_.-]{1,62}$/.test(s.trim()) || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim()) || /^\+?[0-9][0-9 ]{6,18}$/.test(s.trim())
 const shortAddress = (a: string) => (a.length > 14 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a)
 const when = (iso: string) => new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 
@@ -374,7 +374,14 @@ const SEND_STATUS: Record<CryptoSend['status'], [string, 'good' | 'bad' | 'wait'
 function SendFacts({ q, agent }: { q: CryptoSendQuote; agent: Agent }) {
   return (
     <View testID="crypto-send-quote">
-      <Fact name="To" value={q.to_kind === 'agent' && q.to_label ? `${q.to} · ${q.to_label}` : q.to} />
+      {q.saved_name || q.ens_name ? (
+        <>
+          <Fact name="To" value={q.saved_name || q.ens_name || ''} />
+          <Fact name="Address" value={q.to} />
+        </>
+      ) : (
+        <Fact name="To" value={q.to_kind === 'agent' && q.to_label ? `${q.to} · ${q.to_label}` : q.to} />
+      )}
       <Fact name="Network" value={networkName(q.network)} />
       <Fact name="Network fee, at most" value={`${feeText(q.max_fee_wei)} · ${q.fee_paid_by === 'workspace_gas_budget' ? 'Paid from your network fee budget' : `Paid by ${agent.name}’s wallet`}`} />
       <Fact name="You send" value={formatMinor(q.amount_minor, 'USDC')} />
@@ -382,16 +389,12 @@ function SendFacts({ q, agent }: { q: CryptoSendQuote; agent: Agent }) {
   )
 }
 
-/** Asks for Face ID or a fingerprint through this phone's key before money goes: '' once it passed, or why it did not. */
-async function faceCheck(reason: string, nothing: string): Promise<string> {
-  const check = await checkItsYou(reason)
-  if (check === 'gone') return keyGoneText
-  if (check === 'cancelled') return `Cancelled. ${nothing}`
-  if (check === 'off') return `Turn on Approve with ${biometricName} on this phone first.`
-  return ''
-}
+/** Who a send goes to, in the words Face ID shows: the saved or ENS name with its short address, or the address. */
+const sendsTo = (q: Pick<CryptoSendQuote, 'to' | 'saved_name' | 'ens_name'>) =>
+  q.saved_name || q.ens_name ? `${q.saved_name || q.ens_name} (${shortAddress(q.to)})` : shortAddress(q.to)
 
-/** A send waiting for the owner: Approve, Send a test amount first, or Decline, each after Face ID but Decline. */
+/** A send waiting for the owner: Approve, Send a test amount first, or Decline; a yes and a test amount are signed by
+ * this phone's key behind Face ID over Lens's challenge for that answer, a decline moves nothing and is not. */
 function AwaitingSend({ agent, s, onAnswered }: { agent: Agent; s: CryptoSend; onAnswered: () => void }) {
   const { client } = useSession()
   const [testing, setTesting] = useState(false)
@@ -403,11 +406,8 @@ function AwaitingSend({ agent, s, onAnswered }: { agent: Agent; s: CryptoSend; o
     setBusy(true)
     setSaid('')
     try {
-      if (approve) {
-        const no = await faceCheck(`Send ${formatMinor(testAmount ?? s.amount_minor, 'USDC')} to ${shortAddress(s.to)}`, 'Nothing was sent.')
-        if (no) return setSaid(no)
-        await client.approveCryptoSend(agent.id, s.id, testAmount)
-      } else await client.declineCryptoSend(agent.id, s.id)
+      if (approve) await approveCryptoSendSigned(client, agent.id, s, testAmount, `Send ${formatMinor(testAmount ?? s.amount_minor, 'USDC')} to ${sendsTo(s)}`)
+      else await client.declineCryptoSend(agent.id, s.id)
       onAnswered()
     } catch (err) {
       setSaid(failure(err, 'Nothing changed. You can try again.'))
@@ -441,7 +441,73 @@ function AwaitingSend({ agent, s, onAnswered }: { agent: Agent; s: CryptoSend; o
   )
 }
 
-/** Send USDC: to an address or a person → the quote → Send with Face ID → the receipt; then what waits and what went. */
+/** B48.51 — the workspace's saved addresses: pressing one sends to it by its name; the owner saves and removes them. */
+function SavedAddresses({ onPick }: { onPick: (name: string) => void }) {
+  const { client } = useSession()
+  const book = useLoad(useCallback(() => client.cryptoAddresses(), [client]))
+  const [name, setName] = useState('')
+  const [address, setAddress] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [said, setSaid] = useState('')
+  const act = async (what: () => Promise<unknown>, nothing: string) => {
+    setBusy(true)
+    setSaid('')
+    try {
+      await what()
+      book.reload()
+      return true
+    } catch (err) {
+      setSaid(failure(err, nothing))
+      return false
+    } finally {
+      setBusy(false)
+    }
+  }
+  const save = async () => {
+    if (await act(() => client.saveCryptoAddress(name.trim(), address.trim()), 'Nothing was saved. You can try again.')) {
+      setName('')
+      setAddress('')
+    }
+  }
+  const saved = book.data
+  return (
+    <View style={{ gap: 8 }} testID="crypto-address-book">
+      <Eyebrow>Saved addresses</Eyebrow>
+      {book.error ? (
+        <Body>{failure(book.error, 'Your saved addresses could not be read.')}</Body>
+      ) : saved === null ? (
+        <Body muted>Reading…</Body>
+      ) : saved.length === 0 ? (
+        <Body muted>No saved addresses yet.</Body>
+      ) : (
+        saved.map((a: CryptoAddress, i) => (
+          <Row
+            key={a.id}
+            first={i === 0}
+            title={a.name}
+            sub={shortAddress(a.address)}
+            onPress={() => onPick(a.name)}
+            right={<Button small variant="secondary" haptic={false} label="Remove" accessibilityLabel={`Remove ${a.name}`} disabled={busy} hint="Removing…" onPress={() => void act(() => client.removeCryptoAddress(a.id), 'Nothing changed. You can try again.')} />}
+          />
+        ))
+      )}
+      <Field label="Name" placeholder="Treasury" value={name} onChangeText={setName} />
+      <Field label="Address" placeholder="0x…" autoCapitalize="none" autoCorrect={false} value={address} onChangeText={setAddress} />
+      <Button
+        small
+        variant="secondary"
+        label="Save address"
+        disabled={busy || !name.trim() || !isAddress(address)}
+        hint={!name.trim() || !isAddress(address) ? 'Type a name and a 0x address first' : 'Saving…'}
+        onPress={() => void save()}
+      />
+      {said ? <Body>{said}</Body> : null}
+    </View>
+  )
+}
+
+/** Send USDC: to an address, a name.eth, a saved name or a person → the quote, with the address it resolved to → Send,
+ * signed with Face ID → the receipt; then what waits and what went. */
 function Send({ agent }: { agent: Agent }) {
   const { client } = useSession()
   const [to, setTo] = useState('')
@@ -459,7 +525,8 @@ function Send({ agent }: { agent: Agent }) {
   const readSaid = list.error ? failure(list.error, `${agent.name}’s sends could not be read.`) : ''
   const minor = usdcMinor(amount)
   const request = (): CryptoSendRequest => ({ to: to.trim(), network, token: 'USDC', amount_minor: minor ?? 0 })
-  const ready = (isAddress(to) || isHandle(to)) && minor !== null
+  // A saved name is checked by Lens, which answers the address it names or nobody found.
+  const ready = to.trim() !== '' && minor !== null
   const review = async () => {
     if (!ready) return
     setBusy(true)
@@ -478,9 +545,7 @@ function Send({ agent }: { agent: Agent }) {
     setBusy(true)
     setSaid('')
     try {
-      const no = await faceCheck(`Send ${formatMinor(quote.amount_minor, 'USDC')} to ${shortAddress(quote.to)}`, 'Nothing was sent.')
-      if (no) return setSaid(no)
-      const s = await client.cryptoSend(agent.id, request(), key)
+      const s = await sendCryptoSigned(client, agent.id, request(), key, quote, `Send ${formatMinor(quote.amount_minor, 'USDC')} to ${sendsTo(quote)}`)
       setKey(newKey())
       setQuote(null)
       setAmount('')
@@ -515,13 +580,21 @@ function Send({ agent }: { agent: Agent }) {
         </View>
       ) : (
         <View style={{ gap: 12 }}>
-          <Field label="Wallet address, @name, email or phone" placeholder="0x… or @name" autoCapitalize="none" autoCorrect={false} value={to} onChangeText={setTo} />
+          <Field label="Wallet address, name.eth, saved name, @name, email or phone" placeholder="0x…, name.eth or @name" autoCapitalize="none" autoCorrect={false} value={to} onChangeText={setTo} />
           <Choice label="Network" options={NETWORKS} value={network} onChange={setNetwork} />
           <Field label="Amount in USDC" keyboardType="decimal-pad" placeholder="0.00" value={amount} onChangeText={setAmount} />
-          <Button primary label={busy ? 'Reading the quote…' : 'Review'} disabled={busy || !ready} hint={ready ? 'Reading the quote…' : 'Type a 0x address or @name and an amount first'} onPress={() => void review()} />
+          <Button primary label={busy ? 'Reading the quote…' : 'Review'} disabled={busy || !ready} hint={ready ? 'Reading the quote…' : 'Type who it goes to and an amount first'} onPress={() => void review()} />
         </View>
       )}
       {said ? <Body>{said}</Body> : null}
+      {quote ? null : (
+        <SavedAddresses
+          onPick={(name) => {
+            setTo(name)
+            setSaid('')
+          }}
+        />
+      )}
       {receipt ? (
         <View testID="crypto-send-receipt" style={{ gap: 6 }}>
           <Chip tone={SEND_STATUS[receipt.status][1]}>{SEND_STATUS[receipt.status][0]}</Chip>

@@ -962,15 +962,38 @@ export interface CryptoSendQuote {
   network: string
   token: string
   amount_minor: number
+  /** the address it goes to: what a name.eth or a saved name resolved to */
   to: string
-  to_kind: 'agent' | 'address'
+  to_kind: 'agent' | 'person' | 'address'
   to_label?: string
+  /** B48.49: the ENS name `to` was resolved from, on the network's own registry */
+  ens_name?: string
+  /** B48.49: the name the owner saved `to` under */
+  saved_name?: string
   /** the workspace never paid it: a send the agent asks for waits for the owner */
   new_address: boolean
   /** the most the network fee can be, in wei of the network's coin */
   max_fee_wei: string
   fee_paid_by: 'workspace_gas_budget' | 'agent_account'
   arrival_seconds?: number
+}
+
+/** B48.49 — what the owner's own send, or their yes to a send, is signed over: no credentials while only a phone's key
+ * signs for the workspace; the send's challenge comes with its quote, naming the address it resolved to. */
+export interface CryptoSendChallenge {
+  challenge: string
+  allow_credentials: string[] | null
+  quote?: CryptoSendQuote
+}
+
+/** Lens economy.CryptoAddress (B48.49): an address the workspace's owner saved under a name a send may take as `to`. */
+export interface CryptoAddress {
+  id: string
+  name: string
+  address: string
+  saved_by: string
+  created_at: string
+  updated_at: string
 }
 
 /** Lens economy.CryptoSend: one send and how it ended. */
@@ -1412,13 +1435,29 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     smartAccount: (id: string) => call<{ agent_id?: string; address: string; owners?: SmartAccountOwner[] | null }>('GET', `/api/agents/${e(id)}/smart-account`),
     /** Nothing moves: the amount, the most the fee can be and who pays it, the arrival and who it is. */
     cryptoSendQuote: (id: string, body: CryptoSendRequest) => call<CryptoSendQuote>('POST', `/api/agents/${e(id)}/crypto-sends/quote`, body),
-    /** Sent once however many times `key` arrives. */
-    cryptoSend: (id: string, body: CryptoSendRequest, key: string) =>
-      call<CryptoSend>('POST', `/api/agents/${e(id)}/crypto-sends`, body, { 'Idempotency-Key': key }),
+    /** B48.51 — what the owner's send under `key` is signed over (Lens B48.49), with the quote it is signed for. */
+    cryptoSendChallenge: (id: string, body: CryptoSendRequest, key: string) =>
+      call<CryptoSendChallenge>('POST', `/api/agents/${e(id)}/crypto-sends/challenge`, body, { 'Idempotency-Key': key }),
+    /** Sent once however many times `key` arrives; the owner's carries their signature over its challenge. */
+    cryptoSend: (id: string, body: CryptoSendRequest, key: string, assertion?: DeviceAssertion) =>
+      call<CryptoSend>('POST', `/api/agents/${e(id)}/crypto-sends`, assertion ? { ...body, assertion } : body, { 'Idempotency-Key': key }),
     cryptoSends: (id: string) => call<{ sends: CryptoSend[] | null }>('GET', `/api/agents/${e(id)}/crypto-sends`),
+    /** B48.51 — what the owner's yes to a send to a new address, or its test amount, is signed over (Lens B48.49). */
+    approveCryptoSendChallenge: (id: string, sendID: string, testAmountMinor?: number) =>
+      call<CryptoSendChallenge>('POST', `/api/agents/${e(id)}/crypto-sends/${e(sendID)}/approve/challenge`, testAmountMinor ? { test_amount_minor: testAmountMinor } : {}),
     /** The owner says yes to a send to a new address; with a test amount, that much goes first. */
-    approveCryptoSend: (id: string, sendID: string, testAmountMinor?: number) =>
-      call<CryptoSend>('POST', `/api/agents/${e(id)}/crypto-sends/${e(sendID)}/approve`, testAmountMinor ? { test_amount_minor: testAmountMinor } : {}),
+    approveCryptoSend: (id: string, sendID: string, testAmountMinor?: number, assertion?: DeviceAssertion) =>
+      call<CryptoSend>('POST', `/api/agents/${e(id)}/crypto-sends/${e(sendID)}/approve`, {
+        ...(testAmountMinor ? { test_amount_minor: testAmountMinor } : {}),
+        ...(assertion ? { assertion } : {}),
+      }),
+    /** B48.51 — the workspace's saved crypto addresses, by name (Lens B48.49). */
+    cryptoAddresses: async () => (await call<{ addresses: CryptoAddress[] | null }>('GET', '/api/crypto-addresses')).addresses ?? [],
+    /** Saves `address` under `name`, or renames it when it is saved already. */
+    saveCryptoAddress: (name: string, address: string) => call<CryptoAddress>('POST', '/api/crypto-addresses', { name, address }),
+    removeCryptoAddress: async (addressID: string) => {
+      await send('DELETE', `/api/crypto-addresses/${e(addressID)}`, undefined, { Accept: 'application/json' })
+    },
     declineCryptoSend: (id: string, sendID: string) => call<CryptoSend>('POST', `/api/agents/${e(id)}/crypto-sends/${e(sendID)}/decline`),
     /** Nothing moves: what it sells, the fee, the rate, what it buys, and until when. */
     walletMoveQuote: (id: string, body: WalletMoveRequest) => call<WalletMove>('POST', `/api/agents/${e(id)}/wallet-moves/quote`, body),

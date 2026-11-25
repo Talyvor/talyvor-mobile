@@ -6,7 +6,9 @@ import { walletHref } from '../push'
 // QR code; Top up and Cash out, quoted then confirmed once, the cash-out signed by this phone's key over Lens's challenge
 // for exactly that move; Send, which asks Face ID through the key before it goes, under one Idempotency-Key; Request as
 // a link and QR code; Activity with its explorer link; Limits and Freeze signed by this phone's key when it owns the
-// agent's account; and a push about the wallet opening the part it is about. The words are the web's (talyvor-suite
+// agent's account; and a push about the wallet opening the part it is about. B48.51: a send to a name.eth or a saved name
+// shows the address it resolved to, and the owner's send and their yes are signed by this phone's key over Lens's
+// challenges (Lens B48.49). The words are the web's (talyvor-suite
 // 0914fa6, AgentMoneyWallet.tsx, AgentWalletActions.tsx, AgentCryptoSend.tsx and AgentWalletLimits.tsx).
 
 jest.setTimeout(30_000)
@@ -59,7 +61,16 @@ const PERMISSION = { number: 3, permission: { tokens: [{ token: USDC_ON_BASE, al
 
 type Call = { method: string; path: string; body?: Record<string, unknown>; key?: string }
 
-function mockBff({ owner = { role: 'person', device_id: 'dev_1' } as Record<string, string>, sends = [] as unknown[], lensChanges = {} as Record<string, unknown> } = {}) {
+const SAVED = { id: 'caddr_1', name: 'Treasury', address: TO, saved_by: 'user:u1', created_at: '2026-11-20T09:00:00Z', updated_at: '2026-11-20T09:00:00Z' }
+
+function mockBff({
+  owner = { role: 'person', device_id: 'dev_1' } as Record<string, string>,
+  sends = [] as unknown[],
+  lensChanges = {} as Record<string, unknown>,
+  quote = QUOTE as Record<string, unknown>,
+  challengeTo = '',
+  passkeys = [] as string[],
+} = {}) {
   const calls: Call[] = []
   globalThis.fetch = jest.fn(async (url: string, init: RequestInit = {}) => {
     const path = url.replace('https://bff.test', '').split('?')[0]
@@ -81,9 +92,19 @@ function mockBff({ owner = { role: 'person', device_id: 'dev_1' } as Record<stri
       case 'GET /api/agents/agt_remy/smart-account':
         return json({ address: ADDRESS, owners: [owner, { role: 'agent' }] })
       case 'POST /api/agents/agt_remy/crypto-sends/quote':
-        return json(QUOTE)
+        return json(quote)
+      case 'POST /api/agents/agt_remy/crypto-sends/challenge':
+        return json({ challenge: 'ch_send', allow_credentials: passkeys, user_verification: 'required', quote: { ...quote, to: challengeTo || quote.to } })
       case 'POST /api/agents/agt_remy/crypto-sends':
-        return json({ ...QUOTE, id: 'cs_1', agent_id: 'agt_remy', direction: 'out', status: 'sending', created_at: '2026-11-25T09:00:00Z' })
+        return json({ ...quote, id: 'cs_1', agent_id: 'agt_remy', direction: 'out', status: 'sending', created_at: '2026-11-25T09:00:00Z' })
+      case 'POST /api/agents/agt_remy/crypto-sends/cs_9/approve/challenge':
+        return json({ challenge: body.test_amount_minor ? 'ch_test' : 'ch_yes', allow_credentials: passkeys, user_verification: 'required' })
+      case 'GET /api/crypto-addresses':
+        return json({ addresses: [SAVED] })
+      case 'POST /api/crypto-addresses':
+        return json({ ...SAVED, id: 'caddr_2', name: body.name, address: body.address })
+      case 'DELETE /api/crypto-addresses/caddr_1':
+        return new Response(null, { status: 204 })
       case 'GET /api/agents/agt_remy/crypto-sends':
         return json({ sends })
       case 'POST /api/agents/agt_remy/crypto-sends/cs_9/approve':
@@ -146,10 +167,10 @@ test('the balance and how to pay into the wallet: the address, its QR code, its 
   expect(wallet.getByRole('button', { name: 'Copy address' })).toBeTruthy()
 })
 
-test('a send asks Face ID through this phone’s key, then goes once under its key; a cancelled check sends nothing', async () => {
+test('a send is signed by this phone’s key over Lens’s challenge, then goes once under its key; a cancelled check sends nothing', async () => {
   const calls = mockBff()
   await open('send')
-  await fireEvent.changeText(screen.getByLabelText('Wallet address, @name, email or phone'), TO)
+  await fireEvent.changeText(screen.getByLabelText('Wallet address, name.eth, saved name, @name, email or phone'), TO)
   await fireEvent.changeText(screen.getByLabelText('Amount in USDC'), '2.5')
   await press('Review')
   const quote = within(await screen.findByTestId('crypto-send-quote'))
@@ -167,21 +188,107 @@ test('a send asks Face ID through this phone’s key, then goes once under its k
   await screen.findByTestId('crypto-send-receipt')
   expect(mockSigned).toHaveLength(1)
   expect(mockSigned[0].reason).toBe('Send 2.50 USDC to 0x2222…2222')
-  expect(mockSigned[0].message).toMatch(/^talyvor-phone-check-v1:/)
+  expect(mockSigned[0].message).toBe('talyvor-device-v1:ch_send')
+  const challenged = writes(calls).filter((c) => c.path === '/api/agents/agt_remy/crypto-sends/challenge')
   const sent = writes(calls).filter((c) => c.path === '/api/agents/agt_remy/crypto-sends')
   expect(sent).toHaveLength(1)
-  expect(sent[0].body).toEqual({ to: TO, network: 'base', token: 'USDC', amount_minor: 2_500_000 })
+  expect(sent[0].body).toEqual({ to: TO, network: 'base', token: 'USDC', amount_minor: 2_500_000, assertion: { device_id: 'dev_1', challenge: 'ch_send', signature: 'sig' } })
   expect(sent[0].key).toMatch(/^key-/)
+  // The challenge is asked for the same send under the same key every time, the cancelled one included.
+  expect(challenged.map((c) => [c.body, c.key])).toEqual([
+    [{ to: TO, network: 'base', token: 'USDC', amount_minor: 2_500_000 }, sent[0].key],
+    [{ to: TO, network: 'base', token: 'USDC', amount_minor: 2_500_000 }, sent[0].key],
+  ])
 })
 
-test('a send waiting for the owner is approved after Face ID', async () => {
+test('a yes to a send waiting for the owner, and its test amount, are signed by this phone’s key over Lens’s challenge', async () => {
   const calls = mockBff({ sends: [{ ...QUOTE, id: 'cs_9', agent_id: 'agt_remy', direction: 'out', status: 'awaiting_owner', created_at: '2026-11-25T08:00:00Z' }] })
   await open('send')
   const waiting = within(await screen.findByTestId('crypto-send-waiting-cs_9'))
   expect(waiting.getByText('Remy wants to send to a new address')).toBeTruthy()
   await fireEvent.press(waiting.getByRole('button', { name: 'Approve with Face ID' }))
   await waitFor(() => expect(writes(calls).map((c) => c.path)).toContain('/api/agents/agt_remy/crypto-sends/cs_9/approve'))
-  expect(mockSigned.map((s) => s.reason)).toEqual(['Send 2.50 USDC to 0x2222…2222'])
+  expect(mockSigned).toEqual([{ message: 'talyvor-device-v1:ch_yes', reason: 'Send 2.50 USDC to 0x2222…2222' }])
+  const yes = writes(calls).filter((c) => c.path === '/api/agents/agt_remy/crypto-sends/cs_9/approve')
+  expect(yes.map((c) => c.body)).toEqual([{ assertion: { device_id: 'dev_1', challenge: 'ch_yes', signature: 'sig' } }])
+
+  await fireEvent.press(waiting.getByRole('button', { name: 'Send a test amount first' }))
+  await fireEvent.changeText(screen.getByLabelText('Test amount in USDC'), '0.1')
+  await press('Send the test amount')
+  await waitFor(() => expect(writes(calls).filter((c) => c.path === '/api/agents/agt_remy/crypto-sends/cs_9/approve')).toHaveLength(2))
+  expect(writes(calls).filter((c) => c.path === '/api/agents/agt_remy/crypto-sends/cs_9/approve/challenge').map((c) => c.body)).toEqual([{}, { test_amount_minor: 100_000 }])
+  expect(writes(calls).filter((c) => c.path === '/api/agents/agt_remy/crypto-sends/cs_9/approve')[1].body).toEqual({
+    test_amount_minor: 100_000,
+    assertion: { device_id: 'dev_1', challenge: 'ch_test', signature: 'sig' },
+  })
+})
+
+test('a send to a name.eth shows the address it resolved to, and that address is what is signed for', async () => {
+  const calls = mockBff({ quote: { ...QUOTE, to: TO, ens_name: 'northwind.eth', to_label: 'northwind.eth' } })
+  await open('send')
+  await fireEvent.changeText(screen.getByLabelText('Wallet address, name.eth, saved name, @name, email or phone'), 'northwind.eth')
+  await fireEvent.changeText(screen.getByLabelText('Amount in USDC'), '2.5')
+  await press('Review')
+  const quote = within(await screen.findByTestId('crypto-send-quote'))
+  expect(quote.getByText('northwind.eth')).toBeTruthy()
+  expect(quote.getByText(TO)).toBeTruthy()
+  await press('Send with Face ID')
+  await screen.findByTestId('crypto-send-receipt')
+  expect(mockSigned.map((s) => s.reason)).toEqual(['Send 2.50 USDC to northwind.eth (0x2222…2222)'])
+  const sent = writes(calls).filter((c) => c.path === '/api/agents/agt_remy/crypto-sends')
+  expect(sent.map((c) => c.body)).toEqual([{ to: 'northwind.eth', network: 'base', token: 'USDC', amount_minor: 2_500_000, assertion: { device_id: 'dev_1', challenge: 'ch_send', signature: 'sig' } }])
+})
+
+test('a name.eth that points elsewhere by the time it is signed sends nothing and signs nothing', async () => {
+  const calls = mockBff({ quote: { ...QUOTE, to: TO, ens_name: 'northwind.eth' }, challengeTo: '0x3333333333333333333333333333333333333333' })
+  await open('send')
+  await fireEvent.changeText(screen.getByLabelText('Wallet address, name.eth, saved name, @name, email or phone'), 'northwind.eth')
+  await fireEvent.changeText(screen.getByLabelText('Amount in USDC'), '2.5')
+  await press('Review')
+  await screen.findByTestId('crypto-send-quote')
+  await press('Send with Face ID')
+  expect(await screen.findByText('northwind.eth now goes to 0x3333333333333333333333333333333333333333, not the address you reviewed. Nothing was sent: review it again.')).toBeTruthy()
+  expect(mockSigned).toEqual([])
+  expect(writes(calls).filter((c) => c.path === '/api/agents/agt_remy/crypto-sends')).toEqual([])
+})
+
+test('a saved address sends by its name; the owner saves and removes addresses', async () => {
+  const calls = mockBff({ quote: { ...QUOTE, to: TO, saved_name: 'Treasury', to_label: 'Treasury' } })
+  await open('send')
+  const book = within(await screen.findByTestId('crypto-address-book'))
+  await fireEvent.press(await book.findByText('Treasury'))
+  expect(screen.getByLabelText('Wallet address, name.eth, saved name, @name, email or phone').props.value).toBe('Treasury')
+  await fireEvent.changeText(screen.getByLabelText('Amount in USDC'), '2.5')
+  await press('Review')
+  const quote = within(await screen.findByTestId('crypto-send-quote'))
+  expect(quote.getByText('Treasury')).toBeTruthy()
+  expect(quote.getByText(TO)).toBeTruthy()
+  await press('Send with Face ID')
+  await screen.findByTestId('crypto-send-receipt')
+  expect(writes(calls).filter((c) => c.path === '/api/agents/agt_remy/crypto-sends').map((c) => c.body?.to)).toEqual(['Treasury'])
+
+  const again = within(await screen.findByTestId('crypto-address-book'))
+  await fireEvent.changeText(again.getByLabelText('Name'), 'Payroll')
+  await fireEvent.changeText(again.getByLabelText('Address'), ADDRESS)
+  await fireEvent.press(again.getByRole('button', { name: 'Save address' }))
+  await fireEvent.press(again.getByRole('button', { name: 'Remove Treasury' }))
+  await waitFor(() => expect(writes(calls).filter((c) => c.path.startsWith('/api/crypto-addresses')).map((c) => [c.method, c.path, c.body])).toEqual([
+    ['POST', '/api/crypto-addresses', { name: 'Payroll', address: ADDRESS }],
+    ['DELETE', '/api/crypto-addresses/caddr_1', undefined],
+  ]))
+})
+
+test('with no key for this workspace on this phone, a send is signed nowhere here: it says where, and nothing goes', async () => {
+  mockStore.delete('talyvor.device-key')
+  const calls = mockBff({ passkeys: ['cred_1'] })
+  await open('send')
+  await fireEvent.changeText(screen.getByLabelText('Wallet address, name.eth, saved name, @name, email or phone'), TO)
+  await fireEvent.changeText(screen.getByLabelText('Amount in USDC'), '2.5')
+  await press('Review')
+  await screen.findByTestId('crypto-send-quote')
+  await press('Send with Face ID')
+  expect(await screen.findByText('Sign this on the web with your passkey, or turn on Approve with Face ID on this phone.')).toBeTruthy()
+  expect(writes(calls).filter((c) => c.path === '/api/agents/agt_remy/crypto-sends')).toEqual([])
 })
 
 test('a top up by card is quoted, then confirmed once, unsigned', async () => {
