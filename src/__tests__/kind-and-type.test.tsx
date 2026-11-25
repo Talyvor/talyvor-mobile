@@ -105,7 +105,8 @@ function hidden(type: Type, kind: Kind): RegExp[] {
   if (kind !== 'hybrid') out.push(/Convert/i, /\bInstant\b/)
   // Team, roles, second approver and payout batches; company words.
   if (type === 'personal') out.push(/team/i, /company/i, /Members/, /second approver/i, /payout/i, /Business/)
-  else out.push(/^Your agents$/m, /Your account/, /Personal/)
+  // B28.463: "Your accounts" is the switcher's name, on every type (the shared accounts open from it); "Your account" is Personal's.
+  else out.push(/^Your agents$/m, /Your account(?!s)/, /Personal/)
   return out
 }
 

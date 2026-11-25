@@ -4,12 +4,14 @@ import { useCallback, useState, type ReactNode } from 'react'
 import { Text, View } from 'react-native'
 
 import { useAccount } from '@/account'
+import { ROLE_LINE, ROLE_NAME, ROLES, roleName, type Role } from '@/role-words'
 import { biometricName, keyGone, keyGoneText, phoneKey, setSecondApproverSigned, thisPhoneDevice, turnOffPhoneApprovals } from '@/keys'
 import { Choices } from './account-requests'
 import { Face } from './face'
 import { Icon } from './icon'
 import { BottomSheet } from './pay-sheet'
 import { PhoneKeyCard } from './phone-key-card'
+import { accountName } from './your-accounts'
 import { Body, Button, Card, Chip, Eyebrow, Field, Headline, Row, useLoad } from './ui'
 import { useSession } from '../session'
 import { fonts, useTheme } from '../theme'
@@ -24,6 +26,10 @@ import { fonts, useTheme } from '../theme'
 // B59.50 — the second approver under Team and roles, in the web's words (suite B28.40, TeamRoles.tsx SecondApprover): an
 // Approver or Admin who has signed in, and the amount above which a payment needs two people's approvals, one of them
 // theirs (Lens B28.315). Setting or removing it is signed with this phone's key over Lens's challenge for exactly that line.
+// B28.463 — the phone side of suite B28.70, in the web's words (TeamRoles.tsx): the owner gives an email a role (Viewer,
+// Finance, Approver, Admin), sees each with its chip and takes it away after asking; every account proves an email with a
+// code mailed to it and then sees the accounts shared with it, each with its role, opened as the switcher opens them. A
+// role session gives no roles, and a Personal account has no team: it sees only the accounts shared with it.
 
 /** A row's 36 tile, as w-security draws a key's kind and w-members a person's initial. */
 function Tile({ children, round, testID }: { children: ReactNode; round?: boolean; testID?: string }) {
@@ -166,6 +172,10 @@ export function TeamAndRoles() {
   const { c } = useTheme()
   const load = useCallback(() => client.members(), [client])
   const { data, error, reload } = useLoad(load)
+  // The account this session is on: a role session (suite B28.70) gives no roles and names no second approver.
+  const loadHere = useCallback(() => client.accounts().then((a) => ({ here: a.find((x) => x.current) })), [client])
+  const here = useLoad(loadHere).data?.here
+  const [round, setRound] = useState(0)
   const [email, setEmail] = useState('')
   const [role, setRole] = useState<MemberRole>('member')
   const [busy, setBusy] = useState(false)
@@ -191,6 +201,11 @@ export function TeamAndRoles() {
   return (
     <View testID="team-and-roles" style={{ gap: 12 }}>
       <Eyebrow>Team and roles</Eyebrow>
+      {here?.role ? (
+        <Body muted>{`You are ${roleName(here.role)} in ${accountName(here)}. ${ROLE_LINE[here.role] ?? ''}`}</Body>
+      ) : (
+        <Body muted>Give each person the role they need. Keys, passkeys and roles stay yours.</Body>
+      )}
       <Card>
         {error ? <Body muted>The roster could not be read.</Body> : null}
         {roster.map((m, i) => (
@@ -221,7 +236,13 @@ export function TeamAndRoles() {
           setAdding(true)
         }}
       />
-      <SecondApprover />
+      {here?.role ? null : (
+        <>
+          <YourTeam onChange={() => setRound((r) => r + 1)} />
+          <SecondApprover key={round} />
+        </>
+      )}
+      <SharedWithYou titled />
       <BottomSheet visible={adding} onClose={() => !busy && setAdding(false)}>
         <Headline>Add a member</Headline>
         <Body muted>Add someone by the email they sign in with. Each person takes one of your plan’s seats.</Body>
@@ -236,10 +257,296 @@ export function TeamAndRoles() {
   )
 }
 
+const ENTER_EMAIL = 'Enter an email address.'
+
+/** A refusal's sentence, as the web's rolesApi refusal, or the fallback; an ended session says to sign in again. */
+function roleRefusal(err: unknown, fallback: string): string {
+  if (err instanceof BffError && err.status === 401) return refusalText(err)
+  return err instanceof BffError && err.sentence ? err.sentence : fallback
+}
+
+/** "Your team could not be read just now.", as the web's readFailure. */
+const readFailure = (err: unknown, what: string) =>
+  err instanceof BffError && err.status === 401 ? `${what} can’t be read until you sign in again.` : `${what} could not be read just now.`
+
+/** A card's own heading and the line under it, as the second approver's. */
+function CardTitle({ children, line }: { children: string; line?: string }) {
+  const { c } = useTheme()
+  return (
+    <View style={{ gap: 4 }}>
+      <Text accessibilityRole="header" style={{ fontFamily: fonts.uiBold, fontSize: 16.5, color: c.ink }}>
+        {children}
+      </Text>
+      {line ? <Body muted>{line}</Body> : null}
+    </View>
+  )
+}
+
+/** A person's or an account's initial on its round tile. */
+function Initial({ of }: { of: string }) {
+  const { c } = useTheme()
+  return (
+    <Tile round>
+      <Text style={{ fontFamily: fonts.uiBold, fontSize: 15, color: c.ink }}>{(of.trim().charAt(0) || '?').toUpperCase()}</Text>
+    </Tile>
+  )
+}
+
+/**
+ * B28.463 — the owner's roles (suite TeamRoles.tsx YourTeam): each email given a role, whether they have signed in, the
+ * role as a chip and Remove, which asks first in the bottom sheet; Give a role opens the email, the role and what that
+ * role may do in the bottom sheet, as Add member does.
+ */
+function YourTeam({ onChange }: { onChange: () => void }) {
+  const { client } = useSession()
+  const { c } = useTheme()
+  const load = useCallback(() => client.givenRoles(), [client])
+  const { data, error, reload } = useLoad(load)
+  const [giving, setGiving] = useState(false)
+  const [removing, setRemoving] = useState<GivenRole | null>(null)
+  const [email, setEmail] = useState('')
+  const [role, setRole] = useState<Role>('viewer')
+  const [busy, setBusy] = useState(false)
+  const [wrong, setWrong] = useState('')
+  const [said, setSaid] = useState<{ title: string; line: string } | null>(null)
+  const done = (title: string, line: string) => {
+    setGiving(false)
+    setRemoving(null)
+    setSaid({ title, line })
+    reload()
+    onChange()
+  }
+  const give = async () => {
+    if (!email.trim()) return setWrong(ENTER_EMAIL)
+    setBusy(true)
+    setWrong('')
+    try {
+      const r = await client.giveRole(email.trim(), role)
+      setEmail('')
+      done('Role given', `${r.email} is now ${roleName(r.role)}.`)
+    } catch (err) {
+      setWrong(roleRefusal(err, 'That role wasn’t given. Try again.'))
+    } finally {
+      setBusy(false)
+    }
+  }
+  const remove = async (r: GivenRole) => {
+    setBusy(true)
+    setWrong('')
+    try {
+      await client.removeRole(r.email)
+      done('Role removed', `${r.email} no longer has a role.`)
+    } catch (err) {
+      setWrong(roleRefusal(err, 'That role wasn’t removed. Try again.'))
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <View testID="your-team" style={{ gap: 12 }}>
+      <Card>
+        <CardTitle>Your team</CardTitle>
+        {error ? (
+          <Body muted>{readFailure(error, 'Your team')}</Body>
+        ) : !data ? (
+          <Body muted>Reading…</Body>
+        ) : data.length === 0 ? (
+          <Body muted>You haven’t given anyone a role yet.</Body>
+        ) : (
+          data.map((r) => (
+            <Row
+              key={r.email}
+              left={<Initial of={r.email} />}
+              title={r.email}
+              sub={r.signed_in ? 'Has signed in' : 'Hasn’t signed in yet'}
+              right={
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Chip>{roleName(r.role)}</Chip>
+                  <Button
+                    small
+                    variant="secondary"
+                    label="Remove"
+                    accessibilityLabel={`Remove ${r.email}`}
+                    onPress={() => {
+                      setWrong('')
+                      setRemoving(r)
+                    }}
+                  />
+                </View>
+              }
+            />
+          ))
+        )}
+      </Card>
+      {said ? (
+        <View testID="your-team-said" style={{ gap: 2 }}>
+          <Text style={{ fontFamily: fonts.uiBold, fontSize: 14, color: c.ink }}>{said.title}</Text>
+          <Body muted>{said.line}</Body>
+        </View>
+      ) : null}
+      <Button
+        primary
+        label="Give a role"
+        onPress={() => {
+          setSaid(null)
+          setWrong('')
+          setGiving(true)
+        }}
+      />
+      <BottomSheet testID="give-role-sheet" visible={giving} onClose={() => !busy && setGiving(false)}>
+        <Headline>Give a role</Headline>
+        <Body muted>They open your company’s account by proving this email with a code we send to it.</Body>
+        <Card>
+          <Field label="Email" value={email} onChangeText={setEmail} placeholder="name@company.com" autoCapitalize="none" autoCorrect={false} keyboardType="email-address" editable={!busy} />
+          <Choices label="Role" options={ROLES.map((x) => [x, ROLE_NAME[x]] as [Role, string])} value={role} onChange={setRole} />
+          <Body muted>{ROLE_LINE[role]}</Body>
+        </Card>
+        {wrong ? <Body style={{ color: c.critical }}>{wrong}</Body> : null}
+        <Button testID="give-role-send" primary label={busy ? 'Giving…' : 'Give role'} disabled={busy} onPress={() => void give()} />
+        <Button variant="secondary" label="Cancel" disabled={busy} onPress={() => setGiving(false)} />
+      </BottomSheet>
+      <BottomSheet testID="remove-role-sheet" visible={!!removing} onClose={() => !busy && setRemoving(null)}>
+        <Headline>{`Remove “${removing?.email ?? ''}”?`}</Headline>
+        <Body muted>{`They can no longer open your company’s account as ${roleName(removing?.role ?? '')}.`}</Body>
+        {wrong ? <Body style={{ color: c.critical }}>{wrong}</Body> : null}
+        <Button variant="danger" label={busy ? 'Removing…' : 'Remove it'} disabled={busy} onPress={() => removing && void remove(removing)} />
+        <Button variant="secondary" label="Keep it" disabled={busy} onPress={() => setRemoving(null)} />
+      </BottomSheet>
+    </View>
+  )
+}
+
+/**
+ * B28.463 — Accounts shared with you (suite TeamRoles.tsx SharedWithYou), on every account: the person proves an email
+ * with a code mailed to it, then sees each account a role was given in to that email, with the role as a chip, and opens
+ * it as the switcher does. An address typed and not proved shows nothing. `titled` draws the card's own heading, under
+ * Team and roles; a Personal account's Settings names it in its eyebrow instead.
+ */
+export function SharedWithYou({ titled }: { titled?: boolean }) {
+  const { client, switchAccount } = useSession()
+  const { c } = useTheme()
+  const load = useCallback(() => client.myRoles(), [client])
+  const { data, error, reload } = useLoad(load)
+  const [email, setEmail] = useState('')
+  const [code, setCode] = useState('')
+  const [sentTo, setSentTo] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [wrong, setWrong] = useState('')
+  const [proved, setProved] = useState('')
+  const [openFailed, setOpenFailed] = useState(false)
+  const line = 'Someone gave a role to your email? Prove it’s yours with a code we send to it, and their account opens from Your accounts.'
+  const ask = async () => {
+    if (!email.trim()) return setWrong(ENTER_EMAIL)
+    setBusy(true)
+    setWrong('')
+    try {
+      const r = await client.sendRoleCode(email.trim())
+      setSentTo(r.email)
+      setCode('')
+    } catch (err) {
+      setWrong(roleRefusal(err, 'That code didn’t send. Try again.'))
+    } finally {
+      setBusy(false)
+    }
+  }
+  const check = async () => {
+    if (!code.trim()) return setWrong('Enter the code from the email.')
+    setBusy(true)
+    setWrong('')
+    try {
+      const r = await client.checkRoleCode(sentTo ?? '', code.trim())
+      setSentTo(null)
+      setEmail('')
+      setCode('')
+      setProved(r.email)
+      reload()
+    } catch (err) {
+      setWrong(roleRefusal(err, 'That code isn’t right, or it has run out. Ask for a new one.'))
+    } finally {
+      setBusy(false)
+    }
+  }
+  const open = async (id: string) => {
+    setBusy(true)
+    setOpenFailed(false)
+    try {
+      await switchAccount(id)
+      router.replace('/')
+    } catch {
+      setOpenFailed(true)
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <View testID="shared-with-you" style={{ gap: 12 }}>
+      <Card>
+        {titled ? <CardTitle line={line}>Accounts shared with you</CardTitle> : <Body muted>{line}</Body>}
+        {error ? (
+          <Body muted>{readFailure(error, 'Accounts shared with you')}</Body>
+        ) : !data ? (
+          <Body muted>Reading…</Body>
+        ) : (
+          <>
+            {data.emails.length > 0 ? <Body muted>{`Proved: ${data.emails.join(', ')}`}</Body> : null}
+            {data.accounts.map((a) => (
+              <Row
+                key={a.id}
+                left={<Initial of={accountName(a)} />}
+                title={accountName(a)}
+                sub={a.email}
+                right={
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Chip>{roleName(a.role)}</Chip>
+                    {a.current ? <Chip tone="good">Current</Chip> : <Button small label="Open" accessibilityLabel={`Open ${accountName(a)}`} disabled={busy} onPress={() => void open(a.id)} />}
+                  </View>
+                }
+              />
+            ))}
+            {data.accounts.length === 0 && data.emails.length > 0 ? <Body muted>No account has given a role to these emails yet.</Body> : null}
+          </>
+        )}
+        {openFailed ? <Body style={{ color: c.critical }}>That account didn’t open. Try again.</Body> : null}
+      </Card>
+      {proved ? (
+        <View testID="shared-with-you-said" style={{ gap: 2 }}>
+          <Text style={{ fontFamily: fonts.uiBold, fontSize: 14, color: c.ink }}>Email proved</Text>
+          <Body muted>{proved}</Body>
+        </View>
+      ) : null}
+      <Card>
+        {sentTo === null ? (
+          <>
+            <Field label="Your email" value={email} onChangeText={setEmail} autoCapitalize="none" autoCorrect={false} keyboardType="email-address" autoComplete="email" editable={!busy} />
+            {wrong ? <Body style={{ color: c.critical }}>{wrong}</Body> : null}
+            <Button variant="secondary" label={busy ? 'Sending…' : 'Send code'} disabled={busy} onPress={() => void ask()} />
+          </>
+        ) : (
+          <>
+            <Body muted>{`We sent a code to ${sentTo}. It works for 10 minutes.`}</Body>
+            <Field label="Code" value={code} onChangeText={setCode} keyboardType="number-pad" autoComplete="one-time-code" textContentType="oneTimeCode" editable={!busy} />
+            {wrong ? <Body style={{ color: c.critical }}>{wrong}</Body> : null}
+            <Button primary label={busy ? 'Checking…' : 'Confirm'} disabled={busy} onPress={() => void check()} />
+            <Button
+              variant="secondary"
+              label="Use another email"
+              disabled={busy}
+              onPress={() => {
+                setWrong('')
+                setSentTo(null)
+              }}
+            />
+          </>
+        )}
+      </Card>
+    </View>
+  )
+}
+
 /** The roles that may approve (talyvor-lens approvalRoles): only they can be a second approver. */
 const APPROVING_ROLES: readonly GivenRole['role'][] = ['approver', 'admin']
 
-const GIVEN_ROLE_NAME: Record<GivenRole['role'], string> = { viewer: 'Viewer', finance: 'Finance', approver: 'Approver', admin: 'Admin' }
+const GIVEN_ROLE_NAME = ROLE_NAME
 
 /** What went wrong saving the second approver, in words: the web's, and the phone's own for its key. */
 function lineRefusal(err: unknown): string {

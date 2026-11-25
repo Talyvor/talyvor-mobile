@@ -50,19 +50,46 @@ const rules = (o: Record<string, number>) => ({
 
 /** Lens and Track behind the BFF; `calls` is every request the app made. */
 function mockBff({ type = 'business', keys = [mac, phone], addRefusal }: { type?: 'business' | 'personal'; keys?: Key[]; addRefusal?: { status: number; code: string } } = {}) {
-  const calls: { method: string; path: string; body?: unknown }[] = []
+  const calls: { method: string; path: string; query?: string; body?: unknown }[] = []
+  // B28.463 — the roles the owner gave, and Acme's role for ana@acme.test, opened only once that address is proved.
+  let given = [{ email: 'lee@northwind.studio', role: 'viewer', signed_in: true, granted_at: '2026-11-20T09:00:00Z', user_id: 'u_lee' }]
+  const proved: string[] = []
   let held = [...keys]
   let roster = [
     { id: 'm_1', name: 'Nick', email: 'nick@northwind.studio', role: 'owner', avatar_url: '' },
     { id: 'm_2', name: 'Dana', email: 'dana@northwind.studio', role: 'member', avatar_url: '' },
   ]
   globalThis.fetch = jest.fn(async (url: string, init: RequestInit = {}) => {
-    const path = url.replace('https://bff.test', '').split('?')[0]
+    const [path, query] = url.replace('https://bff.test', '').split('?')
     const method = init.method ?? 'GET'
     const body = init.body ? JSON.parse(init.body as string) : undefined
-    calls.push({ method, path, body })
+    calls.push({ method, path, query, body })
     const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status })
     switch (`${method} ${path}`) {
+      case 'GET /api/accounts':
+        return json({ accounts: [{ id: 'ws_northwind', name: 'Northwind Studio', type, kind: 'fiat', opened_at: '2026-11-01T00:00:00Z', current: true }] })
+      case 'GET /api/workspace/roles':
+        if (type === 'personal') return json({ error: 'not_business' }, 409)
+        return json({ items: given })
+      case 'PUT /api/workspace/roles': {
+        const { email, role } = body as { email: string; role: string }
+        const r = { email, role, signed_in: false, granted_at: '2026-11-25T09:00:00Z', user_id: '' }
+        given = [...given.filter((g) => g.email !== email), r]
+        return json(r)
+      }
+      case 'DELETE /api/workspace/roles':
+        given = given.filter((g) => g.email !== new URLSearchParams(query).get('email'))
+        return new Response(null, { status: 204 })
+      case 'GET /api/roles':
+        return json({ emails: proved, accounts: proved.includes('ana@acme.test') ? [{ id: 'ws_acme', name: 'Acme Ltd', type: 'business', kind: 'fiat', role: 'approver', email: 'ana@acme.test', current: false }] : [] })
+      case 'POST /api/roles/email/code':
+        return json({ sent: true, email: (body as { email: string }).email.trim() })
+      case 'POST /api/roles/email/check': {
+        const { email, code } = body as { email: string; code: string }
+        if (code !== '246810') return json({ error: 'That code isn’t right, or it has run out. Ask for a new one.' }, 400)
+        proved.push(email)
+        return json({ email })
+      }
       case 'GET /auth/me':
         return json({ workspace_id: 'ws_northwind' })
       case 'GET /api/workspace/name':
@@ -199,6 +226,66 @@ describe('Team and roles', () => {
     expect(screen.queryByTestId('team-and-roles')).toBeNull()
     expect(screen.queryByText('Team and roles')).toBeNull()
     expect(calls.some((c) => c.path === '/api/members')).toBe(false)
+  })
+})
+
+// B28.463 — the phone side of suite B28.70, in the web's words (TeamRoles.tsx): a Business owner gives an email a role,
+// sees it with its chip and takes it away after asking; every account proves an email with a code mailed to it and then
+// sees the accounts shared with it, each with its role. An address typed and not proved opens nothing.
+describe('Roles', () => {
+  test('the owner gives an email a role and removes one after asking, in the web’s words', async () => {
+    const calls = mockBff()
+    await renderRouter('./src/app', { initialUrl: '/settings' })
+    const team = within(await screen.findByTestId('your-team'))
+    expect(await team.findByText('lee@northwind.studio')).toBeTruthy()
+    expect(team.getByText('Has signed in')).toBeTruthy()
+    expect(team.getByText('Viewer')).toBeTruthy()
+    await fireEvent.press(screen.getByRole('button', { name: 'Give a role' }))
+    expect(await screen.findByText('They open your company’s account by proving this email with a code we send to it.')).toBeTruthy()
+    await fireEvent.changeText(screen.getByLabelText('Email'), ' ana@northwind.studio ')
+    await fireEvent.press(screen.getByRole('radio', { name: 'Finance' }))
+    expect(screen.getByText('Sees everything, and adds, pays, sends and converts money.')).toBeTruthy()
+    await fireEvent.press(screen.getByTestId('give-role-send'))
+    expect(await screen.findByText('ana@northwind.studio is now Finance.')).toBeTruthy()
+    expect(await team.findByText('Hasn’t signed in yet')).toBeTruthy()
+    expect(calls.filter((c) => c.method === 'PUT' && c.path === '/api/workspace/roles').map((c) => c.body)).toEqual([{ email: 'ana@northwind.studio', role: 'finance' }])
+
+    await fireEvent.press(team.getByRole('button', { name: 'Remove lee@northwind.studio' }))
+    expect(await screen.findByText('Remove “lee@northwind.studio”?')).toBeTruthy()
+    expect(screen.getByText('They can no longer open your company’s account as Viewer.')).toBeTruthy()
+    await fireEvent.press(screen.getByRole('button', { name: 'Remove it' }))
+    expect(await screen.findByText('lee@northwind.studio no longer has a role.')).toBeTruthy()
+    await waitFor(() => expect(team.queryByText('lee@northwind.studio')).toBeNull())
+    expect(calls.filter((c) => c.method === 'DELETE' && c.path === '/api/workspace/roles').map((c) => c.query)).toEqual(['email=lee%40northwind.studio'])
+  })
+
+  test('a wrong code shows the web’s line and no shared account; the right one lists it with its role', async () => {
+    const calls = mockBff({ type: 'personal' })
+    await renderRouter('./src/app', { initialUrl: '/settings' })
+    const shared = within(await screen.findByTestId('shared-with-you'))
+    expect(shared.getByText('Someone gave a role to your email? Prove it’s yours with a code we send to it, and their account opens from Your accounts.')).toBeTruthy()
+    await fireEvent.changeText(shared.getByLabelText('Your email'), 'ana@acme.test')
+    await fireEvent.press(shared.getByRole('button', { name: 'Send code' }))
+    expect(await shared.findByText('We sent a code to ana@acme.test. It works for 10 minutes.')).toBeTruthy()
+    await fireEvent.changeText(shared.getByLabelText('Code'), '111111')
+    await fireEvent.press(shared.getByRole('button', { name: 'Confirm' }))
+    expect(await shared.findByText('That code isn’t right, or it has run out. Ask for a new one.')).toBeTruthy()
+    expect(shared.queryByText('Acme Ltd')).toBeNull()
+    expect(shared.queryByText('Approver')).toBeNull()
+
+    await fireEvent.changeText(shared.getByLabelText('Code'), '246810')
+    await fireEvent.press(shared.getByRole('button', { name: 'Confirm' }))
+    expect(await shared.findByText('Acme Ltd')).toBeTruthy()
+    expect(shared.getByText('Approver')).toBeTruthy()
+    expect(shared.getByText('Proved: ana@acme.test')).toBeTruthy()
+    expect(shared.queryByText('That code isn’t right, or it has run out. Ask for a new one.')).toBeNull()
+    expect(calls.filter((c) => c.path === '/api/roles/email/check').map((c) => c.body)).toEqual([
+      { email: 'ana@acme.test', code: '111111' },
+      { email: 'ana@acme.test', code: '246810' },
+    ])
+    // A Personal account has no team to give roles in.
+    expect(screen.queryByTestId('your-team')).toBeNull()
+    expect(calls.some((c) => c.path === '/api/workspace/roles')).toBe(false)
   })
 })
 

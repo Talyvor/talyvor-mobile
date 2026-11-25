@@ -904,6 +904,8 @@ export interface PersonAccount {
   kind: WorkspaceAccount['money_kind'] | ''
   opened_at: string
   current: boolean
+  /** B28.463 — set on an account a role was given in (suite B28.70): the role this person holds there; absent on their own. */
+  role?: GivenRole['role']
 }
 
 /** B61.10 — sign-up's answers for another account (the BFF's parseSignupAccount). */
@@ -1239,6 +1241,23 @@ export interface GivenRole {
   granted_at: string
   /** the person who took the role up, as the second approver names them (talyvor-lens B28.464); "" or absent until then */
   user_id?: string
+}
+
+/** B28.463 — one account a role was given in, to one of the person's proved addresses (the BFF's GET /api/roles). */
+export interface RoleAccount {
+  id: string
+  name: string
+  type: WorkspaceAccount['account_type'] | ''
+  kind: WorkspaceAccount['money_kind'] | ''
+  role: GivenRole['role']
+  email: string
+  current: boolean
+}
+
+/** B28.463 — the addresses this person proved with a code, and the accounts a role was given in to one of them. */
+export interface MyRoles {
+  emails: string[]
+  accounts: RoleAccount[]
 }
 
 /** B59.50 — a Business's second approver (talyvor-lens B28.315): above `above_minor` of `currency`, a payment needs two
@@ -1647,6 +1666,19 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     addMember: (email: string, role: MemberRole) => call<Member>('POST', '/api/members', { email, role }),
     /** B59.50 — the roles the owner gave, as the web's Team and roles reads them (suite B28.70). */
     givenRoles: async () => (await call<{ items: GivenRole[] | null }>('GET', '/api/workspace/roles')).items ?? [],
+    /** B28.463 — the owner gives an email a role, or changes it (suite B28.70); Lens answers the owner's session only. */
+    giveRole: (email: string, role: GivenRole['role']) => call<GivenRole>('PUT', '/api/workspace/roles', { email, role }),
+    /** B28.463 — takes the role away: every session it gave ends at once. */
+    removeRole: async (email: string) => void (await send('DELETE', `/api/workspace/roles?email=${e(email)}`, undefined, { Accept: 'application/json' })),
+    /** B28.463 — the addresses this person proved, and the accounts shared with them through a role. */
+    myRoles: async (): Promise<MyRoles> => {
+      const got = await call<{ emails: string[] | null; accounts: RoleAccount[] | null }>('GET', '/api/roles')
+      return { emails: got.emails ?? [], accounts: got.accounts ?? [] }
+    },
+    /** B28.463 — a code is mailed to the address, for this person to prove it is theirs. */
+    sendRoleCode: (email: string) => call<{ sent: boolean; email: string }>('POST', '/api/roles/email/code', { email }),
+    /** B28.463 — the code mailed to the address proves it; an address never proved opens no role. */
+    checkRoleCode: (email: string, code: string) => call<{ email: string }>('POST', '/api/roles/email/check', { email, code }),
     /** B59.50 — the second approver and its line (suite B28.40); a Personal account's is refused with not_business. */
     secondApprover: () => call<SecondApproverLine>('GET', '/api/workspace/second-approver'),
     /** The challenge setting exactly this line, or clearing it with an empty one, is signed over. */
