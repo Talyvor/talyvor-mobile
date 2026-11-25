@@ -322,8 +322,37 @@ export async function signSpendPermission(client: BffClient, agentId: string, ag
           : `${agentName}’s wallet has no key to sign its limits.`,
     )
   }
-  const { canonical, challenge } = await client.prepareSpendPermission(agentId, terms)
+  const { canonical } = await client.prepareSpendPermission(agentId, terms)
+  if (!namesTerms(canonical, agentId, terms)) throw new Error('What Lens asked this phone to sign is not the limits you set, so nothing was signed.')
+  // The challenge is the phone's own, over exactly the JSON it checked: Lens's is the same hash (economy.MandateChallenge).
+  const challenge = toBase64url(await sha256(utf8(canonical)))
   return client.setSpendPermission(agentId, canonical, await signWithThisPhone(client, challenge, reason))
+}
+
+/** Whether Lens's canonical JSON for a spend permission is this agent's and names exactly `terms`: the same tokens and
+ * limits, the same addresses allowed and blocked (Lens writes them checksummed, sorted and once each) and the same end,
+ * to the second. */
+function namesTerms(canonical: string, agentId: string, terms: SpendPermissionTerms): boolean {
+  let t: { agent_id?: unknown; permission?: { tokens?: unknown; allowed?: unknown; blocked?: unknown; expires?: unknown } }
+  try {
+    t = JSON.parse(canonical)
+  } catch {
+    return false
+  }
+  const p = t.permission
+  if (t.agent_id !== agentId || !p || !Array.isArray(p.tokens) || typeof p.expires !== 'string') return false
+  const limit = (l: { token?: unknown; allowance?: unknown; period?: unknown; per_payment?: unknown }) =>
+    `${String(l.token).toLowerCase()}|${String(l.allowance)}|${String(l.period)}|${String(l.per_payment)}`
+  const same = (a: string[], b: string[]) => a.length === b.length && a.every((x, i) => x === b[i])
+  const set = (xs: unknown) => (Array.isArray(xs) ? [...new Set(xs.map((x) => String(x).trim().toLowerCase()))].sort() : [])
+  const second = (iso: string) => Math.floor(Date.parse(iso) / 1000)
+  return (
+    same((p.tokens as object[]).map(limit).sort(), (terms.tokens ?? []).map(limit).sort()) &&
+    same(set(p.allowed), set(terms.allowed)) &&
+    same(set(p.blocked), set(terms.blocked)) &&
+    !Number.isNaN(second(p.expires)) &&
+    second(p.expires) === second(terms.expires)
+  )
 }
 
 /** B59.34 — Face ID or a fingerprint before the phone shows a card's details. The approval key signs a fresh message that

@@ -20,7 +20,13 @@ jest.mock('expo-secure-store', () => ({
 jest.mock('expo-font', () => ({ ...jest.requireActual('expo-font'), useFonts: () => [true, null] }))
 jest.mock('expo-clipboard', () => ({ setStringAsync: async () => true }))
 let mockUUID = 0
-jest.mock('expo-crypto', () => ({ ...jest.requireActual('expo-crypto'), randomUUID: () => `key-${++mockUUID}` }))
+jest.mock('expo-crypto', () => ({
+  CryptoDigestAlgorithm: { SHA256: 'SHA-256' },
+  digest: async (_: string, b: Uint8Array) => Uint8Array.from(jest.requireActual('node:crypto').createHash('sha256').update(b).digest()).buffer,
+  randomUUID: () => `key-${++mockUUID}`,
+}))
+/** Lens's economy.MandateChallenge: the canonical JSON's SHA-256, base64url. */
+const challengeOf = (canonical: string) => jest.requireActual('node:crypto').createHash('sha256').update(canonical).digest('base64url')
 jest.mock('../config', () => ({ config: { bffUrl: 'https://bff.test' } }))
 /** What the phone's key signed, and the reason Face ID showed, in order. */
 const mockSigned: { message: string; reason: string }[] = []
@@ -53,7 +59,7 @@ const PERMISSION = { number: 3, permission: { tokens: [{ token: USDC_ON_BASE, al
 
 type Call = { method: string; path: string; body?: Record<string, unknown>; key?: string }
 
-function mockBff({ owner = { role: 'person', device_id: 'dev_1' } as Record<string, string>, sends = [] as unknown[] } = {}) {
+function mockBff({ owner = { role: 'person', device_id: 'dev_1' } as Record<string, string>, sends = [] as unknown[], lensChanges = {} as Record<string, unknown> } = {}) {
   const calls: Call[] = []
   globalThis.fetch = jest.fn(async (url: string, init: RequestInit = {}) => {
     const path = url.replace('https://bff.test', '').split('?')[0]
@@ -100,10 +106,13 @@ function mockBff({ owner = { role: 'person', device_id: 'dev_1' } as Record<stri
         return json({ id: 'cr_1', token: 'USDC', network: 'base', amount_minor: 40_000_000, memo: body.memo, expires_at: body.expires_at, status: 'open', link: 'https://pay.talyvor.com/r/cr_1', uri: `ethereum:${USDC_ON_BASE}@8453/transfer?address=${ADDRESS}&uint256=40000000` })
       case 'GET /api/agents/agt_remy/spend-permission':
         return json(PERMISSION)
-      case 'POST /api/agents/agt_remy/spend-permission/prepare':
-        return json({ canonical: `{"n":4,"tokens":${JSON.stringify(body.tokens)}}`, challenge: 'ch_perm' })
+      case 'POST /api/agents/agt_remy/spend-permission/prepare': {
+        const p = { ...body, ...lensChanges }
+        const canonical = JSON.stringify({ version: 'v1', workspace_id: 'ws_1', agent_id: 'agt_remy', account: ADDRESS, number: 4, permission: p })
+        return json({ canonical, challenge: 'not-the-hash' })
+      }
       case 'PUT /api/agents/agt_remy/spend-permission':
-        return json({ ...PERMISSION, number: 4, permission: { ...PERMISSION.permission, tokens: JSON.parse(String(body.canonical)).tokens } })
+        return json({ ...PERMISSION, number: 4, permission: JSON.parse(String(body.canonical)).permission })
     }
     return json({ error: 'no' }, 404)
   }) as unknown as typeof fetch
@@ -240,13 +249,25 @@ test('new limits and Freeze are signed by this phone’s key, which owns the age
   const prepared = writes(calls).filter((c) => c.path === '/api/agents/agt_remy/spend-permission/prepare')
   expect(prepared[0].body).toMatchObject({ tokens: [{ token: USDC_ON_BASE, allowance: 80_000_000, period: 'week', per_payment: 10_000_000 }], expires: '2027-06-30T23:59:59Z' })
   const put = writes(calls).filter((c) => c.method === 'PUT')
-  expect(put[0].body).toEqual({ canonical: expect.any(String), assertion: { device_id: 'dev_1', challenge: 'ch_perm', signature: 'sig' } })
-  expect(mockSigned[0]).toEqual({ message: 'talyvor-device-v1:ch_perm', reason: 'Sign Remy’s new limits' })
+  const canonical = String(put[0].body?.canonical)
+  // Signed over the phone's own hash of exactly the JSON it checked, never the challenge it was handed.
+  expect(put[0].body).toEqual({ canonical, assertion: { device_id: 'dev_1', challenge: challengeOf(canonical), signature: 'sig' } })
+  expect(mockSigned[0]).toEqual({ message: `talyvor-device-v1:${challengeOf(canonical)}`, reason: 'Sign Remy’s new limits' })
 
   await press('Freeze Remy')
   expect(await screen.findByText('Remy’s wallet is frozen. Every payment from it is refused until you sign new limits.')).toBeTruthy()
   expect(writes(calls).filter((c) => c.path.endsWith('/prepare'))[1].body).toMatchObject({ tokens: [] })
   expect(mockSigned[1].reason).toBe('Freeze Remy')
+})
+
+test('limits Lens prepared other than the ones set are never signed', async () => {
+  const calls = mockBff({ lensChanges: { allowed: [TO] } })
+  await open('limits')
+  await screen.findByText('50.00 USDC a week')
+  await press('Freeze Remy')
+  expect(await screen.findByText('What Lens asked this phone to sign is not the limits you set, so nothing was signed.')).toBeTruthy()
+  expect(writes(calls).filter((c) => c.method === 'PUT')).toEqual([])
+  expect(mockSigned).toEqual([])
 })
 
 test('limits a passkey owns are changed on the web: nothing is prepared or signed', async () => {
