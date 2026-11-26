@@ -27,6 +27,9 @@ const UNKNOWN_LINE = 'Talyvor could not read whether this workspace moves real m
 /** Credit the workspace hands its agents: Home's safe-to-spend, the statement and an agent's balance (the web's AGENT_CREDIT). */
 export const AGENT_CREDIT = ['spend_on_talyvor', 'move_between_own_agents'] as const
 
+/** An agent's own wallet: its balances and the details to pay into it (the web's MONEY_WALLET). */
+export const MONEY_WALLET = ['currency_accounts', 'account_details'] as const
+
 /** Money paid out to a saved payee outside Talyvor. */
 export const PAY_OUT = ['payments_out'] as const
 

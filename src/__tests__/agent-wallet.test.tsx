@@ -85,6 +85,8 @@ function mockBff({
         return json({ id: 'ws_1', name: 'Northwind Studio' })
       case 'GET /api/workspace/account':
         return json({ account_type: 'business', money_kind: 'hybrid' })
+      case 'GET /api/wallets/capabilities':
+        return json({ capabilities: ['currency_accounts', 'account_details'].map((capability) => ({ capability, name: capability, class: 'AMBER', real_money: false, label: 'sandbox' })) })
       case 'GET /api/agents':
         return json({ agents: [{ id: 'agt_remy', name: 'Remy', balance_ulxc: 0, spent_ulxc: 0, wallet_kind: 'crypto', created_at: '2026-10-01T09:00:00Z' }] })
       case 'GET /api/agents/agt_remy/wallets':
@@ -160,11 +162,42 @@ test('the balance and how to pay into the wallet: the address, its QR code, its 
   mockBff()
   const wallet = await open()
   expect(wallet.getByText('Remy’s wallet')).toBeTruthy()
-  expect(wallet.getByText('Remy holds 125.50 USDC.')).toBeTruthy()
+  expect(wallet.getByLabelText('125.50 USDC')).toBeTruthy()
   expect(wallet.getByText('Send USDC on Base to this address. Money sent on another network is lost.')).toBeTruthy()
   expect(wallet.getByLabelText('QR code of Remy’s USDC address')).toBeTruthy()
   expect(wallet.getByText(ADDRESS)).toBeTruthy()
   expect(wallet.getByRole('button', { name: 'Copy address' })).toBeTruthy()
+})
+
+test('B57.220: the wallet in Pocket: its face, the balance with its label, round actions, Activity and Limits as rows, the address in facts', async () => {
+  mockBff()
+  const wallet = await open()
+  const head = within(wallet.getByTestId('agent-wallet-head'))
+  expect(head.getByText('Remy’s wallet')).toBeTruthy()
+  expect(head.getByLabelText('Remy agent')).toBeTruthy()
+  const balance = within(wallet.getByTestId('agent-wallet-balance-USDC'))
+  expect(balance.getByText('Balance')).toBeTruthy()
+  expect(balance.getByLabelText('125.50 USDC')).toBeTruthy()
+  expect(await balance.findByTestId('money-label-sandbox')).toBeTruthy()
+  const rounds = within(wallet.getByTestId('agent-wallet-rounds-USDC'))
+  expect(rounds.getAllByRole('button').map((b) => b.props.accessibilityLabel)).toEqual(['Top up', 'Cash out', 'Send', 'Request'])
+  const rows = within(wallet.getByTestId('agent-wallet-rows-USDC'))
+  expect(rows.getByRole('button', { name: 'Activity' })).toBeTruthy()
+  expect(rows.getByRole('button', { name: 'Limits and permissions' })).toBeTruthy()
+  const facts = within(wallet.getByTestId('wallet-address-facts'))
+  expect(facts.getByText('Address')).toBeTruthy()
+  expect(facts.getByText('Base')).toBeTruthy()
+  expect(facts.getByRole('button', { name: 'Copy address' })).toBeTruthy()
+
+  // A round opens its part under the rounds, and says it is open; pressed again, it closes.
+  await fireEvent.press(rounds.getByRole('button', { name: 'Send' }))
+  await waitFor(() => expect(rounds.getByRole('button', { name: 'Send' }).props.accessibilityState).toMatchObject({ expanded: true }))
+  expect(await screen.findByLabelText('Amount in USDC')).toBeTruthy()
+  await fireEvent.press(rounds.getByRole('button', { name: 'Send' }))
+  expect(screen.queryByLabelText('Amount in USDC')).toBeNull()
+  // A row opens its part under the rows.
+  await fireEvent.press(rows.getByRole('button', { name: 'Activity' }))
+  expect(await screen.findByTestId('wallet-activity-USDC')).toBeTruthy()
 })
 
 test('a send is signed by this phone’s key over Lens’s challenge, then goes once under its key; a cancelled check sends nothing', async () => {

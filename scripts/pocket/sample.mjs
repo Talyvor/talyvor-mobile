@@ -101,6 +101,9 @@ const ANSWERS = {
       sandbox('payments_out', 'Paying people and companies outside Talyvor'),
       sandbox('buy_marketplace_listings', 'Buying on the marketplace'),
       sandbox('pay_another_owner', "Paying another owner's agent"),
+      // B57.220: an agent's own wallet, its balances and the details to pay into it (the web's MONEY_WALLET).
+      sandbox('currency_accounts', 'Accounts in each currency'),
+      sandbox('account_details', 'Account details to be paid into'),
     ],
   },
   '/api/payees': { payees: [] },
