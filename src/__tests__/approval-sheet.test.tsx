@@ -1,5 +1,7 @@
 import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library'
 
+import { outcome, play } from '../sound'
+
 // B57.67: deciding on the phone is Pocket's approval sheet (p-home+psheet-A, psheet-L) over the screen you are on, then
 // its result screen (p-approved-acme, p-declined-acme): what pays it, the budget left, when it expires, Face ID, Next.
 
@@ -14,6 +16,10 @@ jest.mock('expo-secure-store', () => ({
 jest.mock('expo-font', () => ({ ...jest.requireActual('expo-font'), useFonts: () => [true, null] }))
 jest.mock('expo-crypto', () => ({ randomUUID: () => 'uuid-1' }))
 jest.mock('../config', () => ({ config: { bffUrl: 'https://bff.test' } }))
+// B61.127 — the outcome's sound, once Lens has answered: approved, declined, or refused and never approved.
+jest.mock('../sound', () => ({ ...jest.requireActual('../sound'), play: jest.fn(), outcome: jest.fn() }))
+const heard = () => [...(play as jest.Mock).mock.calls, ...(outcome as jest.Mock).mock.calls].map(([n]) => n as string).filter((n) => n !== 'key' && n !== 'tick')
+beforeEach(() => jest.clearAllMocks())
 const mockPhone = { reasons: [] as string[] }
 jest.mock('../../modules/talyvor-keys', () => ({
   isAvailable: () => true,
@@ -161,6 +167,7 @@ test('Approve with Face ID signs this approval’s challenge, then the result sc
 
   const result = within(await screen.findByTestId('approval-result'))
   expect(result.getByText('Approved')).toBeTruthy()
+  expect(heard()).toEqual(['approved'])
   expect(result.getByText('Research’s payment to Acme Hosting goes through the next time it sends it, once. Your approval lasts 24 hours.')).toBeTruthy()
   expect(result.getByLabelText('Signed with: Face ID on this iPhone')).toBeTruthy()
   expect(result.getByLabelText('Paid from: Research’s US dollar account')).toBeTruthy()
@@ -198,6 +205,7 @@ test('refuses the same person’s second approval over the line in words', async
   await fireEvent.press(sheet().getByRole('button', { name: 'Approve with Face ID' }))
   await waitFor(() => expect(sheet().getByText('Approved by you. Waiting for a second approver.')).toBeTruthy())
   expect(screen.queryByTestId('approval-result')).toBeNull()
+  expect(heard()).toEqual(['refused'])
 })
 
 test('Decline signs, keeps the reason, and the declined screen says what declining does and the budget left', async () => {
@@ -210,6 +218,7 @@ test('Decline signs, keeps the reason, and the declined screen says what declini
 
   const result = within(await screen.findByTestId('approval-result'))
   expect(result.getByText('Declined')).toBeTruthy()
+  expect(heard()).toEqual(['declined'])
   expect(result.getByText('Declined. Research’s payment is refused, and the same request is refused without asking you for 24 hours.')).toBeTruthy()
   expect(result.getByLabelText('Declined with: Face ID on this iPhone')).toBeTruthy()
   expect(result.getByLabelText('Research’s budget left: $760.00')).toBeTruthy()

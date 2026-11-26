@@ -10,6 +10,7 @@ import { DOOR_WORDS, doorRefusal, waitLeft } from '@/door-words'
 import { openHelpMail } from '@/help-words'
 import { faceIDUnlocks } from '@/keys'
 import { useSession } from '@/session'
+import { play } from '@/sound'
 import { fonts, useTheme } from '@/theme'
 
 // B61.27 — Pocket Live's `lock`: the app's mark, the six dots and the number pad, and Face ID offered first once it is
@@ -17,6 +18,7 @@ import { fonts, useTheme } from '@/theme'
 // BFF's (suite B61.25), so the passcode and the Face ID signature are checked there and a copied session opens nothing.
 // B57.185 — laid out as Pocket Live draws it: the mark and the words at the top, the dots under them, the number pad at
 // the foot with the two ways out under it, small, over the full background.
+// B61.127 — unlock.wav once the BFF has opened the lock, by passcode or Face ID.
 // B61.109 — "Forgot your passcode?" with Face ID on: the door's number and code, Face ID, and a new passcode (suite
 // B61.108), which then opens the lock. Without Face ID it points to help.
 
@@ -40,6 +42,7 @@ export function LockScreen() {
     setSaid('')
     try {
       await unlockFaceID()
+      play('unlock')
     } catch (err) {
       // A Face ID that did not pass says nothing: the passcode is right there. Only the BFF's refusal is worded.
       if (err instanceof BffError) setSaid(doorRefusal(err))
@@ -75,6 +78,7 @@ export function LockScreen() {
     setSaid('')
     try {
       await unlock(digits)
+      play('unlock')
     } catch (err) {
       setSaid(doorRefusal(err))
       const left = waitLeft(err)

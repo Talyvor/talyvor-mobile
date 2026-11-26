@@ -9,6 +9,7 @@ import { StartEveryAgentButton, StartEveryAgentSheet, useSigns } from '@/compone
 import { Body, Button, Headline, Screen, SheetTop, useLoad } from '@/components/ui'
 import { biometricName } from '@/keys'
 import { useSession } from '@/session'
+import { play } from '@/sound'
 import { useTheme } from '@/theme'
 
 /** Pocket's p-pause-all (B57.71), from Home's Pause every agent and the "Pause my agents in Talyvor" shortcut (B40.17):
@@ -32,6 +33,7 @@ export default function PauseAll() {
     setSaid('')
     try {
       await client.pauseAll('Paused from the phone app')
+      play('pause')
       setPaused(true)
     } catch (err) {
       setSaid(refusalText(err))

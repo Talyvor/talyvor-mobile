@@ -16,6 +16,7 @@ import { Press } from '@/components/press'
 import { Body, Button, Card, Field, Headline, LoadState, Screen, useLoad } from '@/components/ui'
 import { biometricName, keyGone, keyGoneText, phoneKey, signWithThisPhone } from '@/keys'
 import { useSession } from '@/session'
+import { outcome } from '@/sound'
 import { fonts, useTheme } from '@/theme'
 
 // B61.37 — New agent on the phone, as the web's (talyvor-suite B61.13), in Pocket Live's three steps (`na` 0 to 2): one
@@ -165,6 +166,8 @@ export default function NewAgentScreen() {
       else unsaved.push('its rules were not saved: cancelled.')
     }
     setBusy(false)
+    // B61.127 — the agent is made: celebrate.wav, whatever of its details still waits.
+    outcome('celebrate')
     if (unsaved.length) return setMade({ agent, unsaved })
     router.replace({ pathname: '/agents/[id]', params: { id: agent.id } })
   }

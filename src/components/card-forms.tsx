@@ -22,6 +22,7 @@ import { useState, type ReactNode } from 'react'
 import { Text, TextInput, View, type TextInputProps } from 'react-native'
 
 import { biometricName, keyGone, keyGoneText, phoneKey, signWithThisPhone } from '@/keys'
+import { outcome } from '@/sound'
 
 import { Icon } from './icon'
 import { Body, Button, Card, Eyebrow } from './ui'
@@ -159,6 +160,7 @@ export function CardLimits({ client, agent, rules, peg, onSaved }: { client: Bff
         assertion = await signWithThisPhone(client, j.challenge, `Loosen ${agent.name}’s rules`)
       }
       await client.setRules(agent.id, proposed, assertion)
+      outcome('moved')
       setForm(null)
       setJudged(null)
       setSaid('Saved. Lens applies these rules to the next request or payment.')

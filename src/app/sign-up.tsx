@@ -16,6 +16,7 @@ import { Body, Button, Field, Headline, Screen } from '@/components/ui'
 import { DOOR_WORDS, doorRefusal } from '@/door-words'
 import { keysAvailable, turnOnFaceID } from '@/keys'
 import { useSession } from '@/session'
+import { outcome } from '@/sound'
 import {
   ACCOUNT_TYPES,
   IDENTITY_WORDS,
@@ -464,6 +465,7 @@ export default function SignUp() {
     setFailed(null)
     try {
       await openAccount({ type, kind, name, country: profile.country, ...(type === 'business' ? { registration_number: profile.registrationNumber.trim() } : {}) })
+      outcome('celebrate')
       setStep(4)
     } catch (err) {
       if (backToCountry(err)) return
@@ -480,6 +482,7 @@ export default function SignUp() {
     try {
       setStarted(true)
       await finishSignup({ type, kind, name, country: profile.country, ...(type === 'business' ? { registration_number: profile.registrationNumber.trim() } : {}) })
+      outcome('celebrate')
       setStep(3)
     } catch (err) {
       setStarted(false)

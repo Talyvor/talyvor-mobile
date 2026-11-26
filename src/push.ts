@@ -6,13 +6,22 @@ import { useEffect, useRef } from 'react'
 import { approveBatch, batchOf, noteApproved, noteRefusal, notApproved } from './approve-batch'
 import { biometricName, phoneKey, signWithThisPhone } from './keys'
 import { syncLiveActivities } from './live-activity'
+import { play } from './sound'
 
 // B40.14 — Lens (B40.15) pushes every held payment and every request prepared for approval to the APNs or FCM token of
 // each phone whose approval key is on, with the payee and the amount; tapping one opens its approval card. The data is
 // Lens's nativepush.Message.Data.
 
+// B61.127 — an agent's request arriving while the app is open drops in with request.wav (pocket-live DESIGN.md section
+// 15) in place of the phone's own sound; every other notification keeps the phone's.
+const asksForYes = (data: Record<string, unknown> | undefined) => data?.type === 'payment_request' || data?.type === 'agent_approval' || data?.type === 'card_challenge'
+
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: true, shouldSetBadge: false }),
+  handleNotification: async (n) => {
+    const asks = asksForYes(n.request.content.data)
+    if (asks) play('request')
+    return { shouldShowBanner: true, shouldShowList: true, shouldPlaySound: !asks, shouldSetBadge: false }
+  },
 })
 
 /** The screen a notification's data opens, or null for one that is not an approval. */

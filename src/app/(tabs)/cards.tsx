@@ -1,4 +1,4 @@
-import { formatMinor, refusalText, type Agent, type AgentCard as Held, type AgentRules, type CardAuthorization, type CardSpend } from '@talyvor/bff-client'
+import { BffError, formatMinor, refusalText, type Agent, type AgentCard as Held, type AgentRules, type CardAuthorization, type CardSpend } from '@talyvor/bff-client'
 import { router, useFocusEffect } from 'expo-router'
 import { useCallback, useEffect, useState } from 'react'
 import { AppState, useWindowDimensions, View } from 'react-native'
@@ -15,6 +15,7 @@ import { Body, Button, Card, Chip, Eyebrow, Figure, Headline, LoadState, Row, Sc
 import { DISPUTE_WORDS } from '@/dispute-words'
 import { biometricName, checkItsYou, keyGoneText } from '@/keys'
 import { useSession } from '@/session'
+import { outcome, play } from '@/sound'
 
 // B59.34 — Cards: each agent's card in its approved art (B57.126), frozen or not, the limits its purchases are judged by,
 // and every purchase with what its rules decided, in the web's words (AgentCardPanel.tsx, CardFreeze.tsx). The card's
@@ -168,9 +169,11 @@ export default function Cards() {
     setBusy(agent.id)
     try {
       const got = card?.frozen ? await client.unfreezeCard(agent.id) : await client.freezeCard(agent.id)
+      play(card?.frozen ? 'unfreeze' : 'freeze')
       setSaid({ id: agent.id, text: frozenText(agent.name, got) })
       reload()
     } catch (err) {
+      if (err instanceof BffError) outcome('refused')
       setSaid({ id: agent.id, text: refusalText(err) })
     } finally {
       setBusy(null)

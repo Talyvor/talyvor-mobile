@@ -1,0 +1,32 @@
+[
+  {
+    "route": "/settings",
+    "screen": "p-settings",
+    "live": "await P.unlock(); await P.push('settings');",
+    "words": "report",
+    "why": "B61.127 adds the Look and sound row to Pocket Live's Settings (texts.json 'ph settings'); the rest of the app's Settings is its own items'",
+    "name": "look-and-sound-row",
+    "scroll": "Look and sound"
+  },
+  {
+    "route": "/settings",
+    "screen": "p-settings",
+    "live": "await P.unlock(); await P.push('settings'); await P.openSheet('appearance');",
+    "words": "report",
+    "why": "B61.127 draws Pocket Live's sheet:appearance (texts.json 'ph sheet:appearance')",
+    "name": "look-and-sound-sheet",
+    "scroll": "Look and sound",
+    "press": ["Look and sound Follows your phone, sounds on"]
+  },
+  {
+    "route": "/settings",
+    "screen": "p-settings",
+    "dark": true,
+    "live": "await P.unlock(); await P.push('settings'); await P.openSheet('appearance');",
+    "words": "report",
+    "why": "B61.127 draws Pocket Live's sheet:appearance (texts.json 'ph sheet:appearance'), dark",
+    "name": "look-and-sound-sheet",
+    "scroll": "Look and sound",
+    "press": ["Look and sound Follows your phone, sounds on"]
+  }
+]

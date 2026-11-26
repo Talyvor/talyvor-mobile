@@ -10,6 +10,7 @@ import { biometricName, phoneKey, signWithThisPhone } from '../keys'
 import { syncLiveActivities } from '../live-activity'
 import { haptic } from '../motion'
 import { useSession } from '../session'
+import { play } from '../sound'
 import { fonts, useTheme } from '../theme'
 import { AgentCard } from './card'
 import { Face } from './face'
@@ -270,9 +271,12 @@ export function ApprovalSheet({
       const got = decision === 'approve' ? await client.approve(a.id, assertion) : await client.deny(a.id, assertion, why.trim())
       void syncLiveActivities(client)
       if (decision === 'approve') haptic('success')
+      // B61.127 — the outcome's sound once Lens has answered: approved, or declined.
+      play(decision === 'approve' ? 'approved' : 'declined')
       onDecided(decision === 'approve', !!assertion, decision === 'approve' && !!got?.waiting_for_second_approver)
     } catch (err) {
       if (decision === 'approve' && err instanceof BffError) haptic('warning')
+      if (err instanceof BffError) play('refused')
       // B57.105: an approval that did not happen says so as the notification's Approve does: Nothing was approved.
       setRefusal(secondApproverRefusal(err) || (decision === 'approve' ? notApproved(err) : err instanceof BffError ? refusalText(err) : `Nothing changed: ${(err as Error).message}`))
     } finally {

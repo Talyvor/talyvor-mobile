@@ -12,6 +12,7 @@ import { biometricName } from '@/keys'
 import { syncLiveActivities } from '@/live-activity'
 import { haptic } from '@/motion'
 import { useSession } from '@/session'
+import { play } from '@/sound'
 import { fonts, useTheme } from '@/theme'
 
 // B40.14 — the approval card of a request prepared for approval (B40.9 on the web), where talyvor://approve/<id> and its
@@ -96,9 +97,13 @@ export default function ApproveScreen() {
     try {
       setDone(await approveBatch(client, r!.id, ticked))
       haptic('success')
+      play('approved')
       void syncLiveActivities(client)
     } catch (err) {
-      if (err instanceof BffError) haptic('warning')
+      if (err instanceof BffError) {
+        haptic('warning')
+        play('refused')
+      }
       setRefusal(notApproved(err))
     } finally {
       setBusy(false)
@@ -112,8 +117,10 @@ export default function ApproveScreen() {
       setDone(await client.cancelRequest(r!.id))
       setDeclined(true)
       setDeclining(false)
+      play('declined')
       void syncLiveActivities(client)
     } catch (err) {
+      if (err instanceof BffError) play('refused')
       setRefusal(err instanceof BffError ? refusalText(err) : `Nothing was declined: ${(err as Error).message}`)
     } finally {
       setBusy(false)

@@ -4,6 +4,7 @@ import { Pressable, Text, View } from 'react-native'
 
 import { biometricName, phoneKey, resumeWithThisPhone } from '../keys'
 import { useSession } from '../session'
+import { play } from '../sound'
 import { fonts, useTheme } from '../theme'
 import { Icon } from './icon'
 import { BottomSheet } from './pay-sheet'
@@ -72,6 +73,7 @@ export function StartEveryAgentSheet({ visible, signs, onClose, onStarted }: { v
     const why = await resumeWithThisPhone(client, null, 'Start every agent', ON_WEB)
     setBusy(false)
     if (why) return setSaid(why)
+    play('resume')
     onStarted()
   }
 

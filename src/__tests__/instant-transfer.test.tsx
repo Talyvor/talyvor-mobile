@@ -4,6 +4,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import InstantTransferScreen from '../app/instant-transfer'
 import InstantTransferProgressScreen from '../app/instant-transfer/[id]'
 import * as phone from '../instant-transfer'
+import { outcome, play } from '../sound'
 
 // B59.20 — Instant transfer on the phone (design P7 to P10, launch pack 4.1): the quote card's fields and its 30 seconds
 // counting down, with a fresh quote when they run out; Continue mockChecks Face ID and sends under one key; a refusal read
@@ -118,7 +119,13 @@ jest.mock('../components/ui', () => {
   return { ...jest.requireActual('../components/ui'), Screen: ({ children }: { children: unknown }) => <View>{children}</View> }
 })
 
+// B61.127 — sent.wav once Lens has taken the transfer; a refusal is refused.wav and never sent; the approval that asks
+// first is one send, so one sent.
+jest.mock('../sound', () => ({ ...jest.requireActual('../sound'), play: jest.fn(), outcome: jest.fn() }))
+const heard = () => [...(play as jest.Mock).mock.calls, ...(outcome as jest.Mock).mock.calls].map(([n]) => n as string).filter((n) => n !== 'key' && n !== 'tick')
+
 beforeEach(() => {
+  jest.clearAllMocks()
   quotes = 0
   quoteLife = 30
   sends = []
@@ -172,6 +179,7 @@ describe('sending it', () => {
     expect(sends[0]).toMatchObject({ agent: 'agt_remy', body: { quote_id: 'itq_1', to_payee_id: 'payee_lf' } })
     expect(sends[0].key).toMatch(/^key-/)
     expect(mockPushed).toEqual([{ pathname: '/instant-transfer/[id]', params: { id: 'itr_7Q2M' } }])
+    expect(heard()).toEqual(['sent'])
   })
 
   test('an agent without the rule is told so from the field, with the way to its rules', async () => {
@@ -183,6 +191,7 @@ describe('sending it', () => {
     const refused = screen.getByTestId('instant-refused')
     expect(within(refused).getByText(WEB.rule)).toBeTruthy()
     expect(within(refused).queryByText(/may_instant_transfer/)).toBeNull()
+    expect(heard()).toEqual(['refused'])
     await fireEvent.press(within(refused).getByRole('button', { name: 'Open Remy’s rules' }))
     expect(mockPushed).toEqual([{ pathname: '/agents/[id]', params: { id: 'agt_remy' } }])
   })
@@ -203,6 +212,7 @@ describe('sending it', () => {
     expect(sends[1].body.quote_id).not.toBe(sends[0].body.quote_id)
     expect(sends[1].key).toBe(sends[0].key)
     expect(mockPushed).toEqual([{ pathname: '/instant-transfer/[id]', params: { id: 'itr_7Q2M' } }])
+    expect(heard()).toEqual(['sent'])
   })
 })
 

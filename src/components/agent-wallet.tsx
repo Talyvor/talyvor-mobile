@@ -28,6 +28,7 @@ import { encode } from 'uqr'
 import { useAccount, type Shows } from '@/account'
 import { approveCryptoSendSigned, biometricName, confirmWalletMove, keyGone, keyGoneText, sendCryptoSigned, signSpendPermission } from '@/keys'
 import { useSession } from '@/session'
+import { outcome } from '@/sound'
 import { fonts, useTheme } from '@/theme'
 
 import { Face } from './face'
@@ -249,8 +250,12 @@ function MoveQuote({
     setSaid('')
     try {
       const reason = m.route === 'cash_out' ? `Cash out ${formatMinor(m.sell_minor, m.sell_currency)}` : `Add ${formatMinor(m.buy_minor, m.buy_currency)} to ${agent.name}`
-      onDone(await confirmWalletMove(client, agent.id, m, reason))
+      const done = await confirmWalletMove(client, agent.id, m, reason)
+      // B61.127 — a cash out leaves the account (sent); a top-up or a conversion moves inside it (moved).
+      outcome(m.route === 'cash_out' ? 'sent' : 'moved')
+      onDone(done)
     } catch (err) {
+      if (err instanceof BffError) outcome('refused')
       setSaid(
         err instanceof BffError && err.status === 409
           ? `${refusalText(err)} Ask for a new quote.`

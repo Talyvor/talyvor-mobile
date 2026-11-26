@@ -2,6 +2,7 @@ import { act, fireEvent, renderRouter, screen, waitFor, within } from 'expo-rout
 import { AppState, StyleSheet, type AppStateStatus } from 'react-native'
 
 import { palettes, surfaces } from '../theme'
+import { outcome, play } from '../sound'
 
 // B59.34 — Cards on the phone: each agent's card in its art, its details hidden until Face ID, freeze and unfreeze, the
 // limits its purchases are judged by, and every purchase, in the web's words.
@@ -17,6 +18,10 @@ jest.mock('expo-secure-store', () => ({
 jest.mock('expo-font', () => ({ ...jest.requireActual('expo-font'), useFonts: () => [true, null] }))
 jest.mock('expo-crypto', () => ({ ...jest.requireActual('expo-crypto'), randomUUID: () => 'uuid-1' }))
 jest.mock('../config', () => ({ config: { bffUrl: 'https://bff.test' } }))
+// B61.127 — which sounds played, by name.
+jest.mock('../sound', () => ({ ...jest.requireActual('../sound'), play: jest.fn(), outcome: jest.fn() }))
+const heard = () => [...(play as jest.Mock).mock.calls, ...(outcome as jest.Mock).mock.calls].map(([n]) => n as string).filter((n) => n !== 'key' && n !== 'tick')
+beforeEach(() => jest.clearAllMocks())
 
 /** The phone's key: `face` is whether Face ID passes; `signed` is every message it signed. */
 const mockPhone = { has: true, face: true, signed: [] as string[] }
@@ -230,11 +235,13 @@ test('B57.136: the card sits in Pocket’s panel with its name, and Freeze card 
   await waitFor(() => expect(within(screen.getByTestId('card-head-ag_1')).getByText('Frozen')).toBeTruthy())
   expect(within(screen.getByTestId('card-head-ag_1')).getByRole('switch', { name: 'Freeze card' }).props.accessibilityState.checked).toBe(true)
   expect(calls).toContain('POST /api/agents/ag_1/card/freeze')
+  expect(heard()).toEqual(['freeze'])
 
   await fireEvent.press(within(screen.getByTestId('card-head-ag_1')).getByRole('switch', { name: 'Freeze card' }))
   expect(await screen.findByText(unmasked(WEB.unfrozen('Research', '4242')))).toBeTruthy()
   await waitFor(() => expect(screen.queryByText('Frozen')).toBeNull())
   expect(calls).toContain('POST /api/agents/ag_1/card/unfreeze')
+  expect(heard()).toEqual(['freeze', 'unfreeze'])
 })
 
 test('B28.465: Replace card asks once, then shows the new card’s last four', async () => {

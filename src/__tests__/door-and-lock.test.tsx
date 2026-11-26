@@ -3,6 +3,8 @@ import { act, fireEvent, renderRouter, screen, waitFor, within } from 'expo-rout
 import { router } from 'expo-router'
 import { AppState, Linking, StyleSheet, type AppStateStatus } from 'react-native'
 
+import { outcome, play } from '../sound'
+
 // B61.27 — the phone's front door and its lock (suite B61.25's BFF): the number, the texted code, and the passcode, or a
 // new one chosen twice that goes on to sign-up; and every time the app opens, or comes back after 2 minutes away, the
 // lock: six dots and the number pad, Face ID first once it is on, checked by the BFF, with nothing of the account behind.
@@ -22,6 +24,9 @@ jest.mock('expo-crypto', () => ({
   randomUUID: () => 'uuid-1',
 }))
 jest.mock('../config', () => ({ config: { bffUrl: 'https://bff.test' } }))
+// B61.127 — key.wav for each key on the pad, unlock.wav once the BFF has opened the lock.
+jest.mock('../sound', () => ({ ...jest.requireActual('../sound'), play: jest.fn(), outcome: jest.fn() }))
+const heard = () => [...(play as jest.Mock).mock.calls, ...(outcome as jest.Mock).mock.calls].map(([n]) => n as string)
 
 /** The phone's key store: Face ID passes unless told to fail. */
 const mockPhone = { signed: [] as string[], fail: false }
@@ -108,6 +113,7 @@ const typeDigits = async (digits: string) => {
 }
 
 beforeEach(() => {
+  jest.clearAllMocks()
   mockStore.clear()
   mockPhone.signed = []
   mockPhone.fail = false
@@ -184,9 +190,11 @@ test('the lock on opening: nothing of the account is drawn behind it, and the pa
   // Face ID is not on, so the pad has no Face ID key.
   expect(screen.queryByRole('button', { name: 'Face ID' })).toBeNull()
 
+  ;(play as jest.Mock).mockClear()
   await typeDigits(PASSCODE)
   await waitFor(() => expect(screen.queryByTestId('lock-screen')).toBeNull())
   expect(bff.calls.find((c) => c.route === 'POST /auth/unlock')?.body).toEqual({ passcode: PASSCODE })
+  expect(heard()).toEqual([...Array(6).fill('key'), 'unlock'])
 })
 
 test('the lock after 2 minutes away, and not before', async () => {
@@ -235,6 +243,7 @@ test('Face ID first, once it is on: the lock opens with the sign-in key and no d
   await waitFor(() => expect(bff.calls.find((c) => c.route === 'POST /auth/unlock')?.body).toEqual({ device_id: 'pk_1', challenge: 'ch_unlock', signature: 'signed:talyvor-device-v1:ch_unlock' }))
   await waitFor(() => expect(screen.queryByTestId('lock-screen')).toBeNull())
   expect(mockPhone.signed).toEqual(['talyvor-device-v1:ch_unlock'])
+  expect(heard().filter((n) => n === 'unlock')).toEqual(['unlock'])
 })
 
 test('Face ID that does not pass leaves the passcode, with the Face ID key to try again', async () => {
