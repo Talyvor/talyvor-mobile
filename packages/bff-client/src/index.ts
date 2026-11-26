@@ -884,6 +884,8 @@ export interface AuthMe {
   workspace_id: string
   authenticated?: boolean
   signup_unfinished?: boolean
+  /** B52.47 — who is signed in; `email` is "" for a person signed in without one (the phone's door) */
+  user?: { sub: string; email: string } | null
 }
 
 /** B59.9 — what sign-up asks (suite B59.8): the BFF sends them to Lens when it makes the workspace, and refuses a set
@@ -1367,6 +1369,10 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
       void (await send('POST', '/auth/passcode/replace', JSON.stringify({ check, passcode, ...answer }), { 'Content-Type': 'application/json' })),
     /** B61.27 — who is signed in, and what the door still asks of them. */
     authMe: () => call<AuthMe>('GET', '/auth/me'),
+    /** B52.47 — deletes every account the person holds and ends every sign-in of theirs (suite B52.38): `confirm` is
+     * their email typed back, or DELETE. Lens's refusal (money still held) comes back as its sentence. */
+    deleteAccount: async (confirm: string) =>
+      void (await send('POST', '/auth/account/delete', JSON.stringify({ confirm }), { Accept: 'application/json', 'Content-Type': 'application/json' })),
     /** B61.10 — the person's accounts, the session's marked current. */
     accounts: async () => (await call<{ accounts: PersonAccount[] | null }>('GET', '/api/accounts')).accounts ?? [],
     /** B61.10 — moves the session to another of the person's accounts; any other id is refused 404 and nothing moves. */

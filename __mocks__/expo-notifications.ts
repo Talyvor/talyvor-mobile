@@ -3,6 +3,7 @@
 export const DEFAULT_ACTION_IDENTIFIER = 'expo.modules.notifications.actions.DEFAULT'
 export const setNotificationHandler = () => undefined
 export const requestPermissionsAsync = async () => ({ granted: false })
+export const unregisterForNotificationsAsync = async () => undefined
 export const getDevicePushTokenAsync = async () => ({ type: 'ios', data: '' })
 export const useLastNotificationResponse = () => null
 export const setNotificationCategoryAsync = async () => null

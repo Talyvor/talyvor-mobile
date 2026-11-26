@@ -82,6 +82,9 @@ export async function registerPush(client: BffClient): Promise<void> {
   await client.setPushToken(key.id, String(data))
 }
 
+/** B52.47 — the account is deleted: this phone stops taking Talyvor's notifications until someone signs in again. */
+export const forgetPushToken = () => Notifications.unregisterForNotificationsAsync()
+
 /** While signed in: keeps the push token current and opens the approval a tapped notification names. */
 export function usePushApprovals(client: BffClient, signedIn: boolean) {
   const response = Notifications.useLastNotificationResponse()

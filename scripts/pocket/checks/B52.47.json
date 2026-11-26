@@ -1,0 +1,5 @@
+[
+  { "route": "/settings/close", "screen": "p-pause-all", "name": "card", "scroll": "Delete your account", "live": "await P.unlock(); await P.openSheet('closeAcct');", "words": "report", "why": "B52.47 — Delete your account under Ask to close, in the web's words (suite B52.38), beside Pocket Live's close-account sheet" },
+  { "route": "/settings/close", "screen": "p-pause-all", "name": "sheet", "press": ["Delete your account"], "live": "await P.unlock(); await P.openSheet('closeAcct');", "words": "report", "why": "the sheet asks once, Keep my account first, with the email (or DELETE) typed back as the web's dialog does" },
+  { "route": "/settings/close", "screen": "p-pause-all", "name": "sheet", "dark": true, "press": ["Delete your account"], "live": "await P.unlock(); await P.openSheet('closeAcct');", "words": "report", "why": "the same, with the phone set to dark" }
+]

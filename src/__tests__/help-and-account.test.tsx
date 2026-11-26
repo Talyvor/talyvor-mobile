@@ -83,18 +83,21 @@ const WEB = {
 type Req = { id: number; kind: string; state: string; reference: string; message: string; answer: string; filed_at: string; updated_at: string }
 
 /** Lens behind the BFF; `calls` is every request the app made, `requests` what the workspace has sent. */
-function mockBff({ requests = [] as Req[], closure }: { requests?: Req[]; closure?: { status: number; body: unknown } } = {}) {
-  const calls: { method: string; path: string; body?: unknown }[] = []
+function mockBff({ requests = [] as Req[], closure, deletion, email = '' }: { requests?: Req[]; closure?: { status: number; body: unknown }; deletion?: { status: number; body?: unknown }; email?: string } = {}) {
+  const calls: { method: string; path: string; body?: unknown; auth?: string }[] = []
   let next = 100
   globalThis.fetch = jest.fn(async (url: string, init: RequestInit = {}) => {
     const path = url.replace('https://bff.test', '').split('?')[0]
     const method = init.method ?? 'GET'
     const body = init.body ? JSON.parse(init.body as string) : undefined
-    calls.push({ method, path, body })
+    calls.push({ method, path, body, auth: (init.headers as Record<string, string> | undefined)?.Authorization })
     const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status })
     switch (`${method} ${path}`) {
       case 'GET /auth/me':
-        return json({ workspace_id: 'ws_northwind' })
+        return json({ workspace_id: 'ws_northwind', authenticated: true, user: { sub: 'p_1', email } })
+      case 'POST /auth/account/delete':
+        if (!deletion) break
+        return deletion.status === 204 ? new Response(null, { status: 204 }) : json(deletion.body, deletion.status)
       case 'GET /api/workspace/name':
         return json({ id: 'ws_northwind', name: 'Northwind Studio' })
       case 'GET /api/workspace/account':
@@ -132,7 +135,7 @@ function mockBff({ requests = [] as Req[], closure }: { requests?: Req[]; closur
   return calls
 }
 
-const posts = (calls: { method: string; path: string; body?: unknown }[]) => calls.filter((c) => c.method === 'POST' && c.path === '/api/workspace/requests').map((c) => c.body)
+const posts = (calls: { method: string; path: string; body?: unknown; auth?: string }[]) => calls.filter((c) => c.method === 'POST' && c.path === '/api/workspace/requests').map((c) => c.body)
 
 beforeEach(() => {
   mockStore.clear()
@@ -197,6 +200,55 @@ test('closing is refused while the account holds money, naming each balance', as
   await fireEvent.press(screen.getByText('Ask to close this account'))
   expect(await screen.findByText('This account still holds £12.50, 3.00 USDC. Move the money out, then ask again.')).toBeTruthy()
   expect(posts(calls)).toEqual([{ kind: 'account_closure', message: '' }])
+})
+
+// B52.47 — the web's Delete your account (suite B52.38, B57.209), typed from suite ae827d8 HelpAndAccount.tsx.
+const DELETE_WORDS = {
+  card: [
+    'Delete your account',
+    'Deletes every account you hold and signs you out everywhere: every browser, every phone and every connected assistant. It can’t be undone. Billing and ledger records, statements included, are kept as the law requires.',
+  ],
+  sheet: ['Delete your account?', 'Every account you hold is deleted, and every browser, phone and connected assistant is signed out. This can’t be undone.', 'Keep my account', 'Yes, delete my account'],
+}
+
+const deletes = (calls: { method: string; path: string; body?: unknown; auth?: string }[]) => calls.filter((c) => c.method === 'POST' && c.path === '/auth/account/delete')
+
+test('Delete your account sends the typed email once on the session, then the phone forgets the session and its key and opens the first screen', async () => {
+  const calls = mockBff({ deletion: { status: 204 }, email: 'ada@northwind.test' })
+  mockStore.set('talyvor.device-key', 'dk_1')
+  mockStore.set('talyvor.device-workspace', 'ws_northwind')
+  await renderRouter('./src/app', { initialUrl: '/settings/close' })
+  expect(await screen.findByText('You have not asked to close this account.')).toBeTruthy()
+  for (const words of DELETE_WORDS.card) expect(screen.getAllByText(words).length).toBeGreaterThan(0)
+
+  await fireEvent.press(screen.getByRole('button', { name: 'Delete your account' }))
+  for (const words of DELETE_WORDS.sheet) expect(await screen.findByText(words)).toBeTruthy()
+  const yes = screen.getByRole('button', { name: 'Yes, delete my account' })
+  expect(yes.props.accessibilityState?.disabled).toBe(true)
+  await fireEvent.changeText(await screen.findByLabelText('Type ada@northwind.test to confirm'), ' Ada@Northwind.test ')
+  await fireEvent.press(screen.getByRole('button', { name: 'Yes, delete my account' }))
+
+  expect(await screen.findByText('What’s your phone number?')).toBeTruthy()
+  expect(deletes(calls)).toEqual([{ method: 'POST', path: '/auth/account/delete', body: { confirm: ' Ada@Northwind.test ' }, auth: 'Bearer session-1' }])
+  expect(mockStore.has('talyvor.session')).toBe(false)
+  expect(mockStore.has('talyvor.device-key')).toBe(false)
+  expect(mockStore.has('talyvor.device-workspace')).toBe(false)
+})
+
+test('a refused deletion shows Lens’s sentence and keeps the person signed in', async () => {
+  const sentence = 'This account still holds money: £12.50. Move it out, then delete your account.'
+  const calls = mockBff({ deletion: { status: 409, body: { error: sentence } } })
+  mockStore.set('talyvor.device-key', 'dk_1')
+  await renderRouter('./src/app', { initialUrl: '/settings/close' })
+  await fireEvent.press(await screen.findByRole('button', { name: 'Delete your account' }))
+  await fireEvent.changeText(await screen.findByLabelText('Type DELETE to confirm'), 'delete')
+  await fireEvent.press(screen.getByRole('button', { name: 'Yes, delete my account' }))
+
+  expect(await screen.findByText(sentence)).toBeTruthy()
+  expect(deletes(calls).map((c) => c.body)).toEqual([{ confirm: 'delete' }])
+  expect(mockStore.get('talyvor.session')).toContain('session-1')
+  expect(mockStore.get('talyvor.device-key')).toBe('dk_1')
+  expect(screen.getByText('Keep my account')).toBeTruthy()
 })
 
 test('Your data asks for a copy and, once done, hands it to the share sheet; deletion is its own request', async () => {
