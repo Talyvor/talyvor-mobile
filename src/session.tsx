@@ -32,6 +32,8 @@ interface Session {
   /** B52.47 — deletes the person's accounts with what they typed back; once the BFF has, the phone forgets the session,
    * its push token and its approval key, and the first screen opens. A refusal is thrown and nothing is forgotten. */
   deleteAccount: (confirm: string) => Promise<void>
+  /** B57.225 — ends every sign-in of the person at Talyvor, then this phone's session; a failure is thrown and nothing ends. */
+  signOutEverywhere: () => Promise<void>
   /** B61.10 — moves the session to another of the person's accounts; every screen then reads that account. */
   switchAccount: (accountID: string) => Promise<void>
   /** B61.10 — opens another account with sign-up's answers and moves the session to it. */
@@ -137,6 +139,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     [client, signOut],
   )
 
+  const signOutEverywhere = useCallback(async () => {
+    await client.logoutEverywhere()
+    await signOut()
+  }, [client, signOut])
+
   const signInWithDoor = useCallback(
     async (s: DoorSession, passcode?: string) => {
       const joins = !!s.signup_unfinished
@@ -199,6 +206,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       peg,
       signOut,
       deleteAccount,
+      signOutEverywhere,
       switchAccount,
       openAccount,
       signInWithDoor,
@@ -211,7 +219,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       unlock,
       unlockFaceID,
     }),
-    [ready, token, client, peg, signOut, deleteAccount, switchAccount, openAccount, signInWithDoor, finishSignup, takeNewPasscode, person, joining, locked, covered, unlock, unlockFaceID],
+    [ready, token, client, peg, signOut, deleteAccount, signOutEverywhere, switchAccount, openAccount, signInWithDoor, finishSignup, takeNewPasscode, person, joining, locked, covered, unlock, unlockFaceID],
   )
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
 }
