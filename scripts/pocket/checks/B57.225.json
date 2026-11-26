@@ -1,0 +1,5 @@
+[
+  { "route": "/settings", "screen": "p-spending", "name": "card", "scroll": "Sign out everywhere", "words": "report", "why": "B57.225 — Sign out everywhere above Sign out, in the web's Connect your AI words (suite B52.9, B57.158); the reference draws no phone Settings, so its nearest is Spending, as B57.132's" },
+  { "route": "/settings", "screen": "p-home+pdecline-A", "name": "sheet", "press": ["Sign out everywhere"], "words": "report", "why": "the sheet asks once, Cancel then Yes, sign out everywhere, as the web's dialog does; the nearest phone confirm is the approval sheet's" },
+  { "route": "/settings", "screen": "p-home+pdecline-A", "name": "sheet", "dark": true, "press": ["Sign out everywhere"], "words": "report", "why": "the same, with the phone set to dark" }
+]

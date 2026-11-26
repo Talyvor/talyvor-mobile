@@ -10,6 +10,7 @@ import { AccountSettings } from '@/components/account-settings'
 import { FindMeSettings } from '@/components/find-me'
 import { Icon, type IconName } from '@/components/icon'
 import { NoticeSettingsCard } from '@/components/notice-settings'
+import { SignOutEverywhere } from '@/components/sign-out-everywhere'
 import { UnlockSettings } from '@/components/unlock-settings'
 import { Limits, SecurityKeys, SharedWithYou, TeamAndRoles } from '@/components/settings-access'
 import { Back, Button, Card, Eyebrow, Headline, LoadState, Row, Screen, useLoad } from '@/components/ui'
@@ -28,6 +29,7 @@ import { fonts, useTheme } from '@/theme'
 // B61.60 — Plan, as the web's Settings lists it (suite B61.59): the plan Lens has the account on, by its name.
 // B28.463 — a Personal account sees only the accounts shared with it through a role (launch pack 3.4; suite B28.70).
 // B61.94 — under the profile, the person's Talyvor name and who can find them, to pay them (components/find-me.tsx).
+// B57.225 — Sign out everywhere, the web's Connect your AI card (suite B52.9, B57.158), above signing out of this phone.
 
 const HELP_ROWS: readonly { to: '/help' | '/settings/help' | '/settings/data' | '/settings/close'; icon: IconName; title: string; line: string }[] = [
   { to: '/help', icon: 'chat', title: HELP_ROW.title, line: HELP_ROW.line },
@@ -148,6 +150,7 @@ export default function SettingsScreen() {
             ))}
           </Card>
 
+          <SignOutEverywhere />
           <Button variant="secondary" label="Sign out" onPress={() => void signOut()} />
         </>
       ) : null}

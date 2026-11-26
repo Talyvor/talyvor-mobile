@@ -1373,6 +1373,8 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
      * their email typed back, or DELETE. Lens's refusal (money still held) comes back as its sentence. */
     deleteAccount: async (confirm: string) =>
       void (await send('POST', '/auth/account/delete', JSON.stringify({ confirm }), { Accept: 'application/json', 'Content-Type': 'application/json' })),
+    /** B57.225 — ends every sign-in of the person (suite B52.9): every browser, every phone and every connected assistant. */
+    logoutEverywhere: async () => void (await send('POST', '/auth/logout-everywhere', undefined, { Accept: 'application/json' })),
     /** B61.10 — the person's accounts, the session's marked current. */
     accounts: async () => (await call<{ accounts: PersonAccount[] | null }>('GET', '/api/accounts')).accounts ?? [],
     /** B61.10 — moves the session to another of the person's accounts; any other id is refused 404 and nothing moves. */

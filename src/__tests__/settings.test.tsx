@@ -53,15 +53,15 @@ const lastMonth = [line(9, 'agent:ag_2', 'topup', 9_000_000, 'October top-up', '
 
 /** Lens behind the BFF; `calls` is every request the app made. `account` is the workspace's type and kind (none: Lens
  * does not answer), `accounts` what /api/money/accounts answers (null: the read fails). */
-function mockBff({ account, accounts = [] }: { account?: { account_type: string; money_kind: string }; accounts?: unknown[] | null } = {}) {
-  const calls: { method: string; path: string; query: URLSearchParams; body?: unknown; accept?: string }[] = []
+function mockBff({ account, accounts = [], everywhere }: { account?: { account_type: string; money_kind: string }; accounts?: unknown[] | null; everywhere?: () => Promise<Response> } = {}) {
+  const calls: { method: string; path: string; query: URLSearchParams; body?: unknown; accept?: string; auth?: string }[] = []
   const settings = { timezone: 'Europe/London', quiet_from: '', quiet_until: '', off: [] as string[] }
   globalThis.fetch = jest.fn(async (url: string, init: RequestInit = {}) => {
     const [path, q = ''] = url.replace('https://bff.test', '').split('?')
     const method = init.method ?? 'GET'
     const query = new URLSearchParams(q)
     const headers = (init.headers ?? {}) as Record<string, string>
-    calls.push({ method, path, query, body: init.body ? JSON.parse(init.body as string) : undefined, accept: headers.Accept })
+    calls.push({ method, path, query, body: init.body ? JSON.parse(init.body as string) : undefined, accept: headers.Accept, auth: headers.Authorization })
     const json = (b: unknown) => new Response(JSON.stringify(b), { status: 200 })
     switch (`${method} ${path}`) {
       case 'GET /auth/me':
@@ -91,6 +91,9 @@ function mockBff({ account, accounts = [] }: { account?: { account_type: string;
         return json({ settings, notices: [] })
       case 'PUT /api/money/notices/settings':
         return json(JSON.parse(init.body as string))
+      case 'POST /auth/logout-everywhere':
+        if (everywhere) return everywhere()
+        break
     }
     return new Response(JSON.stringify({ error: 'no' }), { status: 404 })
   }) as unknown as typeof fetch
@@ -174,6 +177,43 @@ describe('Settings', () => {
     await waitFor(() => expect(mockStore.has('talyvor.session')).toBe(false))
     // B61.27 — signed out, the door asks for the phone number.
     expect(await screen.findByText('What’s your phone number?')).toBeTruthy()
+  })
+
+  // B57.225 — the web's Sign out everywhere (suite ConnectAI.tsx, B52.9 and B57.158), its words typed from suite efeec6a.
+  const EVERYWHERE = {
+    sheet: ['Sign out everywhere?', 'Every browser, every phone and every connected assistant has to sign in again.', 'Cancel', 'Yes, sign out everywhere'],
+  }
+  const everywhereCalls = (calls: { method: string; path: string; auth?: string }[]) => calls.filter((c) => c.method === 'POST' && c.path === '/auth/logout-everywhere')
+
+  test('B57.225: signs out everywhere once on the session, stays up while it does, then opens the sign-in screen', async () => {
+    let answer: (r: Response) => void = () => undefined
+    const calls = mockBff({ everywhere: () => new Promise<Response>((r) => (answer = r)) })
+    await renderRouter('./src/app', { initialUrl: '/settings' })
+    await fireEvent.press(await screen.findByRole('button', { name: 'Sign out everywhere' }))
+    const sheet = await screen.findByTestId('sign-out-everywhere-sheet')
+    for (const words of EVERYWHERE.sheet) expect(within(sheet).getByText(words)).toBeTruthy()
+
+    await fireEvent.press(within(sheet).getByRole('button', { name: 'Yes, sign out everywhere' }))
+    const going = await within(sheet).findByRole('button', { name: 'Signing out…' })
+    expect(going.props.accessibilityState?.disabled).toBe(true)
+    expect(within(sheet).getByRole('button', { name: 'Cancel' }).props.accessibilityState?.disabled).toBe(true)
+    expect(mockStore.has('talyvor.session')).toBe(true)
+
+    answer(new Response(null, { status: 204 }))
+    expect(await screen.findByText('What’s your phone number?')).toBeTruthy()
+    expect(mockStore.has('talyvor.session')).toBe(false)
+    expect(everywhereCalls(calls).map((c) => c.auth)).toEqual(['Bearer session-1'])
+  })
+
+  test('B57.225: when it could not sign out, it says so and the phone stays signed in', async () => {
+    const calls = mockBff({ everywhere: async () => new Response(JSON.stringify({ error: 'you could not be signed out everywhere; try again' }), { status: 503 }) })
+    await renderRouter('./src/app', { initialUrl: '/settings' })
+    await fireEvent.press(await screen.findByRole('button', { name: 'Sign out everywhere' }))
+    await fireEvent.press(await screen.findByRole('button', { name: 'Yes, sign out everywhere' }))
+    expect(await screen.findByText('You were not signed out anywhere. Try again.')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Yes, sign out everywhere' }).props.accessibilityState?.disabled).toBeFalsy()
+    expect(mockStore.get('talyvor.session')).toContain('session-1')
+    expect(everywhereCalls(calls)).toHaveLength(1)
   })
 })
 
