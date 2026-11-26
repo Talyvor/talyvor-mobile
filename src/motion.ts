@@ -25,6 +25,19 @@ export const durations = {
   roll: 700,
   /** loading shapes, repeating */
   shimmer: 1100,
+  /** B61.130 — section 15's special effects */
+  drawIn: 900,
+  pulse: 760,
+  ring: 760,
+  burst: 1250,
+  still: 1000,
+  frost: 560,
+  shine: 1100,
+  ripple: 620,
+  tick: 430,
+  roundRing: 520,
+  breathe: 2800,
+  switch: 320,
 } as const
 
 export const easings = {

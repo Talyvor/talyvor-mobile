@@ -177,6 +177,97 @@ exports[`dark mode agent-max draws its face 1`] = `
         Research · pays in dollars
       </Text>
     </View>
+    <View
+      collapsable={false}
+      pointerEvents="none"
+      style={
+        {
+          "height": 302.0467289719626,
+          "left": 0,
+          "position": "absolute",
+          "top": -43.149532710280376,
+          "transform": [
+            {
+              "translateX": -205.2,
+            },
+            {
+              "skewX": "-18deg",
+            },
+          ],
+          "width": 157.32,
+        }
+      }
+      testID="card-shine"
+    >
+      <RNSVGSvgView
+        bbHeight={302.0467289719626}
+        bbWidth={157.32}
+        focusable={false}
+        height={302.0467289719626}
+        style={
+          [
+            {
+              "backgroundColor": "transparent",
+              "borderWidth": 0,
+            },
+            {
+              "flex": 0,
+              "height": 302,
+              "width": 157,
+            },
+          ]
+        }
+        width={157.32}
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "payload": 4278190080,
+              "type": 0,
+            }
+          }
+        >
+          <RNSVGDefs>
+            <RNSVGLinearGradient
+              gradient={
+                [
+                  0,
+                  16777215,
+                  0.5,
+                  1811939327,
+                  1,
+                  16777215,
+                ]
+              }
+              gradientTransform={null}
+              gradientUnits={0}
+              name="card-shine"
+              x1="0"
+              x2="1"
+              y1="0"
+              y2="0"
+            />
+          </RNSVGDefs>
+          <RNSVGRect
+            fill={
+              {
+                "brushRef": "card-shine",
+                "type": 1,
+              }
+            }
+            height={302.0467289719626}
+            propList={
+              [
+                "fill",
+              ]
+            }
+            width={157.32}
+            x={0}
+            y={0}
+          />
+        </RNSVGGroup>
+      </RNSVGSvgView>
+    </View>
   </View>
 </View>
 `;
@@ -357,6 +448,97 @@ exports[`dark mode agent-nova draws its face 1`] = `
       >
         Research · pays in dollars
       </Text>
+    </View>
+    <View
+      collapsable={false}
+      pointerEvents="none"
+      style={
+        {
+          "height": 302.0467289719626,
+          "left": 0,
+          "position": "absolute",
+          "top": -43.149532710280376,
+          "transform": [
+            {
+              "translateX": -205.2,
+            },
+            {
+              "skewX": "-18deg",
+            },
+          ],
+          "width": 157.32,
+        }
+      }
+      testID="card-shine"
+    >
+      <RNSVGSvgView
+        bbHeight={302.0467289719626}
+        bbWidth={157.32}
+        focusable={false}
+        height={302.0467289719626}
+        style={
+          [
+            {
+              "backgroundColor": "transparent",
+              "borderWidth": 0,
+            },
+            {
+              "flex": 0,
+              "height": 302,
+              "width": 157,
+            },
+          ]
+        }
+        width={157.32}
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "payload": 4278190080,
+              "type": 0,
+            }
+          }
+        >
+          <RNSVGDefs>
+            <RNSVGLinearGradient
+              gradient={
+                [
+                  0,
+                  16777215,
+                  0.5,
+                  1811939327,
+                  1,
+                  16777215,
+                ]
+              }
+              gradientTransform={null}
+              gradientUnits={0}
+              name="card-shine"
+              x1="0"
+              x2="1"
+              y1="0"
+              y2="0"
+            />
+          </RNSVGDefs>
+          <RNSVGRect
+            fill={
+              {
+                "brushRef": "card-shine",
+                "type": 1,
+              }
+            }
+            height={302.0467289719626}
+            propList={
+              [
+                "fill",
+              ]
+            }
+            width={157.32}
+            x={0}
+            y={0}
+          />
+        </RNSVGGroup>
+      </RNSVGSvgView>
     </View>
   </View>
 </View>
@@ -539,6 +721,97 @@ exports[`dark mode agent-ollie draws its face 1`] = `
         Research · pays in dollars
       </Text>
     </View>
+    <View
+      collapsable={false}
+      pointerEvents="none"
+      style={
+        {
+          "height": 302.0467289719626,
+          "left": 0,
+          "position": "absolute",
+          "top": -43.149532710280376,
+          "transform": [
+            {
+              "translateX": -205.2,
+            },
+            {
+              "skewX": "-18deg",
+            },
+          ],
+          "width": 157.32,
+        }
+      }
+      testID="card-shine"
+    >
+      <RNSVGSvgView
+        bbHeight={302.0467289719626}
+        bbWidth={157.32}
+        focusable={false}
+        height={302.0467289719626}
+        style={
+          [
+            {
+              "backgroundColor": "transparent",
+              "borderWidth": 0,
+            },
+            {
+              "flex": 0,
+              "height": 302,
+              "width": 157,
+            },
+          ]
+        }
+        width={157.32}
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "payload": 4278190080,
+              "type": 0,
+            }
+          }
+        >
+          <RNSVGDefs>
+            <RNSVGLinearGradient
+              gradient={
+                [
+                  0,
+                  16777215,
+                  0.5,
+                  1811939327,
+                  1,
+                  16777215,
+                ]
+              }
+              gradientTransform={null}
+              gradientUnits={0}
+              name="card-shine"
+              x1="0"
+              x2="1"
+              y1="0"
+              y2="0"
+            />
+          </RNSVGDefs>
+          <RNSVGRect
+            fill={
+              {
+                "brushRef": "card-shine",
+                "type": 1,
+              }
+            }
+            height={302.0467289719626}
+            propList={
+              [
+                "fill",
+              ]
+            }
+            width={157.32}
+            x={0}
+            y={0}
+          />
+        </RNSVGGroup>
+      </RNSVGSvgView>
+    </View>
   </View>
 </View>
 `;
@@ -719,6 +992,97 @@ exports[`dark mode agent-penny draws its face 1`] = `
       >
         Research · pays in dollars
       </Text>
+    </View>
+    <View
+      collapsable={false}
+      pointerEvents="none"
+      style={
+        {
+          "height": 302.0467289719626,
+          "left": 0,
+          "position": "absolute",
+          "top": -43.149532710280376,
+          "transform": [
+            {
+              "translateX": -205.2,
+            },
+            {
+              "skewX": "-18deg",
+            },
+          ],
+          "width": 157.32,
+        }
+      }
+      testID="card-shine"
+    >
+      <RNSVGSvgView
+        bbHeight={302.0467289719626}
+        bbWidth={157.32}
+        focusable={false}
+        height={302.0467289719626}
+        style={
+          [
+            {
+              "backgroundColor": "transparent",
+              "borderWidth": 0,
+            },
+            {
+              "flex": 0,
+              "height": 302,
+              "width": 157,
+            },
+          ]
+        }
+        width={157.32}
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "payload": 4278190080,
+              "type": 0,
+            }
+          }
+        >
+          <RNSVGDefs>
+            <RNSVGLinearGradient
+              gradient={
+                [
+                  0,
+                  16777215,
+                  0.5,
+                  1811939327,
+                  1,
+                  16777215,
+                ]
+              }
+              gradientTransform={null}
+              gradientUnits={0}
+              name="card-shine"
+              x1="0"
+              x2="1"
+              y1="0"
+              y2="0"
+            />
+          </RNSVGDefs>
+          <RNSVGRect
+            fill={
+              {
+                "brushRef": "card-shine",
+                "type": 1,
+              }
+            }
+            height={302.0467289719626}
+            propList={
+              [
+                "fill",
+              ]
+            }
+            width={157.32}
+            x={0}
+            y={0}
+          />
+        </RNSVGGroup>
+      </RNSVGSvgView>
     </View>
   </View>
 </View>
@@ -901,6 +1265,97 @@ exports[`dark mode agent-remy draws its face 1`] = `
         Research · pays in dollars
       </Text>
     </View>
+    <View
+      collapsable={false}
+      pointerEvents="none"
+      style={
+        {
+          "height": 302.0467289719626,
+          "left": 0,
+          "position": "absolute",
+          "top": -43.149532710280376,
+          "transform": [
+            {
+              "translateX": -205.2,
+            },
+            {
+              "skewX": "-18deg",
+            },
+          ],
+          "width": 157.32,
+        }
+      }
+      testID="card-shine"
+    >
+      <RNSVGSvgView
+        bbHeight={302.0467289719626}
+        bbWidth={157.32}
+        focusable={false}
+        height={302.0467289719626}
+        style={
+          [
+            {
+              "backgroundColor": "transparent",
+              "borderWidth": 0,
+            },
+            {
+              "flex": 0,
+              "height": 302,
+              "width": 157,
+            },
+          ]
+        }
+        width={157.32}
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "payload": 4278190080,
+              "type": 0,
+            }
+          }
+        >
+          <RNSVGDefs>
+            <RNSVGLinearGradient
+              gradient={
+                [
+                  0,
+                  16777215,
+                  0.5,
+                  1811939327,
+                  1,
+                  16777215,
+                ]
+              }
+              gradientTransform={null}
+              gradientUnits={0}
+              name="card-shine"
+              x1="0"
+              x2="1"
+              y1="0"
+              y2="0"
+            />
+          </RNSVGDefs>
+          <RNSVGRect
+            fill={
+              {
+                "brushRef": "card-shine",
+                "type": 1,
+              }
+            }
+            height={302.0467289719626}
+            propList={
+              [
+                "fill",
+              ]
+            }
+            width={157.32}
+            x={0}
+            y={0}
+          />
+        </RNSVGGroup>
+      </RNSVGSvgView>
+    </View>
   </View>
 </View>
 `;
@@ -1081,6 +1536,97 @@ exports[`dark mode agent-sunny draws its face 1`] = `
       >
         Research · pays in dollars
       </Text>
+    </View>
+    <View
+      collapsable={false}
+      pointerEvents="none"
+      style={
+        {
+          "height": 302.0467289719626,
+          "left": 0,
+          "position": "absolute",
+          "top": -43.149532710280376,
+          "transform": [
+            {
+              "translateX": -205.2,
+            },
+            {
+              "skewX": "-18deg",
+            },
+          ],
+          "width": 157.32,
+        }
+      }
+      testID="card-shine"
+    >
+      <RNSVGSvgView
+        bbHeight={302.0467289719626}
+        bbWidth={157.32}
+        focusable={false}
+        height={302.0467289719626}
+        style={
+          [
+            {
+              "backgroundColor": "transparent",
+              "borderWidth": 0,
+            },
+            {
+              "flex": 0,
+              "height": 302,
+              "width": 157,
+            },
+          ]
+        }
+        width={157.32}
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "payload": 4278190080,
+              "type": 0,
+            }
+          }
+        >
+          <RNSVGDefs>
+            <RNSVGLinearGradient
+              gradient={
+                [
+                  0,
+                  16777215,
+                  0.5,
+                  1811939327,
+                  1,
+                  16777215,
+                ]
+              }
+              gradientTransform={null}
+              gradientUnits={0}
+              name="card-shine"
+              x1="0"
+              x2="1"
+              y1="0"
+              y2="0"
+            />
+          </RNSVGDefs>
+          <RNSVGRect
+            fill={
+              {
+                "brushRef": "card-shine",
+                "type": 1,
+              }
+            }
+            height={302.0467289719626}
+            propList={
+              [
+                "fill",
+              ]
+            }
+            width={157.32}
+            x={0}
+            y={0}
+          />
+        </RNSVGGroup>
+      </RNSVGSvgView>
     </View>
   </View>
 </View>
@@ -1491,6 +2037,97 @@ exports[`dark mode business draws its face 1`] = `
         Your everyday account
       </Text>
     </View>
+    <View
+      collapsable={false}
+      pointerEvents="none"
+      style={
+        {
+          "height": 302.0467289719626,
+          "left": 0,
+          "position": "absolute",
+          "top": -43.149532710280376,
+          "transform": [
+            {
+              "translateX": -205.2,
+            },
+            {
+              "skewX": "-18deg",
+            },
+          ],
+          "width": 157.32,
+        }
+      }
+      testID="card-shine"
+    >
+      <RNSVGSvgView
+        bbHeight={302.0467289719626}
+        bbWidth={157.32}
+        focusable={false}
+        height={302.0467289719626}
+        style={
+          [
+            {
+              "backgroundColor": "transparent",
+              "borderWidth": 0,
+            },
+            {
+              "flex": 0,
+              "height": 302,
+              "width": 157,
+            },
+          ]
+        }
+        width={157.32}
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "payload": 4278190080,
+              "type": 0,
+            }
+          }
+        >
+          <RNSVGDefs>
+            <RNSVGLinearGradient
+              gradient={
+                [
+                  0,
+                  16777215,
+                  0.5,
+                  1811939327,
+                  1,
+                  16777215,
+                ]
+              }
+              gradientTransform={null}
+              gradientUnits={0}
+              name="card-shine"
+              x1="0"
+              x2="1"
+              y1="0"
+              y2="0"
+            />
+          </RNSVGDefs>
+          <RNSVGRect
+            fill={
+              {
+                "brushRef": "card-shine",
+                "type": 1,
+              }
+            }
+            height={302.0467289719626}
+            propList={
+              [
+                "fill",
+              ]
+            }
+            width={157.32}
+            x={0}
+            y={0}
+          />
+        </RNSVGGroup>
+      </RNSVGSvgView>
+    </View>
   </View>
 </View>
 `;
@@ -1899,6 +2536,97 @@ exports[`dark mode daily draws its face 1`] = `
       >
         Your everyday account
       </Text>
+    </View>
+    <View
+      collapsable={false}
+      pointerEvents="none"
+      style={
+        {
+          "height": 302.0467289719626,
+          "left": 0,
+          "position": "absolute",
+          "top": -43.149532710280376,
+          "transform": [
+            {
+              "translateX": -205.2,
+            },
+            {
+              "skewX": "-18deg",
+            },
+          ],
+          "width": 157.32,
+        }
+      }
+      testID="card-shine"
+    >
+      <RNSVGSvgView
+        bbHeight={302.0467289719626}
+        bbWidth={157.32}
+        focusable={false}
+        height={302.0467289719626}
+        style={
+          [
+            {
+              "backgroundColor": "transparent",
+              "borderWidth": 0,
+            },
+            {
+              "flex": 0,
+              "height": 302,
+              "width": 157,
+            },
+          ]
+        }
+        width={157.32}
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "payload": 4278190080,
+              "type": 0,
+            }
+          }
+        >
+          <RNSVGDefs>
+            <RNSVGLinearGradient
+              gradient={
+                [
+                  0,
+                  16777215,
+                  0.5,
+                  1811939327,
+                  1,
+                  16777215,
+                ]
+              }
+              gradientTransform={null}
+              gradientUnits={0}
+              name="card-shine"
+              x1="0"
+              x2="1"
+              y1="0"
+              y2="0"
+            />
+          </RNSVGDefs>
+          <RNSVGRect
+            fill={
+              {
+                "brushRef": "card-shine",
+                "type": 1,
+              }
+            }
+            height={302.0467289719626}
+            propList={
+              [
+                "fill",
+              ]
+            }
+            width={157.32}
+            x={0}
+            y={0}
+          />
+        </RNSVGGroup>
+      </RNSVGSvgView>
     </View>
   </View>
 </View>
@@ -2309,6 +3037,97 @@ exports[`dark mode enterprise draws its face 1`] = `
         Your everyday account
       </Text>
     </View>
+    <View
+      collapsable={false}
+      pointerEvents="none"
+      style={
+        {
+          "height": 302.0467289719626,
+          "left": 0,
+          "position": "absolute",
+          "top": -43.149532710280376,
+          "transform": [
+            {
+              "translateX": -205.2,
+            },
+            {
+              "skewX": "-18deg",
+            },
+          ],
+          "width": 157.32,
+        }
+      }
+      testID="card-shine"
+    >
+      <RNSVGSvgView
+        bbHeight={302.0467289719626}
+        bbWidth={157.32}
+        focusable={false}
+        height={302.0467289719626}
+        style={
+          [
+            {
+              "backgroundColor": "transparent",
+              "borderWidth": 0,
+            },
+            {
+              "flex": 0,
+              "height": 302,
+              "width": 157,
+            },
+          ]
+        }
+        width={157.32}
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "payload": 4278190080,
+              "type": 0,
+            }
+          }
+        >
+          <RNSVGDefs>
+            <RNSVGLinearGradient
+              gradient={
+                [
+                  0,
+                  16777215,
+                  0.5,
+                  1811939327,
+                  1,
+                  16777215,
+                ]
+              }
+              gradientTransform={null}
+              gradientUnits={0}
+              name="card-shine"
+              x1="0"
+              x2="1"
+              y1="0"
+              y2="0"
+            />
+          </RNSVGDefs>
+          <RNSVGRect
+            fill={
+              {
+                "brushRef": "card-shine",
+                "type": 1,
+              }
+            }
+            height={302.0467289719626}
+            propList={
+              [
+                "fill",
+              ]
+            }
+            width={157.32}
+            x={0}
+            y={0}
+          />
+        </RNSVGGroup>
+      </RNSVGSvgView>
+    </View>
   </View>
 </View>
 `;
@@ -2718,6 +3537,97 @@ exports[`dark mode platinum draws its face 1`] = `
         Your everyday account
       </Text>
     </View>
+    <View
+      collapsable={false}
+      pointerEvents="none"
+      style={
+        {
+          "height": 302.0467289719626,
+          "left": 0,
+          "position": "absolute",
+          "top": -43.149532710280376,
+          "transform": [
+            {
+              "translateX": -205.2,
+            },
+            {
+              "skewX": "-18deg",
+            },
+          ],
+          "width": 157.32,
+        }
+      }
+      testID="card-shine"
+    >
+      <RNSVGSvgView
+        bbHeight={302.0467289719626}
+        bbWidth={157.32}
+        focusable={false}
+        height={302.0467289719626}
+        style={
+          [
+            {
+              "backgroundColor": "transparent",
+              "borderWidth": 0,
+            },
+            {
+              "flex": 0,
+              "height": 302,
+              "width": 157,
+            },
+          ]
+        }
+        width={157.32}
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "payload": 4278190080,
+              "type": 0,
+            }
+          }
+        >
+          <RNSVGDefs>
+            <RNSVGLinearGradient
+              gradient={
+                [
+                  0,
+                  16777215,
+                  0.5,
+                  1811939327,
+                  1,
+                  16777215,
+                ]
+              }
+              gradientTransform={null}
+              gradientUnits={0}
+              name="card-shine"
+              x1="0"
+              x2="1"
+              y1="0"
+              y2="0"
+            />
+          </RNSVGDefs>
+          <RNSVGRect
+            fill={
+              {
+                "brushRef": "card-shine",
+                "type": 1,
+              }
+            }
+            height={302.0467289719626}
+            propList={
+              [
+                "fill",
+              ]
+            }
+            width={157.32}
+            x={0}
+            y={0}
+          />
+        </RNSVGGroup>
+      </RNSVGSvgView>
+    </View>
   </View>
 </View>
 `;
@@ -3126,6 +4036,97 @@ exports[`dark mode premium draws its face 1`] = `
       >
         Your everyday account
       </Text>
+    </View>
+    <View
+      collapsable={false}
+      pointerEvents="none"
+      style={
+        {
+          "height": 302.0467289719626,
+          "left": 0,
+          "position": "absolute",
+          "top": -43.149532710280376,
+          "transform": [
+            {
+              "translateX": -205.2,
+            },
+            {
+              "skewX": "-18deg",
+            },
+          ],
+          "width": 157.32,
+        }
+      }
+      testID="card-shine"
+    >
+      <RNSVGSvgView
+        bbHeight={302.0467289719626}
+        bbWidth={157.32}
+        focusable={false}
+        height={302.0467289719626}
+        style={
+          [
+            {
+              "backgroundColor": "transparent",
+              "borderWidth": 0,
+            },
+            {
+              "flex": 0,
+              "height": 302,
+              "width": 157,
+            },
+          ]
+        }
+        width={157.32}
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "payload": 4278190080,
+              "type": 0,
+            }
+          }
+        >
+          <RNSVGDefs>
+            <RNSVGLinearGradient
+              gradient={
+                [
+                  0,
+                  16777215,
+                  0.5,
+                  1811939327,
+                  1,
+                  16777215,
+                ]
+              }
+              gradientTransform={null}
+              gradientUnits={0}
+              name="card-shine"
+              x1="0"
+              x2="1"
+              y1="0"
+              y2="0"
+            />
+          </RNSVGDefs>
+          <RNSVGRect
+            fill={
+              {
+                "brushRef": "card-shine",
+                "type": 1,
+              }
+            }
+            height={302.0467289719626}
+            propList={
+              [
+                "fill",
+              ]
+            }
+            width={157.32}
+            x={0}
+            y={0}
+          />
+        </RNSVGGroup>
+      </RNSVGSvgView>
     </View>
   </View>
 </View>
@@ -3563,6 +4564,97 @@ exports[`dark mode stable draws its face 1`] = `
         Your everyday account
       </Text>
     </View>
+    <View
+      collapsable={false}
+      pointerEvents="none"
+      style={
+        {
+          "height": 302.0467289719626,
+          "left": 0,
+          "position": "absolute",
+          "top": -43.149532710280376,
+          "transform": [
+            {
+              "translateX": -205.2,
+            },
+            {
+              "skewX": "-18deg",
+            },
+          ],
+          "width": 157.32,
+        }
+      }
+      testID="card-shine"
+    >
+      <RNSVGSvgView
+        bbHeight={302.0467289719626}
+        bbWidth={157.32}
+        focusable={false}
+        height={302.0467289719626}
+        style={
+          [
+            {
+              "backgroundColor": "transparent",
+              "borderWidth": 0,
+            },
+            {
+              "flex": 0,
+              "height": 302,
+              "width": 157,
+            },
+          ]
+        }
+        width={157.32}
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "payload": 4278190080,
+              "type": 0,
+            }
+          }
+        >
+          <RNSVGDefs>
+            <RNSVGLinearGradient
+              gradient={
+                [
+                  0,
+                  16777215,
+                  0.5,
+                  1811939327,
+                  1,
+                  16777215,
+                ]
+              }
+              gradientTransform={null}
+              gradientUnits={0}
+              name="card-shine"
+              x1="0"
+              x2="1"
+              y1="0"
+              y2="0"
+            />
+          </RNSVGDefs>
+          <RNSVGRect
+            fill={
+              {
+                "brushRef": "card-shine",
+                "type": 1,
+              }
+            }
+            height={302.0467289719626}
+            propList={
+              [
+                "fill",
+              ]
+            }
+            width={157.32}
+            x={0}
+            y={0}
+          />
+        </RNSVGGroup>
+      </RNSVGSvgView>
+    </View>
   </View>
 </View>
 `;
@@ -3998,6 +5090,97 @@ exports[`dark mode stable-platinum draws its face 1`] = `
       >
         Your everyday account
       </Text>
+    </View>
+    <View
+      collapsable={false}
+      pointerEvents="none"
+      style={
+        {
+          "height": 302.0467289719626,
+          "left": 0,
+          "position": "absolute",
+          "top": -43.149532710280376,
+          "transform": [
+            {
+              "translateX": -205.2,
+            },
+            {
+              "skewX": "-18deg",
+            },
+          ],
+          "width": 157.32,
+        }
+      }
+      testID="card-shine"
+    >
+      <RNSVGSvgView
+        bbHeight={302.0467289719626}
+        bbWidth={157.32}
+        focusable={false}
+        height={302.0467289719626}
+        style={
+          [
+            {
+              "backgroundColor": "transparent",
+              "borderWidth": 0,
+            },
+            {
+              "flex": 0,
+              "height": 302,
+              "width": 157,
+            },
+          ]
+        }
+        width={157.32}
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "payload": 4278190080,
+              "type": 0,
+            }
+          }
+        >
+          <RNSVGDefs>
+            <RNSVGLinearGradient
+              gradient={
+                [
+                  0,
+                  16777215,
+                  0.5,
+                  1811939327,
+                  1,
+                  16777215,
+                ]
+              }
+              gradientTransform={null}
+              gradientUnits={0}
+              name="card-shine"
+              x1="0"
+              x2="1"
+              y1="0"
+              y2="0"
+            />
+          </RNSVGDefs>
+          <RNSVGRect
+            fill={
+              {
+                "brushRef": "card-shine",
+                "type": 1,
+              }
+            }
+            height={302.0467289719626}
+            propList={
+              [
+                "fill",
+              ]
+            }
+            width={157.32}
+            x={0}
+            y={0}
+          />
+        </RNSVGGroup>
+      </RNSVGSvgView>
     </View>
   </View>
 </View>
@@ -4435,6 +5618,97 @@ exports[`dark mode stable-premium draws its face 1`] = `
         Your everyday account
       </Text>
     </View>
+    <View
+      collapsable={false}
+      pointerEvents="none"
+      style={
+        {
+          "height": 302.0467289719626,
+          "left": 0,
+          "position": "absolute",
+          "top": -43.149532710280376,
+          "transform": [
+            {
+              "translateX": -205.2,
+            },
+            {
+              "skewX": "-18deg",
+            },
+          ],
+          "width": 157.32,
+        }
+      }
+      testID="card-shine"
+    >
+      <RNSVGSvgView
+        bbHeight={302.0467289719626}
+        bbWidth={157.32}
+        focusable={false}
+        height={302.0467289719626}
+        style={
+          [
+            {
+              "backgroundColor": "transparent",
+              "borderWidth": 0,
+            },
+            {
+              "flex": 0,
+              "height": 302,
+              "width": 157,
+            },
+          ]
+        }
+        width={157.32}
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "payload": 4278190080,
+              "type": 0,
+            }
+          }
+        >
+          <RNSVGDefs>
+            <RNSVGLinearGradient
+              gradient={
+                [
+                  0,
+                  16777215,
+                  0.5,
+                  1811939327,
+                  1,
+                  16777215,
+                ]
+              }
+              gradientTransform={null}
+              gradientUnits={0}
+              name="card-shine"
+              x1="0"
+              x2="1"
+              y1="0"
+              y2="0"
+            />
+          </RNSVGDefs>
+          <RNSVGRect
+            fill={
+              {
+                "brushRef": "card-shine",
+                "type": 1,
+              }
+            }
+            height={302.0467289719626}
+            propList={
+              [
+                "fill",
+              ]
+            }
+            width={157.32}
+            x={0}
+            y={0}
+          />
+        </RNSVGGroup>
+      </RNSVGSvgView>
+    </View>
   </View>
 </View>
 `;
@@ -4844,6 +6118,97 @@ exports[`dark mode team draws its face 1`] = `
         Your everyday account
       </Text>
     </View>
+    <View
+      collapsable={false}
+      pointerEvents="none"
+      style={
+        {
+          "height": 302.0467289719626,
+          "left": 0,
+          "position": "absolute",
+          "top": -43.149532710280376,
+          "transform": [
+            {
+              "translateX": -205.2,
+            },
+            {
+              "skewX": "-18deg",
+            },
+          ],
+          "width": 157.32,
+        }
+      }
+      testID="card-shine"
+    >
+      <RNSVGSvgView
+        bbHeight={302.0467289719626}
+        bbWidth={157.32}
+        focusable={false}
+        height={302.0467289719626}
+        style={
+          [
+            {
+              "backgroundColor": "transparent",
+              "borderWidth": 0,
+            },
+            {
+              "flex": 0,
+              "height": 302,
+              "width": 157,
+            },
+          ]
+        }
+        width={157.32}
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "payload": 4278190080,
+              "type": 0,
+            }
+          }
+        >
+          <RNSVGDefs>
+            <RNSVGLinearGradient
+              gradient={
+                [
+                  0,
+                  16777215,
+                  0.5,
+                  1811939327,
+                  1,
+                  16777215,
+                ]
+              }
+              gradientTransform={null}
+              gradientUnits={0}
+              name="card-shine"
+              x1="0"
+              x2="1"
+              y1="0"
+              y2="0"
+            />
+          </RNSVGDefs>
+          <RNSVGRect
+            fill={
+              {
+                "brushRef": "card-shine",
+                "type": 1,
+              }
+            }
+            height={302.0467289719626}
+            propList={
+              [
+                "fill",
+              ]
+            }
+            width={157.32}
+            x={0}
+            y={0}
+          />
+        </RNSVGGroup>
+      </RNSVGSvgView>
+    </View>
   </View>
 </View>
 `;
@@ -5030,6 +6395,97 @@ exports[`light mode agent-max draws its face 1`] = `
       >
         Research · pays in dollars
       </Text>
+    </View>
+    <View
+      collapsable={false}
+      pointerEvents="none"
+      style={
+        {
+          "height": 302.0467289719626,
+          "left": 0,
+          "position": "absolute",
+          "top": -43.149532710280376,
+          "transform": [
+            {
+              "translateX": -205.2,
+            },
+            {
+              "skewX": "-18deg",
+            },
+          ],
+          "width": 157.32,
+        }
+      }
+      testID="card-shine"
+    >
+      <RNSVGSvgView
+        bbHeight={302.0467289719626}
+        bbWidth={157.32}
+        focusable={false}
+        height={302.0467289719626}
+        style={
+          [
+            {
+              "backgroundColor": "transparent",
+              "borderWidth": 0,
+            },
+            {
+              "flex": 0,
+              "height": 302,
+              "width": 157,
+            },
+          ]
+        }
+        width={157.32}
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "payload": 4278190080,
+              "type": 0,
+            }
+          }
+        >
+          <RNSVGDefs>
+            <RNSVGLinearGradient
+              gradient={
+                [
+                  0,
+                  16777215,
+                  0.5,
+                  1811939327,
+                  1,
+                  16777215,
+                ]
+              }
+              gradientTransform={null}
+              gradientUnits={0}
+              name="card-shine"
+              x1="0"
+              x2="1"
+              y1="0"
+              y2="0"
+            />
+          </RNSVGDefs>
+          <RNSVGRect
+            fill={
+              {
+                "brushRef": "card-shine",
+                "type": 1,
+              }
+            }
+            height={302.0467289719626}
+            propList={
+              [
+                "fill",
+              ]
+            }
+            width={157.32}
+            x={0}
+            y={0}
+          />
+        </RNSVGGroup>
+      </RNSVGSvgView>
     </View>
   </View>
 </View>
@@ -5218,6 +6674,97 @@ exports[`light mode agent-nova draws its face 1`] = `
         Research · pays in dollars
       </Text>
     </View>
+    <View
+      collapsable={false}
+      pointerEvents="none"
+      style={
+        {
+          "height": 302.0467289719626,
+          "left": 0,
+          "position": "absolute",
+          "top": -43.149532710280376,
+          "transform": [
+            {
+              "translateX": -205.2,
+            },
+            {
+              "skewX": "-18deg",
+            },
+          ],
+          "width": 157.32,
+        }
+      }
+      testID="card-shine"
+    >
+      <RNSVGSvgView
+        bbHeight={302.0467289719626}
+        bbWidth={157.32}
+        focusable={false}
+        height={302.0467289719626}
+        style={
+          [
+            {
+              "backgroundColor": "transparent",
+              "borderWidth": 0,
+            },
+            {
+              "flex": 0,
+              "height": 302,
+              "width": 157,
+            },
+          ]
+        }
+        width={157.32}
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "payload": 4278190080,
+              "type": 0,
+            }
+          }
+        >
+          <RNSVGDefs>
+            <RNSVGLinearGradient
+              gradient={
+                [
+                  0,
+                  16777215,
+                  0.5,
+                  1811939327,
+                  1,
+                  16777215,
+                ]
+              }
+              gradientTransform={null}
+              gradientUnits={0}
+              name="card-shine"
+              x1="0"
+              x2="1"
+              y1="0"
+              y2="0"
+            />
+          </RNSVGDefs>
+          <RNSVGRect
+            fill={
+              {
+                "brushRef": "card-shine",
+                "type": 1,
+              }
+            }
+            height={302.0467289719626}
+            propList={
+              [
+                "fill",
+              ]
+            }
+            width={157.32}
+            x={0}
+            y={0}
+          />
+        </RNSVGGroup>
+      </RNSVGSvgView>
+    </View>
   </View>
 </View>
 `;
@@ -5404,6 +6951,97 @@ exports[`light mode agent-ollie draws its face 1`] = `
       >
         Research · pays in dollars
       </Text>
+    </View>
+    <View
+      collapsable={false}
+      pointerEvents="none"
+      style={
+        {
+          "height": 302.0467289719626,
+          "left": 0,
+          "position": "absolute",
+          "top": -43.149532710280376,
+          "transform": [
+            {
+              "translateX": -205.2,
+            },
+            {
+              "skewX": "-18deg",
+            },
+          ],
+          "width": 157.32,
+        }
+      }
+      testID="card-shine"
+    >
+      <RNSVGSvgView
+        bbHeight={302.0467289719626}
+        bbWidth={157.32}
+        focusable={false}
+        height={302.0467289719626}
+        style={
+          [
+            {
+              "backgroundColor": "transparent",
+              "borderWidth": 0,
+            },
+            {
+              "flex": 0,
+              "height": 302,
+              "width": 157,
+            },
+          ]
+        }
+        width={157.32}
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "payload": 4278190080,
+              "type": 0,
+            }
+          }
+        >
+          <RNSVGDefs>
+            <RNSVGLinearGradient
+              gradient={
+                [
+                  0,
+                  16777215,
+                  0.5,
+                  1811939327,
+                  1,
+                  16777215,
+                ]
+              }
+              gradientTransform={null}
+              gradientUnits={0}
+              name="card-shine"
+              x1="0"
+              x2="1"
+              y1="0"
+              y2="0"
+            />
+          </RNSVGDefs>
+          <RNSVGRect
+            fill={
+              {
+                "brushRef": "card-shine",
+                "type": 1,
+              }
+            }
+            height={302.0467289719626}
+            propList={
+              [
+                "fill",
+              ]
+            }
+            width={157.32}
+            x={0}
+            y={0}
+          />
+        </RNSVGGroup>
+      </RNSVGSvgView>
     </View>
   </View>
 </View>
@@ -5592,6 +7230,97 @@ exports[`light mode agent-penny draws its face 1`] = `
         Research · pays in dollars
       </Text>
     </View>
+    <View
+      collapsable={false}
+      pointerEvents="none"
+      style={
+        {
+          "height": 302.0467289719626,
+          "left": 0,
+          "position": "absolute",
+          "top": -43.149532710280376,
+          "transform": [
+            {
+              "translateX": -205.2,
+            },
+            {
+              "skewX": "-18deg",
+            },
+          ],
+          "width": 157.32,
+        }
+      }
+      testID="card-shine"
+    >
+      <RNSVGSvgView
+        bbHeight={302.0467289719626}
+        bbWidth={157.32}
+        focusable={false}
+        height={302.0467289719626}
+        style={
+          [
+            {
+              "backgroundColor": "transparent",
+              "borderWidth": 0,
+            },
+            {
+              "flex": 0,
+              "height": 302,
+              "width": 157,
+            },
+          ]
+        }
+        width={157.32}
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "payload": 4278190080,
+              "type": 0,
+            }
+          }
+        >
+          <RNSVGDefs>
+            <RNSVGLinearGradient
+              gradient={
+                [
+                  0,
+                  16777215,
+                  0.5,
+                  1811939327,
+                  1,
+                  16777215,
+                ]
+              }
+              gradientTransform={null}
+              gradientUnits={0}
+              name="card-shine"
+              x1="0"
+              x2="1"
+              y1="0"
+              y2="0"
+            />
+          </RNSVGDefs>
+          <RNSVGRect
+            fill={
+              {
+                "brushRef": "card-shine",
+                "type": 1,
+              }
+            }
+            height={302.0467289719626}
+            propList={
+              [
+                "fill",
+              ]
+            }
+            width={157.32}
+            x={0}
+            y={0}
+          />
+        </RNSVGGroup>
+      </RNSVGSvgView>
+    </View>
   </View>
 </View>
 `;
@@ -5779,6 +7508,97 @@ exports[`light mode agent-remy draws its face 1`] = `
         Research · pays in dollars
       </Text>
     </View>
+    <View
+      collapsable={false}
+      pointerEvents="none"
+      style={
+        {
+          "height": 302.0467289719626,
+          "left": 0,
+          "position": "absolute",
+          "top": -43.149532710280376,
+          "transform": [
+            {
+              "translateX": -205.2,
+            },
+            {
+              "skewX": "-18deg",
+            },
+          ],
+          "width": 157.32,
+        }
+      }
+      testID="card-shine"
+    >
+      <RNSVGSvgView
+        bbHeight={302.0467289719626}
+        bbWidth={157.32}
+        focusable={false}
+        height={302.0467289719626}
+        style={
+          [
+            {
+              "backgroundColor": "transparent",
+              "borderWidth": 0,
+            },
+            {
+              "flex": 0,
+              "height": 302,
+              "width": 157,
+            },
+          ]
+        }
+        width={157.32}
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "payload": 4278190080,
+              "type": 0,
+            }
+          }
+        >
+          <RNSVGDefs>
+            <RNSVGLinearGradient
+              gradient={
+                [
+                  0,
+                  16777215,
+                  0.5,
+                  1811939327,
+                  1,
+                  16777215,
+                ]
+              }
+              gradientTransform={null}
+              gradientUnits={0}
+              name="card-shine"
+              x1="0"
+              x2="1"
+              y1="0"
+              y2="0"
+            />
+          </RNSVGDefs>
+          <RNSVGRect
+            fill={
+              {
+                "brushRef": "card-shine",
+                "type": 1,
+              }
+            }
+            height={302.0467289719626}
+            propList={
+              [
+                "fill",
+              ]
+            }
+            width={157.32}
+            x={0}
+            y={0}
+          />
+        </RNSVGGroup>
+      </RNSVGSvgView>
+    </View>
   </View>
 </View>
 `;
@@ -5965,6 +7785,97 @@ exports[`light mode agent-sunny draws its face 1`] = `
       >
         Research · pays in dollars
       </Text>
+    </View>
+    <View
+      collapsable={false}
+      pointerEvents="none"
+      style={
+        {
+          "height": 302.0467289719626,
+          "left": 0,
+          "position": "absolute",
+          "top": -43.149532710280376,
+          "transform": [
+            {
+              "translateX": -205.2,
+            },
+            {
+              "skewX": "-18deg",
+            },
+          ],
+          "width": 157.32,
+        }
+      }
+      testID="card-shine"
+    >
+      <RNSVGSvgView
+        bbHeight={302.0467289719626}
+        bbWidth={157.32}
+        focusable={false}
+        height={302.0467289719626}
+        style={
+          [
+            {
+              "backgroundColor": "transparent",
+              "borderWidth": 0,
+            },
+            {
+              "flex": 0,
+              "height": 302,
+              "width": 157,
+            },
+          ]
+        }
+        width={157.32}
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "payload": 4278190080,
+              "type": 0,
+            }
+          }
+        >
+          <RNSVGDefs>
+            <RNSVGLinearGradient
+              gradient={
+                [
+                  0,
+                  16777215,
+                  0.5,
+                  1811939327,
+                  1,
+                  16777215,
+                ]
+              }
+              gradientTransform={null}
+              gradientUnits={0}
+              name="card-shine"
+              x1="0"
+              x2="1"
+              y1="0"
+              y2="0"
+            />
+          </RNSVGDefs>
+          <RNSVGRect
+            fill={
+              {
+                "brushRef": "card-shine",
+                "type": 1,
+              }
+            }
+            height={302.0467289719626}
+            propList={
+              [
+                "fill",
+              ]
+            }
+            width={157.32}
+            x={0}
+            y={0}
+          />
+        </RNSVGGroup>
+      </RNSVGSvgView>
     </View>
   </View>
 </View>
@@ -6381,6 +8292,97 @@ exports[`light mode business draws its face 1`] = `
         Your everyday account
       </Text>
     </View>
+    <View
+      collapsable={false}
+      pointerEvents="none"
+      style={
+        {
+          "height": 302.0467289719626,
+          "left": 0,
+          "position": "absolute",
+          "top": -43.149532710280376,
+          "transform": [
+            {
+              "translateX": -205.2,
+            },
+            {
+              "skewX": "-18deg",
+            },
+          ],
+          "width": 157.32,
+        }
+      }
+      testID="card-shine"
+    >
+      <RNSVGSvgView
+        bbHeight={302.0467289719626}
+        bbWidth={157.32}
+        focusable={false}
+        height={302.0467289719626}
+        style={
+          [
+            {
+              "backgroundColor": "transparent",
+              "borderWidth": 0,
+            },
+            {
+              "flex": 0,
+              "height": 302,
+              "width": 157,
+            },
+          ]
+        }
+        width={157.32}
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "payload": 4278190080,
+              "type": 0,
+            }
+          }
+        >
+          <RNSVGDefs>
+            <RNSVGLinearGradient
+              gradient={
+                [
+                  0,
+                  16777215,
+                  0.5,
+                  1811939327,
+                  1,
+                  16777215,
+                ]
+              }
+              gradientTransform={null}
+              gradientUnits={0}
+              name="card-shine"
+              x1="0"
+              x2="1"
+              y1="0"
+              y2="0"
+            />
+          </RNSVGDefs>
+          <RNSVGRect
+            fill={
+              {
+                "brushRef": "card-shine",
+                "type": 1,
+              }
+            }
+            height={302.0467289719626}
+            propList={
+              [
+                "fill",
+              ]
+            }
+            width={157.32}
+            x={0}
+            y={0}
+          />
+        </RNSVGGroup>
+      </RNSVGSvgView>
+    </View>
   </View>
 </View>
 `;
@@ -6795,6 +8797,97 @@ exports[`light mode daily draws its face 1`] = `
       >
         Your everyday account
       </Text>
+    </View>
+    <View
+      collapsable={false}
+      pointerEvents="none"
+      style={
+        {
+          "height": 302.0467289719626,
+          "left": 0,
+          "position": "absolute",
+          "top": -43.149532710280376,
+          "transform": [
+            {
+              "translateX": -205.2,
+            },
+            {
+              "skewX": "-18deg",
+            },
+          ],
+          "width": 157.32,
+        }
+      }
+      testID="card-shine"
+    >
+      <RNSVGSvgView
+        bbHeight={302.0467289719626}
+        bbWidth={157.32}
+        focusable={false}
+        height={302.0467289719626}
+        style={
+          [
+            {
+              "backgroundColor": "transparent",
+              "borderWidth": 0,
+            },
+            {
+              "flex": 0,
+              "height": 302,
+              "width": 157,
+            },
+          ]
+        }
+        width={157.32}
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "payload": 4278190080,
+              "type": 0,
+            }
+          }
+        >
+          <RNSVGDefs>
+            <RNSVGLinearGradient
+              gradient={
+                [
+                  0,
+                  16777215,
+                  0.5,
+                  1811939327,
+                  1,
+                  16777215,
+                ]
+              }
+              gradientTransform={null}
+              gradientUnits={0}
+              name="card-shine"
+              x1="0"
+              x2="1"
+              y1="0"
+              y2="0"
+            />
+          </RNSVGDefs>
+          <RNSVGRect
+            fill={
+              {
+                "brushRef": "card-shine",
+                "type": 1,
+              }
+            }
+            height={302.0467289719626}
+            propList={
+              [
+                "fill",
+              ]
+            }
+            width={157.32}
+            x={0}
+            y={0}
+          />
+        </RNSVGGroup>
+      </RNSVGSvgView>
     </View>
   </View>
 </View>
@@ -7211,6 +9304,97 @@ exports[`light mode enterprise draws its face 1`] = `
         Your everyday account
       </Text>
     </View>
+    <View
+      collapsable={false}
+      pointerEvents="none"
+      style={
+        {
+          "height": 302.0467289719626,
+          "left": 0,
+          "position": "absolute",
+          "top": -43.149532710280376,
+          "transform": [
+            {
+              "translateX": -205.2,
+            },
+            {
+              "skewX": "-18deg",
+            },
+          ],
+          "width": 157.32,
+        }
+      }
+      testID="card-shine"
+    >
+      <RNSVGSvgView
+        bbHeight={302.0467289719626}
+        bbWidth={157.32}
+        focusable={false}
+        height={302.0467289719626}
+        style={
+          [
+            {
+              "backgroundColor": "transparent",
+              "borderWidth": 0,
+            },
+            {
+              "flex": 0,
+              "height": 302,
+              "width": 157,
+            },
+          ]
+        }
+        width={157.32}
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "payload": 4278190080,
+              "type": 0,
+            }
+          }
+        >
+          <RNSVGDefs>
+            <RNSVGLinearGradient
+              gradient={
+                [
+                  0,
+                  16777215,
+                  0.5,
+                  1811939327,
+                  1,
+                  16777215,
+                ]
+              }
+              gradientTransform={null}
+              gradientUnits={0}
+              name="card-shine"
+              x1="0"
+              x2="1"
+              y1="0"
+              y2="0"
+            />
+          </RNSVGDefs>
+          <RNSVGRect
+            fill={
+              {
+                "brushRef": "card-shine",
+                "type": 1,
+              }
+            }
+            height={302.0467289719626}
+            propList={
+              [
+                "fill",
+              ]
+            }
+            width={157.32}
+            x={0}
+            y={0}
+          />
+        </RNSVGGroup>
+      </RNSVGSvgView>
+    </View>
   </View>
 </View>
 `;
@@ -7626,6 +9810,97 @@ exports[`light mode platinum draws its face 1`] = `
         Your everyday account
       </Text>
     </View>
+    <View
+      collapsable={false}
+      pointerEvents="none"
+      style={
+        {
+          "height": 302.0467289719626,
+          "left": 0,
+          "position": "absolute",
+          "top": -43.149532710280376,
+          "transform": [
+            {
+              "translateX": -205.2,
+            },
+            {
+              "skewX": "-18deg",
+            },
+          ],
+          "width": 157.32,
+        }
+      }
+      testID="card-shine"
+    >
+      <RNSVGSvgView
+        bbHeight={302.0467289719626}
+        bbWidth={157.32}
+        focusable={false}
+        height={302.0467289719626}
+        style={
+          [
+            {
+              "backgroundColor": "transparent",
+              "borderWidth": 0,
+            },
+            {
+              "flex": 0,
+              "height": 302,
+              "width": 157,
+            },
+          ]
+        }
+        width={157.32}
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "payload": 4278190080,
+              "type": 0,
+            }
+          }
+        >
+          <RNSVGDefs>
+            <RNSVGLinearGradient
+              gradient={
+                [
+                  0,
+                  16777215,
+                  0.5,
+                  1811939327,
+                  1,
+                  16777215,
+                ]
+              }
+              gradientTransform={null}
+              gradientUnits={0}
+              name="card-shine"
+              x1="0"
+              x2="1"
+              y1="0"
+              y2="0"
+            />
+          </RNSVGDefs>
+          <RNSVGRect
+            fill={
+              {
+                "brushRef": "card-shine",
+                "type": 1,
+              }
+            }
+            height={302.0467289719626}
+            propList={
+              [
+                "fill",
+              ]
+            }
+            width={157.32}
+            x={0}
+            y={0}
+          />
+        </RNSVGGroup>
+      </RNSVGSvgView>
+    </View>
   </View>
 </View>
 `;
@@ -8040,6 +10315,97 @@ exports[`light mode premium draws its face 1`] = `
       >
         Your everyday account
       </Text>
+    </View>
+    <View
+      collapsable={false}
+      pointerEvents="none"
+      style={
+        {
+          "height": 302.0467289719626,
+          "left": 0,
+          "position": "absolute",
+          "top": -43.149532710280376,
+          "transform": [
+            {
+              "translateX": -205.2,
+            },
+            {
+              "skewX": "-18deg",
+            },
+          ],
+          "width": 157.32,
+        }
+      }
+      testID="card-shine"
+    >
+      <RNSVGSvgView
+        bbHeight={302.0467289719626}
+        bbWidth={157.32}
+        focusable={false}
+        height={302.0467289719626}
+        style={
+          [
+            {
+              "backgroundColor": "transparent",
+              "borderWidth": 0,
+            },
+            {
+              "flex": 0,
+              "height": 302,
+              "width": 157,
+            },
+          ]
+        }
+        width={157.32}
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "payload": 4278190080,
+              "type": 0,
+            }
+          }
+        >
+          <RNSVGDefs>
+            <RNSVGLinearGradient
+              gradient={
+                [
+                  0,
+                  16777215,
+                  0.5,
+                  1811939327,
+                  1,
+                  16777215,
+                ]
+              }
+              gradientTransform={null}
+              gradientUnits={0}
+              name="card-shine"
+              x1="0"
+              x2="1"
+              y1="0"
+              y2="0"
+            />
+          </RNSVGDefs>
+          <RNSVGRect
+            fill={
+              {
+                "brushRef": "card-shine",
+                "type": 1,
+              }
+            }
+            height={302.0467289719626}
+            propList={
+              [
+                "fill",
+              ]
+            }
+            width={157.32}
+            x={0}
+            y={0}
+          />
+        </RNSVGGroup>
+      </RNSVGSvgView>
     </View>
   </View>
 </View>
@@ -8483,6 +10849,97 @@ exports[`light mode stable draws its face 1`] = `
         Your everyday account
       </Text>
     </View>
+    <View
+      collapsable={false}
+      pointerEvents="none"
+      style={
+        {
+          "height": 302.0467289719626,
+          "left": 0,
+          "position": "absolute",
+          "top": -43.149532710280376,
+          "transform": [
+            {
+              "translateX": -205.2,
+            },
+            {
+              "skewX": "-18deg",
+            },
+          ],
+          "width": 157.32,
+        }
+      }
+      testID="card-shine"
+    >
+      <RNSVGSvgView
+        bbHeight={302.0467289719626}
+        bbWidth={157.32}
+        focusable={false}
+        height={302.0467289719626}
+        style={
+          [
+            {
+              "backgroundColor": "transparent",
+              "borderWidth": 0,
+            },
+            {
+              "flex": 0,
+              "height": 302,
+              "width": 157,
+            },
+          ]
+        }
+        width={157.32}
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "payload": 4278190080,
+              "type": 0,
+            }
+          }
+        >
+          <RNSVGDefs>
+            <RNSVGLinearGradient
+              gradient={
+                [
+                  0,
+                  16777215,
+                  0.5,
+                  1811939327,
+                  1,
+                  16777215,
+                ]
+              }
+              gradientTransform={null}
+              gradientUnits={0}
+              name="card-shine"
+              x1="0"
+              x2="1"
+              y1="0"
+              y2="0"
+            />
+          </RNSVGDefs>
+          <RNSVGRect
+            fill={
+              {
+                "brushRef": "card-shine",
+                "type": 1,
+              }
+            }
+            height={302.0467289719626}
+            propList={
+              [
+                "fill",
+              ]
+            }
+            width={157.32}
+            x={0}
+            y={0}
+          />
+        </RNSVGGroup>
+      </RNSVGSvgView>
+    </View>
   </View>
 </View>
 `;
@@ -8924,6 +11381,97 @@ exports[`light mode stable-platinum draws its face 1`] = `
       >
         Your everyday account
       </Text>
+    </View>
+    <View
+      collapsable={false}
+      pointerEvents="none"
+      style={
+        {
+          "height": 302.0467289719626,
+          "left": 0,
+          "position": "absolute",
+          "top": -43.149532710280376,
+          "transform": [
+            {
+              "translateX": -205.2,
+            },
+            {
+              "skewX": "-18deg",
+            },
+          ],
+          "width": 157.32,
+        }
+      }
+      testID="card-shine"
+    >
+      <RNSVGSvgView
+        bbHeight={302.0467289719626}
+        bbWidth={157.32}
+        focusable={false}
+        height={302.0467289719626}
+        style={
+          [
+            {
+              "backgroundColor": "transparent",
+              "borderWidth": 0,
+            },
+            {
+              "flex": 0,
+              "height": 302,
+              "width": 157,
+            },
+          ]
+        }
+        width={157.32}
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "payload": 4278190080,
+              "type": 0,
+            }
+          }
+        >
+          <RNSVGDefs>
+            <RNSVGLinearGradient
+              gradient={
+                [
+                  0,
+                  16777215,
+                  0.5,
+                  1811939327,
+                  1,
+                  16777215,
+                ]
+              }
+              gradientTransform={null}
+              gradientUnits={0}
+              name="card-shine"
+              x1="0"
+              x2="1"
+              y1="0"
+              y2="0"
+            />
+          </RNSVGDefs>
+          <RNSVGRect
+            fill={
+              {
+                "brushRef": "card-shine",
+                "type": 1,
+              }
+            }
+            height={302.0467289719626}
+            propList={
+              [
+                "fill",
+              ]
+            }
+            width={157.32}
+            x={0}
+            y={0}
+          />
+        </RNSVGGroup>
+      </RNSVGSvgView>
     </View>
   </View>
 </View>
@@ -9367,6 +11915,97 @@ exports[`light mode stable-premium draws its face 1`] = `
         Your everyday account
       </Text>
     </View>
+    <View
+      collapsable={false}
+      pointerEvents="none"
+      style={
+        {
+          "height": 302.0467289719626,
+          "left": 0,
+          "position": "absolute",
+          "top": -43.149532710280376,
+          "transform": [
+            {
+              "translateX": -205.2,
+            },
+            {
+              "skewX": "-18deg",
+            },
+          ],
+          "width": 157.32,
+        }
+      }
+      testID="card-shine"
+    >
+      <RNSVGSvgView
+        bbHeight={302.0467289719626}
+        bbWidth={157.32}
+        focusable={false}
+        height={302.0467289719626}
+        style={
+          [
+            {
+              "backgroundColor": "transparent",
+              "borderWidth": 0,
+            },
+            {
+              "flex": 0,
+              "height": 302,
+              "width": 157,
+            },
+          ]
+        }
+        width={157.32}
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "payload": 4278190080,
+              "type": 0,
+            }
+          }
+        >
+          <RNSVGDefs>
+            <RNSVGLinearGradient
+              gradient={
+                [
+                  0,
+                  16777215,
+                  0.5,
+                  1811939327,
+                  1,
+                  16777215,
+                ]
+              }
+              gradientTransform={null}
+              gradientUnits={0}
+              name="card-shine"
+              x1="0"
+              x2="1"
+              y1="0"
+              y2="0"
+            />
+          </RNSVGDefs>
+          <RNSVGRect
+            fill={
+              {
+                "brushRef": "card-shine",
+                "type": 1,
+              }
+            }
+            height={302.0467289719626}
+            propList={
+              [
+                "fill",
+              ]
+            }
+            width={157.32}
+            x={0}
+            y={0}
+          />
+        </RNSVGGroup>
+      </RNSVGSvgView>
+    </View>
   </View>
 </View>
 `;
@@ -9781,6 +12420,97 @@ exports[`light mode team draws its face 1`] = `
       >
         Your everyday account
       </Text>
+    </View>
+    <View
+      collapsable={false}
+      pointerEvents="none"
+      style={
+        {
+          "height": 302.0467289719626,
+          "left": 0,
+          "position": "absolute",
+          "top": -43.149532710280376,
+          "transform": [
+            {
+              "translateX": -205.2,
+            },
+            {
+              "skewX": "-18deg",
+            },
+          ],
+          "width": 157.32,
+        }
+      }
+      testID="card-shine"
+    >
+      <RNSVGSvgView
+        bbHeight={302.0467289719626}
+        bbWidth={157.32}
+        focusable={false}
+        height={302.0467289719626}
+        style={
+          [
+            {
+              "backgroundColor": "transparent",
+              "borderWidth": 0,
+            },
+            {
+              "flex": 0,
+              "height": 302,
+              "width": 157,
+            },
+          ]
+        }
+        width={157.32}
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "payload": 4278190080,
+              "type": 0,
+            }
+          }
+        >
+          <RNSVGDefs>
+            <RNSVGLinearGradient
+              gradient={
+                [
+                  0,
+                  16777215,
+                  0.5,
+                  1811939327,
+                  1,
+                  16777215,
+                ]
+              }
+              gradientTransform={null}
+              gradientUnits={0}
+              name="card-shine"
+              x1="0"
+              x2="1"
+              y1="0"
+              y2="0"
+            />
+          </RNSVGDefs>
+          <RNSVGRect
+            fill={
+              {
+                "brushRef": "card-shine",
+                "type": 1,
+              }
+            }
+            height={302.0467289719626}
+            propList={
+              [
+                "fill",
+              ]
+            }
+            width={157.32}
+            x={0}
+            y={0}
+          />
+        </RNSVGGroup>
+      </RNSVGSvgView>
     </View>
   </View>
 </View>

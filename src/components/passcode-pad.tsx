@@ -1,8 +1,9 @@
 import { useState, type ReactNode } from 'react'
-import { Pressable, Text, View } from 'react-native'
+import { Text, View } from 'react-native'
 
 import { keyFelt } from '@/components/amount-pad'
 import { Icon } from '@/components/icon'
+import { Press } from '@/components/press'
 import { fonts, useTheme } from '@/theme'
 
 // B61.27 — Pocket Live's passcode: six dots, then the number pad (1 to 9; Face ID or nothing; 0; delete). The digits go
@@ -44,9 +45,14 @@ export function PasscodePad({ onDone, faceID, disabled, reset, spread, children 
     if (next.length === LENGTH) void Promise.resolve(onDone(next)).finally(() => setDigits(''))
   }
 
+  // B61.130 — a key ripples in a tint of ink from where the finger lands; its haptic comes with its sound.
   const key = (k: string, label: string, child: ReactNode) => (
-    <Pressable
+    <Press
       key={k}
+      kind="key"
+      haptic={false}
+      ripple="ink"
+      radius={35}
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ disabled }}
@@ -63,11 +69,10 @@ export function PasscodePad({ onDone, faceID, disabled, reset, spread, children 
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: pressed ? c.tint : 'transparent',
-        transform: [{ scale: pressed ? 0.94 : 1 }],
         opacity: disabled ? 0.5 : 1,
       })}>
       {child}
-    </Pressable>
+    </Press>
   )
   const digit = (n: string) =>
     key(n, n, <Text style={{ fontFamily: fonts.display, fontSize: 30, lineHeight: 36, color: c.ink, fontVariant: ['tabular-nums'] }}>{n}</Text>)

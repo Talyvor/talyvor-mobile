@@ -17,6 +17,7 @@ import { ScrollView, Text, useWindowDimensions, View } from 'react-native'
 import type { Shows } from '../account'
 import { biometricName, checkItsYou, forgetThisPhone, keyGone, keyGoneText, signWithThisPhone } from '../keys'
 import { rateText } from '../instant-transfer'
+import { moneyMoved } from '../effects'
 import { outcome } from '../sound'
 import { fonts, useTheme } from '../theme'
 import { CURRENCY_NAME, isStablecoin } from './home'
@@ -239,6 +240,7 @@ function TopUp({ client, shows, accounts: all, hasKey, open, onClose, onDone }: 
       if (check !== 'ok') return setRefusal('Nothing changed.')
       await client.walletTopUp(account!.id, minor!, key)
       outcome('moneyin')
+      moneyMoved('in')
       setKey('')
       setAmount('')
       onDone()
@@ -332,6 +334,7 @@ function Withdraw({ client, shows, accounts: all, hasKey, open, onClose, onDone 
       if (typeof assertion === 'string') return setRefusal(assertion)
       await client.walletWithdraw(account!.id, body, key, assertion)
       outcome('sent')
+      moneyMoved('sent')
       setKey('')
       setAmount('')
       setBanks(null)
@@ -444,6 +447,7 @@ function Convert({ client, shows, accounts: all, hasKey, open, onClose, onDone }
       if (typeof assertion === 'string') return setRefusal(assertion)
       await client.sideConvert(quote!.id, key, assertion)
       outcome('moved')
+      moneyMoved('inside')
       setQuote(null)
       setAmount('')
       onDone()

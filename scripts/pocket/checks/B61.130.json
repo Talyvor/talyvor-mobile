@@ -1,0 +1,171 @@
+[
+ {
+  "route": "/",
+  "screen": "p-home",
+  "locked": true,
+  "answers": {
+   "/auth/unlock": {}
+  },
+  "steps": [
+   [
+    "press",
+    "4"
+   ],
+   [
+    "press",
+    "1"
+   ],
+   [
+    "press",
+    "8"
+   ],
+   [
+    "press",
+    "2"
+   ],
+   [
+    "press",
+    "6"
+   ],
+   [
+    "press",
+    "3"
+   ]
+  ],
+  "move": 0,
+  "live": "await P.unlock();",
+  "words": "report",
+  "why": "B61.130 draws section 15's motion only (Pocket Live 26 Nov); this screen's words are its own item's: the opening after the passcode, the moment the passcode opens it: the streams and the blocks have still to draw in",
+  "name": "opening-start"
+ },
+ {
+  "route": "/",
+  "screen": "p-home",
+  "locked": true,
+  "answers": {
+   "/auth/unlock": {}
+  },
+  "steps": [
+   [
+    "press",
+    "4"
+   ],
+   [
+    "press",
+    "1"
+   ],
+   [
+    "press",
+    "8"
+   ],
+   [
+    "press",
+    "2"
+   ],
+   [
+    "press",
+    "6"
+   ],
+   [
+    "press",
+    "3"
+   ]
+  ],
+  "move": 350,
+  "live": "await P.unlock();",
+  "words": "report",
+  "why": "B61.130 draws section 15's motion only (Pocket Live 26 Nov); this screen's words are its own item's: the opening after the passcode, 350 ms in (streams drawing in, figures counting up, blocks rising)",
+  "name": "opening"
+ },
+ {
+  "route": "/",
+  "screen": "p-home",
+  "locked": true,
+  "answers": {
+   "/auth/unlock": {}
+  },
+  "steps": [
+   [
+    "press",
+    "4"
+   ],
+   [
+    "press",
+    "1"
+   ],
+   [
+    "press",
+    "8"
+   ],
+   [
+    "press",
+    "2"
+   ],
+   [
+    "press",
+    "6"
+   ],
+   [
+    "press",
+    "3"
+   ]
+  ],
+  "move": 350,
+  "live": "await P.unlock();",
+  "words": "report",
+  "why": "B61.130 draws section 15's motion only (Pocket Live 26 Nov); this screen's words are its own item's: the opening after the passcode, 350 ms in",
+  "name": "opening",
+  "dark": true
+ },
+ {
+  "route": "/cards",
+  "screen": "p-home",
+  "answers": {
+   "/api/agents/agt_research/card": {
+    "card": {
+     "id": "ic_research",
+     "agent_id": "agt_research",
+     "last4": "0005",
+     "exp_month": 9,
+     "exp_year": 2029,
+     "currency": "gbp",
+     "livemode": false,
+     "frozen": true,
+     "created_at": "2026-09-14T09:00:00Z"
+    },
+    "authorizations": []
+   }
+  },
+  "move": 1000,
+  "live": "await P.unlock(); await P.goTab('cards');",
+  "words": "report",
+  "why": "B61.130 draws section 15's motion only (Pocket Live 26 Nov); this screen's words are its own item's: a frozen card wears the frost",
+  "name": "frozen-card"
+ },
+ {
+  "route": "/cards",
+  "screen": "p-home",
+  "answers": {
+   "/api/agents/agt_research/card": {
+    "card": {
+     "id": "ic_research",
+     "agent_id": "agt_research",
+     "last4": "0005",
+     "exp_month": 9,
+     "exp_year": 2029,
+     "currency": "gbp",
+     "livemode": false,
+     "frozen": true,
+     "created_at": "2026-09-14T09:00:00Z"
+    },
+    "authorizations": []
+   }
+  },
+  "move": 1000,
+  "live": "await P.unlock(); await P.goTab('cards');",
+  "words": "report",
+  "why": "B61.130 draws section 15's motion only (Pocket Live 26 Nov); this screen's words are its own item's: a frozen card wears the frost",
+  "name": "frozen-card",
+  "dark": true
+ }
+]

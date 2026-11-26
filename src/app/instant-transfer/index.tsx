@@ -29,6 +29,7 @@ import {
 import { biometricName, checkItsYou, keyGone, keyGoneText, phoneKey, signWithThisPhone } from '@/keys'
 import { haptic } from '@/motion'
 import { useSession } from '@/session'
+import { moneyMoved } from '@/effects'
 import { play } from '@/sound'
 import { fonts, useTheme } from '@/theme'
 
@@ -172,6 +173,7 @@ function InstantTransferForm() {
   const sent = (t: InstantTransfer) => {
     haptic('success')
     play('sent')
+    moneyMoved('sent')
     setKey(Crypto.randomUUID())
     router.push({ pathname: '/instant-transfer/[id]', params: { id: t.id } })
   }

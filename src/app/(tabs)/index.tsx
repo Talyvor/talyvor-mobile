@@ -1,9 +1,10 @@
 import type { BffClient } from '@talyvor/bff-client'
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 import { useAccount } from '@/account'
 import { HomeError, HomeHeader, HomeLoading, HomeView } from '@/components/home'
 import { IdentityGate } from '@/components/identity-checks'
+import { onEffect } from '@/effects'
 import { KeyRecoveryCard } from '@/components/key-recovery-card'
 import { pendingPrepared } from '@/components/prepared-payment-card'
 import { Screen, useLoad } from '@/components/ui'
@@ -26,13 +27,17 @@ export default function Home() {
   useEffect(() => {
     if (data) void syncWidget(client, data)
   }, [client, data])
+  // B61.130 — the streams stop while every agent is paused: as Lens last said, or as soon as Pause every agent answers.
+  const [pausedNow, setPausedNow] = useState<{ data: typeof data } | null>(null)
+  useEffect(() => onEffect((e) => e.kind === 'paused' && setPausedNow({ data })), [data])
+  const still = pausedNow?.data === data || !!data?.book.all_paused_at
   const waiting = data ? data.approvals.filter((a) => a.status === 'pending').length + data.prepared.length : 0
   useEffect(() => {
     if (data) setWaiting(waiting)
   }, [data, waiting])
 
   return (
-    <Screen backdrop="full" onRefresh={reload} refreshing={loading && !!data}>
+    <Screen backdrop="full" still={still} onRefresh={reload} refreshing={loading && !!data}>
       <HomeHeader name={data?.name ?? null} account={account} />
       <KeyRecoveryCard />
       {/* B61.21 — until the identity check passes the account can look and cannot move money: one sentence and the way back. */}

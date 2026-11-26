@@ -7,6 +7,7 @@ import { Icon } from '@/components/icon'
 import { SheetCover } from '@/components/lock-screen'
 import { StartEveryAgentButton, StartEveryAgentSheet, useSigns } from '@/components/start-every-agent'
 import { Body, Button, Headline, Screen, SheetTop, useLoad } from '@/components/ui'
+import { everyAgentPaused } from '@/effects'
 import { biometricName } from '@/keys'
 import { useSession } from '@/session'
 import { play } from '@/sound'
@@ -34,6 +35,7 @@ export default function PauseAll() {
     try {
       await client.pauseAll('Paused from the phone app')
       play('pause')
+      everyAgentPaused()
       setPaused(true)
     } catch (err) {
       setSaid(refusalText(err))

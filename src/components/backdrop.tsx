@@ -1,9 +1,11 @@
 import { NavigationContext } from 'expo-router/react-navigation'
-import { createContext, memo, useContext, useEffect, useId, useMemo, useState, type ReactNode } from 'react'
+import { createContext, memo, useContext, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
 import { AccessibilityInfo, Animated, AppState, Easing, Image, StyleSheet, View, useWindowDimensions } from 'react-native'
 import Svg, { Circle, Defs, G, LinearGradient, Mask, Path, RadialGradient, Rect, Stop } from 'react-native-svg'
 
 import type { AccountType } from '../account'
+import { onEffect, openingNow } from '../effects'
+import { durations, easings } from '../motion'
 import { useSession } from '../session'
 import { agentColours, palettes, useTheme } from '../theme'
 
@@ -170,11 +172,100 @@ export function streamPaths(w: number, h: number, fy: number, sp: number, seed: 
   })
 }
 
+/** B61.130 — the streams while every agent is paused: grey, at 70% of their strength. */
+const STILL_GREY = '#808694'
+
+/** A clip that opens from the left: what is inside shows from the left edge to `open` (0 to 1) of `width`, on the
+ * native driver (the outer box slides in and the inner one slides back by as much). */
+function Clip({ open, width, height, children }: { open: Animated.Value; width: number; height: number; children: ReactNode }) {
+  return (
+    <Animated.View style={{ position: 'absolute', left: 0, top: 0, width, height, overflow: 'hidden', transform: [{ translateX: open.interpolate({ inputRange: [0, 1], outputRange: [-width, 0] }) }] }}>
+      <Animated.View style={{ position: 'absolute', left: 0, top: 0, width, height, transform: [{ translateX: open.interpolate({ inputRange: [0, 1], outputRange: [width, 0] }) }] }}>{children}</Animated.View>
+    </Animated.View>
+  )
+}
+
+type Lines = { w: number; height: number; fade: readonly (readonly [number, number])[]; paths: string[]; j: number; fx: number; py: number; id: string; colour: string; alpha: number }
+
+/** One group of the streams (every third line from the `j`th), faded down the screen as DESIGN.md's table gives, with
+ * the glow at their point on the first group. */
+function StreamLines({ w, height, fade, paths, j, fx, py, id, colour, alpha, glow, width }: Lines & { glow?: string; width?: number }) {
+  return (
+    <Svg width={w} height={height}>
+      <Defs>
+        <LinearGradient id={`${id}m`} x1="0" y1="0" x2="0" y2="1">
+          {fade.map(([o, a]) => (
+            <Stop key={o} offset={o} stopColor="#FFFFFF" stopOpacity={a} />
+          ))}
+        </LinearGradient>
+        <Mask id={`${id}k`} maskUnits="userSpaceOnUse" x="0" y="0" width={w} height={height}>
+          <Rect width={w} height={height} fill={`url(#${id}m)`} />
+        </Mask>
+        <LinearGradient id={`${id}c`} gradientUnits="userSpaceOnUse" x1="0" y1="0" x2={fx} y2="0">
+          <Stop offset="0" stopColor={colour} stopOpacity={0} />
+          <Stop offset="0.35" stopColor={colour} stopOpacity={alpha * 0.55} />
+          <Stop offset="1" stopColor={colour} stopOpacity={alpha} />
+        </LinearGradient>
+        {glow ? (
+          <RadialGradient id={`${id}g`} gradientUnits="userSpaceOnUse" cx={fx} cy={py} r={90}>
+            <Stop offset="0" stopColor={glow} stopOpacity={alpha * 0.5} />
+            <Stop offset="1" stopColor={glow} stopOpacity={0} />
+          </RadialGradient>
+        ) : null}
+      </Defs>
+      <G mask={`url(#${id}k)`}>
+        {paths.map((d, i) => (i % 3 === j ? <Path key={i} d={d} fill="none" stroke={`url(#${id}c)`} strokeWidth={width ?? (j === 0 ? 1.5 : 1)} strokeLinecap="round" /> : null))}
+        {glow ? <Rect x={fx - 90} y={py - 90} width={180} height={180} fill={`url(#${id}g)`} /> : null}
+      </G>
+    </Svg>
+  )
+}
+
+/** Money moved: one bright band runs along the streams into their point over 760 ms, then the glow at the point swells
+ * once (the reference's pulse: `progress` runs to 1.25 of that). */
+function Pulse({ progress, ...lines }: Lines & { progress: Animated.Value }) {
+  const band = lines.fx * 0.3
+  const run = 0.8
+  const left = progress.interpolate({ inputRange: [0, run, 1], outputRange: [-band, lines.fx, lines.fx], extrapolate: 'clamp' })
+  const back = progress.interpolate({ inputRange: [0, run, 1], outputRange: [band, -lines.fx, -lines.fx], extrapolate: 'clamp' })
+  return (
+    <View testID="backdrop-pulse" style={StyleSheet.absoluteFill}>
+      <Animated.View style={{ position: 'absolute', left: 0, top: 0, width: band, height: lines.height, overflow: 'hidden', transform: [{ translateX: left }] }}>
+        <Animated.View style={{ position: 'absolute', left: 0, top: 0, width: lines.w, height: lines.height, transform: [{ translateX: back }] }}>
+          <StreamLines {...lines} width={2.4} />
+        </Animated.View>
+      </Animated.View>
+      {lines.j === 0 ? (
+        <Animated.View
+          style={{
+            position: 'absolute',
+            left: lines.fx - 90,
+            top: lines.py - 90,
+            width: 180,
+            height: 180,
+            opacity: progress.interpolate({ inputRange: [0, 0.6, 0.8, 1], outputRange: [0, 0, 1, 0] }),
+            transform: [{ scale: progress.interpolate({ inputRange: [0, 0.6, 0.8, 1], outputRange: [1, 1, 1.5, 1] }) }],
+          }}>
+          <Svg width={180} height={180}>
+            <Defs>
+              <RadialGradient id={`${lines.id}s`} cx="50%" cy="50%" r="50%">
+                <Stop offset="0" stopColor={lines.colour} stopOpacity={lines.alpha * 0.5} />
+                <Stop offset="1" stopColor={lines.colour} stopOpacity={0} />
+              </RadialGradient>
+            </Defs>
+            <Rect width={180} height={180} fill={`url(#${lines.id}s)`} />
+          </Svg>
+        </Animated.View>
+      ) : null}
+    </View>
+  )
+}
+
 /**
  * Screen's background. `hues` is an agent's own colour on its page; otherwise the account's. B61.126: the glass fills the
  * screen and stays put; `scrollY` fades only the stream lines, to 40%, and lifts them 24 px over the first 80 px.
  */
-export const Backdrop = memo(function Backdrop({ strength, agent, hues, scrollY }: { strength: BackdropStrength; agent?: boolean; hues?: Hues; scrollY?: Animated.Value }) {
+export const Backdrop = memo(function Backdrop({ strength, agent, hues, scrollY, still }: { strength: BackdropStrength; agent?: boolean; hues?: Hues; scrollY?: Animated.Value; still?: boolean }) {
   const { c, dark } = useTheme()
   const account = useContext(HuesContext)
   const [h1, h2] = hues ?? account
@@ -192,6 +283,55 @@ export const Backdrop = memo(function Backdrop({ strength, agent, hues, scrollY 
   const [washes] = useState(() => WASHES.map(() => new Animated.Value(0)))
   const [sheen] = useState(() => new Animated.Value(0))
   const [sways] = useState(() => SWAYS.map(() => new Animated.Value(0)))
+  // B61.130 (DESIGN.md section 15): the streams draw in from the left as the app opens, a pulse runs along them when
+  // money moves, and while every agent is paused (or this agent is) they stop and turn grey at 70%.
+  const [reveal] = useState(() => new Animated.Value(openingNow() ? 0 : 1))
+  const [pulse] = useState(() => new Animated.Value(0))
+  const [pulsing, setPulsing] = useState(false)
+  const [stillness] = useState(() => new Animated.Value(still ? 1 : 0))
+  // The grey streams are drawn while still, and while they fade back to colour on resume.
+  const [wasStill, setWasStill] = useState(!!still)
+  const [fading, setFading] = useState(false)
+  if (wasStill !== !!still) {
+    setWasStill(!!still)
+    setFading(!still)
+  }
+  const grey = !!still || (fading && reduce === false)
+  const showingNow = useRef(showing)
+  useEffect(() => {
+    showingNow.current = showing
+  })
+  useEffect(() => {
+    if (reduce === null) return
+    const draw = () => {
+      if (reduce) return reveal.setValue(1)
+      reveal.setValue(0)
+      Animated.timing(reveal, { toValue: 1, duration: durations.drawIn, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start()
+    }
+    if (openingNow()) draw()
+    else reveal.setValue(1)
+    return onEffect((e) => {
+      if (e.kind === 'opening') draw()
+      if (e.kind !== 'pulse' || reduce || !showingNow.current) return
+      setPulsing(true)
+      pulse.setValue(0)
+      Animated.timing(pulse, { toValue: 1, duration: durations.pulse * 1.25, easing: (t) => t, useNativeDriver: true }).start(({ finished }) => finished && setPulsing(false))
+    })
+  }, [reduce, reveal, pulse])
+  useEffect(() => {
+    if (reduce !== false) return stillness.setValue(still ? 1 : 0)
+    const a = Animated.timing(stillness, { toValue: still ? 1 : 0, duration: durations.still, easing: easings.std, useNativeDriver: true })
+    a.start(({ finished }) => finished && !still && setFading(false))
+    return () => a.stop()
+  }, [still, reduce, stillness])
+  useEffect(() => {
+    if (!moving || still) return
+    const all = Animated.parallel(
+      sways.map((v, i) => drift(v, SWAYS[i].ms)),
+    )
+    all.start()
+    return () => all.stop()
+  }, [moving, still, sways])
   useEffect(() => {
     if (!moving) return
     const all = Animated.parallel([
@@ -202,11 +342,10 @@ export const Backdrop = memo(function Backdrop({ strength, agent, hues, scrollY 
           Animated.timing(sheen, { toValue: 0, duration: SHEEN_MS, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
         ]),
       ),
-      ...sways.map((v, i) => drift(v, SWAYS[i].ms)),
     ])
     all.start()
     return () => all.stop()
-  }, [moving, washes, sheen, sways])
+  }, [moving, washes, sheen])
 
   // The washes' box: 148% of the screen's width, from 24% left of it; 114% of its height, from 8% above it.
   const bw = w * 1.48
@@ -291,50 +430,36 @@ export const Backdrop = memo(function Backdrop({ strength, agent, hues, scrollY 
         <Image source={require('../../assets/backdrop/satin-grain-alpha.png')} resizeMode="repeat" style={[StyleSheet.absoluteFill, { width: w, height: g, opacity: s.grain }]} />
       </View>
       <Animated.View style={[styles.fill, { height: geo.height }, lift]}>
-        {SWAYS.map((sw, j) => (
-          <Animated.View
-            key={j}
-            testID="backdrop-streams"
-            style={{
-              position: 'absolute',
-              left: 0,
-              top: 0,
-              width: w,
-              height: geo.height,
-              transformOrigin: [fx, py, 0],
-              transform: [{ rotate: sways[j].interpolate({ inputRange: [0, 1, 2], outputRange: ['0deg', `${sw.deg}deg`, `${-sw.deg / 2}deg`] }) }],
-            }}>
-            <Svg width={w} height={geo.height}>
-              <Defs>
-                <LinearGradient id={`${id}m${j}`} x1="0" y1="0" x2="0" y2="1">
-                  {geo.fade.map(([o, a]) => (
-                    <Stop key={o} offset={o} stopColor="#FFFFFF" stopOpacity={a} />
-                  ))}
-                </LinearGradient>
-                <Mask id={`${id}k${j}`} maskUnits="userSpaceOnUse" x="0" y="0" width={w} height={geo.height}>
-                  <Rect width={w} height={geo.height} fill={`url(#${id}m${j})`} />
-                </Mask>
-                <LinearGradient id={`${id}c${j}`} gradientUnits="userSpaceOnUse" x1="0" y1="0" x2={fx} y2="0">
-                  <Stop offset="0" stopColor={j === 0 ? h1 : h2} stopOpacity={0} />
-                  <Stop offset="0.35" stopColor={j === 0 ? h1 : h2} stopOpacity={s.streams * 0.55} />
-                  <Stop offset="1" stopColor={j === 0 ? h1 : h2} stopOpacity={s.streams} />
-                </LinearGradient>
-                {j === 0 ? (
-                  <RadialGradient id={`${id}g`} gradientUnits="userSpaceOnUse" cx={fx} cy={py} r={90}>
-                    <Stop offset="0" stopColor={h1} stopOpacity={s.streams * 0.5} />
-                    <Stop offset="1" stopColor={h1} stopOpacity={0} />
-                  </RadialGradient>
+        <Clip open={reveal} width={w} height={geo.height}>
+          {SWAYS.map((sw, j) => {
+            const hue = j === 0 ? h1 : h2
+            const lines = { w, height: geo.height, fade: geo.fade, paths, j, fx, py }
+            return (
+              <Animated.View
+                key={j}
+                testID="backdrop-streams"
+                style={{
+                  position: 'absolute',
+                  left: 0,
+                  top: 0,
+                  width: w,
+                  height: geo.height,
+                  transformOrigin: [fx, py, 0],
+                  transform: [{ rotate: sways[j].interpolate({ inputRange: [0, 1, 2], outputRange: ['0deg', `${sw.deg}deg`, `${-sw.deg / 2}deg`] }) }],
+                }}>
+                <Animated.View style={[StyleSheet.absoluteFill, grey ? { opacity: stillness.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }) } : null]}>
+                  <StreamLines {...lines} id={`${id}${j}`} colour={hue} alpha={s.streams} glow={j === 0 ? h1 : undefined} />
+                </Animated.View>
+                {grey ? (
+                  <Animated.View testID="backdrop-still" style={[StyleSheet.absoluteFill, { opacity: stillness }]}>
+                    <StreamLines {...lines} id={`${id}${j}grey`} colour={STILL_GREY} alpha={s.streams * 0.7} glow={j === 0 ? STILL_GREY : undefined} />
+                  </Animated.View>
                 ) : null}
-              </Defs>
-              <G mask={`url(#${id}k${j})`}>
-                {paths.map((d, i) =>
-                  i % 3 === j ? <Path key={i} d={d} fill="none" stroke={`url(#${id}c${j})`} strokeWidth={j === 0 ? 1.5 : 1} /> : null,
-                )}
-                {j === 0 ? <Rect x={fx - 90} y={py - 90} width={180} height={180} fill={`url(#${id}g)`} /> : null}
-              </G>
-            </Svg>
-          </Animated.View>
-        ))}
+                {pulsing ? <Pulse {...lines} id={`${id}${j}pulse`} colour={hue} alpha={Math.min(1, s.streams * 1.9)} progress={pulse} /> : null}
+              </Animated.View>
+            )
+          })}
+        </Clip>
       </Animated.View>
     </Animated.View>
   )

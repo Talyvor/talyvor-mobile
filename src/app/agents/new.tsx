@@ -16,6 +16,7 @@ import { Press } from '@/components/press'
 import { Body, Button, Card, Field, Headline, LoadState, Screen, useLoad } from '@/components/ui'
 import { biometricName, keyGone, keyGoneText, phoneKey, signWithThisPhone } from '@/keys'
 import { useSession } from '@/session'
+import { celebrate } from '@/effects'
 import { outcome } from '@/sound'
 import { fonts, useTheme } from '@/theme'
 
@@ -168,6 +169,7 @@ export default function NewAgentScreen() {
     setBusy(false)
     // B61.127 — the agent is made: celebrate.wav, whatever of its details still waits.
     outcome('celebrate')
+    celebrate()
     if (unsaved.length) return setMade({ agent, unsaved })
     router.replace({ pathname: '/agents/[id]', params: { id: agent.id } })
   }

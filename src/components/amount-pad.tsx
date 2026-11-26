@@ -1,8 +1,9 @@
 import { formatMinor } from '@talyvor/bff-client'
 import type { ReactNode } from 'react'
-import { Pressable, Text, View } from 'react-native'
+import { Text, View } from 'react-native'
 
 import { Icon } from '@/components/icon'
+import { Press } from '@/components/press'
 import { haptic } from '@/motion'
 import { play } from '@/sound'
 import { fonts, useTheme } from '@/theme'
@@ -41,9 +42,14 @@ export function keyFelt() {
 
 export function AmountPad({ typed, currency, onType }: { typed: string; currency: string; onType: (next: string) => void }) {
   const { c } = useTheme()
+  // B61.130 — a key ripples in a tint of ink from where the finger lands; its haptic comes with its sound.
   const key = (k: string, label: string, child: ReactNode) => (
-    <Pressable
+    <Press
       key={k}
+      kind="key"
+      haptic={false}
+      ripple="ink"
+      radius={35}
       accessibilityRole="button"
       accessibilityLabel={label}
       onPress={() => {
@@ -57,10 +63,9 @@ export function AmountPad({ typed, currency, onType }: { typed: string; currency
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: pressed ? c.tint : 'transparent',
-        transform: [{ scale: pressed ? 0.94 : 1 }],
       })}>
       {child}
-    </Pressable>
+    </Press>
   )
   const glyph = (g: string) => <Text style={{ fontFamily: fonts.display, fontSize: 30, lineHeight: 36, color: c.ink, fontVariant: ['tabular-nums'] }}>{g}</Text>
   const digit = (n: string) => key(n, n, glyph(n))
