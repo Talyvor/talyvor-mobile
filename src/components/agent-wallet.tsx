@@ -20,7 +20,7 @@ import {
 } from '@talyvor/bff-client'
 import * as Clipboard from 'expo-clipboard'
 import * as Crypto from 'expo-crypto'
-import { useCallback, useState } from 'react'
+import { Children, cloneElement, isValidElement, useCallback, useState, type ReactElement, type ReactNode } from 'react'
 import { Linking, Text, View } from 'react-native'
 import Svg, { Path, Rect } from 'react-native-svg'
 import { encode } from 'uqr'
@@ -30,6 +30,11 @@ import { approveCryptoSendSigned, biometricName, confirmWalletMove, keyGone, key
 import { useSession } from '@/session'
 import { fonts, useTheme } from '@/theme'
 
+import { Face } from './face'
+import { Icon, type IconName } from './icon'
+import { Money } from './money'
+import { MONEY_WALLET, MoneyHeader } from './money-label'
+import { Press } from './press'
 import { Body, Button, Card, Chip, Eyebrow, Field, Headline, Row, useLoad } from './ui'
 
 // B48.20 — an agent's wallets on the phone, as the web's wallet panel draws them (talyvor-suite B48.18, B48.36, B48.47
@@ -124,28 +129,39 @@ export function QrCode({ text, label }: { text: string; label: string }) {
   )
 }
 
-/** One fact: its name, its value, and Copy when it is something to paste. */
-function Fact({ name, value, copy }: { name: string; value: string; copy?: boolean }) {
+/** B57.220 — Pocket's facts box: a cloud box of rows, a rule between them. */
+function Facts({ children, testID }: { children: ReactNode; testID?: string }) {
+  const { c } = useTheme()
+  const rows = Children.toArray(children).filter(isValidElement) as ReactElement<{ first?: boolean }>[]
+  return (
+    <View testID={testID} style={{ backgroundColor: c.cloud, borderRadius: 16, paddingHorizontal: 14 }}>
+      {rows.map((r, i) => cloneElement(r, { first: i === 0 }))}
+    </View>
+  )
+}
+
+/** One fact: its name on the left, its value on the right, and Copy beside it when it is something to paste. */
+function Fact({ name, value, copy, first }: { name: string; value: string; copy?: boolean; first?: boolean }) {
   const { c } = useTheme()
   const [copied, setCopied] = useState(false)
   return (
-    <View style={{ gap: 4, paddingVertical: 8 }}>
-      <Text style={{ fontFamily: fonts.ui, fontSize: 12.5, color: c.ink3 }}>{name}</Text>
-      <Text selectable style={{ fontFamily: fonts.ui, fontSize: 14, color: c.ink }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 11, borderTopWidth: first ? 0 : 1, borderTopColor: c.line }}>
+      <Text style={{ fontFamily: fonts.ui, fontSize: 13, color: c.ink3, flexShrink: 0 }}>
+        {name}
+      </Text>
+      <Text selectable style={{ flex: 1, minWidth: 0, fontFamily: fonts.uiMedium, fontSize: 14, color: c.ink, textAlign: 'right' }}>
         {value}
       </Text>
       {copy ? (
-        // Under the value, not beside it: an address is one long word that would push it off the screen.
-        <View style={{ alignSelf: 'flex-start' }}>
-          <Button
-            small
-            variant="outline"
-            icon="copy"
-            label={copied ? 'Copied' : 'Copy'}
-            accessibilityLabel={`Copy ${name.replace(/^[A-Z][a-z]/, (x) => x.toLowerCase())}`}
-            onPress={() => void Clipboard.setStringAsync(value).then(() => setCopied(true))}
-          />
-        </View>
+        <Press
+          kind="round"
+          accessibilityRole="button"
+          accessibilityLabel={copied ? 'Copied' : `Copy ${name.replace(/^[A-Z][a-z]/, (x) => x.toLowerCase())}`}
+          hitSlop={8}
+          onPress={() => void Clipboard.setStringAsync(value).then(() => setCopied(true))}
+          style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: c.page, alignItems: 'center', justifyContent: 'center' }}>
+          <Icon name={copied ? 'check' : 'copy'} color={c.ink} size={18} />
+        </Press>
       ) : null}
     </View>
   )
@@ -178,18 +194,22 @@ function AddMoney({ agent, wallet, shows }: { agent: Agent; wallet: AgentMoneyWa
       <View style={{ gap: 10 }} testID="wallet-address">
         <QrCode text={r.address} label={`QR code of ${agent.name}’s ${r.asset} address`} />
         <Body>{`Send ${r.asset}${network ? ` on ${network}` : ''} to this address. Money sent on another network is lost.`}</Body>
-        <Fact name="Address" value={r.address} copy />
-        {network ? <Fact name="Network" value={network} /> : null}
+        <Facts testID="wallet-address-facts">
+          <Fact name="Address" value={r.address} copy />
+          {network ? <Fact name="Network" value={network} /> : null}
+        </Facts>
       </View>
     )
   }
   return (
     <View style={{ gap: 6 }} testID="wallet-iban">
       <Body>Pay in from your own bank with these details.</Body>
-      {r.holder ? <Fact name="Account holder" value={r.holder} copy /> : null}
-      <Fact name="IBAN" value={r.iban ?? ''} copy />
-      {r.bic ? <Fact name="BIC" value={r.bic} copy /> : null}
-      {wallet.payment_reference ? <Fact name="Reference" value={wallet.payment_reference} copy /> : null}
+      <Facts>
+        {r.holder ? <Fact name="Account holder" value={r.holder} copy /> : null}
+        <Fact name="IBAN" value={r.iban ?? ''} copy />
+        {r.bic ? <Fact name="BIC" value={r.bic} copy /> : null}
+        {wallet.payment_reference ? <Fact name="Reference" value={wallet.payment_reference} copy /> : null}
+      </Facts>
     </View>
   )
 }
@@ -218,11 +238,13 @@ function MoveQuote({ agent, m, gets, onChange, onDone }: { agent: Agent; m: Wall
   }
   return (
     <View style={{ gap: 10 }} testID="wallet-move-quote">
-      <Fact name={m.route === 'cash_out' ? 'You sell' : 'You pay'} value={formatMinor(m.sell_minor, m.sell_currency)} />
-      <Fact name="Fee" value={formatMinor(m.fee_minor, m.sell_currency)} />
-      {m.sell_currency === m.buy_currency ? null : <Fact name="Rate" value={`1 ${m.sell_currency} = ${m.rate} ${m.buy_currency}`} />}
-      <Fact name={gets} value={formatMinor(m.buy_minor, m.buy_currency)} />
-      {m.expires_at ? <Fact name="Price held until" value={when(m.expires_at)} /> : null}
+      <Facts>
+        <Fact name={m.route === 'cash_out' ? 'You sell' : 'You pay'} value={formatMinor(m.sell_minor, m.sell_currency)} />
+        <Fact name="Fee" value={formatMinor(m.fee_minor, m.sell_currency)} />
+        {m.sell_currency === m.buy_currency ? null : <Fact name="Rate" value={`1 ${m.sell_currency} = ${m.rate} ${m.buy_currency}`} />}
+        <Fact name={gets} value={formatMinor(m.buy_minor, m.buy_currency)} />
+        {m.expires_at ? <Fact name="Price held until" value={when(m.expires_at)} /> : null}
+      </Facts>
       {signs ? <Body muted>{`${Biometric} asks before anything moves.`}</Body> : null}
       <Button primary label={busy ? 'Confirming…' : signs ? `Confirm with ${biometricName}` : 'Confirm'} icon={signs ? 'faceid' : undefined} disabled={busy} hint="Confirming…" onPress={() => void confirm()} />
       <Button variant="secondary" label="Change" disabled={busy} hint="Confirming…" onPress={onChange} />
@@ -374,20 +396,16 @@ const SEND_STATUS: Record<CryptoSend['status'], [string, 'good' | 'bad' | 'wait'
 
 /** The quote's facts: who it goes to, on which network, the most the fee can be, and what is sent. */
 function SendFacts({ q, agent }: { q: CryptoSendQuote; agent: Agent }) {
+  const named = !!(q.saved_name || q.ens_name)
   return (
-    <View testID="crypto-send-quote">
-      {q.saved_name || q.ens_name ? (
-        <>
-          <Fact name="To" value={q.saved_name || q.ens_name || ''} />
-          <Fact name="Address" value={q.to} />
-        </>
-      ) : (
-        <Fact name="To" value={q.to_kind === 'agent' && q.to_label ? `${q.to} · ${q.to_label}` : q.to} />
-      )}
+    <Facts testID="crypto-send-quote">
+      {named ? <Fact name="To" value={q.saved_name || q.ens_name || ''} /> : null}
+      {named ? <Fact name="Address" value={q.to} /> : null}
+      {named ? null : <Fact name="To" value={q.to_kind === 'agent' && q.to_label ? `${q.to} · ${q.to_label}` : q.to} />}
       <Fact name="Network" value={networkName(q.network)} />
       <Fact name="Network fee, at most" value={`${feeText(q.max_fee_wei)} · ${q.fee_paid_by === 'workspace_gas_budget' ? 'Paid from your network fee budget' : `Paid by ${agent.name}’s wallet`}`} />
       <Fact name="You send" value={formatMinor(q.amount_minor, 'USDC')} />
-    </View>
+    </Facts>
   )
 }
 
@@ -697,7 +715,9 @@ function Request({ agent }: { agent: Agent }) {
         <View style={{ gap: 8 }} testID="wallet-request-link">
           <QrCode text={made.uri} label={`QR code to pay ${agent.name} ${made.memo}`} />
           <Body>{`Share this link, or have the payer scan the code. It asks for ${formatMinor(made.amount_minor, 'USDC')} on Base.`}</Body>
-          <Fact name="Link" value={made.link} copy />
+          <Facts>
+            <Fact name="Link" value={made.link} copy />
+          </Facts>
         </View>
       ) : null}
       <Eyebrow>Requests</Eyebrow>
@@ -794,22 +814,20 @@ function Limits({ agent }: { agent: Agent }) {
       ) : tokens.length === 0 ? (
         <Body>{`${agent.name}’s wallet is frozen. Every payment from it is refused until you sign new limits.`}</Body>
       ) : (
-        <View>
-          {tokens.map((l) => {
+        <Facts>
+          {tokens.flatMap((l) => {
             const name = l.token === USDC_ON_BASE ? 'USDC on Base' : l.token
             const amount = (m: number) => (l.token === USDC_ON_BASE ? formatMinor(m, 'USDC') : `${m} units`)
-            return (
-              <View key={l.token}>
-                <Fact name={`Allowance, ${name}`} value={`${amount(l.allowance)} ${PERIOD_WORDS[l.period]}`} />
-                <Fact name="Most in one payment" value={amount(l.per_payment)} />
-              </View>
-            )
+            return [
+              <Fact key={`${l.token}:allowance`} name={`Allowance, ${name}`} value={`${amount(l.allowance)} ${PERIOD_WORDS[l.period]}`} />,
+              <Fact key={`${l.token}:per-payment`} name="Most in one payment" value={amount(l.per_payment)} />,
+            ]
           })}
           <Fact name="Pays only" value={(sp.permission.allowed ?? []).length > 0 ? listText(sp.permission.allowed) : 'Any address it is not blocked from'} />
           {(sp.permission.blocked ?? []).length > 0 ? <Fact name="Never pays" value={listText(sp.permission.blocked)} /> : null}
           <Fact name="Ends" value={endText(sp.permission.expires)} />
           <Fact name="Signed" value={when(sp.signed_at)} />
-        </View>
+        </Facts>
       )}
       {sp?.frozen_at ? null : (
         <LimitsForm
@@ -893,51 +911,109 @@ function LimitsForm({ agent, sp, onSigned }: { agent: Agent; sp: SpendPermission
   )
 }
 
-/** One wallet's actions: a button each, the one pressed open under them. */
-function WalletActions({ agent, wallet, opens }: { agent: Agent; wallet: AgentMoneyWallet; opens?: WalletAction }) {
-  const usdc = wallet.asset === 'USDC'
-  const actions: WalletAction[] = usdc ? ['top-up', 'cash-out', 'send', 'request', 'activity', 'limits'] : ['top-up', 'activity']
-  const [open, setOpen] = useState<WalletAction | null>(opens && actions.includes(opens) ? opens : null)
+// B57.220 — drawn in Pocket as p-agent-research and the launch pack's P4 draw money: the agent's face over its name, the
+// balance as the figure in a cloud card with its label, the round actions under it (the one open filled), then how to
+// add money in a facts box, and Activity and Limits and permissions as rows. A part opens under what opened it.
+const ROUND_ICON: Partial<Record<WalletAction, IconName>> = { 'top-up': 'plus', 'cash-out': 'arrowUp', send: 'send', request: 'arrowDown' }
+const ROW_ICON: Partial<Record<WalletAction, IconName>> = { activity: 'clock', limits: 'sliders' }
+
+/** One round action, as Pocket draws .qa: a circle over its word, filled while its part is open. */
+function Round({ action, on, onPress }: { action: WalletAction; on: boolean; onPress: () => void }) {
+  const { c } = useTheme()
   return (
-    <View style={{ gap: 12 }}>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }} accessibilityLabel={`What to do with the ${wallet.asset} wallet`}>
-        {actions.map((a) => (
-          <Button key={a} small variant={open === a ? 'primary' : 'outline'} label={ACTION_WORDS[a]} onPress={() => setOpen(open === a ? null : a)} />
+    <Press
+      kind="round"
+      accessibilityRole="button"
+      accessibilityLabel={ACTION_WORDS[action]}
+      accessibilityState={{ expanded: on }}
+      onPress={onPress}
+      style={{ flex: 1, maxWidth: 84, alignItems: 'center', gap: 7 }}>
+      <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: on ? c.primary : c.cloud, alignItems: 'center', justifyContent: 'center' }}>
+        <Icon name={ROUND_ICON[action] ?? 'plus'} color={on ? c.onPrimary : c.ink} />
+      </View>
+      <Text style={{ fontFamily: fonts.uiBold, fontSize: 12.5, color: c.ink, textAlign: 'center' }}>{ACTION_WORDS[action]}</Text>
+    </Press>
+  )
+}
+
+/** One wallet: its balance, its actions, how to add money to it, and its activity and limits. */
+function WalletPart({ agent, wallet, several, shows, opens }: { agent: Agent; wallet: AgentMoneyWallet; several: boolean; shows: Shows | null; opens?: WalletAction }) {
+  const { c } = useTheme()
+  const usdc = wallet.asset === 'USDC'
+  const rounds: WalletAction[] = usdc ? ['top-up', 'cash-out', 'send', 'request'] : ['top-up']
+  const rows: WalletAction[] = usdc ? ['activity', 'limits'] : ['activity']
+  const [open, setOpen] = useState<WalletAction | null>(opens && [...rounds, ...rows].includes(opens) ? opens : null)
+  const toggle = (a: WalletAction) => setOpen(open === a ? null : a)
+  const network = wallet.receive.network ? networkName(wallet.receive.network) : ''
+  const part = open ? (
+    <Card white>
+      <View style={{ gap: 12 }}>
+        <Eyebrow>{ACTION_WORDS[open]}</Eyebrow>
+        {open === 'top-up' ? <TopUp agent={agent} wallet={wallet} /> : null}
+        {open === 'cash-out' ? <CashOut agent={agent} /> : null}
+        {open === 'send' ? <Send agent={agent} /> : null}
+        {open === 'request' ? <Request agent={agent} /> : null}
+        {open === 'activity' ? <Activity agent={agent} asset={wallet.asset} /> : null}
+        {open === 'limits' ? <Limits agent={agent} /> : null}
+      </View>
+    </Card>
+  ) : null
+  return (
+    <View style={{ gap: 16 }} testID={`agent-wallet-${wallet.asset}`}>
+      <View testID={`agent-wallet-balance-${wallet.asset}`}>
+        <Card>
+          <MoneyHeader capability={MONEY_WALLET}>{several ? `Its ${wallet.asset} wallet` : 'Balance'}</MoneyHeader>
+          <Money minor={wallet.balance_minor} currency={wallet.asset} size={44} />
+          {network ? <Body muted>{`${wallet.asset} on ${network}`}</Body> : null}
+        </Card>
+      </View>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-around' }} testID={`agent-wallet-rounds-${wallet.asset}`}>
+        {rounds.map((a) => (
+          <Round key={a} action={a} on={open === a} onPress={() => toggle(a)} />
         ))}
       </View>
-      {open === 'top-up' ? <TopUp agent={agent} wallet={wallet} /> : null}
-      {open === 'cash-out' ? <CashOut agent={agent} /> : null}
-      {open === 'send' ? <Send agent={agent} /> : null}
-      {open === 'request' ? <Request agent={agent} /> : null}
-      {open === 'activity' ? <Activity agent={agent} asset={wallet.asset} /> : null}
-      {open === 'limits' ? <Limits agent={agent} /> : null}
+      {open && rounds.includes(open) ? part : null}
+      <Card white>
+        <View style={{ gap: 12 }}>
+          <Eyebrow>Add money</Eyebrow>
+          {shows ? <AddMoney agent={agent} wallet={wallet} shows={shows} /> : null}
+        </View>
+      </Card>
+      <View testID={`agent-wallet-rows-${wallet.asset}`}>
+        <Card white tight>
+          {rows.map((a, i) => (
+            <Row
+              key={a}
+              first={i === 0}
+              left={<Icon name={ROW_ICON[a] ?? 'chev'} color={c.ink} />}
+              title={ACTION_WORDS[a]}
+              right={<Icon name={open === a ? 'x' : 'chev'} color={c.ink3} />}
+              onPress={() => toggle(a)}
+            />
+          ))}
+        </Card>
+      </View>
+      {open && rows.includes(open) ? part : null}
     </View>
   )
 }
 
-/** The agent's wallets: each one's balance, how to add money to it, and what to do with it. */
+/** The agent's wallets: its face and name, then each wallet. */
 export function AgentWalletView({ agent, wallets, opens }: { agent: Agent; wallets: AgentWallets; opens?: WalletAction }) {
   const { client } = useSession()
   const { shows } = useAccount(client)
   const all = wallets.wallets ?? []
-  const holds = all.map((w) => formatMinor(w.balance_minor, w.asset))
   return (
     <View style={{ gap: 16 }} testID="agent-wallet">
-      <Headline>{`${agent.name}’s wallet`}</Headline>
-      {all.length === 0 ? (
-        <Body>{`${agent.name} has no wallet yet.`}</Body>
-      ) : (
-        <Body>{`${agent.name} holds ${holds.length > 1 ? `${holds.slice(0, -1).join(', ')} and ${holds[holds.length - 1]}` : holds[0]}.`}</Body>
-      )}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }} testID="agent-wallet-head">
+        <Face agent={agent} size={48} />
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Headline>{`${agent.name}’s wallet`}</Headline>
+        </View>
+      </View>
+      {all.length === 0 ? <Body>{`${agent.name} has no wallet yet.`}</Body> : null}
       {all.map((w) => (
-        <Card key={w.asset} white>
-          <View style={{ gap: 12 }} testID={`agent-wallet-${w.asset}`}>
-            {all.length > 1 ? <Body>{`Its ${w.asset} wallet · ${formatMinor(w.balance_minor, w.asset)}`}</Body> : null}
-            <Eyebrow>Add money</Eyebrow>
-            {shows ? <AddMoney agent={agent} wallet={w} shows={shows} /> : null}
-            <WalletActions agent={agent} wallet={w} opens={opens} />
-          </View>
-        </Card>
+        <WalletPart key={w.asset} agent={agent} wallet={w} several={all.length > 1} shows={shows} opens={opens} />
       ))}
     </View>
   )
