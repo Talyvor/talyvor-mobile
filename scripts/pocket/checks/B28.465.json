@@ -1,0 +1,6 @@
+[
+  { "route": "/cards", "screen": "p-agent-research", "words": "report", "scroll": "Show card details", "why": "the reference draws no phone Cards screen; the nearest is the agent's page and its card; Replace card and Cancel card sit under Freeze card, in the web's words (suite B28.47)" },
+  { "route": "/cards", "screen": "p-agent-research", "name": "replace", "words": "report", "press": ["Replace card"], "why": "the same, with Replace card's sheet asking once, in the web's words (suite EndCardDialog)" },
+  { "route": "/cards", "screen": "p-agent-research", "name": "cancel", "words": "report", "press": ["Cancel card"], "why": "the same, with Cancel card's sheet asking once" },
+  { "route": "/cards", "screen": "p-agent-research", "name": "cancel", "dark": true, "words": "report", "press": ["Cancel card"], "why": "the same, with the phone set to dark" }
+]

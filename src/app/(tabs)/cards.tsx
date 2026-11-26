@@ -30,6 +30,8 @@ import { useSession } from '@/session'
 // above Disputes and refunds; Change limits and Issue a card as the reference's rules draw a list of settings.
 // B59.55 — under each agent's card, its one-time and standing cards with the budget the owner approved (Lens B59.21), and
 // Open Approvals for one still waiting.
+// B28.465 — Replace card and Cancel card beside Freeze card, each asked once in a sheet, in the web's words (B28.47): a
+// replaced card is cancelled and its new one keeps its freeze and merchant lock; a cancelled one is gone for good.
 
 type Entry = { agent: Agent; card: Held | null; purchases: CardAuthorization[]; rules: AgentRules; spends: CardSpend[] | null }
 
@@ -40,6 +42,33 @@ export function frozenText(name: string, card: Held): string {
   return card.frozen
     ? `Frozen. Every purchase on ${name}’s card is refused, and nothing leaves its wallet, until you unfreeze it.`
     : `Unfrozen. ${name}’s card takes purchases again, each one judged by ${name}’s rules.`
+}
+
+export function replacedText(name: string, card: Held): string {
+  return `Replaced. ${name}’s new card ends ${card.last4}. Every purchase on the old one is refused, and nothing leaves its wallet.`
+}
+
+export function cancelledText(name: string): string {
+  return `Cancelled. Every purchase on ${name}’s card is refused, and nothing leaves its wallet. Issue it a new card here.`
+}
+
+type Ending = 'replace' | 'cancel'
+
+/** B28.465 — asks once before the card is replaced or cancelled, as the web's EndCardDialog does. */
+function EndCard({ ending, name, busy, onKeep, onEnd }: { ending: Ending | null; name: string; busy: boolean; onKeep: () => void; onEnd: () => void }) {
+  const replace = ending === 'replace'
+  return (
+    <BottomSheet visible={ending !== null} onClose={onKeep} testID="end-card-sheet">
+      <Headline>{replace ? `Replace ${name}’s card?` : `Cancel ${name}’s card?`}</Headline>
+      <Body muted>
+        {replace
+          ? `${name}’s card is cancelled at once, and a new one is issued to the same cardholder. Its freeze and its merchant lock carry over to the new card.`
+          : `${name}’s card is cancelled for good. Every purchase on it is refused, and ${name} has no card until you issue it a new one.`}
+      </Body>
+      <Button variant={replace ? 'primary' : 'danger'} label={replace ? 'Replace card' : 'Cancel card'} disabled={busy} onPress={onEnd} />
+      <Button variant="secondary" label="Keep it" disabled={busy} onPress={onKeep} />
+    </BottomSheet>
+  )
 }
 
 /** B61.77 — Show card details checks it is you, then the details open in a sheet over the card; closing it hides them. */
@@ -123,6 +152,8 @@ export default function Cards() {
   }, [])
   const [said, setSaid] = useState<{ id: string; text: string } | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
+  // Whose card is being replaced or cancelled, while the sheet asks.
+  const [ending, setEnding] = useState<{ id: string; how: Ending } | null>(null)
 
   const show = async (id: string) => {
     const got = await checkItsYou('Show the card details')
@@ -141,6 +172,21 @@ export default function Cards() {
       setSaid({ id: agent.id, text: refusalText(err) })
     } finally {
       setBusy(null)
+    }
+  }
+
+  const end = async ({ agent }: Entry, how: Ending) => {
+    setBusy(agent.id)
+    try {
+      const got = how === 'replace' ? await client.replaceCard(agent.id) : await client.cancelCard(agent.id)
+      setSaid({ id: agent.id, text: how === 'replace' ? replacedText(agent.name, got) : cancelledText(agent.name) })
+    } catch (err) {
+      setSaid({ id: agent.id, text: refusalText(err) })
+    } finally {
+      setBusy(null)
+      setEnding(null)
+      setShown(null)
+      reload()
     }
   }
 
@@ -171,7 +217,18 @@ export default function Cards() {
                 {h.card?.frozen ? <Chip tone="paused">Frozen</Chip> : null}
               </View>
               {h.card ? (
-                <Toggle label="Freeze card" value={!!h.card.frozen} disabled={busy === h.agent.id} onValueChange={() => void freeze(h)} />
+                <>
+                  <Toggle label="Freeze card" value={!!h.card.frozen} disabled={busy === h.agent.id} onValueChange={() => void freeze(h)} />
+                  <Button label="Replace card" disabled={busy === h.agent.id} onPress={() => setEnding({ id: h.agent.id, how: 'replace' })} />
+                  <Button label="Cancel card" disabled={busy === h.agent.id} onPress={() => setEnding({ id: h.agent.id, how: 'cancel' })} />
+                  <EndCard
+                    ending={ending?.id === h.agent.id ? ending.how : null}
+                    name={h.agent.name}
+                    busy={busy === h.agent.id}
+                    onKeep={() => setEnding(null)}
+                    onEnd={() => ending && void end(h, ending.how)}
+                  />
+                </>
               ) : issuing === h.agent.id ? (
                 <IssueCard
                   client={client}

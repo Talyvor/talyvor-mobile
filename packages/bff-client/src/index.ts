@@ -1501,6 +1501,10 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     },
     freezeCard: (id: string) => call<AgentCard>('POST', `/api/agents/${e(id)}/card/freeze`),
     unfreezeCard: (id: string) => call<AgentCard>('POST', `/api/agents/${e(id)}/card/unfreeze`),
+    /** B28.465 — a new card to the same cardholder, with the old one's freeze and merchant lock; the old one is cancelled. */
+    replaceCard: (id: string) => call<AgentCard>('POST', `/api/agents/${e(id)}/card/replace`),
+    /** B28.465 — the card, cancelled for good: the agent holds none until it is issued another. */
+    cancelCard: (id: string) => call<AgentCard>('POST', `/api/agents/${e(id)}/card/cancel`),
     pause: (id: string, reason: string) => call<Agent>('POST', `/api/agents/${e(id)}/pause`, { reason }),
     resume: (id: string, assertion?: DeviceAssertion) => call<Agent>('POST', `/api/agents/${e(id)}/resume`, assertion ? { assertion } : undefined),
     /** Moves µLXC from the workspace's unallocated balance to the agent; `key` makes a retry move it once. */
