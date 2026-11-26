@@ -4,8 +4,9 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { AppState } from 'react-native'
 
 import { config } from './config'
-import { recheckPhoneKey, unlockWithFaceID } from './keys'
+import { forgetThisPhone, recheckPhoneKey, unlockWithFaceID } from './keys'
 import { endLiveActivities } from './live-activity'
+import { forgetPushToken } from './push'
 import { clearWidget } from './widget-sync'
 
 const KEY = 'talyvor.session'
@@ -28,6 +29,9 @@ interface Session {
   /** USD per LXC once read, for formatLXC; null until then, or while Lens does not supply it. */
   peg: number | null
   signOut: () => Promise<void>
+  /** B52.47 — deletes the person's accounts with what they typed back; once the BFF has, the phone forgets the session,
+   * its push token and its approval key, and the first screen opens. A refusal is thrown and nothing is forgotten. */
+  deleteAccount: (confirm: string) => Promise<void>
   /** B61.10 — moves the session to another of the person's accounts; every screen then reads that account. */
   switchAccount: (accountID: string) => Promise<void>
   /** B61.10 — opens another account with sign-up's answers and moves the session to it. */
@@ -122,6 +126,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setToken(null)
   }, [])
 
+  const deleteAccount = useCallback(
+    async (confirm: string) => {
+      await client.deleteAccount(confirm)
+      // The account and its key are gone at Talyvor, so nothing here is kept for them.
+      await forgetThisPhone().catch((err) => console.warn('device: not forgotten', err))
+      await forgetPushToken().catch((err) => console.warn('push: not forgotten', err))
+      await signOut()
+    },
+    [client, signOut],
+  )
+
   const signInWithDoor = useCallback(
     async (s: DoorSession, passcode?: string) => {
       const joins = !!s.signup_unfinished
@@ -183,6 +198,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       client,
       peg,
       signOut,
+      deleteAccount,
       switchAccount,
       openAccount,
       signInWithDoor,
@@ -195,7 +211,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       unlock,
       unlockFaceID,
     }),
-    [ready, token, client, peg, signOut, switchAccount, openAccount, signInWithDoor, finishSignup, takeNewPasscode, person, joining, locked, covered, unlock, unlockFaceID],
+    [ready, token, client, peg, signOut, deleteAccount, switchAccount, openAccount, signInWithDoor, finishSignup, takeNewPasscode, person, joining, locked, covered, unlock, unlockFaceID],
   )
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
 }
