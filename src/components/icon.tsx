@@ -184,6 +184,11 @@ const ICONS = {
       <Path d="M5 19.5h14" />
     </>
   ),
+  // B61.135 — the statement's downloads (pocket-live DESIGN.md 16.2): an arrow into a tray, the PDF, the sheet, the rows.
+  dl: <Path d="M12 4v11M7 10.5l5 5 5-5M5 19.5h14" />,
+  doc: <Path d="M7 3.5h7l4 4V19a1.5 1.5 0 0 1-1.5 1.5h-9.5A1.5 1.5 0 0 1 5.5 19V5A1.5 1.5 0 0 1 7 3.5zM14 3.5v4h4M9 12.5h6M9 16h4" />,
+  sheet: <Path d="M6.5 4.5h11A2.5 2.5 0 0 1 20 7v10a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 17V7a2.5 2.5 0 0 1 2.5-2.5zM4 9.5h16M4 14.5h16M10 9.5v10" />,
+  rows: <Path d="M5 7h14M5 12h14M5 17h14" />,
   invoices: (
     <>
       <Path d="M7 3.5h10v17l-2.5-1.6-2.5 1.6-2.5-1.6L7 20.5z" />

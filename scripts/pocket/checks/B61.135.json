@@ -1,0 +1,398 @@
+[
+ {
+  "route": "/activity?tab=statements",
+  "screen": "p-activity",
+  "name": "statements",
+  "live": "await P.unlock(); await P.push('activity'); P.top().st.tab = 'Statements'; P.top().st.ready = true; P.redrawTop();",
+  "answers": {
+   "/api/money/accounts/acc_usd/statement": {
+    "account_id": "acc_usd",
+    "currency": "USD",
+    "from": "2026-10-01T00:00:00Z",
+    "to": "2026-10-23T00:00:00Z",
+    "opening_minor": 1331597,
+    "in_minor": 1408200,
+    "out_minor": 929648,
+    "closing_minor": 1810149,
+    "lines": [
+     {
+      "entry_id": "ent_s0",
+      "line": 1,
+      "at": "2026-10-02T09:14:00Z",
+      "kind": "invoice_payment",
+      "amount_minor": 840000,
+      "counterparty": "Lumen Labs",
+      "state": "completed",
+      "balance_after_minor": 2171597,
+      "partner_ref": "INV-2031"
+     },
+     {
+      "entry_id": "ent_s1",
+      "line": 1,
+      "at": "2026-10-03T10:41:00Z",
+      "kind": "card_charge",
+      "amount_minor": -4200,
+      "counterparty": "Figma",
+      "state": "completed",
+      "balance_after_minor": 2167397,
+      "task": "A design seat"
+     },
+     {
+      "entry_id": "ent_s2",
+      "line": 1,
+      "at": "2026-10-06T16:05:00Z",
+      "kind": "payment_out",
+      "amount_minor": -250000,
+      "counterparty": "Kite Accounting",
+      "state": "pending",
+      "balance_after_minor": 1917397
+     },
+     {
+      "entry_id": "ent_s3",
+      "line": 1,
+      "at": "2026-10-09T11:22:00Z",
+      "kind": "card_charge",
+      "amount_minor": -12900,
+      "counterparty": "Northwind Data",
+      "state": "completed",
+      "balance_after_minor": 1904497,
+      "task": "A market report"
+     },
+     {
+      "entry_id": "ent_s4",
+      "line": 1,
+      "at": "2026-10-14T08:50:00Z",
+      "kind": "invoice_payment",
+      "amount_minor": 568200,
+      "counterparty": "Harbor & Co",
+      "state": "completed",
+      "balance_after_minor": 2472697,
+      "partner_ref": "INV-2034"
+     },
+     {
+      "entry_id": "ent_s5",
+      "line": 1,
+      "at": "2026-10-17T13:30:00Z",
+      "kind": "payment_out",
+      "amount_minor": -650000,
+      "counterparty": "Parcel Freight",
+      "state": "completed",
+      "balance_after_minor": 1822697
+     },
+     {
+      "entry_id": "ent_s6",
+      "line": 1,
+      "at": "2026-10-21T15:12:00Z",
+      "kind": "card_charge",
+      "amount_minor": -12548,
+      "counterparty": "Compute shop",
+      "state": "completed",
+      "balance_after_minor": 1810149,
+      "task": "GPU hours"
+     }
+    ]
+   }
+  },
+  "words": "report",
+  "why": "B61.135: Statements in Activity. The app's tab row is All and Statements; Spending, Budgets and Subscriptions are not on the phone's Activity (Spending is its own screen)"
+ },
+ {
+  "route": "/activity?tab=statements",
+  "screen": "p-activity",
+  "name": "statements",
+  "live": "await P.unlock(); await P.push('activity'); P.top().st.tab = 'Statements'; P.top().st.ready = true; P.redrawTop();",
+  "answers": {
+   "/api/money/accounts/acc_usd/statement": {
+    "account_id": "acc_usd",
+    "currency": "USD",
+    "from": "2026-10-01T00:00:00Z",
+    "to": "2026-10-23T00:00:00Z",
+    "opening_minor": 1331597,
+    "in_minor": 1408200,
+    "out_minor": 929648,
+    "closing_minor": 1810149,
+    "lines": [
+     {
+      "entry_id": "ent_s0",
+      "line": 1,
+      "at": "2026-10-02T09:14:00Z",
+      "kind": "invoice_payment",
+      "amount_minor": 840000,
+      "counterparty": "Lumen Labs",
+      "state": "completed",
+      "balance_after_minor": 2171597,
+      "partner_ref": "INV-2031"
+     },
+     {
+      "entry_id": "ent_s1",
+      "line": 1,
+      "at": "2026-10-03T10:41:00Z",
+      "kind": "card_charge",
+      "amount_minor": -4200,
+      "counterparty": "Figma",
+      "state": "completed",
+      "balance_after_minor": 2167397,
+      "task": "A design seat"
+     },
+     {
+      "entry_id": "ent_s2",
+      "line": 1,
+      "at": "2026-10-06T16:05:00Z",
+      "kind": "payment_out",
+      "amount_minor": -250000,
+      "counterparty": "Kite Accounting",
+      "state": "pending",
+      "balance_after_minor": 1917397
+     },
+     {
+      "entry_id": "ent_s3",
+      "line": 1,
+      "at": "2026-10-09T11:22:00Z",
+      "kind": "card_charge",
+      "amount_minor": -12900,
+      "counterparty": "Northwind Data",
+      "state": "completed",
+      "balance_after_minor": 1904497,
+      "task": "A market report"
+     },
+     {
+      "entry_id": "ent_s4",
+      "line": 1,
+      "at": "2026-10-14T08:50:00Z",
+      "kind": "invoice_payment",
+      "amount_minor": 568200,
+      "counterparty": "Harbor & Co",
+      "state": "completed",
+      "balance_after_minor": 2472697,
+      "partner_ref": "INV-2034"
+     },
+     {
+      "entry_id": "ent_s5",
+      "line": 1,
+      "at": "2026-10-17T13:30:00Z",
+      "kind": "payment_out",
+      "amount_minor": -650000,
+      "counterparty": "Parcel Freight",
+      "state": "completed",
+      "balance_after_minor": 1822697
+     },
+     {
+      "entry_id": "ent_s6",
+      "line": 1,
+      "at": "2026-10-21T15:12:00Z",
+      "kind": "card_charge",
+      "amount_minor": -12548,
+      "counterparty": "Compute shop",
+      "state": "completed",
+      "balance_after_minor": 1810149,
+      "task": "GPU hours"
+     }
+    ]
+   }
+  },
+  "words": "report",
+  "why": "B61.135: Statements in Activity. The app's tab row is All and Statements; Spending, Budgets and Subscriptions are not on the phone's Activity (Spending is its own screen)",
+  "dark": true
+ },
+ {
+  "route": "/activity?tab=statements",
+  "screen": "p-activity",
+  "name": "download",
+  "live": "await P.unlock(); await P.push('activity'); P.top().st.tab = 'Statements'; P.top().st.ready = true; P.redrawTop(); await P.openSheet('stdl');",
+  "answers": {
+   "/api/money/accounts/acc_usd/statement": {
+    "account_id": "acc_usd",
+    "currency": "USD",
+    "from": "2026-10-01T00:00:00Z",
+    "to": "2026-10-23T00:00:00Z",
+    "opening_minor": 1331597,
+    "in_minor": 1408200,
+    "out_minor": 929648,
+    "closing_minor": 1810149,
+    "lines": [
+     {
+      "entry_id": "ent_s0",
+      "line": 1,
+      "at": "2026-10-02T09:14:00Z",
+      "kind": "invoice_payment",
+      "amount_minor": 840000,
+      "counterparty": "Lumen Labs",
+      "state": "completed",
+      "balance_after_minor": 2171597,
+      "partner_ref": "INV-2031"
+     },
+     {
+      "entry_id": "ent_s1",
+      "line": 1,
+      "at": "2026-10-03T10:41:00Z",
+      "kind": "card_charge",
+      "amount_minor": -4200,
+      "counterparty": "Figma",
+      "state": "completed",
+      "balance_after_minor": 2167397,
+      "task": "A design seat"
+     },
+     {
+      "entry_id": "ent_s2",
+      "line": 1,
+      "at": "2026-10-06T16:05:00Z",
+      "kind": "payment_out",
+      "amount_minor": -250000,
+      "counterparty": "Kite Accounting",
+      "state": "pending",
+      "balance_after_minor": 1917397
+     },
+     {
+      "entry_id": "ent_s3",
+      "line": 1,
+      "at": "2026-10-09T11:22:00Z",
+      "kind": "card_charge",
+      "amount_minor": -12900,
+      "counterparty": "Northwind Data",
+      "state": "completed",
+      "balance_after_minor": 1904497,
+      "task": "A market report"
+     },
+     {
+      "entry_id": "ent_s4",
+      "line": 1,
+      "at": "2026-10-14T08:50:00Z",
+      "kind": "invoice_payment",
+      "amount_minor": 568200,
+      "counterparty": "Harbor & Co",
+      "state": "completed",
+      "balance_after_minor": 2472697,
+      "partner_ref": "INV-2034"
+     },
+     {
+      "entry_id": "ent_s5",
+      "line": 1,
+      "at": "2026-10-17T13:30:00Z",
+      "kind": "payment_out",
+      "amount_minor": -650000,
+      "counterparty": "Parcel Freight",
+      "state": "completed",
+      "balance_after_minor": 1822697
+     },
+     {
+      "entry_id": "ent_s6",
+      "line": 1,
+      "at": "2026-10-21T15:12:00Z",
+      "kind": "card_charge",
+      "amount_minor": -12548,
+      "counterparty": "Compute shop",
+      "state": "completed",
+      "balance_after_minor": 1810149,
+      "task": "GPU hours"
+     }
+    ]
+   }
+  },
+  "press": [
+   "Download statement"
+  ],
+  "words": "report",
+  "why": "B61.135: Statements in Activity. The app's tab row is All and Statements; Spending, Budgets and Subscriptions are not on the phone's Activity (Spending is its own screen); the download sheet"
+ },
+ {
+  "route": "/activity?tab=statements",
+  "screen": "p-activity",
+  "name": "download",
+  "live": "await P.unlock(); await P.push('activity'); P.top().st.tab = 'Statements'; P.top().st.ready = true; P.redrawTop(); await P.openSheet('stdl');",
+  "answers": {
+   "/api/money/accounts/acc_usd/statement": {
+    "account_id": "acc_usd",
+    "currency": "USD",
+    "from": "2026-10-01T00:00:00Z",
+    "to": "2026-10-23T00:00:00Z",
+    "opening_minor": 1331597,
+    "in_minor": 1408200,
+    "out_minor": 929648,
+    "closing_minor": 1810149,
+    "lines": [
+     {
+      "entry_id": "ent_s0",
+      "line": 1,
+      "at": "2026-10-02T09:14:00Z",
+      "kind": "invoice_payment",
+      "amount_minor": 840000,
+      "counterparty": "Lumen Labs",
+      "state": "completed",
+      "balance_after_minor": 2171597,
+      "partner_ref": "INV-2031"
+     },
+     {
+      "entry_id": "ent_s1",
+      "line": 1,
+      "at": "2026-10-03T10:41:00Z",
+      "kind": "card_charge",
+      "amount_minor": -4200,
+      "counterparty": "Figma",
+      "state": "completed",
+      "balance_after_minor": 2167397,
+      "task": "A design seat"
+     },
+     {
+      "entry_id": "ent_s2",
+      "line": 1,
+      "at": "2026-10-06T16:05:00Z",
+      "kind": "payment_out",
+      "amount_minor": -250000,
+      "counterparty": "Kite Accounting",
+      "state": "pending",
+      "balance_after_minor": 1917397
+     },
+     {
+      "entry_id": "ent_s3",
+      "line": 1,
+      "at": "2026-10-09T11:22:00Z",
+      "kind": "card_charge",
+      "amount_minor": -12900,
+      "counterparty": "Northwind Data",
+      "state": "completed",
+      "balance_after_minor": 1904497,
+      "task": "A market report"
+     },
+     {
+      "entry_id": "ent_s4",
+      "line": 1,
+      "at": "2026-10-14T08:50:00Z",
+      "kind": "invoice_payment",
+      "amount_minor": 568200,
+      "counterparty": "Harbor & Co",
+      "state": "completed",
+      "balance_after_minor": 2472697,
+      "partner_ref": "INV-2034"
+     },
+     {
+      "entry_id": "ent_s5",
+      "line": 1,
+      "at": "2026-10-17T13:30:00Z",
+      "kind": "payment_out",
+      "amount_minor": -650000,
+      "counterparty": "Parcel Freight",
+      "state": "completed",
+      "balance_after_minor": 1822697
+     },
+     {
+      "entry_id": "ent_s6",
+      "line": 1,
+      "at": "2026-10-21T15:12:00Z",
+      "kind": "card_charge",
+      "amount_minor": -12548,
+      "counterparty": "Compute shop",
+      "state": "completed",
+      "balance_after_minor": 1810149,
+      "task": "GPU hours"
+     }
+    ]
+   }
+  },
+  "press": [
+   "Download statement"
+  ],
+  "words": "report",
+  "why": "B61.135: Statements in Activity. The app's tab row is All and Statements; Spending, Budgets and Subscriptions are not on the phone's Activity (Spending is its own screen); the download sheet",
+  "dark": true
+ }
+]

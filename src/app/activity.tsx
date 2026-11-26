@@ -2,13 +2,14 @@ import { formatLXC, refusalText, type StatementFormat } from '@talyvor/bff-clien
 import { File, Paths } from 'expo-file-system'
 import { useLocalSearchParams } from 'expo-router'
 import * as Sharing from 'expo-sharing'
-import { useCallback, useState } from 'react'
+import { useCallback, useState, type ReactNode } from 'react'
 import { Pressable, ScrollView, Text, View } from 'react-native'
 
 import { MoneyLinks } from '@/components/home'
 import { AGENT_CREDIT, MoneyLabel } from '@/components/money-label'
 import { moneyParts } from '@/components/money'
 import { Landed, useLanded } from '@/components/live'
+import { StatementsTab } from '@/components/statement-paper'
 import { Back, Body, Button, Card, Eyebrow, Field, Headline, LoadState, Row, Screen, useLoad } from '@/components/ui'
 import { ACTIVITY_KINDS, day, filterLines, monthName, monthPeriod, when } from '@/activity'
 import { useSession } from '@/session'
@@ -18,6 +19,7 @@ import { fonts, useTheme } from '@/theme'
 // the web's statement is (suite B28.51), and the statement for the period to download as the web's Download writes it.
 // B57.132 — drawn in Pocket: its own Back and headline with the label, the period as the statement's line under it, the
 // filters as Pocket's tabs, and every movement as the statement's rows, in dollars (B61.15).
+// B61.135 — Statements is a tab of Activity (pocket-live DESIGN.md 16.2): one balance's or one agent's statement as paper.
 
 const FORMATS: readonly [StatementFormat, string][] = [
   ['csv', 'CSV'],
@@ -65,11 +67,47 @@ function Pills<T extends string | number | null>({ label, options, value, onChan
   )
 }
 
+/** Activity's tabs as Pocket's .seg: cloud, the one chosen in ink. */
+function Tabs<T extends string>({ tabs, value, onChange }: { tabs: readonly T[]; value: T; onChange: (t: T) => void }) {
+  const { c } = useTheme()
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} accessibilityRole="tablist" contentContainerStyle={{ gap: 6, padding: 2 }}>
+      {tabs.map((t) => {
+        const on = t === value
+        return (
+          <Pressable
+            key={t}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: on }}
+            onPress={() => onChange(t)}
+            style={{ height: 44, justifyContent: 'center', paddingHorizontal: 14, borderRadius: 999, backgroundColor: on ? c.primary : c.cloud, boxShadow: on ? undefined : `inset 0 0 0 1px ${c.frostLine}` }}>
+            <Text style={{ fontFamily: fonts.uiBold, fontSize: 14, color: on ? c.onPrimary : c.ink2 }}>{t}</Text>
+          </Pressable>
+        )
+      })}
+    </ScrollView>
+  )
+}
+
 export default function ActivityScreen() {
+  const params = useLocalSearchParams<{ agent?: string; tab?: string }>()
+  const [tab, setTab] = useState<'All' | 'Statements'>(params.tab === 'statements' ? 'Statements' : 'All')
+  return tab === 'Statements' ? (
+    <Screen>
+      <Back home="/" />
+      <Headline>Activity</Headline>
+      <Tabs tabs={['All', 'Statements'] as const} value={tab} onChange={setTab} />
+      <StatementsTab />
+    </Screen>
+  ) : (
+    <Movements agent={params.agent} tabs={<Tabs tabs={['All', 'Statements'] as const} value={tab} onChange={setTab} />} />
+  )
+}
+
+function Movements({ agent: agentParam, tabs }: { agent?: string; tabs: ReactNode }) {
   const { client, peg } = useSession()
-  const params = useLocalSearchParams<{ agent?: string }>()
   const [month, setMonth] = useState<'this' | 'last'>('this')
-  const [agent, setAgent] = useState<string | null>(params.agent ?? null)
+  const [agent, setAgent] = useState<string | null>(agentParam ?? null)
   const [kindAt, setKindAt] = useState(0)
   const [q, setQ] = useState('')
   const [format, setFormat] = useState<StatementFormat>('csv')
@@ -121,6 +159,7 @@ export default function ActivityScreen() {
         <Headline>Activity</Headline>
         <MoneyLabel capability={AGENT_CREDIT} />
       </View>
+      {tabs}
       <Body muted>
         {month === 'this' ? 'This month' : 'Last month'}: {monthName(period.from)}
       </Body>

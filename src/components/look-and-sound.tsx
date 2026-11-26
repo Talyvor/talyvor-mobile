@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
 
-import { Icon } from '@/components/icon'
+import { Icon, type IconName } from '@/components/icon'
 import { BottomSheet } from '@/components/pay-sheet'
 import { Card, Row, Toggle } from '@/components/ui'
 import { setLook, useLook, type Look } from '@/look'
@@ -66,8 +66,8 @@ export function LookAndSound() {
   )
 }
 
-/** One look: radio semantics, the dot leading, as Pocket Live's `.pick`. */
-function Pick({ picked, title, line, onPick }: { picked: boolean; title: string; line?: string; onPick: () => void }) {
+/** One look: radio semantics, the dot leading, as Pocket Live's `.pick`; `icon` is the mark at its end (B61.135). */
+export function Pick({ picked, title, line, icon, onPick }: { picked: boolean; title: string; line?: string; icon?: IconName; onPick: () => void }) {
   const { c } = useTheme()
   return (
     <Pressable
@@ -83,6 +83,7 @@ function Pick({ picked, title, line, onPick }: { picked: boolean; title: string;
         <Text style={{ fontFamily: fonts.uiBold, fontSize: 16.5, lineHeight: 22, color: c.ink }}>{title}</Text>
         {line ? <Text style={{ fontFamily: fonts.ui, fontSize: 14, lineHeight: 20, color: c.ink2 }}>{line}</Text> : null}
       </View>
+      {icon ? <Icon name={icon} color={c.ink2} /> : null}
     </Pressable>
   )
 }
