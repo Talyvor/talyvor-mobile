@@ -214,7 +214,7 @@ export default function Cards() {
         <View key={h.agent.id} style={{ gap: 12 }} testID={`card-${h.agent.id}`}>
           <View testID={`card-head-${h.agent.id}`}>
             <Card>
-              <AgentCard agent={h.agent} width={width - 76} />
+              <AgentCard agent={h.agent} width={width - 76} frozen={!!h.card?.frozen} />
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 6 }}>
                 <View style={{ flexShrink: 1 }}>
                   <Headline>{h.agent.name}</Headline>

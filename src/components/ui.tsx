@@ -6,12 +6,13 @@ import { BottomTabBarHeightContext } from 'expo-router/build/react-navigation/bo
 import { NavigationContext } from 'expo-router/build/react-navigation/core/index'
 import { SafeAreaInsetsContext, SafeAreaView } from 'react-native-safe-area-context'
 
-import { durations, haptic, sheetDragClose, spring, useReduceMotion } from '../motion'
+import { durations, easings, haptic, sheetDragClose, spring, useReduceMotion } from '../motion'
 
 import { useSession } from '../session'
 import { play } from '../sound'
 import { fonts, SurfaceContext, useTheme } from '../theme'
-import { Backdrop, ScreenHues, SheetWash, type BackdropStrength, type Hues } from './backdrop'
+import { Backdrop, ScreenHues, SheetWash, useHues, type BackdropStrength, type Hues } from './backdrop'
+import { DoneTick } from './effects'
 import { Icon, type IconName } from './icon'
 import { Shapes } from './live'
 import { Press } from './press'
@@ -66,6 +67,7 @@ export function Screen({
   toEnd,
   fill,
   sheet,
+  still,
 }: {
   children: ReactNode
   onRefresh?: () => void
@@ -77,11 +79,13 @@ export function Screen({
   toEnd?: boolean
   fill?: boolean
   sheet?: boolean
+  /** B61.130 — every agent is paused, or the agent whose page it is: the streams stop and turn grey */
+  still?: boolean
 }) {
   return (
     <ScreenHues hues={hues}>
       <SurfaceContext.Provider value={sheet ? 'sheet' : 'glass'}>
-        <ScreenBody {...{ onRefresh, refreshing, footer, backdrop, agent, hues, toEnd, fill, sheet }}>{children}</ScreenBody>
+        <ScreenBody {...{ onRefresh, refreshing, footer, backdrop, agent, hues, toEnd, fill, sheet, still }}>{children}</ScreenBody>
       </SurfaceContext.Provider>
     </ScreenHues>
   )
@@ -98,6 +102,7 @@ function ScreenBody({
   toEnd,
   fill,
   sheet,
+  still,
 }: Parameters<typeof Screen>[0]) {
   const { c } = useTheme()
   const scroller = useRef<ComponentRef<typeof ScrollView>>(null)
@@ -119,7 +124,7 @@ function ScreenBody({
   )
   return (
     <View style={{ flex: 1, backgroundColor: c.page }}>
-      {sheet ? <SheetWash /> : <Backdrop strength={backdrop ?? 'calm'} agent={agent} hues={hues} scrollY={scrollY} />}
+      {sheet ? <SheetWash /> : <Backdrop strength={backdrop ?? 'calm'} agent={agent} hues={hues} scrollY={scrollY} still={still} />}
       <SafeAreaView style={{ flex: 1 }} edges={footer ? ['top', 'left', 'right', 'bottom'] : ['top', 'left', 'right']}>
         {footer ? (
           <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -209,6 +214,9 @@ export function Card({ children, white, tight, testID }: { children: ReactNode; 
   )
 }
 
+/** How far a switch's thumb travels from off to on. */
+const KNOB_TRAVEL = 18
+
 type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'danger' | 'soft-danger' | 'ghost'
 
 /** 52 tall and round; the primary one is ink and full width. `primary` is today's name for the primary variant. `small`
@@ -226,6 +234,7 @@ export function Button({
   icon,
   testID,
   haptic,
+  done,
 }: {
   label: string
   onPress: () => void
@@ -242,8 +251,11 @@ export function Button({
   testID?: string
   /** a light haptic when pressed; false on a decline (B61.73) */
   haptic?: boolean
+  /** B61.130 — its small job is done: green with a tick, and it takes no press, until its sheet closes */
+  done?: boolean
 }) {
-  const { c } = useTheme()
+  const { c, dark } = useTheme()
+  const [h1, h2] = useHues()
   const look = {
     primary: { backgroundColor: c.primary, color: c.onPrimary },
     secondary: { backgroundColor: c.cloud2, boxShadow: `inset 0 0 0 1px ${c.frostLine}`, color: c.ink },
@@ -254,19 +266,26 @@ export function Button({
   }[variant]
   const { color, ...box } = look
   const text = <Text style={[styles.buttonText, { color }, small && { fontSize: 14 }]}>{label}</Text>
+  // B61.130 — a main button carries a glow of the page's two colours under it (pocket-live DESIGN.md section 15).
+  const glow = variant === 'primary' && !disabled && !done ? { boxShadow: `0 10px 26px -10px ${h1}B3, 0 2px 6px -2px ${h2}66` } : null
+  const did = done ? { backgroundColor: c.success, borderWidth: 0, boxShadow: undefined } : null
   return (
     <Press
       accessibilityRole="button"
       testID={testID}
-      accessibilityLabel={accessibilityLabel}
-      accessibilityState={{ disabled }}
-      accessibilityHint={disabled ? hint : undefined}
-      disabled={disabled}
+      accessibilityLabel={done ? 'Done' : accessibilityLabel}
+      accessibilityState={{ disabled: disabled || done }}
+      accessibilityHint={disabled && !done ? hint : undefined}
+      disabled={disabled || done}
       onPress={onPress}
       haptic={haptic}
       hitSlop={small ? 8 : undefined}
-      style={({ pressed }) => [styles.button, box, small ? styles.small : variant === 'primary' && { alignSelf: 'stretch' }, (pressed || disabled) && { opacity: 0.6 }]}>
-      {icon ? (
+      ripple={variant === 'primary' ? 'onPrimary' : variant === 'ghost' ? undefined : 'ink'}
+      radius={small ? 17 : 26}
+      style={({ pressed }) => [styles.button, box, glow, did, small ? styles.small : variant === 'primary' && { alignSelf: 'stretch' }, ((pressed || disabled) && !done) && { opacity: 0.6 }]}>
+      {done ? (
+        <DoneTick colour={dark ? '#06281A' : '#FFFFFF'} />
+      ) : icon ? (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <Icon name={icon} color={color} />
           {text}
@@ -301,12 +320,28 @@ export function Chip({ children, tone = 'plain', dot }: { children: ReactNode; t
 /** A role switch with its words beside it; `sub` is the line under them, as Pocket Live's setting rows draw it. */
 export function Toggle({ label, sub, value, onValueChange, disabled }: { label: string; sub?: string; value: boolean; onValueChange: (on: boolean) => void; disabled?: boolean }) {
   const { c, dark } = useTheme()
+  // B61.130 — the thumb stretches under the finger and springs across (pocket-live DESIGN.md section 15); with Reduce
+  // Motion it stands at its side.
+  const reduce = useReduceMotion()
+  const [across] = useState(() => new Animated.Value(value ? KNOB_TRAVEL : 0))
+  const [stretch] = useState(() => new Animated.Value(1))
+  useEffect(() => {
+    if (reduce) return across.setValue(value ? KNOB_TRAVEL : 0)
+    const a = Animated.spring(across, { toValue: value ? KNOB_TRAVEL : 0, ...spring, useNativeDriver: true })
+    a.start()
+    return () => a.stop()
+  }, [value, reduce, across])
+  const stretchTo = (to: number) => {
+    if (!reduce) Animated.timing(stretch, { toValue: to, duration: to > 1 ? durations.pressIn : durations.switch, easing: to > 1 ? easings.std : easings.pop, useNativeDriver: true }).start()
+  }
   return (
     <Pressable
       accessibilityRole="switch"
       accessibilityLabel={label}
       accessibilityState={{ checked: value, disabled }}
       disabled={disabled}
+      onPressIn={() => stretchTo(32 / 20)}
+      onPressOut={() => stretchTo(1)}
       onPress={() => {
         // B61.127 — a switch flips with tick.wav and a light haptic (pocket-live DESIGN.md section 15).
         play('tick')
@@ -323,7 +358,10 @@ export function Toggle({ label, sub, value, onValueChange, disabled }: { label: 
         <Text style={[styles.body, { color: c.ink, flex: 1 }]}>{label}</Text>
       )}
       <View style={[styles.toggle, { backgroundColor: value ? c.ink : c.control }]}>
-        <View style={[styles.knob, { left: value ? 21 : 3, backgroundColor: value && dark ? '#111216' : '#FFFFFF' }]} />
+        <Animated.View
+          testID="toggle-knob"
+          style={[styles.knob, { left: 3, backgroundColor: value && dark ? '#111216' : '#FFFFFF', transformOrigin: value ? 'right' : 'left', transform: [{ translateX: across }, { scaleX: stretch }] }]}
+        />
       </View>
     </Pressable>
   )

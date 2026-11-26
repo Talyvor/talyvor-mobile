@@ -183,6 +183,97 @@ exports[`a cobalt agent draws its card 1`] = `
         Research
       </Text>
     </View>
+    <View
+      collapsable={false}
+      pointerEvents="none"
+      style={
+        {
+          "height": 302.0467289719626,
+          "left": 0,
+          "position": "absolute",
+          "top": -43.149532710280376,
+          "transform": [
+            {
+              "translateX": -205.2,
+            },
+            {
+              "skewX": "-18deg",
+            },
+          ],
+          "width": 157.32,
+        }
+      }
+      testID="card-shine"
+    >
+      <RNSVGSvgView
+        bbHeight={302.0467289719626}
+        bbWidth={157.32}
+        focusable={false}
+        height={302.0467289719626}
+        style={
+          [
+            {
+              "backgroundColor": "transparent",
+              "borderWidth": 0,
+            },
+            {
+              "flex": 0,
+              "height": 302,
+              "width": 157,
+            },
+          ]
+        }
+        width={157.32}
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "payload": 4278190080,
+              "type": 0,
+            }
+          }
+        >
+          <RNSVGDefs>
+            <RNSVGLinearGradient
+              gradient={
+                [
+                  0,
+                  16777215,
+                  0.5,
+                  1811939327,
+                  1,
+                  16777215,
+                ]
+              }
+              gradientTransform={null}
+              gradientUnits={0}
+              name="card-shine"
+              x1="0"
+              x2="1"
+              y1="0"
+              y2="0"
+            />
+          </RNSVGDefs>
+          <RNSVGRect
+            fill={
+              {
+                "brushRef": "card-shine",
+                "type": 1,
+              }
+            }
+            height={302.0467289719626}
+            propList={
+              [
+                "fill",
+              ]
+            }
+            width={157.32}
+            x={0}
+            y={0}
+          />
+        </RNSVGGroup>
+      </RNSVGSvgView>
+    </View>
   </View>
 </View>
 `;
@@ -369,6 +460,97 @@ exports[`a lemon agent draws its card 1`] = `
       >
         Research
       </Text>
+    </View>
+    <View
+      collapsable={false}
+      pointerEvents="none"
+      style={
+        {
+          "height": 302.0467289719626,
+          "left": 0,
+          "position": "absolute",
+          "top": -43.149532710280376,
+          "transform": [
+            {
+              "translateX": -205.2,
+            },
+            {
+              "skewX": "-18deg",
+            },
+          ],
+          "width": 157.32,
+        }
+      }
+      testID="card-shine"
+    >
+      <RNSVGSvgView
+        bbHeight={302.0467289719626}
+        bbWidth={157.32}
+        focusable={false}
+        height={302.0467289719626}
+        style={
+          [
+            {
+              "backgroundColor": "transparent",
+              "borderWidth": 0,
+            },
+            {
+              "flex": 0,
+              "height": 302,
+              "width": 157,
+            },
+          ]
+        }
+        width={157.32}
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "payload": 4278190080,
+              "type": 0,
+            }
+          }
+        >
+          <RNSVGDefs>
+            <RNSVGLinearGradient
+              gradient={
+                [
+                  0,
+                  16777215,
+                  0.5,
+                  1811939327,
+                  1,
+                  16777215,
+                ]
+              }
+              gradientTransform={null}
+              gradientUnits={0}
+              name="card-shine"
+              x1="0"
+              x2="1"
+              y1="0"
+              y2="0"
+            />
+          </RNSVGDefs>
+          <RNSVGRect
+            fill={
+              {
+                "brushRef": "card-shine",
+                "type": 1,
+              }
+            }
+            height={302.0467289719626}
+            propList={
+              [
+                "fill",
+              ]
+            }
+            width={157.32}
+            x={0}
+            y={0}
+          />
+        </RNSVGGroup>
+      </RNSVGSvgView>
     </View>
   </View>
 </View>
@@ -597,6 +779,97 @@ exports[`a lime agent draws its card 1`] = `
         Research
       </Text>
     </View>
+    <View
+      collapsable={false}
+      pointerEvents="none"
+      style={
+        {
+          "height": 302.0467289719626,
+          "left": 0,
+          "position": "absolute",
+          "top": -43.149532710280376,
+          "transform": [
+            {
+              "translateX": -205.2,
+            },
+            {
+              "skewX": "-18deg",
+            },
+          ],
+          "width": 157.32,
+        }
+      }
+      testID="card-shine"
+    >
+      <RNSVGSvgView
+        bbHeight={302.0467289719626}
+        bbWidth={157.32}
+        focusable={false}
+        height={302.0467289719626}
+        style={
+          [
+            {
+              "backgroundColor": "transparent",
+              "borderWidth": 0,
+            },
+            {
+              "flex": 0,
+              "height": 302,
+              "width": 157,
+            },
+          ]
+        }
+        width={157.32}
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "payload": 4278190080,
+              "type": 0,
+            }
+          }
+        >
+          <RNSVGDefs>
+            <RNSVGLinearGradient
+              gradient={
+                [
+                  0,
+                  16777215,
+                  0.5,
+                  1811939327,
+                  1,
+                  16777215,
+                ]
+              }
+              gradientTransform={null}
+              gradientUnits={0}
+              name="card-shine"
+              x1="0"
+              x2="1"
+              y1="0"
+              y2="0"
+            />
+          </RNSVGDefs>
+          <RNSVGRect
+            fill={
+              {
+                "brushRef": "card-shine",
+                "type": 1,
+              }
+            }
+            height={302.0467289719626}
+            propList={
+              [
+                "fill",
+              ]
+            }
+            width={157.32}
+            x={0}
+            y={0}
+          />
+        </RNSVGGroup>
+      </RNSVGSvgView>
+    </View>
   </View>
 </View>
 `;
@@ -783,6 +1056,97 @@ exports[`a mint agent draws its card 1`] = `
       >
         Research
       </Text>
+    </View>
+    <View
+      collapsable={false}
+      pointerEvents="none"
+      style={
+        {
+          "height": 302.0467289719626,
+          "left": 0,
+          "position": "absolute",
+          "top": -43.149532710280376,
+          "transform": [
+            {
+              "translateX": -205.2,
+            },
+            {
+              "skewX": "-18deg",
+            },
+          ],
+          "width": 157.32,
+        }
+      }
+      testID="card-shine"
+    >
+      <RNSVGSvgView
+        bbHeight={302.0467289719626}
+        bbWidth={157.32}
+        focusable={false}
+        height={302.0467289719626}
+        style={
+          [
+            {
+              "backgroundColor": "transparent",
+              "borderWidth": 0,
+            },
+            {
+              "flex": 0,
+              "height": 302,
+              "width": 157,
+            },
+          ]
+        }
+        width={157.32}
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "payload": 4278190080,
+              "type": 0,
+            }
+          }
+        >
+          <RNSVGDefs>
+            <RNSVGLinearGradient
+              gradient={
+                [
+                  0,
+                  16777215,
+                  0.5,
+                  1811939327,
+                  1,
+                  16777215,
+                ]
+              }
+              gradientTransform={null}
+              gradientUnits={0}
+              name="card-shine"
+              x1="0"
+              x2="1"
+              y1="0"
+              y2="0"
+            />
+          </RNSVGDefs>
+          <RNSVGRect
+            fill={
+              {
+                "brushRef": "card-shine",
+                "type": 1,
+              }
+            }
+            height={302.0467289719626}
+            propList={
+              [
+                "fill",
+              ]
+            }
+            width={157.32}
+            x={0}
+            y={0}
+          />
+        </RNSVGGroup>
+      </RNSVGSvgView>
     </View>
   </View>
 </View>
@@ -971,6 +1335,97 @@ exports[`a orchid agent draws its card 1`] = `
         Research
       </Text>
     </View>
+    <View
+      collapsable={false}
+      pointerEvents="none"
+      style={
+        {
+          "height": 302.0467289719626,
+          "left": 0,
+          "position": "absolute",
+          "top": -43.149532710280376,
+          "transform": [
+            {
+              "translateX": -205.2,
+            },
+            {
+              "skewX": "-18deg",
+            },
+          ],
+          "width": 157.32,
+        }
+      }
+      testID="card-shine"
+    >
+      <RNSVGSvgView
+        bbHeight={302.0467289719626}
+        bbWidth={157.32}
+        focusable={false}
+        height={302.0467289719626}
+        style={
+          [
+            {
+              "backgroundColor": "transparent",
+              "borderWidth": 0,
+            },
+            {
+              "flex": 0,
+              "height": 302,
+              "width": 157,
+            },
+          ]
+        }
+        width={157.32}
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "payload": 4278190080,
+              "type": 0,
+            }
+          }
+        >
+          <RNSVGDefs>
+            <RNSVGLinearGradient
+              gradient={
+                [
+                  0,
+                  16777215,
+                  0.5,
+                  1811939327,
+                  1,
+                  16777215,
+                ]
+              }
+              gradientTransform={null}
+              gradientUnits={0}
+              name="card-shine"
+              x1="0"
+              x2="1"
+              y1="0"
+              y2="0"
+            />
+          </RNSVGDefs>
+          <RNSVGRect
+            fill={
+              {
+                "brushRef": "card-shine",
+                "type": 1,
+              }
+            }
+            height={302.0467289719626}
+            propList={
+              [
+                "fill",
+              ]
+            }
+            width={157.32}
+            x={0}
+            y={0}
+          />
+        </RNSVGGroup>
+      </RNSVGSvgView>
+    </View>
   </View>
 </View>
 `;
@@ -1158,6 +1613,97 @@ exports[`a rose agent draws its card 1`] = `
         Research
       </Text>
     </View>
+    <View
+      collapsable={false}
+      pointerEvents="none"
+      style={
+        {
+          "height": 302.0467289719626,
+          "left": 0,
+          "position": "absolute",
+          "top": -43.149532710280376,
+          "transform": [
+            {
+              "translateX": -205.2,
+            },
+            {
+              "skewX": "-18deg",
+            },
+          ],
+          "width": 157.32,
+        }
+      }
+      testID="card-shine"
+    >
+      <RNSVGSvgView
+        bbHeight={302.0467289719626}
+        bbWidth={157.32}
+        focusable={false}
+        height={302.0467289719626}
+        style={
+          [
+            {
+              "backgroundColor": "transparent",
+              "borderWidth": 0,
+            },
+            {
+              "flex": 0,
+              "height": 302,
+              "width": 157,
+            },
+          ]
+        }
+        width={157.32}
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "payload": 4278190080,
+              "type": 0,
+            }
+          }
+        >
+          <RNSVGDefs>
+            <RNSVGLinearGradient
+              gradient={
+                [
+                  0,
+                  16777215,
+                  0.5,
+                  1811939327,
+                  1,
+                  16777215,
+                ]
+              }
+              gradientTransform={null}
+              gradientUnits={0}
+              name="card-shine"
+              x1="0"
+              x2="1"
+              y1="0"
+              y2="0"
+            />
+          </RNSVGDefs>
+          <RNSVGRect
+            fill={
+              {
+                "brushRef": "card-shine",
+                "type": 1,
+              }
+            }
+            height={302.0467289719626}
+            propList={
+              [
+                "fill",
+              ]
+            }
+            width={157.32}
+            x={0}
+            y={0}
+          />
+        </RNSVGGroup>
+      </RNSVGSvgView>
+    </View>
   </View>
 </View>
 `;
@@ -1344,6 +1890,97 @@ exports[`a sky agent draws its card 1`] = `
       >
         Research
       </Text>
+    </View>
+    <View
+      collapsable={false}
+      pointerEvents="none"
+      style={
+        {
+          "height": 302.0467289719626,
+          "left": 0,
+          "position": "absolute",
+          "top": -43.149532710280376,
+          "transform": [
+            {
+              "translateX": -205.2,
+            },
+            {
+              "skewX": "-18deg",
+            },
+          ],
+          "width": 157.32,
+        }
+      }
+      testID="card-shine"
+    >
+      <RNSVGSvgView
+        bbHeight={302.0467289719626}
+        bbWidth={157.32}
+        focusable={false}
+        height={302.0467289719626}
+        style={
+          [
+            {
+              "backgroundColor": "transparent",
+              "borderWidth": 0,
+            },
+            {
+              "flex": 0,
+              "height": 302,
+              "width": 157,
+            },
+          ]
+        }
+        width={157.32}
+      >
+        <RNSVGGroup
+          fill={
+            {
+              "payload": 4278190080,
+              "type": 0,
+            }
+          }
+        >
+          <RNSVGDefs>
+            <RNSVGLinearGradient
+              gradient={
+                [
+                  0,
+                  16777215,
+                  0.5,
+                  1811939327,
+                  1,
+                  16777215,
+                ]
+              }
+              gradientTransform={null}
+              gradientUnits={0}
+              name="card-shine"
+              x1="0"
+              x2="1"
+              y1="0"
+              y2="0"
+            />
+          </RNSVGDefs>
+          <RNSVGRect
+            fill={
+              {
+                "brushRef": "card-shine",
+                "type": 1,
+              }
+            }
+            height={302.0467289719626}
+            propList={
+              [
+                "fill",
+              ]
+            }
+            width={157.32}
+            x={0}
+            y={0}
+          />
+        </RNSVGGroup>
+      </RNSVGSvgView>
     </View>
   </View>
 </View>

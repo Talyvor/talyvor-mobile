@@ -8,6 +8,7 @@ import { useEffect } from 'react'
 
 import { useHideFromAppSwitcher } from '@/app-switcher'
 import { BackdropHues } from '@/components/backdrop'
+import { EffectsLayer } from '@/components/effects'
 import { forgetTopLine, TopLine } from '@/components/live'
 import { Cover, LockScreen } from '@/components/lock-screen'
 import { PictureFlight } from '@/components/picture-flight'
@@ -86,6 +87,8 @@ function Navigator() {
       </Stack>
       {/* B61.79 — an agent's face carried from the list to the top of its page, above both screens. */}
       <PictureFlight />
+      {/* B61.130 — the ring when money moves and the burst when an account opens or an agent is made. */}
+      {covered ? null : <EffectsLayer />}
       {/* B61.78 — one line at the top of the app for 2.3 s, saying what happened; never over the app switcher's cover. */}
       {covered ? null : <TopLine />}
       {/* B61.27 — not in front, the app switcher's picture is the mark, never the screen. */}

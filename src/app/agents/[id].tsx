@@ -43,10 +43,12 @@ export default function AgentScreen() {
   }, [client, id])
   const { data, error, loading, reload } = useLoad(load)
   // B61.71 — the page and its rules take the agent's own colour: Lens's once read, the pick from its id until then.
+  // B61.130 — the streams stop and turn grey while this agent is paused, or every agent is.
+  const still = !!data && data !== 'gone' && (!!data.summary.agent.paused_at || !!data.summary.all_paused_at)
   const own = agentColours[faceOf(data && data !== 'gone' ? data.summary.agent : { id }).colour]
 
   return (
-    <Screen backdrop="full" agent hues={[own, own]} onRefresh={reload} refreshing={loading && !!data}>
+    <Screen backdrop="full" agent hues={[own, own]} still={still} onRefresh={reload} refreshing={loading && !!data}>
       <Back home="/" />
       <LoadState loading={loading && !data} error={error} />
       {data === 'gone' ? <Body muted>This agent is not in your workspace.</Body> : null}

@@ -1,18 +1,19 @@
 import { formatMinor, type Agent, type AgentApproval, type AgentBook, type CurrencyAccount, type PaymentRequest } from '@talyvor/bff-client'
 import { Link } from 'expo-router'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Pressable, ScrollView, Text, View } from 'react-native'
 
 import { accountChip, type Account, type Shows } from '../account'
 import { balancesByCurrency, CURRENCY_NAME, isStablecoin } from '../balances'
 import { fonts, palettes, useTheme } from '../theme'
 import { PendingApprovals } from './approval-card'
+import { Breathe, Rise, RoundRing, useRipple } from './effects'
 import { AgentCard, agentCardLabel } from './card'
 import { Face } from './face'
 import { FlightSource, useTakeOff } from './picture-flight'
 import { Icon } from './icon'
 import { Shapes } from './live'
-import { Money } from './money'
+import { Money, useRolled } from './money'
 import { AGENT_CREDIT, MoneyLabel, PAY_OUT } from './money-label'
 import { OwnerCard } from './owner-card'
 import { PreparedPaymentCard } from './prepared-payment-card'
@@ -127,49 +128,70 @@ function Total({ business, shows, accounts }: { business: boolean; shows: Shows;
           <Body muted>{shows.bankTransfers ? 'Add money to get started.' : 'Receive stablecoins to get started.'}</Body>
         </>
       ) : held.length === 1 ? (
-        <Money minor={held[0].minor} currency={held[0].currency} size={44} />
+        <Money minor={held[0].minor} currency={held[0].currency} size={44} countUp />
       ) : (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: 14, borderRadius: 24, padding: 16, backgroundColor: c.cloud }}>
-          {held.map(({ currency, minor }) => {
-            const name = CURRENCY_NAME[currency] ?? currency
-            const amount = formatMinor(minor, currency).replace(` ${currency}`, '')
-            return (
-              <View key={currency} accessible accessibilityLabel={`${name}, ${amount}`} style={{ width: '33.33%', gap: 2 }}>
-                <Text style={{ fontFamily: fonts.ui, fontSize: 12.5, color: c.ink3 }}>{name}</Text>
-                <Text style={{ fontFamily: fonts.uiBold, fontSize: 15, color: c.ink, fontVariant: ['tabular-nums'] }}>{amount}</Text>
-              </View>
-            )
-          })}
+          {held.map(({ currency, minor }) => (
+            <Tile key={currency} currency={currency} minor={minor} />
+          ))}
         </View>
       )}
     </View>
   )
 }
 
+/** One currency's tile in the total: its name and what it holds, counting up as the app opens. */
+function Tile({ currency, minor }: { currency: string; minor: number }) {
+  const { c } = useTheme()
+  const name = CURRENCY_NAME[currency] ?? currency
+  const words = (v: number) => formatMinor(v, currency).replace(` ${currency}`, '')
+  const drawn = useRolled(minor, currency, true)
+  return (
+    <View accessible accessibilityLabel={`${name}, ${words(minor)}`} style={{ width: '33.33%', gap: 2 }}>
+      <Text style={{ fontFamily: fonts.ui, fontSize: 12.5, color: c.ink3 }}>{name}</Text>
+      <Text style={{ fontFamily: fonts.uiBold, fontSize: 15, color: c.ink, fontVariant: ['tabular-nums'] }}>{words(drawn)}</Text>
+    </View>
+  )
+}
+
+/** A round quick action: it ripples in a tint of ink under the finger and a ring opens around it as the finger lifts
+ * (B61.130). */
+function QuickAction({ href, label, words, icon }: { href: '/pay' | '/instant-transfer'; label: string; words: string; icon: 'payments' | 'send' }) {
+  const { c } = useTheme()
+  const [lifted, setLifted] = useState(0)
+  const ripple = useRipple('ink', 24)
+  const outer = useRef(72)
+  return (
+    <Link href={href} asChild>
+      <Press
+        kind="round"
+        accessibilityRole="link"
+        accessibilityLabel={label}
+        onLayout={(e) => (outer.current = e.nativeEvent.layout.width)}
+        // The finger's point, from the action's box to its circle's, which sits centred at the top.
+        onPressIn={(e) => ripple.start({ ...e, nativeEvent: { ...e.nativeEvent, locationX: e.nativeEvent.locationX - (outer.current - 48) / 2 } })}
+        onPressOut={() => setLifted((n) => n + 1)}
+        style={{ alignItems: 'center', gap: 6, minWidth: 72 }}>
+        <View style={{ width: 48, height: 48, alignItems: 'center', justifyContent: 'center' }}>
+          <RoundRing n={lifted} size={48} />
+          <View onLayout={ripple.onLayout} style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: c.cloud, alignItems: 'center', justifyContent: 'center' }}>
+            <Icon name={icon} color={c.ink} />
+            {ripple.layer}
+          </View>
+        </View>
+        <Text style={{ fontFamily: fonts.uiBold, fontSize: 12.5, color: c.ink }}>{words}</Text>
+      </Press>
+    </Link>
+  )
+}
+
 /** Quick actions: only the ones the phone has a screen for. */
 function Actions({ instant }: { instant: boolean }) {
-  const { c } = useTheme()
   return (
     <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
-      <Link href="/pay" asChild>
-        <Press kind="round" accessibilityRole="link" accessibilityLabel="Pay" style={{ alignItems: 'center', gap: 6, minWidth: 72 }}>
-          <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: c.cloud, alignItems: 'center', justifyContent: 'center' }}>
-            <Icon name="payments" color={c.ink} />
-          </View>
-          <Text style={{ fontFamily: fonts.uiBold, fontSize: 12.5, color: c.ink }}>Pay</Text>
-        </Press>
-      </Link>
+      <QuickAction href="/pay" label="Pay" words="Pay" icon="payments" />
       {/* B59.20 — Instant transfer, for a Hybrid account; B61.80: "Instant" under the round action, the full name read aloud. */}
-      {instant ? (
-        <Link href="/instant-transfer" asChild>
-          <Press kind="round" accessibilityRole="link" accessibilityLabel="Instant transfer" style={{ alignItems: 'center', gap: 6, minWidth: 72 }}>
-            <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: c.cloud, alignItems: 'center', justifyContent: 'center' }}>
-              <Icon name="send" color={c.ink} />
-            </View>
-            <Text style={{ fontFamily: fonts.uiBold, fontSize: 12.5, color: c.ink }}>Instant</Text>
-          </Press>
-        </Link>
-      ) : null}
+      {instant ? <QuickAction href="/instant-transfer" label="Instant transfer" words="Instant" icon="send" /> : null}
     </View>
   )
 }
@@ -178,8 +200,15 @@ function WaitingRow({ count }: { count: number }) {
   const { c } = useTheme()
   const words = waitingWords(count)
   return (
-    <Link href="/approvals" asChild>
-      <Pressable
+    <View>
+      {/* B61.130 — a soft tangerine halo breathes in and out around what waits for your yes. */}
+      <Breathe radius={16} />
+      <Link href="/approvals" asChild>
+      <Press
+        kind="row"
+        haptic={false}
+        ripple="tangerine"
+        radius={16}
         accessibilityRole="link"
         accessibilityLabel={words}
         style={{ flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 52, paddingHorizontal: 14, borderRadius: 16, backgroundColor: c.tangerine50 }}>
@@ -189,8 +218,9 @@ function WaitingRow({ count }: { count: number }) {
         </View>
         <Text style={{ flex: 1, fontFamily: fonts.uiBold, fontSize: 15, color: c.ink }}>{words}</Text>
         <Icon name="chev" color={c.ink} />
-      </Pressable>
-    </Link>
+      </Press>
+      </Link>
+    </View>
   )
 }
 
@@ -276,6 +306,8 @@ export function HomeView({
   const [starting, setStarting] = useState(false)
   return (
     <>
+      {/* B61.130 — as the app opens, Home's blocks rise in one after another. */}
+      <Rise index={0}>
       <Total business={shows.team} shows={shows} accounts={data.accounts} />
       {/* B59.33 — what each account holds, side by side by the kind of money. */}
       <Link href="/wallets" asChild>
@@ -283,7 +315,11 @@ export function HomeView({
           <Body style={{ color: c.tangerineInk }}>See all in Wallets</Body>
         </Pressable>
       </Link>
+      </Rise>
+      <Rise index={1}>
       <Actions instant={shows.instantTransfer} />
+      </Rise>
+      <Rise index={2}>
       {/* B57.71 — Pocket's .killp: every agent is paused, and the way to start them again, signed. */}
       {allPaused ? (
         <View style={{ gap: 4, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 20, backgroundColor: c.danger50 }}>
@@ -292,6 +328,7 @@ export function HomeView({
           <StartEveryAgentButton small signs={signs} onPress={() => setStarting(true)} />
         </View>
       ) : null}
+      </Rise>
       <StartEveryAgentSheet
         visible={starting}
         signs={signs}
@@ -301,6 +338,7 @@ export function HomeView({
           onDecided()
         }}
       />
+      <Rise index={3}>
       {waiting ? <WaitingRow count={waiting} /> : null}
       {data.prepared.map((r) => (
         <PreparedPaymentCard key={r.id} request={r} />
@@ -313,6 +351,8 @@ export function HomeView({
       </Link>
       {/* B61.54 — Spending and Statement left the tab bar and open from here and from Activity. */}
       <MoneyLinks />
+      </Rise>
+      <Rise index={4}>
 
       {/* B57.126 and B57.128: the owner's own card, then each agent's, each opening its screen. */}
       {agents.length || (account && name) ? (
@@ -337,6 +377,8 @@ export function HomeView({
         </>
       ) : null}
 
+      </Rise>
+      <Rise index={5}>
       {/* B59.11 — "Your agents", or a Business's "Your team’s agents", as the web's Home says. */}
       {/* B61.54 — See all opens the Agents tab, as P5 draws it. */}
       <SectionHead title={shows.agents} more={agents.length ? { href: '/agents', label: 'See all agents' } : undefined} />
@@ -363,6 +405,7 @@ export function HomeView({
           </Pressable>
         </Link>
       ) : null}
+      </Rise>
     </>
   )
 }

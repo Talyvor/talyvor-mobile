@@ -12,6 +12,7 @@ import { biometricName } from '@/keys'
 import { syncLiveActivities } from '@/live-activity'
 import { haptic } from '@/motion'
 import { useSession } from '@/session'
+import { moneyMoved } from '@/effects'
 import { play } from '@/sound'
 import { fonts, useTheme } from '@/theme'
 
@@ -98,6 +99,7 @@ export default function ApproveScreen() {
       setDone(await approveBatch(client, r!.id, ticked))
       haptic('success')
       play('approved')
+      moneyMoved('approved')
       void syncLiveActivities(client)
     } catch (err) {
       if (err instanceof BffError) {

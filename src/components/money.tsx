@@ -2,6 +2,7 @@ import { formatBalance, formatLXC, formatMinor } from '@talyvor/bff-client'
 import { useEffect, useRef, useState } from 'react'
 import { Text, View } from 'react-native'
 
+import { openingNow } from '../effects'
 import { durations, useReduceMotion } from '../motion'
 import { fonts, useTheme } from '../theme'
 
@@ -18,11 +19,13 @@ export function moneyParts(written: string): { large: string; small: string | nu
  * B61.78 — Pocket Live's roll (DESIGN.md section 4, `roll`), as the web's B61.75: once a figure is on the screen, a new
  * value rolls from the one drawn to the new one over 700 ms, easing out on the fourth power, in whole units. The first
  * value, a change of unit and Reduce Motion draw at once. Returns the value to draw now; the roll ends on the value itself.
+ * B61.130: `countUp` is one of Home's figures: drawn first as the app opens, it counts up from nothing over 700 ms, as a roll does.
  */
-export function useRolled(amount: number, unit: string): number {
+export function useRolled(amount: number, unit: string, countUp?: boolean): number {
   const reduce = useReduceMotion()
-  const [drawn, setDrawn] = useState(amount)
-  const at = useRef({ drawn: amount, unit })
+  const [first] = useState(() => (countUp && !reduce && openingNow() ? 0 : amount))
+  const [drawn, setDrawn] = useState(first)
+  const at = useRef({ drawn: first, unit })
   useEffect(() => {
     const from = at.current.drawn
     const sameUnit = at.current.unit === unit
@@ -41,7 +44,7 @@ export function useRolled(amount: number, unit: string): number {
     }
     frame = requestAnimationFrame(step)
     return () => cancelAnimationFrame(frame)
-  }, [amount, unit, reduce])
+  }, [amount, unit, reduce, first])
   return reduce ? amount : drawn
 }
 
@@ -50,11 +53,11 @@ type Amount = { micros: number; peg: number | null; balance?: boolean } | { mino
 
 /** An amount: µLXC in dollars at the peg, or minor units of a currency ($450.00, £24.00, 400.00 USDC). B61.78: a new
  * value rolls in, and a screen reader hears the new value once, never a figure in between. */
-export function Money({ size = 32, tone, ...amount }: Amount & { size?: number; tone?: string }) {
+export function Money({ size = 32, tone, countUp, ...amount }: Amount & { size?: number; tone?: string; countUp?: boolean }) {
   const { c } = useTheme()
   const micros = 'micros' in amount
   const value = micros ? amount.micros : amount.minor
-  const drawn = useRolled(value, micros ? `micros:${amount.peg}` : amount.currency)
+  const drawn = useRolled(value, micros ? `micros:${amount.peg}` : amount.currency, countUp)
   const writtenOf = (v: number) => (micros ? (amount.balance ? formatBalance : formatLXC)(v, amount.peg) : formatMinor(v, amount.currency))
   const written = writtenOf(value)
   const { large, small } = moneyParts(drawn === value ? written : writtenOf(drawn))

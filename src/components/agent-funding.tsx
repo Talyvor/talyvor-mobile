@@ -4,9 +4,11 @@ import { useEffect, useState } from 'react'
 import { Pressable, ScrollView, Text, useWindowDimensions, View } from 'react-native'
 
 import { useAccount } from '../account'
+import { moneyMoved } from '../effects'
 import { useSession } from '../session'
 import { outcome } from '../sound'
 import { fonts, useTheme } from '../theme'
+import { useTick } from './effects'
 import { AGENT_CREDIT, MoneyLabel } from './money-label'
 import { BottomSheet } from './pay-sheet'
 import { Body, Button, Field, Headline } from './ui'
@@ -89,6 +91,7 @@ function FundingSheet({ agent, direction, onClose, onDone }: { agent: { id: stri
   const Ours = `${ours.charAt(0).toUpperCase()}${ours.slice(1)}`
   const ready = agentAccount !== undefined && companyAccount !== undefined && minor !== null && minor > 0
   const close = busy ? undefined : onClose
+  const { ticked, tick } = useTick()
 
   const move = async () => {
     setBusy(true)
@@ -96,8 +99,11 @@ function FundingSheet({ agent, direction, onClose, onDone }: { agent: { id: stri
     try {
       const f = await client.agentFunding(agentAccount!.id, direction, minor!, key)
       outcome('moved')
+      moneyMoved('inside')
       setKey(Crypto.randomUUID())
       const moved = formatMinor(f.amount_minor, f.currency)
+      // B61.130 — the answer is in: the button ticks, then the sheet closes. Still busy, so nothing more is sent.
+      await tick()
       onDone(toAgent ? `${moved} moved to ${agent.name}.` : `${moved} back from ${agent.name}.`)
       onClose()
     } catch (err) {
@@ -192,6 +198,7 @@ function FundingSheet({ agent, direction, onClose, onDone }: { agent: { id: stri
               primary
               label={busy ? 'Moving…' : `${toAgent ? 'Move' : 'Take back'}${total ? ` ${total}` : ''}`}
               disabled={!ready || busy}
+              done={ticked}
               hint={busy ? 'Moving…' : agentAccount === undefined ? `${agent.name} has no ${accountWords(currency)}.` : companyAccount === undefined ? line : 'Add an amount first.'}
               onPress={() => void move()}
             />

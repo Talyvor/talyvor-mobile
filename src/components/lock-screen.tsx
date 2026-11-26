@@ -7,6 +7,7 @@ import { Door } from '@/components/door'
 import { PasscodePad } from '@/components/passcode-pad'
 import { Body, Button, Headline, Screen } from '@/components/ui'
 import { DOOR_WORDS, doorRefusal, waitLeft } from '@/door-words'
+import { opened } from '@/effects'
 import { openHelpMail } from '@/help-words'
 import { faceIDUnlocks } from '@/keys'
 import { useSession } from '@/session'
@@ -43,6 +44,7 @@ export function LockScreen() {
     try {
       await unlockFaceID()
       play('unlock')
+      opened()
     } catch (err) {
       // A Face ID that did not pass says nothing: the passcode is right there. Only the BFF's refusal is worded.
       if (err instanceof BffError) setSaid(doorRefusal(err))
@@ -79,6 +81,7 @@ export function LockScreen() {
     try {
       await unlock(digits)
       play('unlock')
+      opened()
     } catch (err) {
       setSaid(doorRefusal(err))
       const left = waitLeft(err)

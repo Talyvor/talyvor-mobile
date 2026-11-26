@@ -3,6 +3,7 @@ import Svg, { Defs, Line, LinearGradient, Rect, Stop } from 'react-native-svg'
 
 import { CARDS, type CardFace } from '../cards'
 import { agentColours, fonts, useTheme } from '../theme'
+import { Frost, Shine } from './effects'
 import { Face, faceOf } from './face'
 
 // B57.123 — one card face, drawn from the B57.121 manifest exactly as layout/Card.dc.html lays it out at 428 × 270 and
@@ -97,6 +98,7 @@ export function Card({
   holder,
   sub,
   width = W,
+  frozen,
 }: {
   face: CardFace
   /** The account holder's name on an owner card; the agent's own name on an agent card. */
@@ -105,6 +107,8 @@ export function Card({
   sub: string
   /** Edge in points; everything on the face scales with it. */
   width?: number
+  /** B61.130 — frost crosses the picture as the card freezes, and stays while it is frozen */
+  frozen?: boolean
 }) {
   const { c, dark } = useTheme()
   const k = width / W
@@ -165,6 +169,9 @@ export function Card({
           </View>
         )}
         <Holder k={k} owner={owner} ink={ink} holder={holder} sub={sub} />
+        {/* B61.130 — a band of light crosses the picture once as it comes into view; frost crosses a frozen one. */}
+        <Shine width={width} height={H * k} />
+        <Frost on={!!frozen} width={width} height={H * k} />
       </View>
     </View>
   )
@@ -173,12 +180,12 @@ export function Card({
 /** B57.126 — an agent's own card: the helper drawn for its colour (Remy for cobalt, and so on), with the agent's own name
  * and its job line. Lime has no helper yet, so a lime agent keeps today's face on a plain lime card (cards handoff,
  * 10 Nov 2026). The colour is the one Lens stores for the agent, or the pick from its id, as its face uses. */
-export function AgentCard({ agent, width = W }: { agent: { id: string; name: string; description?: string; colour?: string; face?: string }; width?: number }) {
+export function AgentCard({ agent, width = W, frozen }: { agent: { id: string; name: string; description?: string; colour?: string; face?: string }; width?: number; frozen?: boolean }) {
   const { c, dark } = useTheme()
   const { colour } = faceOf(agent)
   const sub = agent.description ?? ''
   const helper = CARDS.find((f) => f.family === 'agent' && f.colour.name === colour)
-  if (helper) return <Card face={helper} holder={agent.name} sub={sub} width={width} />
+  if (helper) return <Card face={helper} holder={agent.name} sub={sub} width={width} frozen={frozen} />
 
   const k = width / W
   return (
@@ -189,6 +196,8 @@ export function AgentCard({ agent, width = W }: { agent: { id: string; name: str
           <Face agent={agent} size={72 * k} />
         </View>
         <Holder k={k} owner={false} ink={TEXT.ink} holder={agent.name} sub={sub} />
+        <Shine width={width} height={H * k} />
+        <Frost on={!!frozen} width={width} height={H * k} />
       </View>
     </View>
   )
