@@ -1,4 +1,7 @@
 import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library'
+import { StyleSheet } from 'react-native'
+
+import { palettes } from '../theme'
 
 // B59.29 — the phone's Help and complaints, Close this account and Your data (the web's B59.28, on the phone): each form
 // sends one request with its kind and message only, a complaint shows its reference, the list shows each request's state
@@ -249,6 +252,32 @@ test('a refused deletion shows Lens’s sentence and keeps the person signed in'
   expect(mockStore.get('talyvor.session')).toContain('session-1')
   expect(mockStore.get('talyvor.device-key')).toBe('dk_1')
   expect(screen.getByText('Keep my account')).toBeTruthy()
+})
+
+// B57.226 — drawn as Pocket Live draws its close-account sheet (pocket-live SH.closeAcct): no tangerine edge, which only
+// the approval sheet wears; the line under the question in ink-2; Keep my account in ink; the red button is .btn.danger,
+// red on danger-50 with no outline, on the card as in the sheet.
+test('Delete your account and its sheet are drawn as Pocket Live’s close-account sheet', async () => {
+  mockBff()
+  const c = palettes.light
+  const look = (name: string) => StyleSheet.flatten(screen.getByRole('button', { name }).props.style)
+  await renderRouter('./src/app', { initialUrl: '/settings/close' })
+  expect(await screen.findByText('You have not asked to close this account.')).toBeTruthy()
+  expect(look('Delete your account')).toMatchObject({ backgroundColor: c.danger50 })
+  expect(look('Delete your account').borderWidth ?? 0).toBe(0)
+
+  await fireEvent.press(screen.getByRole('button', { name: 'Delete your account' }))
+  const sheet = await screen.findByTestId('delete-account-sheet')
+  expect(StyleSheet.flatten(within(sheet).getByText(DELETE_WORDS.sheet[1]).props.style).color).toBe(c.ink2)
+  expect(look('Keep my account')).toMatchObject({ backgroundColor: c.primary })
+  expect(look('Yes, delete my account')).toMatchObject({ backgroundColor: c.danger50 })
+  expect(look('Yes, delete my account').borderWidth ?? 0).toBe(0)
+  type Node = { type?: unknown; props?: { style?: unknown }; parent?: Node | null; children?: (Node | string)[] }
+  let root: Node = sheet as unknown as Node
+  while (root.parent) root = root.parent
+  const walk = (n: Node): Node[] => [n, ...(n.children ?? []).flatMap((k) => (typeof k === 'string' ? [] : walk(k)))]
+  const tangerine = walk(root).filter((n) => StyleSheet.flatten(n.props?.style as never)?.backgroundColor === c.tangerine)
+  expect(tangerine).toHaveLength(0)
 })
 
 test('Your data asks for a copy and, once done, hands it to the share sheet; deletion is its own request', async () => {

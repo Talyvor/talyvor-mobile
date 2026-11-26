@@ -1,0 +1,6 @@
+[
+  { "route": "/settings", "screen": "p-pause-all", "name": "row", "scroll": "Close this account", "live": "await P.unlock(); await P.push('settings');", "words": "report", "why": "B57.226 — Settings' Close this account on Pocket Live's trash mark; the row keeps the web's line (suite B59.28)" },
+  { "route": "/settings/close", "screen": "p-pause-all", "name": "card", "scroll": "Delete your account", "live": "await P.unlock(); await P.openSheet('closeAcct');", "words": "report", "why": "Delete your account's button as Pocket Live's .btn.danger, red on danger-50; the words are the web's (suite B52.38, B57.209)" },
+  { "route": "/settings/close", "screen": "p-pause-all", "name": "sheet", "press": ["Delete your account"], "live": "await P.unlock(); await P.openSheet('closeAcct');", "words": "report", "why": "drawn as Pocket Live's closeAcct: no tangerine edge, the line in ink-2, Keep my account in ink, Yes, delete my account as .btn.danger; the email (or DELETE) typed back stays, as the web's dialog asks it" },
+  { "route": "/settings/close", "screen": "p-pause-all", "name": "sheet", "dark": true, "press": ["Delete your account"], "live": "await P.unlock(); await P.openSheet('closeAcct');", "words": "report", "why": "the same, with the phone set to dark" }
+]
