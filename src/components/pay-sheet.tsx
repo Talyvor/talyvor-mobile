@@ -17,12 +17,27 @@ type ScamAnswers = Partial<Record<(typeof SCAM_QUESTIONS)[number]['key'], boolea
 
 /** A bottom sheet over the screen: Close, a tap on the dimmed screen above it and dragging its grab bar down all close it. Without `onClose` it has
  * neither, and only its own buttons put it away (B57.146: a recovery code shown once). */
-export function BottomSheet({ visible, onClose, children, testID }: { visible: boolean; onClose?: () => void; children: ReactNode; testID?: string }) {
+export function BottomSheet({
+  visible,
+  onClose,
+  children,
+  testID,
+  edge,
+}: {
+  visible: boolean
+  onClose?: () => void
+  children: ReactNode
+  testID?: string
+  /** false leaves off the tangerine band, as Pocket Live draws every sheet but the approval's (B57.227) */
+  edge?: boolean
+}) {
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose ?? (() => undefined)}>
       <View testID={testID} style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(17,18,22,0.4)' }}>
         <Pressable accessible={false} disabled={!onClose} style={{ flex: 1 }} onPress={onClose} />
-        <Sheet onClose={onClose}>{children}</Sheet>
+        <Sheet onClose={onClose} edge={edge}>
+          {children}
+        </Sheet>
       </View>
       <SheetCover />
     </Modal>

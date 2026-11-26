@@ -1,0 +1,6 @@
+[
+  { "route": "/cards", "screen": "p-agent-research", "words": "report", "scroll": "Show card details", "why": "B57.227 — Replace card as the agent page draws Pause (.btn.secondary) and Cancel card as .btn.danger, red on danger-50, under Freeze card; the words are the web's (suite B28.47)" },
+  { "route": "/cards", "screen": "p-agent-research", "name": "replace", "words": "report", "press": ["Replace card"], "live": "await P.unlock(); await P.openSheet('closeAcct');", "why": "Replace card's sheet drawn as Pocket Live's closeAcct: no tangerine edge, the line in ink-2, Keep it first in ink, Replace card under it; the words are the web's EndCardDialog" },
+  { "route": "/cards", "screen": "p-agent-research", "name": "cancel", "words": "report", "press": ["Cancel card"], "live": "await P.unlock(); await P.openSheet('closeAcct');", "why": "the same, with Cancel card as .btn.danger" },
+  { "route": "/cards", "screen": "p-agent-research", "name": "cancel", "dark": true, "words": "report", "press": ["Cancel card"], "live": "await P.unlock(); await P.openSheet('closeAcct');", "why": "the same, with the phone set to dark" }
+]

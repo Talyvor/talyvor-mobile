@@ -1,5 +1,7 @@
 import { act, fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library'
-import { AppState, type AppStateStatus } from 'react-native'
+import { AppState, StyleSheet, type AppStateStatus } from 'react-native'
+
+import { palettes } from '../theme'
 
 // B59.34 — Cards on the phone: each agent's card in its art, its details hidden until Face ID, freeze and unfreeze, the
 // limits its purchases are judged by, and every purchase, in the web's words.
@@ -267,6 +269,38 @@ test('B28.465: Cancel card asks once, then the agent has no card yet and can be 
   expect(within(screen.getByTestId('card-head-ag_1')).getByText(WEB.cancelled('Research').replace('on Agents', 'here'))).toBeTruthy()
   expect(within(screen.getByTestId('card-head-ag_1')).getByRole('button', { name: 'Issue Research a card' })).toBeTruthy()
   expect(within(screen.getByTestId('card-head-ag_1')).queryByRole('switch', { name: 'Freeze card' })).toBeNull()
+})
+
+// B57.227 — in Pocket: Replace card is .btn.secondary as the reference's agent page draws Pause; Cancel card is .btn.danger,
+// red on danger-50 with no outline; the sheet is drawn as Pocket Live's close-account sheet (SH.closeAcct): no tangerine
+// edge, the line in ink-2, Keep it in ink first, and the card's own button under it.
+test('B57.227: Replace card and Cancel card, and the sheet that asks, are drawn in Pocket', async () => {
+  mockBff()
+  const c = palettes.light
+  const look = (within: { getByRole: typeof screen.getByRole }, name: string) => StyleSheet.flatten(within.getByRole('button', { name }).props.style)
+  await renderRouter('./src/app', { initialUrl: '/cards' })
+  const head = within(await screen.findByTestId('card-head-ag_1'))
+  expect(look(head, 'Replace card')).toMatchObject({ backgroundColor: c.cloud2 })
+  expect(look(head, 'Cancel card')).toMatchObject({ backgroundColor: c.danger50 })
+  expect(look(head, 'Cancel card').borderWidth ?? 0).toBe(0)
+
+  for (const [name, action] of [['Replace card', c.cloud2], ['Cancel card', c.danger50]] as const) {
+    await fireEvent.press(within(screen.getByTestId('card-head-ag_1')).getByRole('button', { name }))
+    const ask = await screen.findByTestId('end-card-sheet')
+    const sheet = within(ask)
+    const line = name === 'Replace card' ? /is cancelled at once/ : /is cancelled for good/
+    expect(StyleSheet.flatten(sheet.getByText(line).props.style).color).toBe(c.ink2)
+    expect(look(sheet, 'Keep it')).toMatchObject({ backgroundColor: c.primary })
+    expect(look(sheet, name)).toMatchObject({ backgroundColor: action })
+    expect(look(sheet, name).borderWidth ?? 0).toBe(0)
+    const buttons = sheet.getAllByRole('button')
+    expect(buttons.indexOf(sheet.getByRole('button', { name: 'Keep it' }))).toBeLessThan(buttons.indexOf(sheet.getByRole('button', { name })))
+    type Node = { props?: { style?: unknown }; children?: (Node | string)[] }
+    const walk = (n: Node): Node[] => [n, ...(n.children ?? []).flatMap((k) => (typeof k === 'string' ? [] : walk(k)))]
+    expect(walk(ask as unknown as Node).filter((n) => StyleSheet.flatten(n.props?.style as never)?.backgroundColor === c.tangerine)).toHaveLength(0)
+    await fireEvent.press(sheet.getByRole('button', { name: 'Keep it' }))
+    await waitFor(() => expect(screen.queryByTestId('end-card-sheet')).toBeNull())
+  }
 })
 
 test('B57.136: the limits sit in their own panel, and an agent with no card says so in its panel', async () => {
