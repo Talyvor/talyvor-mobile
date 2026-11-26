@@ -1,0 +1,69 @@
+[
+ {
+  "route": "/settings/verification",
+  "screen": "p-pause-all",
+  "account": "personal:hybrid",
+  "live": "await P.flow('su', { type: 'Personal', kind: 'Fiat', find: 'yes' }); await P.push('su', [5]);",
+  "answers": {
+   "/api/verification": {
+    "level": "L1",
+    "meaning": "",
+    "live_level": "L0",
+    "live_meaning": "",
+    "checks": [
+     {
+      "level": "L1",
+      "subject": "contact",
+      "method": "test",
+      "test": true,
+      "status": "completed",
+      "evidence_ref": "ev_1"
+     }
+    ]
+   }
+  },
+  "name": "address",
+  "scroll": "Home address",
+  "fill": {
+   "Address line 1": "1 High Street",
+   "Town or city": "London",
+   "Postcode": "N1 9GU"
+  },
+  "words": "report",
+  "why": "B57.197: the home address drawn as Pocket draws an address: Pocket Live's section head over its fields, Town or city beside Postcode as w-card's Order a card has them; the reference does not draw it in su5 yet (DESIGN.md section 8), so B61.47's words (the web's B61.46) are listed under Words to confirm"
+ },
+ {
+  "route": "/settings/verification",
+  "screen": "p-pause-all",
+  "account": "personal:hybrid",
+  "live": "await P.flow('su', { type: 'Personal', kind: 'Fiat', find: 'yes' }); await P.push('su', [5]);",
+  "answers": {
+   "/api/verification": {
+    "level": "L1",
+    "meaning": "",
+    "live_level": "L0",
+    "live_meaning": "",
+    "checks": [
+     {
+      "level": "L1",
+      "subject": "contact",
+      "method": "test",
+      "test": true,
+      "status": "completed",
+      "evidence_ref": "ev_1"
+     }
+    ]
+   }
+  },
+  "name": "address",
+  "scroll": "Home address",
+  "fill": {
+   "Address line 1": "1 High Street",
+   "Town or city": "London",
+   "Postcode": "N1 9GU"
+  },
+  "words": "report",
+  "why": "the same, with the phone set to dark",
+  "dark": true
+ }
+]

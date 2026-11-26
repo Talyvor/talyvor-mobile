@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library'
 
-import { palettes } from '@/theme'
+import { fonts, palettes } from '@/theme'
 
 // B59.9 — sign-up on the phone shows the web's words (talyvor-suite B59.8, apps/web/src/areas/auth/signupWords.ts at
 // a8240e4), asks who the account is for and the kind of money, and its step 3 makes this phone's key with Face ID. B61.21: step 4 is the identity
@@ -475,6 +475,25 @@ test("B57.174: the identity step is drawn as Pocket Live's su5, its one main but
   // The order the drawing reads in: the line, the fields, then the note. (An empty Country also says its label inside.)
   const order = texts().filter((t) => [LIVE.line, LIVE.fullName, LIVE.dateOfBirth, WEB.identity.labels.country, LIVE.note].includes(t))
   expect([...new Set(order)]).toEqual([LIVE.line, LIVE.fullName, LIVE.dateOfBirth, WEB.identity.labels.country, LIVE.note])
+})
+
+// B57.197 — the home address in Pocket. The reference has not drawn it in the identity step yet (Pocket Live DESIGN.md
+// section 8), so it is drawn as Pocket draws an address and a part of a screen: Pocket Live's section head (.sec-h h3) over
+// its fields, and Town or city beside Postcode, as Pocket's Order a card draws them (w-card). B61.47's words are kept.
+test('B57.197: the home address is drawn under Pocket\'s section head, Town or city beside Postcode', async () => {
+  mockBff()
+  await renderRouter('./src/app', { initialUrl: '/sign-up' })
+  await toStepFour('Personal', 'Maya Lind')
+  const A = WEB.identity.address
+  const head = await screen.findByRole('header', { name: A.title })
+  expect(head).toHaveStyle({ fontFamily: fonts.display, fontSize: 18 })
+  const row = screen.getByTestId('address-town-postcode')
+  expect(row).toHaveStyle({ flexDirection: 'row' })
+  expect(within(row).getByLabelText(A.town)).toBeTruthy()
+  expect(within(row).getByLabelText(A.postcode)).toBeTruthy()
+  // The address reads in the order the web's has it, above the country lived in.
+  const order = texts().filter((t) => [A.title, A.line1, A.line2, A.town, A.postcode, WEB.identity.labels.country].includes(t))
+  expect([...new Set(order)]).toEqual([A.title, A.line1, A.line2, A.town, A.postcode, WEB.identity.labels.country])
 })
 
 test('B61.21: a Business sign-up asks for its company, and opens once the company check passes too', async () => {
