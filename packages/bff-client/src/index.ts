@@ -337,6 +337,10 @@ export interface MoneyStatementLine {
   memo?: string
   /** on a card_charge: the issuer's id for the payment, which a dispute names */
   partner_ref?: string
+  /** B61.135 — pending, sent, completed, failed or returned (B30.23) */
+  state?: string
+  /** B61.135 — what the paying agent said the payment was for, on money out only (B62.2) */
+  task?: string
   balance_after_minor: number
 }
 
@@ -347,7 +351,22 @@ export interface MoneyStatement {
   currency: string
   from: string
   to: string
+  /** B61.135 — the account's own name, if it was given one, and opening + in − out = closing, in minor units */
+  name?: string
+  opening_minor?: number
+  in_minor?: number
+  out_minor?: number
+  closing_minor?: number
   lines: MoneyStatementLine[] | null
+}
+
+/** B61.135 — a currency account's statement as a file (Lens B61.131 and B61.132): the branded PDF, the Excel workbook or the CSV. */
+export type MoneyStatementFormat = 'pdf' | 'xlsx' | 'csv'
+
+export const MONEY_STATEMENT_MIME: Record<MoneyStatementFormat, string> = {
+  pdf: 'application/pdf',
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  csv: 'text/csv',
 }
 
 /** B59.26 — where a card dispute stands (Lens economy.CardDispute*). */
@@ -1555,6 +1574,9 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     /** One currency account's postings over [from, to), YYYY-MM-DD: its card payments carry the id a dispute names. */
     accountStatement: (id: string, from: string, to: string) =>
       call<MoneyStatement>('GET', `/api/money/accounts/${e(id)}/statement?${new URLSearchParams({ from, to })}`),
+    /** B61.135 — the same statement as the file Lens writes, to hand to the share sheet. */
+    accountStatementFile: async (id: string, from: string, to: string, format: MoneyStatementFormat) =>
+      (await send('GET', `/api/money/accounts/${e(id)}/statement?${new URLSearchParams({ from, to, format })}`, undefined, { Accept: MONEY_STATEMENT_MIME[format] })).arrayBuffer(),
     /** The workspace's card disputes, newest first, and where each stands. */
     cardDisputes: async () => (await call<{ card_disputes: CardDispute[] | null }>('GET', '/api/money/card-disputes')).card_disputes ?? [],
     /** Disputes a card payment, named by the issuer's id for it, with the owner's reason. Lens answers the dispute. */
