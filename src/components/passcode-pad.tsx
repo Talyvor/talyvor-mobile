@@ -57,7 +57,7 @@ export function PasscodePad({ onDone, faceID, disabled, reset, spread, children 
         borderRadius: 35,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: pressed ? c.cloud2 : 'transparent',
+        backgroundColor: pressed ? c.tint : 'transparent',
         transform: [{ scale: pressed ? 0.94 : 1 }],
         opacity: disabled ? 0.5 : 1,
       })}>

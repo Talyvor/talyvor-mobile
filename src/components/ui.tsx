@@ -9,8 +9,8 @@ import { SafeAreaInsetsContext, SafeAreaView } from 'react-native-safe-area-cont
 import { durations, sheetDragClose, spring, useReduceMotion } from '../motion'
 
 import { useSession } from '../session'
-import { fonts, useTheme } from '../theme'
-import { Backdrop, type BackdropStrength, type Hues } from './backdrop'
+import { fonts, SurfaceContext, useTheme } from '../theme'
+import { Backdrop, ScreenHues, SheetWash, type BackdropStrength, type Hues } from './backdrop'
 import { Icon, type IconName } from './icon'
 import { Shapes } from './live'
 import { Press } from './press'
@@ -51,7 +51,9 @@ export function useLoad<T>(load: () => Promise<T>) {
  * `hues` is an agent's own colour on its page, otherwise the account's two. B57.177: `toEnd` keeps a chat's latest line
  * in view, scrolling to the end each time what is in it grows. B57.185: `fill` lets the screen's words grow to its height,
  * so a number pad can sit at its foot as Pocket Live's lock and sign-up steps draw it. B61.76: on a tab, the content
- * scrolls under the floating tab bar and clears it at the end, and pressing the tab you are on scrolls it to the top. */
+ * scrolls under the floating tab bar and clears it at the end, and pressing the tab you are on scrolls it to the top.
+ * B61.126: the glass fills the screen and what is drawn on it is frosted (theme.ts's Surface); `sheet` is a screen that
+ * opens as the phone's own sheet, drawn as a sheet is, on the page with its two soft washes. */
 export function Screen({
   children,
   onRefresh,
@@ -62,6 +64,7 @@ export function Screen({
   hues,
   toEnd,
   fill,
+  sheet,
 }: {
   children: ReactNode
   onRefresh?: () => void
@@ -72,7 +75,29 @@ export function Screen({
   hues?: Hues
   toEnd?: boolean
   fill?: boolean
+  sheet?: boolean
 }) {
+  return (
+    <ScreenHues hues={hues}>
+      <SurfaceContext.Provider value={sheet ? 'sheet' : 'glass'}>
+        <ScreenBody {...{ onRefresh, refreshing, footer, backdrop, agent, hues, toEnd, fill, sheet }}>{children}</ScreenBody>
+      </SurfaceContext.Provider>
+    </ScreenHues>
+  )
+}
+
+function ScreenBody({
+  children,
+  onRefresh,
+  refreshing = false,
+  footer,
+  backdrop,
+  agent,
+  hues,
+  toEnd,
+  fill,
+  sheet,
+}: Parameters<typeof Screen>[0]) {
   const { c } = useTheme()
   const scroller = useRef<ComponentRef<typeof ScrollView>>(null)
   const [scrollY] = useState(() => new Animated.Value(0))
@@ -93,7 +118,7 @@ export function Screen({
   )
   return (
     <View style={{ flex: 1, backgroundColor: c.page }}>
-      <Backdrop strength={backdrop} agent={agent} hues={hues} scrollY={scrollY} />
+      {sheet ? <SheetWash /> : <Backdrop strength={backdrop ?? 'calm'} agent={agent} hues={hues} scrollY={scrollY} />}
       <SafeAreaView style={{ flex: 1 }} edges={footer ? ['top', 'left', 'right', 'bottom'] : ['top', 'left', 'right']}>
         {footer ? (
           <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -172,12 +197,13 @@ export function Figure({ children, size = 15, tone }: { children: ReactNode; siz
   return <Text style={{ fontFamily: fonts.display, fontSize: size, color: tone ?? c.ink, fontVariant: ['tabular-nums'] }}>{children}</Text>
 }
 
-/** Pocket's card: cloud, or white with a shadow where it sits on cloud; `tight` is .card.tight, a setting's row. */
+/** Pocket's card: frosted glass with a hairline (B61.126), or white with a shadow where it sits on cloud; `tight` is
+ * .card.tight, a setting's row. */
 export function Card({ children, white, tight, testID }: { children: ReactNode; white?: boolean; tight?: boolean; testID?: string }) {
   const { c } = useTheme()
   return (
     <OnCard.Provider value>
-      <View testID={testID} style={[styles.card, tight && styles.tight, white ? [{ backgroundColor: c.page }, styles.shadow] : { backgroundColor: c.cloud }]}>{children}</View>
+      <View testID={testID} style={[styles.card, tight && styles.tight, white ? [{ backgroundColor: c.page }, styles.shadow] : { backgroundColor: c.card, boxShadow: `inset 0 0 0 1px ${c.hairline}` }]}>{children}</View>
     </OnCard.Provider>
   )
 }
@@ -219,7 +245,7 @@ export function Button({
   const { c } = useTheme()
   const look = {
     primary: { backgroundColor: c.primary, color: c.onPrimary },
-    secondary: { backgroundColor: c.cloud2, color: c.ink },
+    secondary: { backgroundColor: c.cloud2, boxShadow: `inset 0 0 0 1px ${c.frostLine}`, color: c.ink },
     outline: { borderWidth: 1.5, borderColor: c.control, color: c.ink },
     danger: { borderWidth: 1.5, borderColor: c.danger, color: c.danger },
     'soft-danger': { backgroundColor: c.danger50, color: c.danger },
@@ -264,7 +290,7 @@ export function Chip({ children, tone = 'plain', dot }: { children: ReactNode; t
     paused: [c.cloud2, c.ink2],
   }[tone]
   return (
-    <View style={[styles.chip, { backgroundColor }]}>
+    <View style={[styles.chip, { backgroundColor }, (tone === 'plain' || tone === 'paused') && { boxShadow: `inset 0 0 0 1px ${c.frostLine}` }]}>
       {dot ? <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: color }} /> : null}
       <Text style={[styles.chipText, { color }]}>{children}</Text>
     </View>
@@ -326,7 +352,7 @@ export function Note({ icon, children, tone, link, testID = 'note' }: {
   const { c } = useTheme()
   const ink = tone === 'warn' ? c.tangerineInk : c.ink2
   return (
-    <View testID={testID} style={{ flexDirection: 'row', gap: 10, paddingVertical: 12, paddingHorizontal: 14, borderRadius: 14, backgroundColor: tone === 'warn' ? c.tangerine50 : c.cloud }}>
+    <View testID={testID} style={{ flexDirection: 'row', gap: 10, paddingVertical: 12, paddingHorizontal: 14, borderRadius: 14, ...(tone === 'warn' ? { backgroundColor: c.tangerine50 } : { backgroundColor: c.card, boxShadow: `inset 0 0 0 1px ${c.hairline}` }) }}>
       <Icon name={icon} size={20} color={ink} />
       <View style={{ flex: 1, gap: 6 }}>
         <Text style={{ fontFamily: fonts.ui, fontSize: 13.5, lineHeight: 19, color: ink }}>{children}</Text>
@@ -382,7 +408,7 @@ export function Bar({ value, label, thin }: { value: number; label: string; thin
       accessibilityRole="progressbar"
       accessibilityLabel={label}
       accessibilityValue={{ min: 0, max: 100, now: Math.round(used * 100) }}
-      style={{ height: thin ? 6 : 10, borderRadius: 999, backgroundColor: c.cloud2, overflow: 'hidden' }}>
+      style={{ height: thin ? 6 : 10, borderRadius: 999, backgroundColor: c.tint, overflow: 'hidden' }}>
       <View style={{ width: `${used * 100}%`, height: '100%', borderRadius: 999, backgroundColor: c.ink }} />
     </View>
   )
@@ -414,8 +440,16 @@ function SheetClose({ onClose }: { onClose: () => void }) {
 /** A sheet rising over the screen. With `onClose` it has Close at the top, focus moves to it, and dragging the grab bar
  * down more than 110 points closes it (B61.77, pocket-live DESIGN.md section 5, move 3); a shorter drag springs back. The
  * drag is a shortcut: Close does the same for anyone who cannot drag. `edge={false}` leaves off the tangerine band, as
- * Pocket Live draws every sheet but the approval's (B57.226). */
-export function Sheet({ children, onClose, edge = true }: { children: ReactNode; onClose?: () => void; edge?: boolean }) {
+ * Pocket Live draws every sheet but the approval's (B57.226). B61.126: on the page with the screen's two soft washes. */
+export function Sheet(props: { children: ReactNode; onClose?: () => void; edge?: boolean }) {
+  return (
+    <SurfaceContext.Provider value="sheet">
+      <SheetBody {...props} />
+    </SurfaceContext.Provider>
+  )
+}
+
+function SheetBody({ children, onClose, edge = true }: { children: ReactNode; onClose?: () => void; edge?: boolean }) {
   const { c } = useTheme()
   const reduce = useReduceMotion()
   const [drag] = useState(() => new Animated.Value(0))
@@ -423,6 +457,7 @@ export function Sheet({ children, onClose, edge = true }: { children: ReactNode;
   const back = () => (reduce ? drag.setValue(0) : Animated.spring(drag, { toValue: 0, ...spring, useNativeDriver: false }).start())
   return (
     <Animated.View accessibilityViewIsModal style={[styles.sheet, styles.shadow, { backgroundColor: c.page, transform: [{ translateY: drag }] }]}>
+      <SheetWash />
       {edge ? <View style={[styles.band, { backgroundColor: c.tangerine }]} /> : null}
       <View
         testID="sheet-grab"

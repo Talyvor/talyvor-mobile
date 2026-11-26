@@ -362,7 +362,7 @@ function InstantTransferForm() {
                 <Chip>{arrivesText(q)}</Chip>
                 <Body muted>{`Locked for ${lockedFor(q)} seconds`}</Body>
               </View>
-              <View style={{ height: 6, borderRadius: 3, overflow: 'hidden', backgroundColor: c.cloud2 }}>
+              <View style={{ height: 6, borderRadius: 3, overflow: 'hidden', backgroundColor: c.tint }}>
                 <View style={{ height: 6, width: `${Math.min(100, (seconds / Math.max(1, lockedFor(q))) * 100)}%`, backgroundColor: c.ink }} />
               </View>
               {seconds > 0 ? (

@@ -33,7 +33,7 @@ it.each(['light', 'dark'] as const)('Screen draws the background once in %s, hid
   expect(all[0].props.pointerEvents).toBe('none')
   // Hidden from a screen reader's view of the screen, so nothing in it is read.
   expect(screen.queryByTestId('backdrop')).toBeNull()
-  // The glass fades into this theme's page colour.
+  // The glass is veiled in this theme's page colour.
   expect(JSON.stringify(screen.toJSON())).toContain(palettes[mode].page)
 })
 
@@ -42,8 +42,8 @@ it('moves its washes, sheen and streams, and with Reduce Motion on nothing anima
   const loop = jest.spyOn(Animated, 'loop')
   await draw(false)
   await screen.findByText('Agents')
-  // The control: with Reduce Motion off, the three washes, the sheen and the three sways each loop.
-  await waitFor(() => expect(loop).toHaveBeenCalledTimes(7))
+  // The control: with Reduce Motion off, the five washes (B61.126), the sheen and the three sways each loop.
+  await waitFor(() => expect(loop).toHaveBeenCalledTimes(9))
   screen.unmount()
   loop.mockClear()
 

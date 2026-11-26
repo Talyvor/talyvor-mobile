@@ -41,11 +41,11 @@ export default function PauseAll() {
   }
 
   // A failed read still lets the person pause: pausing is never what waits on a read.
-  if (!data && !error) return <Screen>{null}</Screen>
+  if (!data && !error) return <Screen sheet>{null}</Screen>
   // B50.57 — the phone draws this sheet above the app, over the app's own Cover, so it draws the Cover itself.
   return (
     <View style={{ flex: 1 }}>
-      <Screen>
+      <Screen sheet>
         <SheetTop home="/" />
         <View style={{ gap: 14, paddingTop: 40 }}>
           <View style={{ alignSelf: 'center', width: 84, height: 84, borderRadius: 42, alignItems: 'center', justifyContent: 'center', backgroundColor: c.cloud }}>

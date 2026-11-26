@@ -1,7 +1,7 @@
 import { act, fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library'
 import { AppState, StyleSheet, type AppStateStatus } from 'react-native'
 
-import { palettes } from '../theme'
+import { palettes, surfaces } from '../theme'
 
 // B59.34 — Cards on the phone: each agent's card in its art, its details hidden until Face ID, freeze and unfreeze, the
 // limits its purchases are judged by, and every purchase, in the web's words.
@@ -280,11 +280,12 @@ test('B57.227: Replace card and Cancel card, and the sheet that asks, are drawn 
   const look = (within: { getByRole: typeof screen.getByRole }, name: string) => StyleSheet.flatten(within.getByRole('button', { name }).props.style)
   await renderRouter('./src/app', { initialUrl: '/cards' })
   const head = within(await screen.findByTestId('card-head-ag_1'))
-  expect(look(head, 'Replace card')).toMatchObject({ backgroundColor: c.cloud2 })
+  // B61.126: on a screen the grey button is the lighter frost; in a sheet, a touch of ink in the page.
+  expect(look(head, 'Replace card')).toMatchObject({ backgroundColor: surfaces.light.glass.cloud2 })
   expect(look(head, 'Cancel card')).toMatchObject({ backgroundColor: c.danger50 })
   expect(look(head, 'Cancel card').borderWidth ?? 0).toBe(0)
 
-  for (const [name, action] of [['Replace card', c.cloud2], ['Cancel card', c.danger50]] as const) {
+  for (const [name, action] of [['Replace card', surfaces.light.sheet.cloud2], ['Cancel card', c.danger50]] as const) {
     await fireEvent.press(within(screen.getByTestId('card-head-ag_1')).getByRole('button', { name }))
     const ask = await screen.findByTestId('end-card-sheet')
     const sheet = within(ask)

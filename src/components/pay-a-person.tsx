@@ -136,7 +136,7 @@ export function PayToAPerson() {
         <Text accessibilityRole="header" style={{ fontFamily: fonts.display, fontSize: 20, color: c.ink }}>
           To a person
         </Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, height: 48, paddingHorizontal: 16, borderRadius: 999, backgroundColor: c.cloud }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, height: 48, paddingHorizontal: 16, borderRadius: 999, backgroundColor: c.cloud, boxShadow: `inset 0 0 0 1px ${c.frostLine}` }}>
           <Icon name="search" size={18} color={c.ink2} />
           <TextInput
             accessibilityLabel="Name, phone number or email"

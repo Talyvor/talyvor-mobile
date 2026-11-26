@@ -9,7 +9,7 @@ import { agentColours, palettes, useTheme } from '../theme'
 
 // B61.71 — Talyvor's own background, drawn once inside Screen so every screen carries it: the logo's payment streams
 // flowing into one point, over a matte satin glass of the account's two colours (design/pocket-live/DESIGN.md section
-// 6). Only transforms and opacity move, on the native driver; nothing moves with Reduce Motion on, on a screen that is
+// 6; 6.0 since 26 Nov: the colour fills the whole screen with no fade). Only transforms and opacity move, on the native driver; nothing moves with Reduce Motion on, on a screen that is
 // not showing, or while the app is in the background. It is hidden from screen readers and never takes a touch.
 
 /** Full on Home and an agent's page; Calm on every other screen, behind the status bar and the title only. */
@@ -23,6 +23,17 @@ export const ACCOUNT_HUES: Record<AccountType, Hues> = {
 }
 
 const HuesContext = createContext<Hues>(ACCOUNT_HUES.personal)
+
+/** B61.126 — the screen's two colours: an agent's own on its page, otherwise the account's. A sheet's washes read them. */
+export function useHues(): Hues {
+  return useContext(HuesContext)
+}
+
+/** A screen's colours for everything drawn inside it, its sheets included. */
+export function ScreenHues({ hues, children }: { hues?: Hues; children: ReactNode }) {
+  const account = useContext(HuesContext)
+  return <HuesContext.Provider value={hues ?? account}>{children}</HuesContext.Provider>
+}
 
 /** Reads the session's account type once per session and hands its colours to every screen's background. Signed out
  * (sign-in, sign-up's first steps) and until the read answers, the background is Personal's. */
@@ -87,18 +98,35 @@ function useShowing(): boolean {
   return focused && front
 }
 
-/** A drift back and forth through three keyframes (0, 1, 2 and back), eased in each half, as CSS's `alternate` does. */
-function drift(value: Animated.Value, ms: number): Animated.CompositeAnimation {
+/** A drift back and forth through three keyframes (0, 1, 2 and back), eased in each half, as CSS's `alternate` does.
+ * `from` starts it part-way through, as CSS's negative delay does. */
+function drift(value: Animated.Value, ms: number, from = 0): Animated.CompositeAnimation {
   const ease = Easing.inOut(Easing.ease)
-  const leg = (toValue: number) => Animated.timing(value, { toValue, duration: ms / 2, easing: ease, useNativeDriver: true })
-  return Animated.loop(Animated.sequence([leg(1), leg(2), leg(1), leg(0)]))
+  const half = ms / 2
+  const leg = (toValue: number, duration = half, easing = ease) => Animated.timing(value, { toValue, duration, easing, useNativeDriver: true })
+  const stops = [1, 2, 1, 0]
+  const loop = Animated.loop(Animated.sequence(stops.map((t) => leg(t))))
+  if (!from) return loop
+  const i = Math.floor(from / half) % stops.length
+  const part = (from % half) / half
+  const start = i === 0 ? 0 : stops[i - 1]
+  value.setValue(start + (stops[i] - start) * ease(part))
+  return Animated.sequence([leg(stops[i], (1 - part) * half, Easing.out(Easing.ease)), ...stops.slice(i + 1).map((t) => leg(t)), loop])
 }
 
-/** The three washes' keyframes (DESIGN.md: 15, 19 and 24 s): offsets are a part of the wash's own size. */
+/** The keyframes the washes share (pocket-live index.html satin-a, satin-b, satin-c): offsets are a part of the wash's
+ * own size. */
+const SATIN_A = { x: [0, -0.24, 0.08], y: [0, 0.12, -0.06], scale: [1, 1.18, 0.92], opacity: [1, 0.4, 0.95] } as const
+const SATIN_B = { x: [0, 0.2, 0.34], y: [0, 0.14, -0.04], scale: [1.05, 0.9, 1.12], opacity: [0.6, 1, 0.5] } as const
+const SATIN_C = { x: [0, 0.24, -0.14], y: [0, -0.12, 0.08], scale: [0.9, 1.16, 1], opacity: [0.25, 1, 0.45] } as const
+/** B61.126 — five washes spread from top to bottom (DESIGN.md section 6.0), as parts of their box: the first colour, the
+ * second, the mix, the first again and the second again. The fourth and fifth start 6 s and 9 s into their cycles. */
 const WASHES = [
-  { ms: 15000, size: 0.7, left: 0.44, top: -0.1, x: [0, -0.24, 0.08], y: [0, 0.12, -0.06], scale: [1, 1.18, 0.92], opacity: [1, 0.4, 0.95] },
-  { ms: 19000, size: 0.72, left: -0.1, top: 0.18, x: [0, 0.2, 0.34], y: [0, 0.14, -0.04], scale: [1.05, 0.9, 1.12], opacity: [0.6, 1, 0.5] },
-  { ms: 24000, size: 0.66, left: 0.22, top: 0.46, x: [0, 0.24, -0.14], y: [0, -0.12, 0.08], scale: [0.9, 1.16, 1], opacity: [0.25, 1, 0.45] },
+  { ...SATIN_A, ms: 15000, from: 0, hue: 0, size: 0.72, left: 0.44, top: -0.08 },
+  { ...SATIN_B, ms: 19000, from: 0, hue: 1, size: 0.74, left: -0.12, top: 0.12 },
+  { ...SATIN_C, ms: 24000, from: 0, hue: 2, size: 0.7, left: 0.3, top: 0.34 },
+  { ...SATIN_B, ms: 21000, from: 6000, hue: 0, size: 0.76, left: -0.14, top: 0.54 },
+  { ...SATIN_C, ms: 17000, from: 9000, hue: 1, size: 0.74, left: 0.36, top: 0.7 },
 ] as const
 const SHEEN_MS = 13000
 /** Each group of streams sways about the point they flow into, so the point stays still. */
@@ -114,9 +142,10 @@ const STREAMS = {
 /** Light and dark (DESIGN.md's satin table). The grain's 38% and 26% are for a soft-light blend, which the phone has
  * not: the alpha tile at a normal blend is matched by eye to index.html, as the table asks. B61.99: the dark washes are
  * 32%, not the table's 34%: measured on the phone's own pixels (scripts/pocket-contrast.mjs), Pay's "Saved payees" in
- * ink-2 fell to 4.47 to 1 where Business's two washes cross under the sheen; at 32% every line passes. */
+ * ink-2 fell to 4.47 to 1 where Business's two washes cross under the sheen; at 32% every line passes. B61.126: light's
+ * washes are 46% and its veil 16% (section 6.0). */
 const SATIN = {
-  light: { wash: 0.4, veil: 0.22, sheen: 0.5, grain: 0.1, streams: 0.5 },
+  light: { wash: 0.46, veil: 0.16, sheen: 0.5, grain: 0.1, streams: 0.5 },
   dark: { wash: 0.32, veil: 0.12, sheen: 0.08, grain: 0.08, streams: 0.9 },
 } as const
 
@@ -142,8 +171,8 @@ export function streamPaths(w: number, h: number, fy: number, sp: number, seed: 
 }
 
 /**
- * Screen's background. `hues` is an agent's own colour on its page; otherwise the account's.
- * `scrollY` fades it to 45% and lifts it 24 px over the first 80 px of scroll.
+ * Screen's background. `hues` is an agent's own colour on its page; otherwise the account's. B61.126: the glass fills the
+ * screen and stays put; `scrollY` fades only the stream lines, to 40%, and lifts them 24 px over the first 80 px.
  */
 export const Backdrop = memo(function Backdrop({ strength, agent, hues, scrollY }: { strength: BackdropStrength; agent?: boolean; hues?: Hues; scrollY?: Animated.Value }) {
   const { c, dark } = useTheme()
@@ -154,7 +183,7 @@ export const Backdrop = memo(function Backdrop({ strength, agent, hues, scrollY 
   const showing = useShowing()
   const moving = showing && reduce === false
   const s = dark ? SATIN.dark : SATIN.light
-  const g = Math.round(screenH * 0.7)
+  const g = screenH
   const geo = STREAMS[strength === 'full' ? (agent ? 'agent' : 'full') : 'calm']
   const id = useId().replace(/[^A-Za-z0-9]/g, '')
   const [seed] = useState(() => Math.random() * 10)
@@ -166,7 +195,7 @@ export const Backdrop = memo(function Backdrop({ strength, agent, hues, scrollY 
   useEffect(() => {
     if (!moving) return
     const all = Animated.parallel([
-      ...washes.map((v, i) => drift(v, WASHES[i].ms)),
+      ...washes.map((v, i) => drift(v, WASHES[i].ms, WASHES[i].from)),
       Animated.loop(
         Animated.sequence([
           Animated.timing(sheen, { toValue: 1, duration: SHEEN_MS, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
@@ -179,9 +208,9 @@ export const Backdrop = memo(function Backdrop({ strength, agent, hues, scrollY 
     return () => all.stop()
   }, [moving, washes, sheen, sways])
 
-  // The washes' box: 148% of the screen's width, from 24% left of it; 120% of the glass's height, from 12% above it.
+  // The washes' box: 148% of the screen's width, from 24% left of it; 114% of its height, from 8% above it.
   const bw = w * 1.48
-  const bh = g * 1.2
+  const bh = g * 1.14
   const sheenW = w * 1.2
   const sheenH = g * 1.8
   // CSS's 105-degree gradient line through the sheen's box.
@@ -192,7 +221,7 @@ export const Backdrop = memo(function Backdrop({ strength, agent, hues, scrollY 
   const py = geo.height * geo.fy
   const lift = scrollY
     ? {
-        opacity: scrollY.interpolate({ inputRange: [0, 80], outputRange: [1, 0.45], extrapolate: 'clamp' }),
+        opacity: scrollY.interpolate({ inputRange: [0, 80], outputRange: [1, 0.4], extrapolate: 'clamp' }),
         transform: [{ translateY: scrollY.interpolate({ inputRange: [0, 80], outputRange: [0, -24], extrapolate: 'clamp' }) }],
       }
     : null
@@ -204,16 +233,17 @@ export const Backdrop = memo(function Backdrop({ strength, agent, hues, scrollY 
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
       aria-hidden
-      style={[styles.fill, { height: g }, lift]}>
-      <View style={[styles.fill, { height: g, overflow: 'hidden' }]}>
-        <View style={{ position: 'absolute', left: -w * 0.24, top: -g * 0.12, width: bw, height: bh }}>
+      style={[styles.fill, { height: g }]}>
+      <View testID="backdrop-glass" style={[styles.fill, { height: g, overflow: 'hidden' }]}>
+        <View style={{ position: 'absolute', left: -w * 0.24, top: -g * 0.08, width: bw, height: bh }}>
           {WASHES.map((k, i) => {
             const size = bw * k.size
-            const colour = i === 0 ? h1 : i === 1 ? h2 : mix(h1, h2)
+            const colour = k.hue === 0 ? h1 : k.hue === 1 ? h2 : mix(h1, h2)
             const at = (out: readonly number[]) => washes[i].interpolate({ inputRange: [0, 1, 2], outputRange: [...out] })
             return (
               <Animated.View
                 key={i}
+                testID="backdrop-wash"
                 style={{
                   position: 'absolute',
                   left: bw * k.left,
@@ -259,66 +289,82 @@ export const Backdrop = memo(function Backdrop({ strength, agent, hues, scrollY 
           </Svg>
         </Animated.View>
         <Image source={require('../../assets/backdrop/satin-grain-alpha.png')} resizeMode="repeat" style={[StyleSheet.absoluteFill, { width: w, height: g, opacity: s.grain }]} />
-        {/* The glass fades into the page: full to 52% of its height, 55% by 76%, gone at its foot. */}
-        <Svg width={w} height={g} style={StyleSheet.absoluteFill}>
-          <Defs>
-            <LinearGradient id={`${id}f`} x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor={c.page} stopOpacity={0} />
-              <Stop offset="0.52" stopColor={c.page} stopOpacity={0} />
-              <Stop offset="0.76" stopColor={c.page} stopOpacity={0.45} />
-              <Stop offset="1" stopColor={c.page} stopOpacity={1} />
-            </LinearGradient>
-          </Defs>
-          <Rect width={w} height={g} fill={`url(#${id}f)`} />
-        </Svg>
       </View>
-      {SWAYS.map((sw, j) => (
-        <Animated.View
-          key={j}
-          testID="backdrop-streams"
-          style={{
-            position: 'absolute',
-            left: 0,
-            top: 0,
-            width: w,
-            height: geo.height,
-            transformOrigin: [fx, py, 0],
-            transform: [{ rotate: sways[j].interpolate({ inputRange: [0, 1, 2], outputRange: ['0deg', `${sw.deg}deg`, `${-sw.deg / 2}deg`] }) }],
-          }}>
-          <Svg width={w} height={geo.height}>
-            <Defs>
-              <LinearGradient id={`${id}m${j}`} x1="0" y1="0" x2="0" y2="1">
-                {geo.fade.map(([o, a]) => (
-                  <Stop key={o} offset={o} stopColor="#FFFFFF" stopOpacity={a} />
-                ))}
-              </LinearGradient>
-              <Mask id={`${id}k${j}`} maskUnits="userSpaceOnUse" x="0" y="0" width={w} height={geo.height}>
-                <Rect width={w} height={geo.height} fill={`url(#${id}m${j})`} />
-              </Mask>
-              <LinearGradient id={`${id}c${j}`} gradientUnits="userSpaceOnUse" x1="0" y1="0" x2={fx} y2="0">
-                <Stop offset="0" stopColor={j === 0 ? h1 : h2} stopOpacity={0} />
-                <Stop offset="0.35" stopColor={j === 0 ? h1 : h2} stopOpacity={s.streams * 0.55} />
-                <Stop offset="1" stopColor={j === 0 ? h1 : h2} stopOpacity={s.streams} />
-              </LinearGradient>
-              {j === 0 ? (
-                <RadialGradient id={`${id}g`} gradientUnits="userSpaceOnUse" cx={fx} cy={py} r={90}>
-                  <Stop offset="0" stopColor={h1} stopOpacity={s.streams * 0.5} />
-                  <Stop offset="1" stopColor={h1} stopOpacity={0} />
-                </RadialGradient>
-              ) : null}
-            </Defs>
-            <G mask={`url(#${id}k${j})`}>
-              {paths.map((d, i) =>
-                i % 3 === j ? <Path key={i} d={d} fill="none" stroke={`url(#${id}c${j})`} strokeWidth={j === 0 ? 1.5 : 1} /> : null,
-              )}
-              {j === 0 ? <Rect x={fx - 90} y={py - 90} width={180} height={180} fill={`url(#${id}g)`} /> : null}
-            </G>
-          </Svg>
-        </Animated.View>
-      ))}
+      <Animated.View style={[styles.fill, { height: geo.height }, lift]}>
+        {SWAYS.map((sw, j) => (
+          <Animated.View
+            key={j}
+            testID="backdrop-streams"
+            style={{
+              position: 'absolute',
+              left: 0,
+              top: 0,
+              width: w,
+              height: geo.height,
+              transformOrigin: [fx, py, 0],
+              transform: [{ rotate: sways[j].interpolate({ inputRange: [0, 1, 2], outputRange: ['0deg', `${sw.deg}deg`, `${-sw.deg / 2}deg`] }) }],
+            }}>
+            <Svg width={w} height={geo.height}>
+              <Defs>
+                <LinearGradient id={`${id}m${j}`} x1="0" y1="0" x2="0" y2="1">
+                  {geo.fade.map(([o, a]) => (
+                    <Stop key={o} offset={o} stopColor="#FFFFFF" stopOpacity={a} />
+                  ))}
+                </LinearGradient>
+                <Mask id={`${id}k${j}`} maskUnits="userSpaceOnUse" x="0" y="0" width={w} height={geo.height}>
+                  <Rect width={w} height={geo.height} fill={`url(#${id}m${j})`} />
+                </Mask>
+                <LinearGradient id={`${id}c${j}`} gradientUnits="userSpaceOnUse" x1="0" y1="0" x2={fx} y2="0">
+                  <Stop offset="0" stopColor={j === 0 ? h1 : h2} stopOpacity={0} />
+                  <Stop offset="0.35" stopColor={j === 0 ? h1 : h2} stopOpacity={s.streams * 0.55} />
+                  <Stop offset="1" stopColor={j === 0 ? h1 : h2} stopOpacity={s.streams} />
+                </LinearGradient>
+                {j === 0 ? (
+                  <RadialGradient id={`${id}g`} gradientUnits="userSpaceOnUse" cx={fx} cy={py} r={90}>
+                    <Stop offset="0" stopColor={h1} stopOpacity={s.streams * 0.5} />
+                    <Stop offset="1" stopColor={h1} stopOpacity={0} />
+                  </RadialGradient>
+                ) : null}
+              </Defs>
+              <G mask={`url(#${id}k${j})`}>
+                {paths.map((d, i) =>
+                  i % 3 === j ? <Path key={i} d={d} fill="none" stroke={`url(#${id}c${j})`} strokeWidth={j === 0 ? 1.5 : 1} /> : null,
+                )}
+                {j === 0 ? <Rect x={fx - 90} y={py - 90} width={180} height={180} fill={`url(#${id}g)`} /> : null}
+              </G>
+            </Svg>
+          </Animated.View>
+        ))}
+      </Animated.View>
     </Animated.View>
   )
 })
+
+/** B61.126 — a sheet's ground: the page, solid enough to read a form, with a soft wash of the first colour at 15% from
+ * the top right and the second at 13% from the bottom left (DESIGN.md section 6.0). */
+export function SheetWash() {
+  const { c } = useTheme()
+  const [h1, h2] = useHues()
+  const id = useId().replace(/[^A-Za-z0-9]/g, '')
+  return (
+    <View testID="sheet-wash" pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" aria-hidden style={[StyleSheet.absoluteFill, { backgroundColor: c.page }]}>
+      <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}>
+        <Defs>
+          <RadialGradient id={`${id}a`} cx="1" cy="0" rx="1.2" ry="0.7" fx="1" fy="0" gradientUnits="objectBoundingBox">
+            <Stop offset="0" stopColor={h1} stopOpacity={0.15} />
+            <Stop offset="0.62" stopColor={h1} stopOpacity={0} />
+          </RadialGradient>
+          <RadialGradient id={`${id}b`} cx="0" cy="1" rx="1.2" ry="0.7" fx="0" fy="1" gradientUnits="objectBoundingBox">
+            <Stop offset="0" stopColor={h2} stopOpacity={0.13} />
+            <Stop offset="0.62" stopColor={h2} stopOpacity={0} />
+          </RadialGradient>
+        </Defs>
+        <Rect width="100%" height="100%" fill={`url(#${id}a)`} />
+        <Rect width="100%" height="100%" fill={`url(#${id}b)`} />
+      </Svg>
+    </View>
+  )
+}
 
 const styles = StyleSheet.create({
   fill: { position: 'absolute', left: 0, right: 0, top: 0 },

@@ -70,7 +70,7 @@ function AccountPill({ name, account }: { name: string | null; account: Account 
         accessibilityRole="button"
         accessibilityLabel={`Switch account. ${[name, chip].filter(Boolean).join(', ')}`}
         onPress={() => setOpen(true)}
-        style={{ flexDirection: 'row', alignItems: 'center', gap: 10, height: 48, paddingLeft: 6, paddingRight: 12, borderRadius: 999, backgroundColor: c.cloud, flexShrink: 1 }}>
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 10, height: 48, paddingLeft: 6, paddingRight: 12, borderRadius: 999, backgroundColor: c.cloud, boxShadow: `inset 0 0 0 1px ${c.frostLine}`, flexShrink: 1 }}>
         <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: c.page, alignItems: 'center', justifyContent: 'center' }}>
           <Text style={{ fontFamily: fonts.uiBold, fontSize: 15, color: c.ink }}>{(name ?? chip ?? '').trim().charAt(0).toUpperCase()}</Text>
         </View>

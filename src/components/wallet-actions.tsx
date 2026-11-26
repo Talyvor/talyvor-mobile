@@ -49,7 +49,7 @@ function Round({ icon, label, primary, onPress, link }: { icon: IconName; label:
   const { c } = useTheme()
   return (
     <Press kind="round" accessibilityRole={link ? 'link' : 'button'} accessibilityLabel={link ?? label} onPress={onPress} style={{ flex: 1, maxWidth: 84, alignItems: 'center', gap: 7 }}>
-      <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: primary ? c.primary : c.cloud, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: primary ? c.primary : c.cloud, boxShadow: primary ? undefined : `inset 0 0 0 1px ${c.frostLine}`, alignItems: 'center', justifyContent: 'center' }}>
         <Icon name={icon} color={primary ? c.onPrimary : c.ink} />
       </View>
       <Text style={{ fontFamily: fonts.uiBold, fontSize: 12.5, color: c.ink, textAlign: 'center' }}>{label}</Text>

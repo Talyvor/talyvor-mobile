@@ -21,6 +21,9 @@
  *
  * Home, Agents, Pay, an agent's page and Approvals, light and dark, for a Business and a Personal account (the two
  * pairs of background colours). Any line under its ratio fails the run, as does a background that did not move.
+ * B61.126: since the glass fills the whole screen (DESIGN.md section 6.0), also an agent's page in each of the seven
+ * agent colours, and three sheets (Add money, an approval and Pause every agent) on their two soft washes. A sheet must
+ * draw its washes; the glass under it may be covered, so it is not asked to move.
  * POCKET_CONTRAST_NO_EXPORT=1 reuses the last export in .pocket-shots; POCKET_CONTRAST_SHOTS=<folder> keeps each screen
  * as measured, at each moment.
  */
@@ -48,6 +51,11 @@ const SCREENS = [
   { name: 'Pay', route: '/pay' },
   { name: "An agent's page", route: '/agents/agt_research' },
   { name: 'Approvals', route: '/approvals' },
+  // An agent's page takes its own colour whatever the account, so each colour is measured once a theme.
+  ...['cobalt', 'orchid', 'sky', 'mint', 'lemon', 'rose', 'lime'].map((colour) => ({ name: `Research's page in ${colour}`, route: '/agents/agt_research', colour, once: true })),
+  { name: 'The Add money sheet', route: '/agents/agt_research', press: 'Add money to Research', sheet: true },
+  { name: 'The approval sheet', route: '/approve/apr_acme', sheet: true },
+  { name: 'The Pause every agent sheet', route: '/pause-all', sheet: true },
 ]
 const ACCOUNTS = [
   { name: 'Business', type: 'business', kind: 'hybrid' },
@@ -176,9 +184,17 @@ const failures = []
 const crossed = []
 let measured = 0
 
-for (const account of ACCOUNTS)
+/** The sample's answer with Research in `colour`. */
+function recolour(v, colour) {
+  if (Array.isArray(v)) return v.map((x) => recolour(x, colour))
+  if (!v || typeof v !== 'object') return v
+  return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, k === 'colour' && v.id === 'agt_research' ? colour : recolour(x, colour)]))
+}
+
+for (const [a, account] of ACCOUNTS.entries())
   for (const dark of [false, true])
     for (const screen of SCREENS) {
+      if (screen.once && a > 0) continue
       const label = `${screen.name}, ${account.name}, ${dark ? 'dark' : 'light'}`
       const ctx = await browser.newContext({ viewport: SIZE, deviceScaleFactor: SCALE, timezoneId: SAMPLE_TIME_ZONE, colorScheme: dark ? 'dark' : 'light', reducedMotion: 'reduce' })
       // Random numbers held, so the streams' curves are drawn alike from run to run.
@@ -190,13 +206,20 @@ for (const account of ACCOUNTS)
       await page.clock.install({ time: new Date(SAMPLE_NOW) })
       await page.route(`${BFF}/**`, (route) => {
         const url = new URL(route.request().url())
-        const body = url.pathname === '/api/workspace/account' ? { account_type: account.type, money_kind: account.kind } : sampleBodyFor(url.pathname)
+        const sample = url.pathname === '/api/workspace/account' ? { account_type: account.type, money_kind: account.kind } : sampleBodyFor(url.pathname)
+        const body = screen.colour ? recolour(sample, screen.colour) : sample
         return route.fulfill({ status: body === undefined ? 404 : 200, contentType: 'application/json', body: JSON.stringify(body ?? {}) })
       })
       await page.goto(BASE + screen.route)
       await page.waitForLoadState('networkidle')
       await page.waitForTimeout(800)
-      if (!(await page.getByTestId('backdrop').count())) failures.push(`${label}: no background on the screen`)
+      if (screen.press) {
+        await page.getByRole('button', { name: screen.press }).click()
+        await page.waitForTimeout(800)
+      }
+      if (screen.sheet) {
+        if (!(await page.getByTestId('sheet-wash').count())) failures.push(`${label}: the sheet has no washes`)
+      } else if (!(await page.getByTestId('backdrop').count())) failures.push(`${label}: no background on the screen`)
       // Time stops; then the background starts, at this moment, and moves only as the clock is moved.
       await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 1000)
       await page.emulateMedia({ reducedMotion: 'no-preference' })
@@ -223,7 +246,7 @@ for (const account of ACCOUNTS)
           else if (withCurves[i].ratio < need) crossed.push(says(withCurves[i], need))
         }
       }
-      if (!moved) failures.push(`${label}: the background did not move between 0 and 12 s, so the moments were not measured`)
+      if (!moved && !screen.sheet) failures.push(`${label}: the background did not move between 0 and 12 s, so the moments were not measured`)
       console.log(`${label}: measured at ${MOMENTS.join(', ')} s`)
       await ctx.close()
     }

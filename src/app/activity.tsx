@@ -56,7 +56,7 @@ function Pills<T extends string | number | null>({ label, options, value, onChan
             accessibilityState={{ checked: on }}
             onPress={() => onChange(v)}
             hitSlop={{ top: 6, bottom: 6 }}
-            style={{ height: 36, justifyContent: 'center', paddingHorizontal: 14, borderRadius: 999, backgroundColor: on ? c.primary : c.cloud }}>
+            style={{ height: 36, justifyContent: 'center', paddingHorizontal: 14, borderRadius: 999, backgroundColor: on ? c.primary : c.cloud, boxShadow: on ? undefined : `inset 0 0 0 1px ${c.frostLine}` }}>
             <Text style={{ fontFamily: fonts.uiBold, fontSize: 14, color: on ? c.onPrimary : c.ink }}>{words}</Text>
           </Pressable>
         )

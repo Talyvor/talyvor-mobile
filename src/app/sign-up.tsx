@@ -135,7 +135,7 @@ function Steps({ at, steps = SIGNUP_STEPS }: { at: StepAt; steps?: StepList }) {
   return (
     <View accessible accessibilityLabel={`Step ${at} of ${of}, ${steps[at - 1]}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
       {steps.map((_, i) => (
-        <View key={i} style={{ width: 28, height: 6, borderRadius: 3, backgroundColor: i < at ? c.tangerine : c.cloud2 }} />
+        <View key={i} style={{ width: 28, height: 6, borderRadius: 3, backgroundColor: i < at ? c.tangerine : c.tint }} />
       ))}
       <Text style={{ marginLeft: 6, fontFamily: fonts.uiMedium, fontSize: 13, color: c.ink2 }}>{`Step ${at} of ${of}`}</Text>
     </View>
