@@ -38,6 +38,10 @@ import { fonts, useTheme } from '@/theme'
 // B57.195 — Persona's step in Pocket: its note is one note, as su5 draws the Sandbox note, with our privacy notice the
 // note's last line; a check that failed or expired is said in Pocket's warning note (.note2.warnnote) straight under the
 // line, so the foot holds only Start again (and, in sign-up, Open the app under it).
+//
+// B57.197 — the home address in Pocket. The reference does not draw it in the identity step yet (Pocket Live DESIGN.md
+// section 8), so it is drawn as Pocket draws an address and a part of a screen: Pocket Live's section head over its
+// fields, and Town or city beside Postcode as Pocket's Order a card has them (w-card). B61.47's words are kept.
 
 const LEVELS = ['L0', 'L1', 'L2', 'L3'] as const
 
@@ -179,6 +183,16 @@ function Title({ children }: { children: string }) {
   const { c } = useTheme()
   return (
     <Text accessibilityRole="header" style={{ fontFamily: fonts.display, fontSize: 17, color: c.ink }}>
+      {children}
+    </Text>
+  )
+}
+
+/** B57.197 — Pocket Live's section head (.sec-h h3): the display face at 18, ink, over the part of the screen it names. */
+function SectionHead({ children }: { children: string }) {
+  const { c } = useTheme()
+  return (
+    <Text accessibilityRole="header" style={{ fontFamily: fonts.display, fontSize: 18, lineHeight: 21.5, color: c.ink, marginTop: 8 }}>
       {children}
     </Text>
   )
@@ -392,11 +406,18 @@ export function IdentityChecks({ head, done, wayIn = false, onPassed, onOpen = (
             : null}
           {field('name', <Field label={IDENTITY_WORDS.legalName} value={d.name} onChangeText={set('name')} maxLength={200} autoComplete="name" autoCapitalize="words" />)}
           {field('dob', <Field label={IDENTITY_WORDS.dateOfBirth} value={d.dob} onChangeText={set('dob')} placeholder="YYYY-MM-DD" keyboardType="numbers-and-punctuation" autoComplete="birthdate-full" autoCorrect={false} />)}
-          <Title>{IDENTITY_WORDS.homeAddress}</Title>
+          <SectionHead>{IDENTITY_WORDS.homeAddress}</SectionHead>
           {field('line1', <Field label={IDENTITY_WORDS.addressLine1} value={d.line1} onChangeText={set('line1')} maxLength={200} autoComplete="address-line1" />)}
           {field('line2', <Field label={IDENTITY_WORDS.addressLine2} value={d.line2} onChangeText={set('line2')} maxLength={200} autoComplete="address-line2" />)}
-          {field('town', <Field label={IDENTITY_WORDS.town} value={d.town} onChangeText={set('town')} maxLength={100} autoComplete="postal-address-locality" autoCapitalize="words" />)}
-          {field('postcode', <Field label={IDENTITY_WORDS.postcode} value={d.postcode} onChangeText={set('postcode')} maxLength={20} autoComplete="postal-code" autoCapitalize="characters" autoCorrect={false} />)}
+          {/* B57.197 — side by side, as w-card's Order a card has them; each keeps its own error under it */}
+          <View testID="address-town-postcode" style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
+            <View style={{ flex: 3 }}>
+              {field('town', <Field label={IDENTITY_WORDS.town} value={d.town} onChangeText={set('town')} maxLength={100} autoComplete="postal-address-locality" autoCapitalize="words" />)}
+            </View>
+            <View style={{ flex: 2 }}>
+              {field('postcode', <Field label={IDENTITY_WORDS.postcode} value={d.postcode} onChangeText={set('postcode')} maxLength={20} autoComplete="postal-code" autoCapitalize="characters" autoCorrect={false} />)}
+            </View>
+          </View>
           {field('country', <CountryField label={IDENTITY_WORDS.country} value={d.country} onChange={set('country')} error={refused?.country === d.country && !errors.country ? refused.sentence : undefined} />)}
         </View>
       ) : null}
