@@ -311,6 +311,24 @@ test('a saved address sends by its name; the owner saves and removes addresses',
   ]))
 })
 
+test('B57.221: Send in Pocket: saved addresses their own card on their initials, a waiting send the agent’s face with who it goes to by name', async () => {
+  mockBff({ sends: [{ ...QUOTE, to: TO, saved_name: 'Treasury', id: 'cs_9', agent_id: 'agt_remy', direction: 'out', status: 'awaiting_owner', created_at: '2026-11-25T08:00:00Z' }] })
+  await open('send')
+  const form = within(await screen.findByTestId('wallet-send-form'))
+  expect(form.getByText('Send')).toBeTruthy()
+  expect(form.queryByTestId('crypto-address-book')).toBeNull()
+  const book = within(await screen.findByTestId('crypto-address-book'))
+  expect(await book.findByTestId('crypto-address-caddr_1-initial')).toBeTruthy()
+  const waiting = within(await screen.findByTestId('crypto-send-waiting-cs_9'))
+  expect(waiting.getByLabelText('Remy agent')).toBeTruthy()
+  expect(waiting.getByLabelText('2.50 USDC')).toBeTruthy()
+  const to = within(waiting.getByTestId('crypto-send-waiting-cs_9-to'))
+  expect(to.getByText('Treasury')).toBeTruthy()
+  expect(to.getByText(TO)).toBeTruthy()
+  const sent = within(await screen.findByTestId('crypto-sends'))
+  expect(sent.getByText('To Treasury')).toBeTruthy()
+})
+
 test('with no key for this workspace on this phone, a send is signed nowhere here: it says where, and nothing goes', async () => {
   mockStore.delete('talyvor.device-key')
   const calls = mockBff({ passkeys: ['cred_1'] })
