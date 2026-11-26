@@ -34,6 +34,9 @@ const WEB = {
   issueLine: 'Each purchase is paid from its wallet only if its rules allow it',
   frozen: (name: string, last4: string) => `Frozen. Every purchase on ${name}’s card •••• ${last4} is refused, and nothing leaves its wallet, until you unfreeze it.`,
   unfrozen: (name: string, last4: string) => `Unfrozen. ${name}’s card •••• ${last4} takes purchases again, each one judged by ${name}’s rules.`,
+  // B28.47 — apps/web/src/areas/lens/Cards.tsx (replacedText, cancelledText, EndCardDialog).
+  replaced: (name: string, last4: string) => `Replaced. ${name}’s new card ends ${last4}. Every purchase on the old one is refused, and nothing leaves its wallet.`,
+  cancelled: (name: string) => `Cancelled. Every purchase on ${name}’s card is refused, and nothing leaves its wallet. Issue it a new card on Agents.`,
 }
 // The phone says the same without the last four digits, which it shows only after Face ID.
 const unmasked = (s: string) => s.replace(/ •••• \d{4}/, '')
@@ -61,6 +64,8 @@ function mockBff() {
     { id: 'cs_3', agent_id: 'ag_1', merchant: 'Linear', amount_minor: 1_200, currency: 'EUR', status: 'awaiting_approval', approval_id: 'ap_1', created_at: '2026-11-10T09:00:00Z' },
   ]
   const spendsAsked: string[] = []
+  // B28.465 — Replace card issues Research a new card and cancels the old one; Cancel card leaves it with none.
+  let cancelled = false
   const purchases = [{ id: 'ca_1', approved: false, reason: 'Over its daily limit.', amount_minor: 4_500, currency: 'gbp', merchant_name: '', created_at: '2026-11-10T09:00:00Z' }]
   globalThis.fetch = jest.fn(async (url: string, init: RequestInit = {}) => {
     const route = `${init.method ?? 'GET'} ${url.replace('https://bff.test', '').split('?')[0]}`
@@ -90,7 +95,13 @@ function mockBff() {
       case 'GET /api/workspace/name':
         return json({ id: 'ws_1', name: 'Nora Vance' })
       case 'GET /api/agents/ag_1/card':
-        return json({ card, authorizations: purchases })
+        return cancelled ? json({ error: 'no card' }, 404) : json({ card, authorizations: purchases })
+      case 'POST /api/agents/ag_1/card/replace':
+        Object.assign(card, { id: 'ic_3', last4: '5555' })
+        return json(card, 201)
+      case 'POST /api/agents/ag_1/card/cancel':
+        cancelled = true
+        return json(card)
       case 'GET /api/money/card-spends': {
         const agent = new URL(url).searchParams.get('agent_id') ?? ''
         spendsAsked.push(agent)
@@ -222,6 +233,40 @@ test('B57.136: the card sits in Pocket’s panel with its name, and Freeze card 
   expect(await screen.findByText(unmasked(WEB.unfrozen('Research', '4242')))).toBeTruthy()
   await waitFor(() => expect(screen.queryByText('Frozen')).toBeNull())
   expect(calls).toContain('POST /api/agents/ag_1/card/unfreeze')
+})
+
+test('B28.465: Replace card asks once, then shows the new card’s last four', async () => {
+  const calls = mockBff()
+  await renderRouter('./src/app', { initialUrl: '/cards' })
+  const head = await screen.findByTestId('card-head-ag_1')
+  await fireEvent.press(within(head).getByRole('button', { name: 'Replace card' }))
+  const ask = await screen.findByTestId('end-card-sheet')
+  expect(within(ask).getByText('Replace Research’s card?')).toBeTruthy()
+  // Keep it closes the question and sends nothing.
+  await fireEvent.press(within(ask).getByRole('button', { name: 'Keep it' }))
+  await waitFor(() => expect(screen.queryByTestId('end-card-sheet')).toBeNull())
+  expect(calls).not.toContain('POST /api/agents/ag_1/card/replace')
+
+  await fireEvent.press(within(screen.getByTestId('card-head-ag_1')).getByRole('button', { name: 'Replace card' }))
+  await fireEvent.press(within(await screen.findByTestId('end-card-sheet')).getByRole('button', { name: 'Replace card' }))
+  expect(await screen.findByText(WEB.replaced('Research', '5555'))).toBeTruthy()
+  expect(calls.filter((c) => c === 'POST /api/agents/ag_1/card/replace')).toHaveLength(1)
+  await waitFor(() => expect(screen.queryByTestId('end-card-sheet')).toBeNull())
+})
+
+test('B28.465: Cancel card asks once, then the agent has no card yet and can be issued one', async () => {
+  const calls = mockBff()
+  await renderRouter('./src/app', { initialUrl: '/cards' })
+  const head = await screen.findByTestId('card-head-ag_1')
+  await fireEvent.press(within(head).getByRole('button', { name: 'Cancel card' }))
+  const ask = await screen.findByTestId('end-card-sheet')
+  expect(within(ask).getByText('Cancel Research’s card?')).toBeTruthy()
+  await fireEvent.press(within(ask).getByRole('button', { name: 'Cancel card' }))
+  expect(calls.filter((c) => c === 'POST /api/agents/ag_1/card/cancel')).toHaveLength(1)
+  await waitFor(() => expect(within(screen.getByTestId('card-head-ag_1')).getByText('No card for Research yet.')).toBeTruthy())
+  expect(within(screen.getByTestId('card-head-ag_1')).getByText(WEB.cancelled('Research').replace('on Agents', 'here'))).toBeTruthy()
+  expect(within(screen.getByTestId('card-head-ag_1')).getByRole('button', { name: 'Issue Research a card' })).toBeTruthy()
+  expect(within(screen.getByTestId('card-head-ag_1')).queryByRole('switch', { name: 'Freeze card' })).toBeNull()
 })
 
 test('B57.136: the limits sit in their own panel, and an agent with no card says so in its panel', async () => {
