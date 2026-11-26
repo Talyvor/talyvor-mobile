@@ -11,6 +11,7 @@ import { fonts, useTheme } from '../theme'
 import { setPinned, syncWidget } from '../widget-sync'
 import { PendingApprovals } from './approval-card'
 import { AgentFundingSheet, type FundingDirection } from './agent-funding'
+import { TopUpLink } from './agent-wallet'
 import { Face } from './face'
 import { Icon, type IconName } from './icon'
 import { MerchantChoices } from './merchant-categories'
@@ -40,7 +41,20 @@ export type AgentData = {
 
 /** One agent's screen; `onChanged` reads it again after a write. */
 /** `opens` draws the screen with a sheet open, as the home-screen widget's Resume and Fund ask (B57.77). */
-export function AgentView({ data, onChanged, opens }: { data: AgentData; onChanged: () => void; opens?: 'resume' | 'fund' }) {
+/** `topUp` is the move an agent's top-up link asks for (B48.45), drawn under the actions until `onTopUpClosed`. */
+export function AgentView({
+  data,
+  onChanged,
+  opens,
+  topUp,
+  onTopUpClosed,
+}: {
+  data: AgentData
+  onChanged: () => void
+  opens?: 'resume' | 'fund'
+  topUp?: string
+  onTopUpClosed?: () => void
+}) {
   const { client, peg } = useSession()
   const { c } = useTheme()
   const { summary, signs } = data
@@ -200,6 +214,7 @@ export function AgentView({ data, onChanged, opens }: { data: AgentData; onChang
         ) : null}
         <Round icon="sliders" label="Rules" accessibilityLabel={`${agent.name}’s rules`} onPress={() => setRulesOpen(true)} />
       </View>
+      {topUp ? <TopUpLink agent={agent} moveID={topUp} onClose={() => (onChanged(), onTopUpClosed?.())} /> : null}
       {moved ? <Body>{moved}</Body> : null}
       {allPaused ? <StartEveryAgentButton signs={signs} busy={busy} onPress={() => setStarting(true)} /> : null}
       {note ? <Body>{note}</Body> : null}

@@ -20,7 +20,7 @@ import {
 } from '@talyvor/bff-client'
 import * as Clipboard from 'expo-clipboard'
 import * as Crypto from 'expo-crypto'
-import { Children, cloneElement, isValidElement, useCallback, useState, type ReactElement, type ReactNode } from 'react'
+import { Children, cloneElement, isValidElement, useCallback, useEffect, useRef, useState, type ReactElement, type ReactNode } from 'react'
 import { Linking, Text, View } from 'react-native'
 import Svg, { Path, Rect } from 'react-native-svg'
 import { encode } from 'uqr'
@@ -214,13 +214,37 @@ function AddMoney({ agent, wallet, shows }: { agent: Agent; wallet: AgentMoneyWa
   )
 }
 
-/** What a quoted move costs and brings, then Confirm; a cash-out or convert is signed with this phone's key first. */
-function MoveQuote({ agent, m, gets, onChange, onDone }: { agent: Agent; m: WalletMove; gets: string; onChange: () => void; onDone: (m: WalletMove) => void }) {
+/** What a quoted move costs and brings, then Confirm; a cash-out or convert is signed with this phone's key first.
+ * B48.45: `link`, a top-up link's quote, as the web's B57.224 draws it: From first, You send, Rate, Fee, They get, the
+ * seconds left to its own end, Move <amount>, and Not now. */
+function MoveQuote({
+  agent,
+  m,
+  gets,
+  link = false,
+  now = 0,
+  onChange,
+  onDone,
+}: {
+  agent: Agent
+  m: WalletMove
+  gets: string
+  link?: boolean
+  /** The time the top-up link's seconds left are counted from. */
+  now?: number
+  onChange: () => void
+  onDone: (m: WalletMove) => void
+}) {
   const { client } = useSession()
+  const { c } = useTheme()
   const [busy, setBusy] = useState(false)
   const [said, setSaid] = useState('')
+  // A second press before the first has re-rendered the button disabled is not a second confirm.
+  const sent = useRef(false)
   const signs = m.route === 'cash_out' || m.route === 'convert'
   const confirm = async () => {
+    if (sent.current) return
+    sent.current = true
     setBusy(true)
     setSaid('')
     try {
@@ -233,21 +257,50 @@ function MoveQuote({ agent, m, gets, onChange, onDone }: { agent: Agent; m: Wall
           : failure(err, 'Press Confirm again: it is made once, however many times you press.'),
       )
     } finally {
+      sent.current = false
       setBusy(false)
     }
   }
+  const left = link && m.expires_at ? Math.max(0, Math.ceil((Date.parse(m.expires_at) - now) / 1000)) : null
+  const moves = `Move ${formatMinor(m.sell_minor, m.sell_currency)}`
   return (
     <View style={{ gap: 10 }} testID="wallet-move-quote">
-      <Facts>
-        <Fact name={m.route === 'cash_out' ? 'You sell' : 'You pay'} value={formatMinor(m.sell_minor, m.sell_currency)} />
-        <Fact name="Fee" value={formatMinor(m.fee_minor, m.sell_currency)} />
-        {m.sell_currency === m.buy_currency ? null : <Fact name="Rate" value={`1 ${m.sell_currency} = ${m.rate} ${m.buy_currency}`} />}
-        <Fact name={gets} value={formatMinor(m.buy_minor, m.buy_currency)} />
-        {m.expires_at ? <Fact name="Price held until" value={when(m.expires_at)} /> : null}
-      </Facts>
+      {link ? (
+        <Facts testID="wallet-move-facts">
+          {m.route !== 'cash_out' ? <Fact name="From" value={LINK_FROM[m.route]} /> : null}
+          <Fact name="You send" value={formatMinor(m.sell_minor, m.sell_currency)} />
+          {m.sell_currency === m.buy_currency ? null : <Fact name="Rate" value={`1 ${m.sell_currency} = ${m.rate} ${m.buy_currency}`} />}
+          <Fact name="Fee" value={formatMinor(m.fee_minor, m.sell_currency)} />
+          <Fact name={gets} value={formatMinor(m.buy_minor, m.buy_currency)} />
+        </Facts>
+      ) : (
+        <Facts>
+          <Fact name={m.route === 'cash_out' ? 'You sell' : 'You pay'} value={formatMinor(m.sell_minor, m.sell_currency)} />
+          <Fact name="Fee" value={formatMinor(m.fee_minor, m.sell_currency)} />
+          {m.sell_currency === m.buy_currency ? null : <Fact name="Rate" value={`1 ${m.sell_currency} = ${m.rate} ${m.buy_currency}`} />}
+          <Fact name={gets} value={formatMinor(m.buy_minor, m.buy_currency)} />
+          {m.expires_at ? <Fact name="Price held until" value={when(m.expires_at)} /> : null}
+        </Facts>
+      )}
+      {left !== null ? (
+        <Text
+          testID="wallet-move-seconds-left"
+          accessibilityLiveRegion="polite"
+          accessibilityLabel={`${left} seconds left on this quote`}
+          style={{ fontFamily: fonts.ui, fontSize: 13, color: c.ink3, textAlign: 'right' }}>
+          {left} seconds left
+        </Text>
+      ) : null}
       {signs ? <Body muted>{`${Biometric} asks before anything moves.`}</Body> : null}
-      <Button primary label={busy ? 'Confirming…' : signs ? `Confirm with ${biometricName}` : 'Confirm'} icon={signs ? 'faceid' : undefined} disabled={busy} hint="Confirming…" onPress={() => void confirm()} />
-      <Button variant="secondary" label="Change" disabled={busy} hint="Confirming…" onPress={onChange} />
+      <Button
+        primary
+        label={busy ? 'Confirming…' : link ? moves : signs ? `Confirm with ${biometricName}` : 'Confirm'}
+        icon={signs ? 'faceid' : undefined}
+        disabled={busy}
+        hint="Confirming…"
+        onPress={() => void confirm()}
+      />
+      <Button variant="secondary" label={link ? 'Not now' : 'Change'} disabled={busy} hint="Confirming…" onPress={onChange} />
       {said ? <Body>{said}</Body> : null}
     </View>
   )
@@ -267,7 +320,99 @@ const TOP_UP_ROUTES: { value: Exclude<WalletMoveRoute, 'cash_out'>; name: string
   { value: 'convert', name: 'From your pounds, euros or dollars' },
   { value: 'wallet', name: 'From your own USDC' },
 ]
+/** Where a top-up link's money comes from, in the From row of its quote (the web's words). */
+const LINK_FROM: Record<Exclude<WalletMoveRoute, 'cash_out'>, string> = {
+  card: 'Your card',
+  bank_transfer: 'A bank transfer',
+  convert: 'Your pounds, euros or dollars',
+  wallet: 'Your own USDC',
+}
 const FIAT = ['GBP', 'EUR', 'USD'] as const
+
+/** A quote whose price is no longer held: confirming it would be refused. */
+const expired = (m: WalletMove, now: number) => m.status === 'quoted' && !!m.expires_at && Date.parse(m.expires_at) <= now
+
+/** B48.45 — the top-up an agent asked its owner for (Lens B48.39's wallet_topup_link), opened from its link
+ * /agents/<id>?top_up=<move>, as the web's B48.44 draws it: the quote as Lens B48.43 reads it back by id, then Move
+ * <amount>, confirmed once (Lens B48.8). An expired quote says so, and Add money quotes the same top-up again. Not now
+ * closes it; nothing moves until the owner presses Move. */
+export function TopUpLink({ agent, moveID, onClose }: { agent: Agent; moveID: string; onClose: () => void }) {
+  const { client } = useSession()
+  const read = useLoad(useCallback(() => client.walletMove(agent.id, moveID), [client, agent.id, moveID]))
+  const [fresh, setFresh] = useState<WalletMove | null>(null)
+  const [done, setDone] = useState<WalletMove | null>(null)
+  const [again, setAgain] = useState({ busy: false, said: '' })
+  const m = fresh ?? read.data
+  // While its price is held, look again every second, so the quote turns to expired, with Add money, the moment it ends.
+  const [now, setNow] = useState(Date.now)
+  const counts = !done && m?.status === 'quoted'
+  useEffect(() => {
+    if (!counts) return
+    const timer = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(timer)
+  }, [counts])
+  const quoteAgain = async (was: WalletMove) => {
+    setAgain({ busy: true, said: '' })
+    try {
+      setFresh(await client.walletMoveQuote(agent.id, { route: was.route, amount_minor: was.sell_minor, currency: was.sell_currency }))
+      setAgain({ busy: false, said: '' })
+    } catch (err) {
+      setAgain({ busy: false, said: failure(err, 'Nothing moved. You can try again.') })
+    }
+  }
+  const notOurs = `This top-up link is not one ${agent.name} asked you for, or it has gone. Nothing moved.`
+  const notNow = <Button variant="secondary" label="Not now" onPress={onClose} />
+  let body: ReactNode
+  if (done) {
+    body = (
+      <>
+        <Body>{moveDone(agent, done)}</Body>
+        <Button variant="secondary" label="Close" onPress={onClose} />
+      </>
+    )
+  } else if (read.error) {
+    body = (
+      <>
+        <Body>{read.error instanceof BffError && read.error.status === 404 ? notOurs : failure(read.error, 'This top-up could not be read.')}</Body>
+        {notNow}
+      </>
+    )
+  } else if (!m) {
+    body = <Body muted>Reading the quote…</Body>
+  } else if (m.route === 'cash_out') {
+    body = (
+      <>
+        <Body>{notOurs}</Body>
+        {notNow}
+      </>
+    )
+  } else if (m.status !== 'quoted') {
+    body = (
+      <>
+        <Body>{moveDone(agent, m)}</Body>
+        {notNow}
+      </>
+    )
+  } else if (expired(m, now)) {
+    body = (
+      <>
+        <Body>This quote has expired. Nothing moved.</Body>
+        <Button primary label={again.busy ? 'Reading the quote…' : 'Add money'} disabled={again.busy} hint="Reading the quote…" onPress={() => void quoteAgain(m)} />
+        {notNow}
+        {again.said ? <Body>{again.said}</Body> : null}
+      </>
+    )
+  } else {
+    body = <MoveQuote key={m.id} agent={agent} m={m} gets="They get" link now={now} onChange={onClose} onDone={setDone} />
+  }
+  return (
+    <Card white testID="agent-top-up-link">
+      <Headline>{`Add money to ${agent.name}`}</Headline>
+      {done ? null : <Body muted>{`${agent.name} asked for this top-up. Nothing moves until you confirm.`}</Body>}
+      {body}
+    </Card>
+  )
+}
 
 /** Top up one wallet: how, how much, the quote, Confirm. */
 function TopUp({ agent, wallet }: { agent: Agent; wallet: AgentMoneyWallet }) {

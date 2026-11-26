@@ -1036,6 +1036,7 @@ export interface WalletMove {
   status: 'quoted' | 'posted' | 'failed' | 'held' | 'returned'
   detail?: string
   expires_at?: string
+  created_at?: string
 }
 
 /** Lens economy.WalletLine: one posting on one of the agent's wallets. */
@@ -1469,6 +1470,9 @@ export function createBffClient(baseUrl: string, token: () => string | null, fet
     declineCryptoSend: (id: string, sendID: string) => call<CryptoSend>('POST', `/api/agents/${e(id)}/crypto-sends/${e(sendID)}/decline`),
     /** Nothing moves: what it sells, the fee, the rate, what it buys, and until when. */
     walletMoveQuote: (id: string, body: WalletMoveRequest) => call<WalletMove>('POST', `/api/agents/${e(id)}/wallet-moves/quote`, body),
+    /** B48.45 — one move by its id, a quote nothing of which has started included (Lens B48.43): what a top-up link an
+     * agent sent its owner asks for. Read only; 404 for a move that is not this agent's. */
+    walletMove: (id: string, moveID: string) => call<WalletMove>('GET', `/api/agents/${e(id)}/wallet-moves/${e(moveID)}`),
     /** What a cash-out's or convert's confirm is signed over; no credentials while the workspace signs nothing yet. */
     walletMoveChallenge: (id: string, moveID: string) =>
       call<{ challenge: string; allow_credentials: string[] | null }>('POST', `/api/agents/${e(id)}/wallet-moves/${e(moveID)}/challenge`),

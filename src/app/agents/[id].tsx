@@ -1,5 +1,5 @@
 import { BffError } from '@talyvor/bff-client'
-import { useLocalSearchParams } from 'expo-router'
+import { router, useLocalSearchParams } from 'expo-router'
 import { useCallback } from 'react'
 
 import { AgentView } from '@/components/agent'
@@ -15,7 +15,8 @@ import { pinnedAgents } from '@/widget-sync'
  * its rules. */
 export default function AgentScreen() {
   // B57.77: the home-screen widget's Resume and Fund land here with the sheet they open.
-  const { id, open } = useLocalSearchParams<{ id: string; open?: string }>()
+  // B48.45: an agent's top-up link, /agents/<id>?top_up=<move>, lands here with the top-up it asked for.
+  const { id, open, top_up: topUp } = useLocalSearchParams<{ id: string; open?: string; top_up?: string }>()
   const { client } = useSession()
   // B61.79 — the face pressed in the list grows into this page's face once the page has slid in.
   usePageArrival(id)
@@ -49,7 +50,13 @@ export default function AgentScreen() {
       <Back home="/" />
       <LoadState loading={loading && !data} error={error} />
       {data === 'gone' ? <Body muted>This agent is not in your workspace.</Body> : null}
-      {data && data !== 'gone' ? <AgentView data={data} onChanged={reload} opens={open === 'resume' || open === 'fund' ? open : undefined} /> : null}
+      {data && data !== 'gone' ? <AgentView
+          data={data}
+          onChanged={reload}
+          opens={open === 'resume' || open === 'fund' ? open : undefined}
+          topUp={topUp || undefined}
+          onTopUpClosed={() => router.setParams({ top_up: undefined })}
+        /> : null}
     </Screen>
   )
 }
