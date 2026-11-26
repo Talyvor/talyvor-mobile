@@ -1,10 +1,11 @@
-import { amountMinor, formatMinor, refusalText, type CurrencyAccount, type FundingDirection } from '@talyvor/bff-client'
+import { amountMinor, BffError, formatMinor, refusalText, type CurrencyAccount, type FundingDirection } from '@talyvor/bff-client'
 import * as Crypto from 'expo-crypto'
 import { useEffect, useState } from 'react'
 import { Pressable, ScrollView, Text, useWindowDimensions, View } from 'react-native'
 
 import { useAccount } from '../account'
 import { useSession } from '../session'
+import { outcome } from '../sound'
 import { fonts, useTheme } from '../theme'
 import { AGENT_CREDIT, MoneyLabel } from './money-label'
 import { BottomSheet } from './pay-sheet'
@@ -94,11 +95,13 @@ function FundingSheet({ agent, direction, onClose, onDone }: { agent: { id: stri
     setRefusal('')
     try {
       const f = await client.agentFunding(agentAccount!.id, direction, minor!, key)
+      outcome('moved')
       setKey(Crypto.randomUUID())
       const moved = formatMinor(f.amount_minor, f.currency)
       onDone(toAgent ? `${moved} moved to ${agent.name}.` : `${moved} back from ${agent.name}.`)
       onClose()
     } catch (err) {
+      if (err instanceof BffError) outcome('refused')
       setRefusal(refusalText(err))
     } finally {
       setBusy(false)

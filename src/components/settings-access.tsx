@@ -14,6 +14,7 @@ import { PhoneKeyCard } from './phone-key-card'
 import { accountName } from './your-accounts'
 import { Body, Button, Card, Chip, Eyebrow, Field, Headline, Row, useLoad } from './ui'
 import { useSession } from '../session'
+import { outcome } from '../sound'
 import { fonts, useTheme } from '../theme'
 
 // B59.39 — Settings' security keys, team and roles, and limits (launch pack 1.9), in the web's words: keys as the web's
@@ -481,6 +482,7 @@ export function SharedWithYou({ titled }: { titled?: boolean }) {
     setOpenFailed(false)
     try {
       await switchAccount(id)
+      outcome('moved')
       router.replace('/')
     } catch {
       setOpenFailed(true)

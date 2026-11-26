@@ -29,6 +29,7 @@ import {
 import { biometricName, checkItsYou, keyGone, keyGoneText, phoneKey, signWithThisPhone } from '@/keys'
 import { haptic } from '@/motion'
 import { useSession } from '@/session'
+import { play } from '@/sound'
 import { fonts, useTheme } from '@/theme'
 
 // B59.20 — Instant transfer on the phone (design P7 and P8, launch pack 4.1): who gets it, from which agent's account,
@@ -170,6 +171,7 @@ function InstantTransferForm() {
     client.instantSend(account?.agent_id ?? '', { quote_id: quote.id, ...(to === 'talyvor_account' ? { to_account_id: recipient } : { to_payee_id: recipient }) }, key)
   const sent = (t: InstantTransfer) => {
     haptic('success')
+    play('sent')
     setKey(Crypto.randomUUID())
     router.push({ pathname: '/instant-transfer/[id]', params: { id: t.id } })
   }
@@ -196,7 +198,10 @@ function InstantTransferForm() {
         setSheetSaid('')
         setApprovalID(id)
       } else {
-        if (err instanceof BffError) haptic('warning')
+        if (err instanceof BffError) {
+          haptic('warning')
+          play('refused')
+        }
         setRefused(sendRefusal(err, agent, holds))
         setRuleRefused(err instanceof BffError && err.field === 'may_instant_transfer')
       }
@@ -224,6 +229,7 @@ function InstantTransferForm() {
       if (keyGone(err)) setSheetSaid(keyGoneText)
       else if (err instanceof BffError) {
         haptic('warning')
+        play('refused')
         setSheetSaid(sendRefusal(err, agent, holds))
       } else setSheetSaid('Cancelled. Nothing was sent.')
     } finally {
@@ -240,6 +246,7 @@ function InstantTransferForm() {
       await client.deny(approvalID, assertion)
       setApprovalID(null)
       setDeclined(true)
+      play('declined')
       setKey(Crypto.randomUUID())
     } catch (err) {
       setSheetSaid(err instanceof BffError ? sendRefusal(err, agent, holds) : 'Cancelled. Nothing changed.')

@@ -1,5 +1,7 @@
 import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library'
 
+import { outcome, play } from '../sound'
+
 // B61.85 — Add money and Take back on the phone (the web's B61.84): on an agent's screen, whose round actions are Add
 // money, Take back, Pause and Rules in that order, and on Wallets beside each of Your agents. The amount is typed in the
 // account's currency, one review line, one move under one key, what moved said back; Lens's refusal in its words.
@@ -16,6 +18,10 @@ jest.mock('expo-secure-store', () => ({
 }))
 jest.mock('expo-font', () => ({ ...jest.requireActual('expo-font'), useFonts: () => [true, null] }))
 jest.mock('../config', () => ({ config: { bffUrl: 'https://bff.test' } }))
+// B61.127 — money moved to or from an agent is moved.wav once Lens has moved it; a refusal is refused.wav.
+jest.mock('../sound', () => ({ ...jest.requireActual('../sound'), play: jest.fn(), outcome: jest.fn() }))
+const heard = () => [...(play as jest.Mock).mock.calls, ...(outcome as jest.Mock).mock.calls].map(([n]) => n as string).filter((n) => n !== 'key' && n !== 'tick')
+beforeEach(() => jest.clearAllMocks())
 let mockUUID = 0
 jest.mock('expo-crypto', () => ({ ...jest.requireActual('expo-crypto'), randomUUID: () => `key-${++mockUUID}` }))
 
@@ -108,6 +114,7 @@ test("the agent's screen: Add money, Take back, Pause and Rules, and Add money m
   expect(await screen.findByText('Nothing changed. You can try again.')).toBeTruthy()
   await fireEvent.press(screen.getByRole('button', { name: 'Move $50.00' }))
   expect(await screen.findByText('$50.00 moved to Research.')).toBeTruthy()
+  expect(heard()).toEqual(['moved'])
   expect(fundings()).toHaveLength(2)
   expect(fundings()[0]).toEqual({ call: 'POST /api/money/accounts/acc_r_usd/funding', body: { direction: 'to_agent', amount_minor: 5000 }, key: expect.stringMatching(/^key-/) })
   expect(fundings()[1].key).toBe(fundings()[0].key)
@@ -127,6 +134,7 @@ test('Wallets: each of Your agents has Add money and Take back, and Take back mo
   expect(within(screen.getByTestId('agent-funding-amounts')).getAllByRole('radio').map((r) => r.props.accessibilityState.checked)).toEqual([false, false, false])
   await fireEvent.press(screen.getByRole('button', { name: 'Take back $4.00' }))
   expect(await screen.findByText('$4.00 back from Research.')).toBeTruthy()
+  expect(heard()).toEqual(['moved'])
   expect(fundings()).toEqual([{ call: 'POST /api/money/accounts/acc_r_usd/funding', body: { direction: 'to_company', amount_minor: 400 }, key: expect.stringMatching(/^key-/) }])
 })
 
@@ -137,5 +145,6 @@ test("Lens's refusal is said in Lens's words, and nothing is said to have moved"
   await fireEvent.press(await screen.findByRole('button', { name: 'Move $100.00' }))
   expect(await screen.findByText('Only the owner or an admin may move money.')).toBeTruthy()
   expect(screen.queryByText('$100.00 moved to Research.')).toBeNull()
+  expect(heard()).toEqual(['refused'])
   expect(fundings()).toHaveLength(1)
 })

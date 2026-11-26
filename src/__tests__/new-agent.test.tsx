@@ -1,5 +1,7 @@
 import { fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-library'
 
+import { outcome, play } from '../sound'
+
 // B61.37 — New agent on the phone, as the web's (suite B61.13): from Agents, one of Talyvor's six named by what it does,
 // or your own; the owner types the name, and Continue stays off until they do; then the four rules in the account's
 // currency, which Lens is sent exactly as typed, signed with this phone's key when Lens judges the save looser.
@@ -15,6 +17,10 @@ jest.mock('expo-secure-store', () => ({
 jest.mock('expo-font', () => ({ ...jest.requireActual('expo-font'), useFonts: () => [true, null] }))
 jest.mock('expo-crypto', () => ({ ...jest.requireActual('expo-crypto'), randomUUID: () => 'uuid-1' }))
 jest.mock('../config', () => ({ config: { bffUrl: 'https://bff.test' } }))
+// B61.127 — an agent made is celebrate.wav, once.
+jest.mock('../sound', () => ({ ...jest.requireActual('../sound'), play: jest.fn(), outcome: jest.fn() }))
+const heard = () => [...(play as jest.Mock).mock.calls, ...(outcome as jest.Mock).mock.calls].map(([n]) => n as string).filter((n) => n !== 'key' && n !== 'tick')
+beforeEach(() => jest.clearAllMocks())
 const mockSign = jest.fn(async () => 'sig')
 jest.mock('../../modules/talyvor-keys', () => ({ isAvailable: () => true, sign: (...a: unknown[]) => mockSign(...(a as [])) }))
 
@@ -107,6 +113,7 @@ test('one of ours: named by what it does, the owner types the name, and its sugg
   await fireEvent.press(screen.getByText('Create agent'))
   await waitFor(() => expect(screen).toHavePathname('/agents/ag_new'))
   expect(bodies['POST /api/agents']).toEqual({ name: 'Trips', colour: 'sky', fiat_currency: 'GBP' })
+  expect(heard()).toEqual(['celebrate'])
   expect(bodies['PATCH /api/agents/ag_new']).toEqual({ description: 'Travel' })
   expect(bodies['PUT /api/agents/ag_new/rules']).toMatchObject({ currency: 'GBP', max_per_payment_minor: 1_250, daily_limit_minor: 300_000, monthly_limit_minor: 600_000, approval_above_minor: 50_000 })
   expect(mockSign).not.toHaveBeenCalled()

@@ -12,8 +12,10 @@ import { forgetTopLine, TopLine } from '@/components/live'
 import { Cover, LockScreen } from '@/components/lock-screen'
 import { PictureFlight } from '@/components/picture-flight'
 import { useLiveActivities } from '@/live-activity'
+import { restoreLook } from '@/look'
 import { usePushApprovals } from '@/push'
 import { SessionProvider, useSession } from '@/session'
+import { loadSounds } from '@/sound'
 import { fonts, useTheme } from '@/theme'
 
 /** B61.77 — a decision that is its own screen opens as the phone's own sheet: it rises over the screen it came from, the
@@ -101,6 +103,11 @@ export default function RootLayout() {
     BricolageGrotesque_700Bold,
     BricolageGrotesque_800ExtraBold,
   })
+  // B61.127 — the person's light or dark, and the sounds, loaded once as the app opens.
+  useEffect(() => {
+    void restoreLook()
+    loadSounds()
+  }, [])
   if (!loaded) return null
   return (
     <SessionProvider>

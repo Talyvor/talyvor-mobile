@@ -3,6 +3,8 @@ import type { ReactNode } from 'react'
 import { Pressable, Text, View } from 'react-native'
 
 import { Icon } from '@/components/icon'
+import { haptic } from '@/motion'
+import { play } from '@/sound'
 import { fonts, useTheme } from '@/theme'
 
 // B57.183 — Pocket Live's amount keypad (`payAmount`): 1 to 9, the decimal point, 0 and Delete, keys 70 high and round,
@@ -31,6 +33,12 @@ export function shownAmount(typed: string, currency: string): string {
   return before + digits + after
 }
 
+/** B61.127 — a key on a keypad: key.wav and a light haptic (pocket-live DESIGN.md section 15). */
+export function keyFelt() {
+  play('key')
+  haptic('light')
+}
+
 export function AmountPad({ typed, currency, onType }: { typed: string; currency: string; onType: (next: string) => void }) {
   const { c } = useTheme()
   const key = (k: string, label: string, child: ReactNode) => (
@@ -38,7 +46,10 @@ export function AmountPad({ typed, currency, onType }: { typed: string; currency
       key={k}
       accessibilityRole="button"
       accessibilityLabel={label}
-      onPress={() => onType(typeAmount(typed, k, currency))}
+      onPress={() => {
+        keyFelt()
+        onType(typeAmount(typed, k, currency))
+      }}
       style={({ pressed }) => ({
         flex: 1,
         height: 70,

@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { Pressable, Text, View } from 'react-native'
 
+import { keyFelt } from '@/components/amount-pad'
 import { Icon } from '@/components/icon'
 import { fonts, useTheme } from '@/theme'
 
@@ -50,7 +51,11 @@ export function PasscodePad({ onDone, faceID, disabled, reset, spread, children 
       accessibilityLabel={label}
       accessibilityState={{ disabled }}
       disabled={disabled}
-      onPress={() => (k === 'face' ? faceID?.() : press(k))}
+      onPress={() => {
+        if (k === 'face') return faceID?.()
+        keyFelt()
+        press(k)
+      }}
       style={({ pressed }) => ({
         flex: 1,
         height: 70,

@@ -1,5 +1,7 @@
 import { fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library'
 
+import { outcome, play } from '../sound'
+
 // B61.34 — Pay, to a person on the phone (the web's B61.33): "To a person" first on Pay, one field for a Talyvor name,
 // phone number or email; a match shows the shown name Lens answers and nothing else, with Pay; nobody found says Lens's
 // words. Pay opens the amount, the account it leaves and a note; one review, Send with Face ID over the challenge naming
@@ -15,6 +17,10 @@ jest.mock('expo-secure-store', () => ({
 }))
 jest.mock('expo-font', () => ({ ...jest.requireActual('expo-font'), useFonts: () => [true, null] }))
 jest.mock('../config', () => ({ config: { bffUrl: 'https://bff.test' } }))
+// B61.127 — which sounds played, by name: a send is sent.wav once Lens has paid it, a refusal refused.wav and never sent.
+jest.mock('../sound', () => ({ ...jest.requireActual('../sound'), play: jest.fn(), outcome: jest.fn() }))
+const heard = () => [...(play as jest.Mock).mock.calls, ...(outcome as jest.Mock).mock.calls].map(([n]) => n as string).filter((n) => n !== 'key' && n !== 'tick')
+beforeEach(() => jest.clearAllMocks())
 let mockUUID = 0
 jest.mock('expo-crypto', () => ({ ...jest.requireActual('expo-crypto'), randomUUID: () => `key-${++mockUUID}` }))
 /** The phone's key: every message it signed, and the reason Face ID showed. */
@@ -166,8 +172,10 @@ test('the pay sheet: amount, account and note, one review, Send with Face ID, pa
   // The first answer is dropped: the second press goes under the same key, so Lens pays once.
   await fireEvent.press(sheet.getByRole('button', { name: 'Send with Face ID' }))
   expect(await screen.findByText('Nothing changed. You can try again.')).toBeTruthy()
+  expect(heard()).toEqual([])
   await fireEvent.press(sheet.getByRole('button', { name: 'Send with Face ID' }))
   expect(await screen.findByText('Sent')).toBeTruthy()
+  expect(heard()).toEqual(['sent'])
   expect(screen.getByText('$42.00 to Dana R. It is there now.')).toBeTruthy()
 
   expect(pays()).toHaveLength(2)
@@ -212,6 +220,7 @@ test("a refusal is said in Lens's words, and nothing is said to be sent", async 
   await fireEvent.press(await screen.findByRole('button', { name: 'Send with Face ID' }))
   expect(await screen.findByText('Dana R. holds no account in EUR, so nothing was sent.')).toBeTruthy()
   expect(screen.queryByText('Sent')).toBeNull()
+  expect(heard()).toEqual(['refused'])
 })
 
 test('with no key on this phone, nothing is sent and the sheet offers Approvals on this phone', async () => {

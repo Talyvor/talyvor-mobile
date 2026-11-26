@@ -25,6 +25,7 @@ import { pendingPrepared, preparedBy } from '@/components/prepared-payment-card'
 import { Body, Button, Card, Field, Headline, LoadState, Screen, Toggle, useLoad } from '@/components/ui'
 import { forgetThisPhone, keyGone, keyGoneText, keysAvailable, phoneKey, signPayment } from '@/keys'
 import { useSession } from '@/session'
+import { outcome as sound } from '@/sound'
 import { fonts, useTheme } from '@/theme'
 import { lastPaid, pinnedPayees, setPayeePinned, syncWidget } from '@/widget-sync'
 
@@ -134,6 +135,7 @@ export default function PayeeScreen() {
       reload()
       void syncWidget(client)
     } catch (err) {
+      if (err instanceof BffError) sound('refused')
       setRefusal(refusalText(err))
     } finally {
       setBusy(false)
@@ -176,6 +178,8 @@ export default function PayeeScreen() {
     }
     await act(async () => {
       setMade({ payment: await client.pay(payment, assertion), from })
+      // B61.127 — sent.wav once Lens has taken the payment.
+      sound('sent')
       setConfirming(false)
       setAmount('')
       setReference('')

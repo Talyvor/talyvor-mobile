@@ -13,6 +13,7 @@ import { AccountChoice, BottomSheet } from '@/components/pay-sheet'
 import { Back, Body, Button, Card, Field, Figure, Headline, LoadState, Screen, useLoad } from '@/components/ui'
 import { biometricName, forgetThisPhone, keyGone, keyGoneText, keysAvailable, phoneKey, signPersonPayment } from '@/keys'
 import { useSession } from '@/session'
+import { outcome } from '@/sound'
 import { fonts, useTheme } from '@/theme'
 
 // B61.34 — Pay a person found on Pay (components/pay-a-person.tsx), as Pocket Live's phone `payAmount`, sheet `review`
@@ -116,7 +117,10 @@ export default function PayPersonScreen() {
       setKey(Crypto.randomUUID())
       setReviewing(false)
       setSent(paid)
+      // B61.127 — sent.wav once Lens has taken the payment.
+      outcome('sent')
     } catch (err) {
+      if (err instanceof BffError) outcome('refused')
       setRefusal(refusalText(err))
     } finally {
       setBusy(false)

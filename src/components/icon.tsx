@@ -216,6 +216,13 @@ const ICONS = {
       <Path d="M7.5 10h1M11.5 10h1M15.5 10h1M8 14h8" />
     </>
   ),
+  // B61.127 — Pocket Live's sun, for Look and sound.
+  sun: (
+    <>
+      <Circle cx="12" cy="12" r="4" />
+      <Path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4" />
+    </>
+  ),
 } as const
 
 export type IconName = keyof typeof ICONS

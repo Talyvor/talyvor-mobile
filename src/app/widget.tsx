@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 
 import { Back, Body, Eyebrow, Screen } from '@/components/ui'
 import { useSession } from '@/session'
+import { play } from '@/sound'
 import { syncWidget, widgetLinkValid } from '@/widget-sync'
 
 /** Where the home-screen widget's Pause lands: pause the agent in Lens, refresh the widget, show the agent. */
@@ -22,6 +23,7 @@ export default function WidgetAction() {
       }
       try {
         await client.pause(agent, 'Paused from the home-screen widget')
+        play('pause')
         await syncWidget(client)
         if (live) router.replace({ pathname: '/agents/[id]', params: { id: agent } })
       } catch (err) {

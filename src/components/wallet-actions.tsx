@@ -17,6 +17,7 @@ import { ScrollView, Text, useWindowDimensions, View } from 'react-native'
 import type { Shows } from '../account'
 import { biometricName, checkItsYou, forgetThisPhone, keyGone, keyGoneText, signWithThisPhone } from '../keys'
 import { rateText } from '../instant-transfer'
+import { outcome } from '../sound'
 import { fonts, useTheme } from '../theme'
 import { CURRENCY_NAME, isStablecoin } from './home'
 import { Icon, type IconName } from './icon'
@@ -237,11 +238,13 @@ function TopUp({ client, shows, accounts: all, hasKey, open, onClose, onDone }: 
       if (check === 'gone') return setRefusal(await keyWentText())
       if (check !== 'ok') return setRefusal('Nothing changed.')
       await client.walletTopUp(account!.id, minor!, key)
+      outcome('moneyin')
       setKey('')
       setAmount('')
       onDone()
       onClose()
     } catch (err) {
+      if (err instanceof BffError) outcome('refused')
       setRefusal(refusalText(err))
     } finally {
       setBusy(false)
@@ -328,12 +331,14 @@ function Withdraw({ client, shows, accounts: all, hasKey, open, onClose, onDone 
       const assertion = await sign(client, challenge, `Withdraw ${total}`)
       if (typeof assertion === 'string') return setRefusal(assertion)
       await client.walletWithdraw(account!.id, body, key, assertion)
+      outcome('sent')
       setKey('')
       setAmount('')
       setBanks(null)
       onDone()
       onClose()
     } catch (err) {
+      if (err instanceof BffError) outcome('refused')
       setRefusal(refusalText(err))
     } finally {
       setBusy(false)
@@ -424,6 +429,7 @@ function Convert({ client, shows, accounts: all, hasKey, open, onClose, onDone }
       setQuote(await client.sideConvertQuote({ sell_currency: from, buy_currency: to, sell_minor: minor! }))
       setKey(Crypto.randomUUID())
     } catch (err) {
+      if (err instanceof BffError) outcome('refused')
       setRefusal(refusalText(err))
     } finally {
       setBusy(false)
@@ -437,11 +443,13 @@ function Convert({ client, shows, accounts: all, hasKey, open, onClose, onDone }
       const assertion = await sign(client, challenge, `Convert ${formatMinor(quote!.sell_minor, quote!.sell_currency)}`)
       if (typeof assertion === 'string') return setRefusal(assertion)
       await client.sideConvert(quote!.id, key, assertion)
+      outcome('moved')
       setQuote(null)
       setAmount('')
       onDone()
       onClose()
     } catch (err) {
+      if (err instanceof BffError) outcome('refused')
       setRefusal(refusalText(err))
     } finally {
       setBusy(false)

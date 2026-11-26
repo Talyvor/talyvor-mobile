@@ -6,6 +6,7 @@ import { Pressable, Text, View } from 'react-native'
 import { accountChip } from '../account'
 import { roleName } from '../role-words'
 import { useSession } from '../session'
+import { outcome } from '../sound'
 import { fonts, useTheme } from '../theme'
 import { Icon } from './icon'
 import { MoneyLabel, useMoneyLabels } from './money-label'
@@ -98,6 +99,7 @@ export function YourAccountsSheet({ visible, onClose }: { visible: boolean; onCl
     setSaid(null)
     try {
       await switchAccount(a.id)
+      outcome('moved')
       close()
       router.replace('/')
     } catch {

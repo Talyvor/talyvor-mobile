@@ -6,9 +6,10 @@ import { BottomTabBarHeightContext } from 'expo-router/build/react-navigation/bo
 import { NavigationContext } from 'expo-router/build/react-navigation/core/index'
 import { SafeAreaInsetsContext, SafeAreaView } from 'react-native-safe-area-context'
 
-import { durations, sheetDragClose, spring, useReduceMotion } from '../motion'
+import { durations, haptic, sheetDragClose, spring, useReduceMotion } from '../motion'
 
 import { useSession } from '../session'
+import { play } from '../sound'
 import { fonts, SurfaceContext, useTheme } from '../theme'
 import { Backdrop, ScreenHues, SheetWash, type BackdropStrength, type Hues } from './backdrop'
 import { Icon, type IconName } from './icon'
@@ -306,7 +307,12 @@ export function Toggle({ label, sub, value, onValueChange, disabled }: { label: 
       accessibilityLabel={label}
       accessibilityState={{ checked: value, disabled }}
       disabled={disabled}
-      onPress={() => onValueChange(!value)}
+      onPress={() => {
+        // B61.127 — a switch flips with tick.wav and a light haptic (pocket-live DESIGN.md section 15).
+        play('tick')
+        haptic('light')
+        onValueChange(!value)
+      }}
       style={styles.toggleRow}>
       {sub ? (
         <View style={{ flex: 1, minWidth: 0 }}>

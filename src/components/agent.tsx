@@ -7,6 +7,7 @@ import { useAccount } from '../account'
 import { WORDS as INSTANT_WORDS } from '../instant-transfer'
 import { biometricName, keyGone, keyGoneText, phoneKey, resumeWithThisPhone, signWithThisPhone } from '../keys'
 import { useSession } from '../session'
+import { outcome, play } from '../sound'
 import { fonts, useTheme } from '../theme'
 import { setPinned, syncWidget } from '../widget-sync'
 import { PendingApprovals } from './approval-card'
@@ -98,7 +99,11 @@ export function AgentView({
       setBusy(false)
     }
   }
-  const pause = () => act(() => client.pause(agent.id, 'Paused from the phone app'))
+  const pause = () =>
+    act(async () => {
+      await client.pause(agent.id, 'Paused from the phone app')
+      play('pause')
+    })
 
   const closeSheet = () => {
     setAsking(false)
@@ -114,6 +119,7 @@ export function AgentView({
     setBusy(false)
     if (why === onWeb) return setAsking(true)
     if (why) return asking ? setSheetSaid(why) : setRefusal(why)
+    play('resume')
     closeSheet()
     if (allPaused) setNote(`${agent.name} runs when you start every agent again. Until then it stays paused with every agent.`)
     changed()
@@ -134,6 +140,7 @@ export function AgentView({
           assertion = await signWithThisPhone(client, j.challenge, `Let ${agent.name} use Instant transfer`)
         }
         await client.setRules(agent.id, proposed, assertion)
+        outcome('moved')
         setInstantSaid('Saved. Lens applies these rules to the next request or payment.')
       } catch (err) {
         if (keyGone(err)) setInstantSaid(keyGoneText)
@@ -153,6 +160,7 @@ export function AgentView({
         assertion = await signWithThisPhone(client, j.challenge, what)
       }
       await client.setRules(agent.id, proposed, assertion)
+      outcome('moved')
       return ''
     } catch (err) {
       if (keyGone(err)) return keyGoneText
