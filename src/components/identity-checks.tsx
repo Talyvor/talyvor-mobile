@@ -34,6 +34,10 @@ import { fonts, useTheme } from '@/theme'
 // then reads the record until the check is decided: a pass goes on to Home, a check that failed or expired offers Start
 // again, which is the same check started anew. The note says what Persona checks, with our privacy notice. The link
 // lives only in the record's read and on the button; nothing of Persona's is kept on the phone, and its words never drawn.
+//
+// B57.195 — Persona's step in Pocket: its note is one note, as su5 draws the Sandbox note, with our privacy notice the
+// note's last line; a check that failed or expired is said in Pocket's warning note (.note2.warnnote) straight under the
+// line, so the foot holds only Start again (and, in sign-up, Open the app under it).
 
 const LEVELS = ['L0', 'L1', 'L2', 'L3'] as const
 
@@ -189,19 +193,14 @@ function wayInLine(v: WorkspaceVerification): string | null {
   return null
 }
 
-/** B65.3 — what the identity partner checks, and our privacy notice, opened in the app's browser sheet. */
+/** B65.3 — what the identity partner checks, and our privacy notice, opened in the app's browser sheet. B57.195: one
+ *  note, as su5 draws its Sandbox note, with the notice its last line. */
 function PartnerNote() {
-  const { c } = useTheme()
+  const privacy = { label: IDENTITY_WORDS.privacy, onPress: () => void WebBrowser.openBrowserAsync(`${config.bffUrl}/privacy`).catch(() => undefined) }
   return (
-    <View style={{ gap: 8 }}>
-      <Note icon="shield">{IDENTITY_WORDS.documentLine}</Note>
-      <Text
-        accessibilityRole="link"
-        onPress={() => void WebBrowser.openBrowserAsync(`${config.bffUrl}/privacy`).catch(() => undefined)}
-        style={{ fontFamily: fonts.uiBold, fontSize: 13.5, color: c.ink, textDecorationLine: 'underline', paddingHorizontal: 14 }}>
-        {IDENTITY_WORDS.privacy}
-      </Text>
-    </View>
+    <Note icon="shield" link={privacy} testID="partner-note">
+      {IDENTITY_WORDS.documentLine}
+    </Note>
   )
 }
 
@@ -264,7 +263,9 @@ export function IdentityChecks({ head, done, wayIn = false, onPassed, onOpen = (
   const partner = atPartner(v)
   const next = latest(v, level + 1)
   const again = next?.subject === 'person' && (next.status === 'failed' || next.status === 'returned')
-  const shownSaid = said ?? (again && !tried && next ? failedText(next) : null)
+  // B57.195 — the check that failed or expired is said in Pocket's warning note under the line, not in the foot
+  const againSaid = again && next && running === null ? failedText(next) : null
+  const shownSaid = said === againSaid ? null : said
 
   const verify = async () => {
     if (!partner || opening) return
@@ -374,6 +375,13 @@ export function IdentityChecks({ head, done, wayIn = false, onPassed, onOpen = (
       }>
       {head}
       <Body muted>{IDENTITY_WORDS.line}</Body>
+      {againSaid ? (
+        <View accessibilityLiveRegion="polite">
+          <Note icon={againSaid === IDENTITY_ERRORS.expired ? 'clock' : 'shield'} tone="warn" testID="again-note">
+            {againSaid}
+          </Note>
+        </View>
+      ) : null}
       {level < 2 && !partner ? (
         <View style={{ gap: 14 }}>
           {level < 1
