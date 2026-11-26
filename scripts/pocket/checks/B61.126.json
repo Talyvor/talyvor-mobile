@@ -1,0 +1,93 @@
+[
+ {
+  "route": "/",
+  "screen": "p-home",
+  "words": "report",
+  "why": "B61.126 changes the background and the greys only (Pocket Live 26 Nov, DESIGN.md 6.0); this screen's words are its own item's",
+  "name": "home",
+  "live": "await P.unlock();"
+ },
+ {
+  "route": "/",
+  "screen": "p-home",
+  "words": "report",
+  "why": "B61.126 changes the background and the greys only (Pocket Live 26 Nov, DESIGN.md 6.0); this screen's words are its own item's",
+  "name": "home",
+  "live": "await P.unlock();",
+  "dark": true
+ },
+ {
+  "route": "/agents",
+  "screen": "p-home",
+  "words": "report",
+  "why": "B61.126 changes the background and the greys only (Pocket Live 26 Nov, DESIGN.md 6.0); this screen's words are its own item's",
+  "name": "agents",
+  "live": "await P.unlock(); await P.goTab('agents');"
+ },
+ {
+  "route": "/agents",
+  "screen": "p-home",
+  "words": "report",
+  "why": "B61.126 changes the background and the greys only (Pocket Live 26 Nov, DESIGN.md 6.0); this screen's words are its own item's",
+  "name": "agents",
+  "live": "await P.unlock(); await P.goTab('agents');",
+  "dark": true
+ },
+ {
+  "route": "/agents/agt_ops",
+  "screen": "p-agent-research",
+  "words": "report",
+  "why": "B61.126 changes the background and the greys only (Pocket Live 26 Nov, DESIGN.md 6.0); this screen's words are its own item's",
+  "name": "agent-ops",
+  "live": "await P.unlock(); await P.goTab('agents'); await P.push('agent', ['pixel']);"
+ },
+ {
+  "route": "/agents/agt_ops",
+  "screen": "p-agent-research",
+  "words": "report",
+  "why": "B61.126 changes the background and the greys only (Pocket Live 26 Nov, DESIGN.md 6.0); this screen's words are its own item's",
+  "name": "agent-ops",
+  "live": "await P.unlock(); await P.goTab('agents'); await P.push('agent', ['pixel']);",
+  "dark": true
+ },
+ {
+  "route": "/agents/agt_research",
+  "screen": "p-agent-research",
+  "words": "report",
+  "why": "B61.126 changes the background and the greys only (Pocket Live 26 Nov, DESIGN.md 6.0); this screen's words are its own item's",
+  "name": "agent-research",
+  "live": "await P.unlock(); await P.goTab('agents'); await P.push('agent', ['juno']);"
+ },
+ {
+  "route": "/agents/agt_research",
+  "screen": "p-agent-research",
+  "words": "report",
+  "why": "B61.126 changes the background and the greys only (Pocket Live 26 Nov, DESIGN.md 6.0); this screen's words are its own item's",
+  "name": "agent-research",
+  "live": "await P.unlock(); await P.goTab('agents'); await P.push('agent', ['juno']);",
+  "dark": true
+ },
+ {
+  "route": "/agents/agt_research",
+  "screen": "p-agent-research",
+  "words": "report",
+  "why": "B61.126 changes the background and the greys only (Pocket Live 26 Nov, DESIGN.md 6.0); this screen's words are its own item's",
+  "name": "sheet-add-money",
+  "press": [
+   "Add money to Research"
+  ],
+  "live": "await P.unlock(); await P.goTab('agents'); await P.push('agent', ['juno']); await P.openSheet('fund', ['juno']);"
+ },
+ {
+  "route": "/agents/agt_research",
+  "screen": "p-agent-research",
+  "words": "report",
+  "why": "B61.126 changes the background and the greys only (Pocket Live 26 Nov, DESIGN.md 6.0); this screen's words are its own item's",
+  "name": "sheet-add-money",
+  "press": [
+   "Add money to Research"
+  ],
+  "live": "await P.unlock(); await P.goTab('agents'); await P.push('agent', ['juno']); await P.openSheet('fund', ['juno']);",
+  "dark": true
+ }
+]

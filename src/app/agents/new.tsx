@@ -59,7 +59,7 @@ function Steps({ at }: { at: number }) {
   return (
     <View accessible accessibilityRole="image" accessibilityLabel={`Step ${at} of ${STEPS}`} style={{ flexDirection: 'row', gap: 5, paddingTop: 6, paddingHorizontal: 2 }}>
       {Array.from({ length: STEPS }, (_, i) => (
-        <View key={i} style={{ flex: 1, height: 5, borderRadius: 999, backgroundColor: i < at ? c.tangerine : c.cloud2 }} />
+        <View key={i} style={{ flex: 1, height: 5, borderRadius: 999, backgroundColor: i < at ? c.tangerine : c.tint }} />
       ))}
     </View>
   )

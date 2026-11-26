@@ -1107,7 +1107,7 @@ function Round({ action, on, onPress }: { action: WalletAction; on: boolean; onP
       accessibilityState={{ expanded: on }}
       onPress={onPress}
       style={{ flex: 1, maxWidth: 84, alignItems: 'center', gap: 7 }}>
-      <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: on ? c.primary : c.cloud, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: on ? c.primary : c.cloud, boxShadow: on ? undefined : `inset 0 0 0 1px ${c.frostLine}`, alignItems: 'center', justifyContent: 'center' }}>
         <Icon name={ROUND_ICON[action] ?? 'plus'} color={on ? c.onPrimary : c.ink} />
       </View>
       <Text style={{ fontFamily: fonts.uiBold, fontSize: 12.5, color: c.ink, textAlign: 'center' }}>{ACTION_WORDS[action]}</Text>

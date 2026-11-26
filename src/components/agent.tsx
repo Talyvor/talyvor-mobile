@@ -201,7 +201,8 @@ export function AgentView({
               </Chip>
             )}
           </View>
-          {agent.description ? <Body muted>{agent.description}</Body> : null}
+          {/* B61.126: the caption under its name is the first ink, as its page can be a bright colour. */}
+          {agent.description ? <Body>{agent.description}</Body> : null}
         </Card>
       </View>
       <View style={{ flexDirection: 'row', justifyContent: 'space-around' }} testID="agent-actions">

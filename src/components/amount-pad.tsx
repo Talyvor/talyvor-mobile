@@ -45,7 +45,7 @@ export function AmountPad({ typed, currency, onType }: { typed: string; currency
         borderRadius: 35,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: pressed ? c.cloud2 : 'transparent',
+        backgroundColor: pressed ? c.tint : 'transparent',
         transform: [{ scale: pressed ? 0.94 : 1 }],
       })}>
       {child}

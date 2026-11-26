@@ -1,3 +1,4 @@
+import { createContext, useContext } from 'react'
 import { useColorScheme } from 'react-native'
 
 // B57.64 — Pocket's tokens (design/pocket/pocket.css, .pk and .pk-dark): light unless the phone is set to dark.
@@ -62,8 +63,51 @@ function withRoles(p: typeof light) {
     critical: p.danger,
   }
 }
-export type Palette = ReturnType<typeof withRoles>
-export const palettes = { light: withRoles(light), dark: withRoles(dark) }
+export type Palette = ReturnType<typeof withRoles> & { card: string; tint: string; hairline: string; frostLine: string }
+
+/** `#RRGGBB` at an opacity, as CSS's color-mix with transparent. */
+export function alpha(hex: string, a: number): string {
+  const ch = (i: number) => parseInt(hex.slice(1 + i * 2, 3 + i * 2), 16)
+  return `rgba(${ch(0)},${ch(1)},${ch(2)},${a})`
+}
+/** `a` mixed into `b` by `k`, as CSS's color-mix(in srgb, a k, b). */
+function over(a: string, k: number, b: string): string {
+  const ch = (hex: string, i: number) => parseInt(hex.slice(1 + i * 2, 3 + i * 2), 16)
+  return `#${[0, 1, 2].map((i) => Math.round(ch(a, i) * k + ch(b, i) * (1 - k)).toString(16).padStart(2, '0').toUpperCase()).join('')}`
+}
+
+function plain(p: typeof light) {
+  return { ...withRoles(p), card: p.cloud, tint: p.cloud2, hairline: 'transparent', frostLine: 'transparent' }
+}
+export const palettes = { light: plain(light), dark: plain(dark) }
+
+/** B61.126 — what a piece of the screen sits on (design/pocket-live/DESIGN.md section 6.0). On a screen's glass, what was
+ * solid grey is frosted: cloud is the page colour at 66% (68% in dark), cloud-2 at 50%, tracks and pressed rows are ink
+ * at 9%, and the third ink is one step stronger so small text keeps 4.5 to 1 on colour. A sheet sits over the page:
+ * solid enough to read a form, its greys a touch of ink in the page, its cards the page colour at 66%, and it keeps
+ * ink-3. */
+export type Surface = 'plain' | 'glass' | 'sheet'
+export const SurfaceContext = createContext<Surface>('plain')
+
+function onGlass(p: typeof light, isDark: boolean) {
+  return {
+    ...withRoles(p),
+    cloud: alpha(p.page, isDark ? 0.68 : 0.66),
+    cloud2: alpha(p.page, 0.5),
+    card: alpha(p.page, isDark ? 0.68 : 0.66),
+    ink3: isDark ? '#989EAD' : '#586070',
+    tint: alpha(p.ink, 0.09),
+    hairline: alpha(p.ink, 0.06),
+    frostLine: alpha(p.ink, 0.08),
+  }
+}
+function onSheet(p: typeof light) {
+  return { ...withRoles(p), cloud: over(p.ink, 0.05, p.page), cloud2: over(p.ink, 0.09, p.page), card: alpha(p.page, 0.66), tint: over(p.ink, 0.09, p.page), hairline: alpha(p.ink, 0.06), frostLine: 'transparent' }
+}
+export const surfaces = {
+  light: { plain: palettes.light, glass: onGlass(light, false), sheet: onSheet(light) },
+  dark: { plain: palettes.dark, glass: onGlass(dark, true), sheet: onSheet(dark) },
+} as const
 
 /** The agent colours (pocket.css --a-*): a face's fill, never text. */
 export const agentColours = {
@@ -88,5 +132,6 @@ export const fonts = {
 
 export function useTheme(): { c: Palette; dark: boolean } {
   const isDark = useColorScheme() === 'dark'
-  return { c: isDark ? palettes.dark : palettes.light, dark: isDark }
+  const surface = useContext(SurfaceContext)
+  return { c: surfaces[isDark ? 'dark' : 'light'][surface], dark: isDark }
 }

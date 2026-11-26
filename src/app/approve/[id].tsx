@@ -127,6 +127,7 @@ export default function ApproveScreen() {
   return (
     <View style={{ flex: 1 }}>
       <Screen
+        sheet
         onRefresh={() => {
           setDone(null)
           setDeclined(false)

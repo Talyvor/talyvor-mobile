@@ -2,17 +2,18 @@ import { render, screen } from '@testing-library/react-native'
 import { AccessibilityInfo, useColorScheme } from 'react-native'
 
 import { Card, Eyebrow, Screen } from '../components/ui'
-import { palettes } from '../theme'
+import { palettes, surfaces } from '../theme'
 
 // B61.99 — small text with no card under it sits on the moving background, so it is ink-2; on a card it keeps ink-3
-// (design/pocket-live/DESIGN.md section 6). The pixels themselves are measured by scripts/pocket-contrast.mjs.
+// (design/pocket-live/DESIGN.md section 6). B61.126: a card on a screen is on the glass, where the third ink is one step
+// stronger (section 6.0). The pixels themselves are measured by scripts/pocket-contrast.mjs.
 
 jest.mock('react-native/Libraries/Utilities/useColorScheme', () => ({ __esModule: true, default: jest.fn(() => null) }))
 const scheme = useColorScheme as jest.Mock
 
 afterEach(() => jest.restoreAllMocks())
 
-it.each(['light', 'dark'] as const)('a section label is ink-2 on the background and ink-3 on a card, in %s', async (mode) => {
+it.each(['light', 'dark'] as const)('a section label is ink-2 on the background and the glass’s ink-3 on a card, in %s', async (mode) => {
   scheme.mockReturnValue(mode)
   jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(true)
   await render(
@@ -25,5 +26,5 @@ it.each(['light', 'dark'] as const)('a section label is ink-2 on the background 
   )
   const colour = (el: ReturnType<typeof screen.getByText>) => [el.props.style].flat(9).reduce((c, s) => s?.color ?? c, undefined)
   expect(colour(await screen.findByText('Saved payees'))).toBe(palettes[mode].ink2)
-  expect(colour(screen.getByText('Limits'))).toBe(palettes[mode].ink3)
+  expect(colour(screen.getByText('Limits'))).toBe(surfaces[mode].glass.ink3)
 })
