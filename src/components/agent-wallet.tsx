@@ -35,7 +35,7 @@ import { Icon, type IconName } from './icon'
 import { Money } from './money'
 import { MONEY_WALLET, MoneyHeader } from './money-label'
 import { Press } from './press'
-import { Body, Button, Card, Chip, Eyebrow, Field, Headline, Row, useLoad } from './ui'
+import { Body, Button, Card, Chip, Eyebrow, Field, Figure, Headline, Row, useLoad } from './ui'
 
 // B48.20 — an agent's wallets on the phone, as the web's wallet panel draws them (talyvor-suite B48.18, B48.36, B48.47
 // and B48.48, with the web's words): each wallet's balance and how to pay into it, with the address's QR code; then, for
@@ -435,9 +435,22 @@ function AwaitingSend({ agent, s, onAnswered }: { agent: Agent; s: CryptoSend; o
       setBusy(false)
     }
   }
+  const named = s.saved_name || s.ens_name
   return (
-    <View style={{ gap: 8 }} testID={`crypto-send-waiting-${s.id}`}>
-      <Row first title={`${agent.name} wants to send to a new address`} sub={`${s.to} on ${networkName(s.network)} · asked ${when(s.created_at)}`} right={<Text>{formatMinor(s.amount_minor, 'USDC')}</Text>} />
+    <Card white testID={`crypto-send-waiting-${s.id}`}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        <Face agent={agent} waiting size={40} />
+        <View style={{ flex: 1, gap: 2 }}>
+          <Body style={{ fontFamily: fonts.uiMedium }}>{`${agent.name} wants to send to a new address`}</Body>
+          <Money minor={s.amount_minor} currency="USDC" size={15} />
+        </View>
+      </View>
+      <Facts testID={`crypto-send-waiting-${s.id}-to`}>
+        <Fact name="To" value={named || s.to} />
+        {named ? <Fact name="Address" value={s.to} /> : null}
+        <Fact name="Network" value={networkName(s.network)} />
+        <Fact name="Asked" value={when(s.created_at)} />
+      </Facts>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
         <Button small primary icon="faceid" label="Approve" accessibilityLabel={`Approve with ${biometricName}`} disabled={busy} hint="Answering…" onPress={() => void answer(true)} />
         <Button small variant="secondary" label="Send a test amount first" disabled={busy} hint="Answering…" onPress={() => setTesting((t) => !t)} />
@@ -457,7 +470,7 @@ function AwaitingSend({ agent, s, onAnswered }: { agent: Agent; s: CryptoSend; o
         </View>
       ) : null}
       {said ? <Body>{said}</Body> : null}
-    </View>
+    </Card>
   )
 }
 
@@ -491,7 +504,7 @@ function SavedAddresses({ onPick }: { onPick: (name: string) => void }) {
   }
   const saved = book.data
   return (
-    <View style={{ gap: 8 }} testID="crypto-address-book">
+    <Card white testID="crypto-address-book">
       <Eyebrow>Saved addresses</Eyebrow>
       {book.error ? (
         <Body>{failure(book.error, 'Your saved addresses could not be read.')}</Body>
@@ -504,6 +517,7 @@ function SavedAddresses({ onPick }: { onPick: (name: string) => void }) {
           <Row
             key={a.id}
             first={i === 0}
+            left={<Initial of={a.name} testID={`crypto-address-${a.id}-initial`} />}
             title={a.name}
             sub={shortAddress(a.address)}
             onPress={() => onPick(a.name)}
@@ -522,6 +536,17 @@ function SavedAddresses({ onPick }: { onPick: (name: string) => void }) {
         onPress={() => void save()}
       />
       {said ? <Body>{said}</Body> : null}
+    </Card>
+  )
+}
+
+/** A saved address's initial on its round tile, as w-members draws a person's; a send to no name wears its arrow. */
+function Initial({ of, icon, testID }: { of: string; icon?: IconName; testID?: string }) {
+  const { c } = useTheme()
+  const letter = of.trim().charAt(0).toUpperCase()
+  return (
+    <View testID={testID} style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: c.cloud2 }}>
+      {letter || !icon ? <Text style={{ fontFamily: fonts.uiBold, fontSize: 15, color: c.ink }}>{letter || '?'}</Text> : <Icon name={icon} size={18} color={c.ink} />}
     </View>
   )
 }
@@ -579,34 +604,57 @@ function Send({ agent }: { agent: Agent }) {
   }
   const waiting = (sends ?? []).filter((s) => s.direction === 'out' && s.status === 'awaiting_owner')
   return (
-    <View style={{ gap: 12 }} testID="wallet-send">
-      {quote ? (
+    <View style={{ gap: 16 }} testID="wallet-send">
+      <Card white testID="wallet-send-form">
+        <Eyebrow>Send</Eyebrow>
+        {quote ? (
+          <View style={{ gap: 10 }}>
+            <SendFacts q={quote} agent={agent} />
+            <Chip>{`Arrives ${arrivalText(quote.arrival_seconds)}`}</Chip>
+            {quote.new_address ? <Body muted>A new address: this workspace has not paid it before.</Body> : null}
+            <Body muted>{`${Biometric} asks before anything is sent.`}</Body>
+            <Button primary icon="faceid" label={busy ? 'Sending…' : `Send with ${biometricName}`} disabled={busy} hint="Sending…" onPress={() => void send()} />
+            <Button
+              variant="secondary"
+              label="Change"
+              disabled={busy}
+              hint="Sending…"
+              onPress={() => {
+                setQuote(null)
+                setSaid('')
+              }}
+            />
+          </View>
+        ) : (
+          <View style={{ gap: 12 }}>
+            <Field label="Wallet address, name.eth, saved name, @name, email or phone" placeholder="0x…, name.eth or @name" autoCapitalize="none" autoCorrect={false} value={to} onChangeText={setTo} />
+            <Choice label="Network" options={NETWORKS} value={network} onChange={setNetwork} />
+            <Field label="Amount in USDC" keyboardType="decimal-pad" placeholder="0.00" value={amount} onChangeText={setAmount} />
+            <Button primary label={busy ? 'Reading the quote…' : 'Review'} disabled={busy || !ready} hint={ready ? 'Reading the quote…' : 'Type who it goes to and an amount first'} onPress={() => void review()} />
+          </View>
+        )}
+        {said ? <Body>{said}</Body> : null}
+        {receipt ? (
+          <View testID="crypto-send-receipt" style={{ gap: 6 }}>
+            <Chip tone={SEND_STATUS[receipt.status][1]}>{SEND_STATUS[receipt.status][0]}</Chip>
+            <Body>
+              {receipt.status === 'awaiting_owner'
+                ? 'A first send to a new address waits for the workspace’s owner.'
+                : receipt.status === 'refused' || receipt.status === 'failed'
+                  ? receipt.reason || 'Nothing was sent.'
+                  : `${formatMinor(receipt.amount_minor, 'USDC')} to ${sendsTo(receipt)}.`}
+            </Body>
+          </View>
+        ) : null}
+      </Card>
+      {waiting.length > 0 ? (
         <View style={{ gap: 10 }}>
-          <SendFacts q={quote} agent={agent} />
-          <Chip>{`Arrives ${arrivalText(quote.arrival_seconds)}`}</Chip>
-          {quote.new_address ? <Body muted>A new address: this workspace has not paid it before.</Body> : null}
-          <Body muted>{`${Biometric} asks before anything is sent.`}</Body>
-          <Button primary icon="faceid" label={busy ? 'Sending…' : `Send with ${biometricName}`} disabled={busy} hint="Sending…" onPress={() => void send()} />
-          <Button
-            variant="secondary"
-            label="Change"
-            disabled={busy}
-            hint="Sending…"
-            onPress={() => {
-              setQuote(null)
-              setSaid('')
-            }}
-          />
+          <Eyebrow>Waiting for you</Eyebrow>
+          {waiting.map((s) => (
+            <AwaitingSend key={s.id} agent={agent} s={s} onAnswered={reread} />
+          ))}
         </View>
-      ) : (
-        <View style={{ gap: 12 }}>
-          <Field label="Wallet address, name.eth, saved name, @name, email or phone" placeholder="0x…, name.eth or @name" autoCapitalize="none" autoCorrect={false} value={to} onChangeText={setTo} />
-          <Choice label="Network" options={NETWORKS} value={network} onChange={setNetwork} />
-          <Field label="Amount in USDC" keyboardType="decimal-pad" placeholder="0.00" value={amount} onChangeText={setAmount} />
-          <Button primary label={busy ? 'Reading the quote…' : 'Review'} disabled={busy || !ready} hint={ready ? 'Reading the quote…' : 'Type who it goes to and an amount first'} onPress={() => void review()} />
-        </View>
-      )}
-      {said ? <Body>{said}</Body> : null}
+      ) : null}
       {quote ? null : (
         <SavedAddresses
           onPick={(name) => {
@@ -615,45 +663,28 @@ function Send({ agent }: { agent: Agent }) {
           }}
         />
       )}
-      {receipt ? (
-        <View testID="crypto-send-receipt" style={{ gap: 6 }}>
-          <Chip tone={SEND_STATUS[receipt.status][1]}>{SEND_STATUS[receipt.status][0]}</Chip>
-          <Body>
-            {receipt.status === 'awaiting_owner'
-              ? 'A first send to a new address waits for the workspace’s owner.'
-              : receipt.status === 'refused' || receipt.status === 'failed'
-                ? receipt.reason || 'Nothing was sent.'
-                : `${formatMinor(receipt.amount_minor, 'USDC')} to ${shortAddress(receipt.to)}.`}
-          </Body>
-        </View>
-      ) : null}
-      {waiting.length > 0 ? (
-        <View style={{ gap: 8 }}>
-          <Eyebrow>Waiting for you</Eyebrow>
-          {waiting.map((s) => (
-            <AwaitingSend key={s.id} agent={agent} s={s} onAnswered={reread} />
-          ))}
-        </View>
-      ) : null}
-      <Eyebrow>Sent and received</Eyebrow>
-      {readSaid ? (
-        <Body>{readSaid}</Body>
-      ) : sends === null ? (
-        <Body muted>Reading…</Body>
-      ) : sends.length === 0 ? (
-        <Body muted>{`${agent.name} has not sent or been sent anything yet.`}</Body>
-      ) : (
-        sends.map((s, i) => (
-          <Row
-            key={s.id}
-            first={i === 0}
-            title={s.direction === 'in' ? `From ${shortAddress(s.to)}` : `To ${shortAddress(s.to)}`}
-            sub={`${SEND_STATUS[s.status][0]} · ${when(s.created_at)}`}
-            right={<Text>{`${s.direction === 'in' ? '+' : '−'}${formatMinor(s.amount_minor, 'USDC')}`}</Text>}
-            onPress={openExplorer(explorerUrl(s.network, s.tx_hash ?? ''))}
-          />
-        ))
-      )}
+      <Card white testID="crypto-sends">
+        <Eyebrow>Sent and received</Eyebrow>
+        {readSaid ? (
+          <Body>{readSaid}</Body>
+        ) : sends === null ? (
+          <Body muted>Reading…</Body>
+        ) : sends.length === 0 ? (
+          <Body muted>{`${agent.name} has not sent or been sent anything yet.`}</Body>
+        ) : (
+          sends.map((s, i) => (
+            <Row
+              key={s.id}
+              first={i === 0}
+              left={<Initial of={s.direction === 'in' ? '' : s.saved_name || s.ens_name || ''} icon={s.direction === 'in' ? 'arrowDown' : 'arrowUp'} />}
+              title={s.direction === 'in' ? `From ${shortAddress(s.to)}` : `To ${s.saved_name || s.ens_name || shortAddress(s.to)}`}
+              sub={`${SEND_STATUS[s.status][0]} · ${when(s.created_at)}`}
+              right={<Figure>{`${s.direction === 'in' ? '+' : '−'}${formatMinor(s.amount_minor, 'USDC')}`}</Figure>}
+              onPress={openExplorer(explorerUrl(s.network, s.tx_hash ?? ''))}
+            />
+          ))
+        )}
+      </Card>
     </View>
   )
 }
@@ -914,6 +945,9 @@ function LimitsForm({ agent, sp, onSigned }: { agent: Agent; sp: SpendPermission
 // B57.220 — drawn in Pocket as p-agent-research and the launch pack's P4 draw money: the agent's face over its name, the
 // balance as the figure in a cloud card with its label, the round actions under it (the one open filled), then how to
 // add money in a facts box, and Activity and Limits and permissions as rows. A part opens under what opened it.
+// B57.221 — Send is cards of its own: the form and its quote; each send waiting for the owner as p-approvals draws a
+// request (the agent's face with its badge and the amount), who it goes to by name and address in facts; the saved
+// addresses, each on its initial with Remove; and what went, each on its name's initial or its arrow.
 const ROUND_ICON: Partial<Record<WalletAction, IconName>> = { 'top-up': 'plus', 'cash-out': 'arrowUp', send: 'send', request: 'arrowDown' }
 const ROW_ICON: Partial<Record<WalletAction, IconName>> = { activity: 'clock', limits: 'sliders' }
 
@@ -945,13 +979,15 @@ function WalletPart({ agent, wallet, several, shows, opens }: { agent: Agent; wa
   const [open, setOpen] = useState<WalletAction | null>(opens && [...rounds, ...rows].includes(opens) ? opens : null)
   const toggle = (a: WalletAction) => setOpen(open === a ? null : a)
   const network = wallet.receive.network ? networkName(wallet.receive.network) : ''
-  const part = open ? (
+  // Send draws its own cards: the form, what waits for the owner, the saved addresses, and what went.
+  const part = open === 'send' ? (
+    <Send agent={agent} />
+  ) : open ? (
     <Card white>
       <View style={{ gap: 12 }}>
         <Eyebrow>{ACTION_WORDS[open]}</Eyebrow>
         {open === 'top-up' ? <TopUp agent={agent} wallet={wallet} /> : null}
         {open === 'cash-out' ? <CashOut agent={agent} /> : null}
-        {open === 'send' ? <Send agent={agent} /> : null}
         {open === 'request' ? <Request agent={agent} /> : null}
         {open === 'activity' ? <Activity agent={agent} asset={wallet.asset} /> : null}
         {open === 'limits' ? <Limits agent={agent} /> : null}

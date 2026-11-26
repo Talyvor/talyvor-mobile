@@ -1,0 +1,582 @@
+[
+ {
+  "route": "/agent-wallet/agt_research?open=send",
+  "screen": "p-agent-research",
+  "name": "send-waiting",
+  "answers": {
+   "/api/agents/agt_research/wallets": {
+    "agent_id": "agt_research",
+    "wallet_kind": "crypto",
+    "wallets": [
+     {
+      "account_id": "acc_u",
+      "agent_id": "agt_research",
+      "asset": "USDC",
+      "partner": "circle",
+      "balance_minor": 125500000,
+      "mode": "LIVE",
+      "receive": {
+       "asset": "USDC",
+       "network": "base",
+       "address": "0x7a3B1c9D2e4F5a6B7c8D9e0F1a2B3c4D5e6F7a8B"
+      }
+     }
+    ]
+   },
+   "/api/agents/agt_research/spend-permission": {
+    "number": 3,
+    "permission": {
+     "tokens": [
+      {
+       "token": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+       "allowance": 50000000,
+       "period": "week",
+       "per_payment": 10000000
+      }
+     ],
+     "allowed": [],
+     "blocked": [],
+     "expires": "2027-06-30T23:59:59Z"
+    },
+    "signed_at": "2026-11-20T09:00:00Z"
+   },
+   "/api/agents/agt_research/crypto-sends": {
+    "sends": [
+     {
+      "id": "cs_2",
+      "agent_id": "agt_research",
+      "direction": "out",
+      "status": "awaiting_owner",
+      "network": "base",
+      "token": "USDC",
+      "amount_minor": 40000000,
+      "to": "0x3333333333333333333333333333333333333333",
+      "to_kind": "address",
+      "new_address": true,
+      "max_fee_wei": "0",
+      "fee_paid_by": "workspace_gas_budget",
+      "created_at": "2026-11-25T08:00:00Z",
+      "ens_name": "northwind.eth"
+     },
+     {
+      "id": "cs_1",
+      "agent_id": "agt_research",
+      "direction": "out",
+      "status": "landed",
+      "network": "base",
+      "token": "USDC",
+      "amount_minor": 2500000,
+      "to": "0x2222222222222222222222222222222222222222",
+      "to_kind": "address",
+      "new_address": false,
+      "max_fee_wei": "0",
+      "fee_paid_by": "workspace_gas_budget",
+      "created_at": "2026-11-24T10:00:00Z",
+      "saved_name": "Treasury"
+     }
+    ]
+   },
+   "/api/agents/agt_research/smart-account": {
+    "address": "0x7a3B1c9D2e4F5a6B7c8D9e0F1a2B3c4D5e6F7a8B",
+    "owners": [
+     {
+      "role": "person",
+      "device_id": "dev_sample"
+     }
+    ]
+   },
+   "/api/crypto-addresses": {
+    "addresses": [
+     {
+      "id": "caddr_1",
+      "name": "Treasury",
+      "address": "0x2222222222222222222222222222222222222222",
+      "saved_by": "user:u1",
+      "created_at": "2026-11-20T09:00:00Z",
+      "updated_at": "2026-11-20T09:00:00Z"
+     },
+     {
+      "id": "caddr_2",
+      "name": "Northwind",
+      "address": "0x4444444444444444444444444444444444444444",
+      "saved_by": "user:u1",
+      "created_at": "2026-11-21T09:00:00Z",
+      "updated_at": "2026-11-21T09:00:00Z"
+     }
+    ]
+   }
+  },
+  "words": "report",
+  "why": "B57.221: Send in Pocket, as p-agent-research draws an agent and p-approvals a request waiting for the owner (the form in its card, the waiting send on the agent's face with its amount and who it goes to by name in facts, the saved addresses on their initials with Remove, what went on its name's initial or arrow); no reference screen draws Send, so its words are listed under Words to confirm",
+  "phoneKey": true,
+  "scroll": "Waiting for you"
+ },
+ {
+  "route": "/agent-wallet/agt_research?open=send",
+  "screen": "p-agent-research",
+  "name": "send-saved",
+  "answers": {
+   "/api/agents/agt_research/wallets": {
+    "agent_id": "agt_research",
+    "wallet_kind": "crypto",
+    "wallets": [
+     {
+      "account_id": "acc_u",
+      "agent_id": "agt_research",
+      "asset": "USDC",
+      "partner": "circle",
+      "balance_minor": 125500000,
+      "mode": "LIVE",
+      "receive": {
+       "asset": "USDC",
+       "network": "base",
+       "address": "0x7a3B1c9D2e4F5a6B7c8D9e0F1a2B3c4D5e6F7a8B"
+      }
+     }
+    ]
+   },
+   "/api/agents/agt_research/spend-permission": {
+    "number": 3,
+    "permission": {
+     "tokens": [
+      {
+       "token": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+       "allowance": 50000000,
+       "period": "week",
+       "per_payment": 10000000
+      }
+     ],
+     "allowed": [],
+     "blocked": [],
+     "expires": "2027-06-30T23:59:59Z"
+    },
+    "signed_at": "2026-11-20T09:00:00Z"
+   },
+   "/api/agents/agt_research/crypto-sends": {
+    "sends": [
+     {
+      "id": "cs_2",
+      "agent_id": "agt_research",
+      "direction": "out",
+      "status": "awaiting_owner",
+      "network": "base",
+      "token": "USDC",
+      "amount_minor": 40000000,
+      "to": "0x3333333333333333333333333333333333333333",
+      "to_kind": "address",
+      "new_address": true,
+      "max_fee_wei": "0",
+      "fee_paid_by": "workspace_gas_budget",
+      "created_at": "2026-11-25T08:00:00Z",
+      "ens_name": "northwind.eth"
+     },
+     {
+      "id": "cs_1",
+      "agent_id": "agt_research",
+      "direction": "out",
+      "status": "landed",
+      "network": "base",
+      "token": "USDC",
+      "amount_minor": 2500000,
+      "to": "0x2222222222222222222222222222222222222222",
+      "to_kind": "address",
+      "new_address": false,
+      "max_fee_wei": "0",
+      "fee_paid_by": "workspace_gas_budget",
+      "created_at": "2026-11-24T10:00:00Z",
+      "saved_name": "Treasury"
+     }
+    ]
+   },
+   "/api/agents/agt_research/smart-account": {
+    "address": "0x7a3B1c9D2e4F5a6B7c8D9e0F1a2B3c4D5e6F7a8B",
+    "owners": [
+     {
+      "role": "person",
+      "device_id": "dev_sample"
+     }
+    ]
+   },
+   "/api/crypto-addresses": {
+    "addresses": [
+     {
+      "id": "caddr_1",
+      "name": "Treasury",
+      "address": "0x2222222222222222222222222222222222222222",
+      "saved_by": "user:u1",
+      "created_at": "2026-11-20T09:00:00Z",
+      "updated_at": "2026-11-20T09:00:00Z"
+     },
+     {
+      "id": "caddr_2",
+      "name": "Northwind",
+      "address": "0x4444444444444444444444444444444444444444",
+      "saved_by": "user:u1",
+      "created_at": "2026-11-21T09:00:00Z",
+      "updated_at": "2026-11-21T09:00:00Z"
+     }
+    ]
+   }
+  },
+  "words": "report",
+  "why": "B57.221: Send in Pocket, as p-agent-research draws an agent and p-approvals a request waiting for the owner (the form in its card, the waiting send on the agent's face with its amount and who it goes to by name in facts, the saved addresses on their initials with Remove, what went on its name's initial or arrow); no reference screen draws Send, so its words are listed under Words to confirm",
+  "phoneKey": true,
+  "scroll": "Saved addresses"
+ },
+ {
+  "route": "/agent-wallet/agt_research?open=send",
+  "screen": "p-agent-research",
+  "name": "send-saved",
+  "answers": {
+   "/api/agents/agt_research/wallets": {
+    "agent_id": "agt_research",
+    "wallet_kind": "crypto",
+    "wallets": [
+     {
+      "account_id": "acc_u",
+      "agent_id": "agt_research",
+      "asset": "USDC",
+      "partner": "circle",
+      "balance_minor": 125500000,
+      "mode": "LIVE",
+      "receive": {
+       "asset": "USDC",
+       "network": "base",
+       "address": "0x7a3B1c9D2e4F5a6B7c8D9e0F1a2B3c4D5e6F7a8B"
+      }
+     }
+    ]
+   },
+   "/api/agents/agt_research/spend-permission": {
+    "number": 3,
+    "permission": {
+     "tokens": [
+      {
+       "token": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+       "allowance": 50000000,
+       "period": "week",
+       "per_payment": 10000000
+      }
+     ],
+     "allowed": [],
+     "blocked": [],
+     "expires": "2027-06-30T23:59:59Z"
+    },
+    "signed_at": "2026-11-20T09:00:00Z"
+   },
+   "/api/agents/agt_research/crypto-sends": {
+    "sends": [
+     {
+      "id": "cs_2",
+      "agent_id": "agt_research",
+      "direction": "out",
+      "status": "awaiting_owner",
+      "network": "base",
+      "token": "USDC",
+      "amount_minor": 40000000,
+      "to": "0x3333333333333333333333333333333333333333",
+      "to_kind": "address",
+      "new_address": true,
+      "max_fee_wei": "0",
+      "fee_paid_by": "workspace_gas_budget",
+      "created_at": "2026-11-25T08:00:00Z",
+      "ens_name": "northwind.eth"
+     },
+     {
+      "id": "cs_1",
+      "agent_id": "agt_research",
+      "direction": "out",
+      "status": "landed",
+      "network": "base",
+      "token": "USDC",
+      "amount_minor": 2500000,
+      "to": "0x2222222222222222222222222222222222222222",
+      "to_kind": "address",
+      "new_address": false,
+      "max_fee_wei": "0",
+      "fee_paid_by": "workspace_gas_budget",
+      "created_at": "2026-11-24T10:00:00Z",
+      "saved_name": "Treasury"
+     }
+    ]
+   },
+   "/api/agents/agt_research/smart-account": {
+    "address": "0x7a3B1c9D2e4F5a6B7c8D9e0F1a2B3c4D5e6F7a8B",
+    "owners": [
+     {
+      "role": "person",
+      "device_id": "dev_sample"
+     }
+    ]
+   },
+   "/api/crypto-addresses": {
+    "addresses": [
+     {
+      "id": "caddr_1",
+      "name": "Treasury",
+      "address": "0x2222222222222222222222222222222222222222",
+      "saved_by": "user:u1",
+      "created_at": "2026-11-20T09:00:00Z",
+      "updated_at": "2026-11-20T09:00:00Z"
+     },
+     {
+      "id": "caddr_2",
+      "name": "Northwind",
+      "address": "0x4444444444444444444444444444444444444444",
+      "saved_by": "user:u1",
+      "created_at": "2026-11-21T09:00:00Z",
+      "updated_at": "2026-11-21T09:00:00Z"
+     }
+    ]
+   }
+  },
+  "words": "report",
+  "why": "B57.221: Send in Pocket, as p-agent-research draws an agent and p-approvals a request waiting for the owner (the form in its card, the waiting send on the agent's face with its amount and who it goes to by name in facts, the saved addresses on their initials with Remove, what went on its name's initial or arrow); no reference screen draws Send, so its words are listed under Words to confirm",
+  "phoneKey": true,
+  "scroll": "Saved addresses",
+  "dark": true
+ },
+ {
+  "route": "/agent-wallet/agt_research?open=send",
+  "screen": "p-agent-research",
+  "name": "send-sent",
+  "answers": {
+   "/api/agents/agt_research/wallets": {
+    "agent_id": "agt_research",
+    "wallet_kind": "crypto",
+    "wallets": [
+     {
+      "account_id": "acc_u",
+      "agent_id": "agt_research",
+      "asset": "USDC",
+      "partner": "circle",
+      "balance_minor": 125500000,
+      "mode": "LIVE",
+      "receive": {
+       "asset": "USDC",
+       "network": "base",
+       "address": "0x7a3B1c9D2e4F5a6B7c8D9e0F1a2B3c4D5e6F7a8B"
+      }
+     }
+    ]
+   },
+   "/api/agents/agt_research/spend-permission": {
+    "number": 3,
+    "permission": {
+     "tokens": [
+      {
+       "token": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+       "allowance": 50000000,
+       "period": "week",
+       "per_payment": 10000000
+      }
+     ],
+     "allowed": [],
+     "blocked": [],
+     "expires": "2027-06-30T23:59:59Z"
+    },
+    "signed_at": "2026-11-20T09:00:00Z"
+   },
+   "/api/agents/agt_research/crypto-sends": {
+    "sends": [
+     {
+      "id": "cs_2",
+      "agent_id": "agt_research",
+      "direction": "out",
+      "status": "awaiting_owner",
+      "network": "base",
+      "token": "USDC",
+      "amount_minor": 40000000,
+      "to": "0x3333333333333333333333333333333333333333",
+      "to_kind": "address",
+      "new_address": true,
+      "max_fee_wei": "0",
+      "fee_paid_by": "workspace_gas_budget",
+      "created_at": "2026-11-25T08:00:00Z",
+      "ens_name": "northwind.eth"
+     },
+     {
+      "id": "cs_1",
+      "agent_id": "agt_research",
+      "direction": "out",
+      "status": "landed",
+      "network": "base",
+      "token": "USDC",
+      "amount_minor": 2500000,
+      "to": "0x2222222222222222222222222222222222222222",
+      "to_kind": "address",
+      "new_address": false,
+      "max_fee_wei": "0",
+      "fee_paid_by": "workspace_gas_budget",
+      "created_at": "2026-11-24T10:00:00Z",
+      "saved_name": "Treasury"
+     }
+    ]
+   },
+   "/api/agents/agt_research/smart-account": {
+    "address": "0x7a3B1c9D2e4F5a6B7c8D9e0F1a2B3c4D5e6F7a8B",
+    "owners": [
+     {
+      "role": "person",
+      "device_id": "dev_sample"
+     }
+    ]
+   },
+   "/api/crypto-addresses": {
+    "addresses": [
+     {
+      "id": "caddr_1",
+      "name": "Treasury",
+      "address": "0x2222222222222222222222222222222222222222",
+      "saved_by": "user:u1",
+      "created_at": "2026-11-20T09:00:00Z",
+      "updated_at": "2026-11-20T09:00:00Z"
+     },
+     {
+      "id": "caddr_2",
+      "name": "Northwind",
+      "address": "0x4444444444444444444444444444444444444444",
+      "saved_by": "user:u1",
+      "created_at": "2026-11-21T09:00:00Z",
+      "updated_at": "2026-11-21T09:00:00Z"
+     }
+    ]
+   }
+  },
+  "words": "report",
+  "why": "B57.221: Send in Pocket, as p-agent-research draws an agent and p-approvals a request waiting for the owner (the form in its card, the waiting send on the agent's face with its amount and who it goes to by name in facts, the saved addresses on their initials with Remove, what went on its name's initial or arrow); no reference screen draws Send, so its words are listed under Words to confirm",
+  "phoneKey": true,
+  "scroll": "Sent and received"
+ },
+ {
+  "route": "/agent-wallet/agt_research?open=send",
+  "screen": "p-agent-research",
+  "name": "send-by-name",
+  "answers": {
+   "/api/agents/agt_research/wallets": {
+    "agent_id": "agt_research",
+    "wallet_kind": "crypto",
+    "wallets": [
+     {
+      "account_id": "acc_u",
+      "agent_id": "agt_research",
+      "asset": "USDC",
+      "partner": "circle",
+      "balance_minor": 125500000,
+      "mode": "LIVE",
+      "receive": {
+       "asset": "USDC",
+       "network": "base",
+       "address": "0x7a3B1c9D2e4F5a6B7c8D9e0F1a2B3c4D5e6F7a8B"
+      }
+     }
+    ]
+   },
+   "/api/agents/agt_research/spend-permission": {
+    "number": 3,
+    "permission": {
+     "tokens": [
+      {
+       "token": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+       "allowance": 50000000,
+       "period": "week",
+       "per_payment": 10000000
+      }
+     ],
+     "allowed": [],
+     "blocked": [],
+     "expires": "2027-06-30T23:59:59Z"
+    },
+    "signed_at": "2026-11-20T09:00:00Z"
+   },
+   "/api/agents/agt_research/crypto-sends": {
+    "sends": [
+     {
+      "id": "cs_2",
+      "agent_id": "agt_research",
+      "direction": "out",
+      "status": "awaiting_owner",
+      "network": "base",
+      "token": "USDC",
+      "amount_minor": 40000000,
+      "to": "0x3333333333333333333333333333333333333333",
+      "to_kind": "address",
+      "new_address": true,
+      "max_fee_wei": "0",
+      "fee_paid_by": "workspace_gas_budget",
+      "created_at": "2026-11-25T08:00:00Z",
+      "ens_name": "northwind.eth"
+     },
+     {
+      "id": "cs_1",
+      "agent_id": "agt_research",
+      "direction": "out",
+      "status": "landed",
+      "network": "base",
+      "token": "USDC",
+      "amount_minor": 2500000,
+      "to": "0x2222222222222222222222222222222222222222",
+      "to_kind": "address",
+      "new_address": false,
+      "max_fee_wei": "0",
+      "fee_paid_by": "workspace_gas_budget",
+      "created_at": "2026-11-24T10:00:00Z",
+      "saved_name": "Treasury"
+     }
+    ]
+   },
+   "/api/agents/agt_research/smart-account": {
+    "address": "0x7a3B1c9D2e4F5a6B7c8D9e0F1a2B3c4D5e6F7a8B",
+    "owners": [
+     {
+      "role": "person",
+      "device_id": "dev_sample"
+     }
+    ]
+   },
+   "/api/crypto-addresses": {
+    "addresses": [
+     {
+      "id": "caddr_1",
+      "name": "Treasury",
+      "address": "0x2222222222222222222222222222222222222222",
+      "saved_by": "user:u1",
+      "created_at": "2026-11-20T09:00:00Z",
+      "updated_at": "2026-11-20T09:00:00Z"
+     },
+     {
+      "id": "caddr_2",
+      "name": "Northwind",
+      "address": "0x4444444444444444444444444444444444444444",
+      "saved_by": "user:u1",
+      "created_at": "2026-11-21T09:00:00Z",
+      "updated_at": "2026-11-21T09:00:00Z"
+     }
+    ]
+   },
+   "/api/agents/agt_research/crypto-sends/quote": {
+    "network": "base",
+    "token": "USDC",
+    "amount_minor": 2500000,
+    "to": "0x2222222222222222222222222222222222222222",
+    "to_kind": "address",
+    "saved_name": "Treasury",
+    "to_label": "Treasury",
+    "new_address": false,
+    "max_fee_wei": "0",
+    "fee_paid_by": "workspace_gas_budget",
+    "arrival_seconds": 12
+   }
+  },
+  "words": "report",
+  "why": "B57.221: Send in Pocket, as p-agent-research draws an agent and p-approvals a request waiting for the owner (the form in its card, the waiting send on the agent's face with its amount and who it goes to by name in facts, the saved addresses on their initials with Remove, what went on its name's initial or arrow); no reference screen draws Send, so its words are listed under Words to confirm",
+  "phoneKey": true,
+  "fill": {
+   "Wallet address, name.eth, saved name, @name, email or phone": "Treasury",
+   "Amount in USDC": "2.50"
+  },
+  "press": [
+   "Review"
+  ]
+ }
+]
