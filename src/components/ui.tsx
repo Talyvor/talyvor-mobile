@@ -182,10 +182,11 @@ export function Card({ children, white, tight, testID }: { children: ReactNode; 
   )
 }
 
-type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'danger' | 'ghost'
+type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'danger' | 'soft-danger' | 'ghost'
 
 /** 52 tall and round; the primary one is ink and full width. `primary` is today's name for the primary variant. `small`
- * is .btn.sm, 34 tall beside a row's words, with its touch area grown to 50. */
+ * is .btn.sm, 34 tall beside a row's words, with its touch area grown to 50. `soft-danger` is Pocket's .btn.danger, red on
+ * danger-50 with no outline, as Pocket Live's close-account sheet draws it (B57.226). */
 export function Button({
   label,
   onPress,
@@ -221,6 +222,7 @@ export function Button({
     secondary: { backgroundColor: c.cloud2, color: c.ink },
     outline: { borderWidth: 1.5, borderColor: c.control, color: c.ink },
     danger: { borderWidth: 1.5, borderColor: c.danger, color: c.danger },
+    'soft-danger': { backgroundColor: c.danger50, color: c.danger },
     ghost: { color: c.ink },
   }[variant]
   const { color, ...box } = look
@@ -411,8 +413,9 @@ function SheetClose({ onClose }: { onClose: () => void }) {
 
 /** A sheet rising over the screen. With `onClose` it has Close at the top, focus moves to it, and dragging the grab bar
  * down more than 110 points closes it (B61.77, pocket-live DESIGN.md section 5, move 3); a shorter drag springs back. The
- * drag is a shortcut: Close does the same for anyone who cannot drag. */
-export function Sheet({ children, onClose }: { children: ReactNode; onClose?: () => void }) {
+ * drag is a shortcut: Close does the same for anyone who cannot drag. `edge={false}` leaves off the tangerine band, as
+ * Pocket Live draws every sheet but the approval's (B57.226). */
+export function Sheet({ children, onClose, edge = true }: { children: ReactNode; onClose?: () => void; edge?: boolean }) {
   const { c } = useTheme()
   const reduce = useReduceMotion()
   const [drag] = useState(() => new Animated.Value(0))
@@ -420,7 +423,7 @@ export function Sheet({ children, onClose }: { children: ReactNode; onClose?: ()
   const back = () => (reduce ? drag.setValue(0) : Animated.spring(drag, { toValue: 0, ...spring, useNativeDriver: false }).start())
   return (
     <Animated.View accessibilityViewIsModal style={[styles.sheet, styles.shadow, { backgroundColor: c.page, transform: [{ translateY: drag }] }]}>
-      <View style={[styles.band, { backgroundColor: c.tangerine }]} />
+      {edge ? <View style={[styles.band, { backgroundColor: c.tangerine }]} /> : null}
       <View
         testID="sheet-grab"
         accessible={false}

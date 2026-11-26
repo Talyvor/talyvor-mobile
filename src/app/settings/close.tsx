@@ -12,6 +12,8 @@ import { fonts, useTheme } from '@/theme'
 // B59.29 — /settings/close, the web's Close this account (suite B59.28): what must be empty first, and the request to
 // close. Lens refuses it while any balance is not empty, and the refusal names each one. B57.140: what was asked comes before the form.
 // B52.47 — and Delete your account, as the web's (suite B52.38, B57.209): asks once, with the email typed back.
+// B57.226 — in Pocket, as Pocket Live draws its close-account sheet (SH.closeAcct): no tangerine edge, the line in ink-2,
+// Keep my account in ink and the red button as .btn.danger; the words stay the web's.
 
 export default function CloseAccountScreen() {
   const requests = useRequests()
@@ -88,16 +90,16 @@ function DeleteYourAccount() {
         Deletes every account you hold and signs you out everywhere: every browser, every phone and every connected assistant. It can’t be undone. Billing and ledger
         records, statements included, are kept as the law requires.
       </Body>
-      <Button variant="danger" label="Delete your account" onPress={() => setAsking(true)} />
+      <Button variant="soft-danger" label="Delete your account" onPress={() => setAsking(true)} />
       <Modal visible={asking} transparent animationType="slide" onRequestClose={keep}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: c.scrim }}>
           <Pressable accessible={false} style={{ flex: 1 }} onPress={keep} />
-          <Sheet>
+          <Sheet edge={false}>
             <View testID="delete-account-sheet" style={{ gap: 14 }}>
-              <Text accessibilityRole="header" style={{ fontFamily: fonts.display, fontSize: 22, lineHeight: 28, color: c.ink }}>
+              <Text accessibilityRole="header" style={{ fontFamily: fonts.display, fontSize: 22, lineHeight: 28, letterSpacing: -0.44, color: c.ink }}>
                 Delete your account?
               </Text>
-              <Body>Every account you hold is deleted, and every browser, phone and connected assistant is signed out. This can’t be undone.</Body>
+              <Body muted>Every account you hold is deleted, and every browser, phone and connected assistant is signed out. This can’t be undone.</Body>
               <Field label={`Type ${confirm} to confirm`} value={typed} onChangeText={setTyped} autoCapitalize="none" autoCorrect={false} autoComplete="off" spellCheck={false} />
               {refusal ? (
                 <View accessibilityRole="alert">
@@ -105,7 +107,7 @@ function DeleteYourAccount() {
                 </View>
               ) : null}
               <Button variant="primary" label="Keep my account" disabled={deleting} onPress={keep} />
-              <Button variant="danger" label={deleting ? 'Deleting…' : 'Yes, delete my account'} disabled={!matches || deleting} onPress={() => void gone()} />
+              <Button variant="soft-danger" label={deleting ? 'Deleting…' : 'Yes, delete my account'} disabled={!matches || deleting} onPress={() => void gone()} />
             </View>
           </Sheet>
         </KeyboardAvoidingView>

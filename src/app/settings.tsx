@@ -35,7 +35,7 @@ const HELP_ROWS: readonly { to: '/help' | '/settings/help' | '/settings/data' | 
   { to: '/help', icon: 'chat', title: HELP_ROW.title, line: HELP_ROW.line },
   { to: '/settings/help', icon: 'send', title: 'Help and complaints', line: 'Ask us something, or make a complaint' },
   { to: '/settings/data', icon: 'download', title: 'Your data', line: 'A copy of your data, or ask for it to be deleted' },
-  { to: '/settings/close', icon: 'lock', title: 'Close this account', line: 'What must be empty first, and asking to close' },
+  { to: '/settings/close', icon: 'trash', title: 'Close this account', line: 'What must be empty first, and asking to close' },
 ]
 
 export default function SettingsScreen() {
