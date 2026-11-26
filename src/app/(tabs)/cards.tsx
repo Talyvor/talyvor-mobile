@@ -28,6 +28,8 @@ import { useSession } from '@/session'
 // as the web's Save rules is and signed with the phone's key when it loosens them; and Issue a card for an agent with none.
 // B57.160 — in Pocket: the owner's card at the top, in its tier art, bare and full width as P3's Cards strip draws it,
 // above Disputes and refunds; Change limits and Issue a card as the reference's rules draw a list of settings.
+// B57.227 — in Pocket: Replace card as the agent page draws Pause (.btn.secondary), Cancel card as .btn.danger, and the
+// sheet that asks as Pocket Live's close-account sheet (SH.closeAcct): no tangerine edge, the line in ink-2, Keep it first in ink.
 // B59.55 — under each agent's card, its one-time and standing cards with the budget the owner approved (Lens B59.21), and
 // Open Approvals for one still waiting.
 // B28.465 — Replace card and Cancel card beside Freeze card, each asked once in a sheet, in the web's words (B28.47): a
@@ -58,15 +60,15 @@ type Ending = 'replace' | 'cancel'
 function EndCard({ ending, name, busy, onKeep, onEnd }: { ending: Ending | null; name: string; busy: boolean; onKeep: () => void; onEnd: () => void }) {
   const replace = ending === 'replace'
   return (
-    <BottomSheet visible={ending !== null} onClose={onKeep} testID="end-card-sheet">
-      <Headline>{replace ? `Replace ${name}’s card?` : `Cancel ${name}’s card?`}</Headline>
+    <BottomSheet visible={ending !== null} onClose={onKeep} testID="end-card-sheet" edge={false}>
+      <Headline style={{ fontSize: 22, lineHeight: 28, letterSpacing: -0.44 }}>{replace ? `Replace ${name}’s card?` : `Cancel ${name}’s card?`}</Headline>
       <Body muted>
         {replace
           ? `${name}’s card is cancelled at once, and a new one is issued to the same cardholder. Its freeze and its merchant lock carry over to the new card.`
           : `${name}’s card is cancelled for good. Every purchase on it is refused, and ${name} has no card until you issue it a new one.`}
       </Body>
-      <Button variant={replace ? 'primary' : 'danger'} label={replace ? 'Replace card' : 'Cancel card'} disabled={busy} onPress={onEnd} />
-      <Button variant="secondary" label="Keep it" disabled={busy} onPress={onKeep} />
+      <Button variant="primary" label="Keep it" disabled={busy} onPress={onKeep} />
+      <Button variant={replace ? 'secondary' : 'soft-danger'} label={replace ? 'Replace card' : 'Cancel card'} disabled={busy} onPress={onEnd} />
     </BottomSheet>
   )
 }
@@ -219,8 +221,8 @@ export default function Cards() {
               {h.card ? (
                 <>
                   <Toggle label="Freeze card" value={!!h.card.frozen} disabled={busy === h.agent.id} onValueChange={() => void freeze(h)} />
-                  <Button label="Replace card" disabled={busy === h.agent.id} onPress={() => setEnding({ id: h.agent.id, how: 'replace' })} />
-                  <Button label="Cancel card" disabled={busy === h.agent.id} onPress={() => setEnding({ id: h.agent.id, how: 'cancel' })} />
+                  <Button variant="secondary" label="Replace card" disabled={busy === h.agent.id} onPress={() => setEnding({ id: h.agent.id, how: 'replace' })} />
+                  <Button variant="soft-danger" label="Cancel card" disabled={busy === h.agent.id} onPress={() => setEnding({ id: h.agent.id, how: 'cancel' })} />
                   <EndCard
                     ending={ending?.id === h.agent.id ? ending.how : null}
                     name={h.agent.name}
