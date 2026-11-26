@@ -639,6 +639,51 @@ test('B65.3: an expired check says so and offers Start again, which starts the c
   expect(screen.queryByText(WEB.identity.expired)).toBeNull()
 })
 
+// B57.195 — Persona's step in Pocket: one note, as su5 draws its Sandbox note, with our privacy notice inside it; a check
+// that failed or expired is said in Pocket's warning note (.note2.warnnote) at the top of the step, not in the foot.
+describe("the identity step's Persona note and Start again, in Pocket (B57.195)", () => {
+  test('our privacy notice is the last line of Persona’s note, and the note comes before the checks', async () => {
+    mockBff(false, { persona: true })
+    await renderRouter('./src/app', { initialUrl: '/sign-up' })
+    await toStepFour('Personal', 'Maya Lind')
+    const note = within(await screen.findByTestId('partner-note'))
+    expect(note.getByText(WEB.identity.documentLine)).toBeTruthy()
+    expect(note.getByRole('link', { name: WEB.identity.privacy })).toBeTruthy()
+    const order = texts().filter((t) => [WEB.identity.documentLine, WEB.identity.privacy, 'The checks'].includes(t))
+    expect(order).toEqual([WEB.identity.documentLine, WEB.identity.privacy, 'The checks'])
+  })
+
+  const saidInTheWarning = async (sentence: string) => {
+    const warn = await screen.findByTestId('again-note')
+    expect(within(warn).getByText(sentence)).toBeTruthy()
+    expect(lookOf(warn).backgroundColor).toBe(palettes.light.tangerine50)
+    const foot = within(screen.getByTestId('screen-footer'))
+    expect(foot.queryByText(sentence)).toBeNull()
+    const main = foot.getAllByRole('button').filter((b) => lookOf(b).backgroundColor === palettes.light.primary)
+    expect(main.map((b) => within(b).getByText(/./).props.children)).toEqual([WEB.identity.again])
+    // the sentence comes straight under the step's line, before the fields
+    const order = texts().filter((t) => [LIVE.line, sentence, WEB.identity.labels.legalName].includes(t))
+    expect(order).toEqual([LIVE.line, sentence, WEB.identity.labels.legalName])
+  }
+
+  test('a check that expired is said in the warning note under the line, and the foot’s main button is Start again', async () => {
+    const bff = mockBff(false, { level: 'L1', expiredPerson: true, persona: true })
+    bff.sessions.push({ account_type: 'personal', money_kind: 'hybrid' })
+    mockStore.set('talyvor.session', JSON.stringify({ token: 'session-1', expires_at: '2099-01-01T00:00:00Z' }))
+    await renderRouter('./src/app', { initialUrl: '/settings/verification' })
+    await saidInTheWarning(WEB.identity.expired)
+  })
+
+  test('a check that did not pass is said the same way', async () => {
+    mockBff(false, { failPerson: true })
+    await renderRouter('./src/app', { initialUrl: '/sign-up' })
+    await toStepFour('Personal', 'Maya Lind')
+    await fillYou()
+    await fireEvent.press(screen.getByRole('button', { name: WEB.identity.run }))
+    await saidInTheWarning(WEB.identity.personFailed)
+  })
+})
+
 test('B61.21: Home says the account cannot move money until the check is finished, and leads back to it', async () => {
   const bff = mockBff(false, { level: 'L1' })
   bff.sessions.push({ account_type: 'personal', money_kind: 'hybrid' })

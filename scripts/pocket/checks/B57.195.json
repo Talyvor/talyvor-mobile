@@ -1,0 +1,148 @@
+[
+ {
+  "route": "/settings/verification",
+  "screen": "p-pause-all",
+  "account": "personal:hybrid",
+  "name": "verify",
+  "answers": {
+   "/api/verification": {
+    "level": "L1",
+    "meaning": "",
+    "live_level": "L0",
+    "live_meaning": "",
+    "checks": [
+     {
+      "level": "L2",
+      "subject": "person",
+      "method": "persona",
+      "test": false,
+      "status": "pending",
+      "evidence_ref": "inq_sample",
+      "link": "https://inquiry.withpersona.com/verify?code=sample"
+     },
+     {
+      "level": "L1",
+      "subject": "contact",
+      "method": "test",
+      "test": true,
+      "status": "completed",
+      "evidence_ref": "ev_1"
+     }
+    ]
+   }
+  },
+  "words": "report",
+  "why": "B57.195: Persona's step as Pocket Live's su5 draws its note: the identity step while the person check waits at Persona: one note with our privacy notice its last line, and Verify your ID",
+  "live": "await P.flow('su', { type: 'Personal', kind: 'Fiat', find: 'yes' }); await P.push('su', [5]);"
+ },
+ {
+  "route": "/settings/verification",
+  "screen": "p-pause-all",
+  "account": "personal:hybrid",
+  "name": "verify",
+  "answers": {
+   "/api/verification": {
+    "level": "L1",
+    "meaning": "",
+    "live_level": "L0",
+    "live_meaning": "",
+    "checks": [
+     {
+      "level": "L2",
+      "subject": "person",
+      "method": "persona",
+      "test": false,
+      "status": "pending",
+      "evidence_ref": "inq_sample",
+      "link": "https://inquiry.withpersona.com/verify?code=sample"
+     },
+     {
+      "level": "L1",
+      "subject": "contact",
+      "method": "test",
+      "test": true,
+      "status": "completed",
+      "evidence_ref": "ev_1"
+     }
+    ]
+   }
+  },
+  "words": "report",
+  "why": "B57.195: Persona's step as Pocket Live's su5 draws its note: the identity step while the person check waits at Persona: one note with our privacy notice its last line, and Verify your ID",
+  "dark": true,
+  "live": "await P.flow('su', { type: 'Personal', kind: 'Fiat', find: 'yes' }); await P.push('su', [5]);"
+ },
+ {
+  "route": "/settings/verification",
+  "screen": "p-pause-all",
+  "account": "personal:hybrid",
+  "name": "expired",
+  "answers": {
+   "/api/verification": {
+    "level": "L1",
+    "meaning": "",
+    "live_level": "L0",
+    "live_meaning": "",
+    "checks": [
+     {
+      "level": "L2",
+      "subject": "person",
+      "method": "persona",
+      "test": false,
+      "status": "failed",
+      "evidence_ref": "inq_sample",
+      "detail": "Your ID check expired. Start it again."
+     },
+     {
+      "level": "L1",
+      "subject": "contact",
+      "method": "test",
+      "test": true,
+      "status": "completed",
+      "evidence_ref": "ev_1"
+     }
+    ]
+   }
+  },
+  "words": "report",
+  "why": "B57.195: Persona's step as Pocket Live's su5 draws its note: the identity step after the check at Persona expired: the sentence in Pocket's warning note under the line, and Start again",
+  "live": "await P.flow('su', { type: 'Personal', kind: 'Fiat', find: 'yes' }); await P.push('su', [5]);"
+ },
+ {
+  "route": "/settings/verification",
+  "screen": "p-pause-all",
+  "account": "personal:hybrid",
+  "name": "expired",
+  "answers": {
+   "/api/verification": {
+    "level": "L1",
+    "meaning": "",
+    "live_level": "L0",
+    "live_meaning": "",
+    "checks": [
+     {
+      "level": "L2",
+      "subject": "person",
+      "method": "persona",
+      "test": false,
+      "status": "failed",
+      "evidence_ref": "inq_sample",
+      "detail": "Your ID check expired. Start it again."
+     },
+     {
+      "level": "L1",
+      "subject": "contact",
+      "method": "test",
+      "test": true,
+      "status": "completed",
+      "evidence_ref": "ev_1"
+     }
+    ]
+   }
+  },
+  "words": "report",
+  "why": "B57.195: Persona's step as Pocket Live's su5 draws its note: the identity step after the check at Persona expired: the sentence in Pocket's warning note under the line, and Start again",
+  "dark": true,
+  "live": "await P.flow('su', { type: 'Personal', kind: 'Fiat', find: 'yes' }); await P.push('su', [5]);"
+ }
+]

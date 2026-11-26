@@ -311,13 +311,29 @@ export function Field({ label, ...input }: { label: string } & Omit<TextInputPro
   )
 }
 
-/** Pocket's .note: a small line on cloud with its mark, for what a screen tells rather than asks. */
-export function Note({ icon, children }: { icon: IconName; children: string }) {
+/** Pocket's .note: a small line on cloud with its mark, for what a screen tells rather than asks.
+ *  B57.195 — `tone="warn"` is Pocket's .note2.warnnote, on tangerine, for something that needs the person again; `link`
+ *  is a page the note names, a line of its own under the sentence. */
+export function Note({ icon, children, tone, link, testID = 'note' }: {
+  icon: IconName
+  children: string
+  tone?: 'warn'
+  link?: { label: string; onPress: () => void }
+  testID?: string
+}) {
   const { c } = useTheme()
+  const ink = tone === 'warn' ? c.tangerineInk : c.ink2
   return (
-    <View testID="note" style={{ flexDirection: 'row', gap: 10, paddingVertical: 12, paddingHorizontal: 14, borderRadius: 14, backgroundColor: c.cloud }}>
-      <Icon name={icon} size={20} color={c.ink2} />
-      <Text style={{ flex: 1, fontFamily: fonts.ui, fontSize: 13.5, lineHeight: 19, color: c.ink2 }}>{children}</Text>
+    <View testID={testID} style={{ flexDirection: 'row', gap: 10, paddingVertical: 12, paddingHorizontal: 14, borderRadius: 14, backgroundColor: tone === 'warn' ? c.tangerine50 : c.cloud }}>
+      <Icon name={icon} size={20} color={ink} />
+      <View style={{ flex: 1, gap: 6 }}>
+        <Text style={{ fontFamily: fonts.ui, fontSize: 13.5, lineHeight: 19, color: ink }}>{children}</Text>
+        {link ? (
+          <Text accessibilityRole="link" onPress={link.onPress} style={{ alignSelf: 'flex-start', fontFamily: fonts.uiBold, fontSize: 13.5, lineHeight: 19, color: c.ink, textDecorationLine: 'underline' }}>
+            {link.label}
+          </Text>
+        ) : null}
+      </View>
     </View>
   )
 }
